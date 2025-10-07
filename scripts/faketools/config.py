@@ -20,19 +20,16 @@ def _get_default_data_root_dir() -> str:
 
     Returns:
         str: Path to default data directory
+
+    Raises:
+        RuntimeError: If MAYA_APP_DIR environment variable is not set
     """
-    # Try to get MAYA_APP_DIR first (respects Maya's per-version directories)
+    # MAYA_APP_DIR must be set (respects Maya's per-version directories)
     maya_app_dir = os.environ.get("MAYA_APP_DIR")
-    if maya_app_dir:
-        return str(Path(maya_app_dir) / "faketools_data")
+    if not maya_app_dir:
+        raise RuntimeError("MAYA_APP_DIR environment variable is not set. FakeTools must be run within Maya environment.")
 
-    # Fallback to platform-specific defaults
-    # Windows: ~/Documents/maya/faketools_data
-    # macOS/Linux: ~/maya/faketools_data
-    if os.name == "nt":
-        return "~/Documents/maya/faketools_data"
-
-    return "~/maya/faketools_data"
+    return str(Path(maya_app_dir) / "faketools_data")
 
 
 # Default configuration values
