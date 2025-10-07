@@ -29,7 +29,7 @@ def _get_default_data_root_dir() -> str:
     if not maya_app_dir:
         raise RuntimeError("MAYA_APP_DIR environment variable is not set. FakeTools must be run within Maya environment.")
 
-    return str(Path(maya_app_dir) / "faketools_data")
+    return str(Path(maya_app_dir) / "faketools_workspace")
 
 
 # Default configuration values

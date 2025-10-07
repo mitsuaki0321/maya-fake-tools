@@ -47,7 +47,7 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
 7. **Settings System** (3 independent systems for different purposes)
    - **Global Config** ([scripts/faketools/config.py](scripts/faketools/config.py)): FakeTools-wide settings stored in JSON at `~/Documents/maya/faketools/config.json`
      - **Requires `MAYA_APP_DIR` environment variable** - throws `RuntimeError` if not set
-     - Data directory: `$MAYA_APP_DIR/faketools_data`
+     - Data directory: `$MAYA_APP_DIR/faketools_workspace`
    - **ToolOptionSettings** ([scripts/faketools/lib_ui/optionvar.py](scripts/faketools/lib_ui/optionvar.py)): Per-tool settings in Maya optionVar with JSON serialization
      - Includes convenience methods: `get_window_geometry()`, `set_window_geometry()`
      - Use this for all tool UI preferences (window size, checkbox states, etc.)

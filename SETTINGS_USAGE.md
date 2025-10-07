@@ -26,7 +26,7 @@ config = get_global_config()
 
 # データルートディレクトリを取得
 data_root = config.get_data_root_dir()
-print(data_root)  # ~/Documents/maya/faketools_data
+print(data_root)  # ~/Documents/maya/faketools_workspace
 
 # ログレベルを取得
 log_level = config.get_log_level()
@@ -70,13 +70,13 @@ config.reset_to_defaults()
 ### デフォルト設定
 
 `data_root_dir` は `MAYA_APP_DIR` 環境変数から自動的に決定されます：
-- `$MAYA_APP_DIR/faketools_data`
+- `$MAYA_APP_DIR/faketools_workspace`
 
 **重要**: FakeToolsはMaya環境内で実行する必要があります。`MAYA_APP_DIR`環境変数が設定されていない場合、初期化時に`RuntimeError`が発生します。
 
 ```json
 {
-    "data_root_dir": "$MAYA_APP_DIR/faketools_data",
+    "data_root_dir": "$MAYA_APP_DIR/faketools_workspace",
     "log_level": "INFO",
     "version": "1.0.0"
 }
@@ -189,7 +189,7 @@ manager = ToolDataManager("skin_weights", "rig")
 # データディレクトリを取得
 data_dir = manager.get_data_dir()
 print(data_dir)
-# ~/Documents/maya/faketools_data/rig/skin_weights
+# ~/Documents/maya/faketools_workspace/rig/skin_weights
 
 # データディレクトリを作成
 manager.ensure_data_dir()
@@ -197,7 +197,7 @@ manager.ensure_data_dir()
 # データファイルのパスを取得
 weights_file = manager.get_data_path("character_a.json")
 print(weights_file)
-# ~/Documents/maya/faketools_data/rig/skin_weights/character_a.json
+# ~/Documents/maya/faketools_workspace/rig/skin_weights/character_a.json
 ```
 
 ### カスタムデータディレクトリの設定
@@ -246,7 +246,7 @@ print(f"削除されたファイル: {deleted}件")
 ### ディレクトリ構造
 
 ```
-~/Documents/maya/faketools_data/          # データルート
+~/Documents/maya/faketools_workspace/          # データルート
 ├── rig/                                  # カテゴリ
 │   ├── transform_connector/              # ツール
 │   │   └── presets.json

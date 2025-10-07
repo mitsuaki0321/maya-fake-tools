@@ -76,7 +76,7 @@ class ToolDataManager:
             >>> manager = ToolDataManager("skin_weights", "rig")
             >>> data_dir = manager.get_data_dir()
             >>> print(data_dir)
-            /home/user/Documents/maya/faketools_data/rig/skin_weights
+            /home/user/Documents/maya/faketools_workspace/rig/skin_weights
         """
         return self._resolve_data_dir()
 
@@ -129,7 +129,7 @@ class ToolDataManager:
             >>> manager = ToolDataManager("skin_weights", "rig")
             >>> file_path = manager.get_data_path("character_a.json")
             >>> print(file_path)
-            /home/user/Documents/maya/faketools_data/rig/skin_weights/character_a.json
+            /home/user/Documents/maya/faketools_workspace/rig/skin_weights/character_a.json
         """
         data_dir = self._resolve_data_dir()
         file_path = data_dir / filename
