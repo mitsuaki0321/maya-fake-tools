@@ -7,11 +7,17 @@ Provides decorators and utilities for Maya UI development:
 - Maya window integration
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable
 import functools
 import traceback
+from typing import TYPE_CHECKING
 
 import maya.cmds as cmds
+
+if TYPE_CHECKING:
+    from .qt_compat import QWidget
 
 
 def error_handler(func: Callable) -> Callable:
@@ -112,7 +118,7 @@ def disable_undo(func: Callable) -> Callable:
     return wrapper
 
 
-def get_maya_window():
+def get_maya_window() -> QWidget | None:
     """
     Get the Maya main window as a Qt widget.
 

@@ -108,11 +108,11 @@ try:
     QT_VERSION_MAJOR = 5
 
     # Additional compatibility helpers
-    def get_open_file_name(parent=None, caption="", directory="", filter="", selectedFilter=""):
+    def get_open_file_name(parent=None, caption: str = "", directory: str = "", filter: str = "", selectedFilter: str = "") -> tuple[str, str]:
         """Wrapper for QFileDialog.getOpenFileName with consistent signature."""
         return QFileDialog.getOpenFileName(parent, caption, directory, filter, selectedFilter)
 
-    def get_save_file_name(parent=None, caption="", directory="", filter="", selectedFilter=""):
+    def get_save_file_name(parent=None, caption: str = "", directory: str = "", filter: str = "", selectedFilter: str = "") -> tuple[str, str]:
         """Wrapper for QFileDialog.getSaveFileName with consistent signature."""
         return QFileDialog.getSaveFileName(parent, caption, directory, filter, selectedFilter)
 
@@ -213,12 +213,12 @@ except ImportError:
     QT_VERSION_MAJOR = 6
 
     # Additional compatibility helpers
-    def get_open_file_name(parent=None, caption="", directory="", filter="", selectedFilter=""):
+    def get_open_file_name(parent=None, caption: str = "", directory: str = "", filter: str = "", selectedFilter: str = "") -> tuple[str, str]:
         """Wrapper for QFileDialog.getOpenFileName with consistent signature."""
         result = QFileDialog.getOpenFileName(parent, caption, directory, filter, selectedFilter)
         return result[0], result[1]
 
-    def get_save_file_name(parent=None, caption="", directory="", filter="", selectedFilter=""):
+    def get_save_file_name(parent=None, caption: str = "", directory: str = "", filter: str = "", selectedFilter: str = "") -> tuple[str, str]:
         """Wrapper for QFileDialog.getSaveFileName with consistent signature."""
         result = QFileDialog.getSaveFileName(parent, caption, directory, filter, selectedFilter)
         return result[0], result[1]

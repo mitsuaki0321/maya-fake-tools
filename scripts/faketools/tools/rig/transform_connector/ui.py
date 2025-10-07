@@ -5,6 +5,7 @@ import logging
 import maya.cmds as cmds
 
 from ....lib_ui.maya_ui import error_handler, get_maya_window, undo_chunk
+from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import (
     QCheckBox,
     QGridLayout,
@@ -41,9 +42,13 @@ class MainWindow(QWidget):
         self.setWindowTitle("Transform Connector")
         self.setObjectName("TransformConnectorMainWindow")
 
+        # UI settings
+        self.settings = ToolOptionSettings(__name__)
+
         # Translate, Rotate, Scale, JointOrient, Visibility
         self.checkboxes = {}
         self.setup_ui()
+        self._restore_settings()
 
     def setup_ui(self):
         """Setup the user interface."""
@@ -180,6 +185,57 @@ class MainWindow(QWidget):
                         enable_attributes.append(f"{attribute}{axis}")
 
         return enable_attributes
+
+    def _restore_settings(self):
+        """Restore UI settings from saved preferences."""
+        # Restore window geometry
+        geometry = self.settings.get_window_geometry()
+        if geometry:
+            self.resize(*geometry["size"])
+            if "position" in geometry:
+                self.move(*geometry["position"])
+
+        # Restore checkbox states
+        checkbox_states = self.settings.read("checkbox_states", {})
+        for attribute, checkboxes in self.checkboxes.items():
+            if attribute == "visibility":
+                state = checkbox_states.get(attribute, False)
+                checkboxes[0].setChecked(state)
+            else:
+                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes, strict=False):
+                    key = f"{attribute}{axis}"
+                    state = checkbox_states.get(key, False)
+                    checkbox.setChecked(state)
+
+        logger.debug("UI settings restored")
+
+    def _save_settings(self):
+        """Save UI settings to preferences."""
+        # Save window geometry
+        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+
+        # Save checkbox states
+        checkbox_states = {}
+        for attribute, checkboxes in self.checkboxes.items():
+            if attribute == "visibility":
+                checkbox_states[attribute] = checkboxes[0].isChecked()
+            else:
+                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes, strict=False):
+                    key = f"{attribute}{axis}"
+                    checkbox_states[key] = checkbox.isChecked()
+
+        self.settings.write("checkbox_states", checkbox_states)
+        logger.debug("UI settings saved")
+
+    def closeEvent(self, event):
+        """
+        Handle window close event.
+
+        Args:
+            event: Close event
+        """
+        self._save_settings()
+        super().closeEvent(event)
 
 
 def show_ui():

@@ -37,6 +37,21 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - Provides standard metadata structure
    - TOOL_CONFIG approach is preferred over BaseTool inheritance
 
+6. **Logging System** ([scripts/faketools/logging_config.py](scripts/faketools/logging_config.py))
+   - Centralized logging for entire package under `faketools` logger
+   - Auto-initialized on package import via `__init__.py`
+   - Functions: `setup_logging(level, detailed)`, `set_log_level(level)`, `get_log_level()`
+   - All modules use `logging.getLogger(__name__)` for automatic hierarchy
+   - See [LOGGING_USAGE.md](LOGGING_USAGE.md) for detailed guide
+
+7. **Settings System** (3 independent systems for different purposes)
+   - **Global Config** ([scripts/faketools/config.py](scripts/faketools/config.py)): FakeTools-wide settings stored in JSON at `~/Documents/maya/faketools/config.json`
+   - **ToolOptionSettings** ([scripts/faketools/lib_ui/optionvar.py](scripts/faketools/lib_ui/optionvar.py)): Per-tool settings in Maya optionVar with JSON serialization
+     - Includes convenience methods: `get_window_geometry()`, `set_window_geometry()`
+     - Use this for all tool UI preferences (window size, checkbox states, etc.)
+   - **Tool Data Manager** ([scripts/faketools/lib_ui/tool_data.py](scripts/faketools/lib_ui/tool_data.py)): Per-tool data directory management for files
+   - See [SETTINGS_USAGE.md](SETTINGS_USAGE.md) for detailed guide
+
 ## Tool Structure
 
 Tools are organized under [scripts/faketools/tools/](scripts/faketools/tools/) by category:
@@ -205,7 +220,74 @@ uv run ruff format .
 uv run ruff check . --fix
 ```
 
+## Logging Management
+
+### Change Log Level at Runtime
+```python
+import faketools
+import logging
+
+# Set to DEBUG for verbose output during development
+faketools.set_log_level(logging.DEBUG)
+
+# Set to INFO for normal operation (default)
+faketools.set_log_level(logging.INFO)
+```
+
+### Use Logger in Modules
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+def my_function():
+    logger.debug("Debug message")
+    logger.info("Info message")
+    logger.warning("Warning message")
+    logger.error("Error message")
+```
+
+## Settings Management
+
+### Global Settings (JSON file)
+```python
+from faketools.config import get_global_config
+
+config = get_global_config()
+config.set_data_root_dir("D:/MyProject/maya_data")
+config.set_log_level("DEBUG")
+config.save()  # Must call save() to persist changes
+```
+
+### Tool Settings (Maya optionVar) - Use ToolOptionSettings
+```python
+from faketools.lib_ui.optionvar import ToolOptionSettings
+
+settings = ToolOptionSettings(__name__)
+settings.write("window_size", [800, 600])
+size = settings.read("window_size", [400, 300])
+
+# Window geometry helpers
+settings.set_window_geometry([800, 600], [100, 100])
+geometry = settings.get_window_geometry()
+```
+
+### Tool Data Files (filesystem)
+```python
+from faketools.lib_ui.tool_data import ToolDataManager
+
+data_manager = ToolDataManager("skin_weights", "rig")
+data_manager.ensure_data_dir()
+file_path = data_manager.get_data_path("character_a.json")
+```
+
+## Future Work
+
+- **Plugins directory**: Currently empty, planned for future C++ plugins
+
 ## Additional Documentation
 
-- **DEVELOP.md**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
+- **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
+- **[SETTINGS_USAGE.md](SETTINGS_USAGE.md)**: Settings system usage guide (Japanese)
+- **[LOGGING_USAGE.md](LOGGING_USAGE.md)**: Logging system usage guide (Japanese)
 - **Example Tool**: [scripts/faketools/tools/common/example_tool/](scripts/faketools/tools/common/example_tool/) demonstrates complete tool structure
