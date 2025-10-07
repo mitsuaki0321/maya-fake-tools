@@ -4,15 +4,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Maya tools package that extends Autodesk Maya through plugins and scripts. The project uses Maya's module system (`.mod` file) for integration.
+Maya tools package that extends Autodesk Maya through plugins and scripts using a plugin-based architecture with automatic tool discovery and registration. The project uses Maya's module system (`.mod` file) for integration.
+
+## Core Architecture
+
+### FakeTools Framework Components
+
+1. **Tool Registry System** ([scripts/faketools/core/registry.py](scripts/faketools/core/registry.py))
+   - `ToolRegistry`: Automatically discovers and registers tools from `tools/` directory
+   - `get_registry()`: Access global singleton registry instance
+   - Discovers tools by scanning for `TOOL_CONFIG` dictionaries in tool `__init__.py` files
+   - Alternative: Auto-detects `BaseTool` subclasses if no config found
+
+2. **Menu System** ([scripts/faketools/menu.py](scripts/faketools/menu.py))
+   - Creates dynamic "FakeTools" menu in Maya's main menu bar
+   - Automatically organizes tools by category (rig/model/anim/common)
+   - Functions: `add_menu()`, `remove_menu()`, `reload_menu()`
+
+3. **Qt Compatibility Layer** ([scripts/faketools/lib_ui/qt_compat.py](scripts/faketools/lib_ui/qt_compat.py))
+   - Provides unified imports for PySide2 (Maya 2022-) and PySide6 (Maya 2023+)
+   - All Qt imports must use this module, never import PySide2/6 directly
+   - Provides helper functions: `get_open_file_name()`, `get_save_file_name()`
+
+4. **Maya UI Decorators** ([scripts/faketools/lib_ui/maya_ui.py](scripts/faketools/lib_ui/maya_ui.py))
+   - `@error_handler`: Catches errors and displays in Maya dialog (UI layer only)
+   - `@undo_chunk(name)`: Groups operations into single undo operation (UI layer only)
+   - `@disable_undo`: Disables undo for query operations (UI layer only)
+   - `get_maya_window()`: Returns Maya main window as Qt parent widget
+
+5. **BaseTool** ([scripts/faketools/core/base/tool.py](scripts/faketools/core/base/tool.py))
+   - Optional base class for tools (inheritance not required)
+   - Provides standard metadata structure
+   - TOOL_CONFIG approach is preferred over BaseTool inheritance
+
+## Tool Structure
+
+Tools are organized under [scripts/faketools/tools/](scripts/faketools/tools/) by category:
+- `rig/`: Rigging tools
+- `model/`: Modeling tools
+- `anim/`: Animation tools
+- `common/`: Common/utility tools
+
+Each tool follows this structure:
+```
+tools/{category}/{tool_name}/
+├── __init__.py      # TOOL_CONFIG dict + exports
+├── ui.py           # UI layer with show_ui() function
+└── command.py      # Business logic (Maya operations)
+```
+
+### Layer Separation Pattern
+
+**IMPORTANT**: Tools must separate UI and business logic:
+
+- **UI Layer** (`ui.py`): User interaction, decorators, Qt widgets
+  - Must define `show_ui()` function (called by menu system)
+  - Use decorators: `@error_handler`, `@undo_chunk`, `@disable_undo`
+  - Calls functions in command layer
+
+- **Command Layer** (`command.py`): Pure Maya operations
+  - NO decorators allowed (pure functions)
+  - Returns results to UI layer
+  - No error dialogs, only return values/raise exceptions
+
+### Tool Registration
+
+Tools must define `TOOL_CONFIG` in `__init__.py`:
+```python
+TOOL_CONFIG = {
+    "name": "Tool Display Name",
+    "version": "1.0.0",
+    "description": "Tool description",
+    "menu_label": "Menu Item Label",
+    "requires_selection": False,
+    "author": "Author Name",
+    "category": "rig",  # rig/model/anim/common
+}
+```
 
 ## Project Structure
 
 - **faketools.mod**: Maya module descriptor defining package paths
   - Module name: `maya_fake_tools` version 1.0.0
   - Declares paths: `plug-ins: .\plug-ins` and `scripts: .\scripts`
-- **plug-ins/**: Maya plugins (Python/C++ API plugins)
-- **scripts/**: Maya scripts (Python/MEL)
+- **plug-ins/**: Maya plugins (currently empty, planned for future)
+- **scripts/faketools/**: Main package
+  - `core/`: Framework core (registry, base classes)
+  - `lib/`: Shared utilities (planned for future)
+  - `lib_ui/`: UI utilities (Qt compat, Maya decorators, widgets)
+  - `tools/`: Category-organized tools
+  - `menu.py`: Menu system
 
 ## Development Commands
 
@@ -80,6 +161,42 @@ class ClassName:
     pass
 ```
 
+## Import Patterns
+
+### Relative Imports (within tools)
+```python
+from . import command              # Same tool's command.py
+from .ui import MainWindow         # Same tool's ui.py
+```
+
+### Global Library Imports (from tool files)
+```python
+# From tools/{category}/{tool_name}/ui.py to lib_ui (4 levels up):
+from ....lib_ui.qt_compat import QWidget, QPushButton
+from ....lib_ui.maya_ui import error_handler, get_maya_window, undo_chunk
+```
+
+### CRITICAL: Never Import PySide Directly
+```python
+# WRONG - Do not do this:
+from PySide2.QtWidgets import QWidget
+
+# CORRECT - Always use qt_compat:
+from ....lib_ui.qt_compat import QWidget
+```
+
+## Creating New Tools
+
+When creating a new tool:
+
+1. Create directory: `tools/{category}/{tool_name}/`
+2. Create `__init__.py` with `TOOL_CONFIG` and exports
+3. Create `ui.py` with `MainWindow` class and `show_ui()` function
+4. Create `command.py` with pure Maya operations (no decorators)
+5. Test in Maya with: `import faketools.menu; faketools.menu.reload_menu()`
+
+Refer to [scripts/faketools/tools/common/example_tool/](scripts/faketools/tools/common/example_tool/) as a template.
+
 ## Workflow
 
 **Always run Ruff at the end of any code changes:**
@@ -87,3 +204,8 @@ class ClassName:
 uv run ruff format .
 uv run ruff check . --fix
 ```
+
+## Additional Documentation
+
+- **DEVELOP.md**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
+- **Example Tool**: [scripts/faketools/tools/common/example_tool/](scripts/faketools/tools/common/example_tool/) demonstrates complete tool structure
