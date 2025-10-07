@@ -210,3 +210,5 @@ __marimo__/
 .vscode/cSpell.json
 .vscode/settings.json
 main.py
+.claude
+CLAUDE.md
