@@ -69,9 +69,15 @@ config.reset_to_defaults()
 
 ### デフォルト設定
 
+`data_root_dir` は `MAYA_APP_DIR` 環境変数から自動的に決定されます：
+- `MAYA_APP_DIR` が設定されている場合: `$MAYA_APP_DIR/faketools_data`
+- 未設定の場合:
+  - Windows: `~/Documents/maya/faketools_data`
+  - macOS/Linux: `~/maya/faketools_data`
+
 ```json
 {
-    "data_root_dir": "~/Documents/maya/faketools_data",
+    "data_root_dir": "<MAYA_APP_DIR>/faketools_data または ~/Documents/maya/faketools_data",
     "log_level": "INFO",
     "version": "1.0.0"
 }

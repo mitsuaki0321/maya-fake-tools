@@ -7,14 +7,37 @@ Settings are stored in a JSON file in the user's home directory.
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
+def _get_default_data_root_dir() -> str:
+    """
+    Get the default data root directory based on Maya's app directory.
+
+    Returns:
+        str: Path to default data directory
+    """
+    # Try to get MAYA_APP_DIR first (respects Maya's per-version directories)
+    maya_app_dir = os.environ.get("MAYA_APP_DIR")
+    if maya_app_dir:
+        return str(Path(maya_app_dir) / "faketools_data")
+
+    # Fallback to platform-specific defaults
+    # Windows: ~/Documents/maya/faketools_data
+    # macOS/Linux: ~/maya/faketools_data
+    if os.name == "nt":
+        return "~/Documents/maya/faketools_data"
+
+    return "~/maya/faketools_data"
+
+
 # Default configuration values
 DEFAULT_CONFIG = {
-    "data_root_dir": "~/Documents/maya/faketools_data",
+    "data_root_dir": _get_default_data_root_dir(),
     "log_level": "INFO",
     "version": "1.0.0",
 }
