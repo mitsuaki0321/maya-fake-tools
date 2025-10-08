@@ -117,6 +117,8 @@ try:
         """Wrapper for QFileDialog.getSaveFileName with consistent signature."""
         return QFileDialog.getSaveFileName(parent, caption, directory, filter, selectedFilter)
 
+    import shiboken2 as shiboken
+
 except ImportError:
     # Fall back to PySide6 (Maya 2023 and later)
     from PySide6 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
@@ -224,6 +226,8 @@ except ImportError:
         """Wrapper for QFileDialog.getSaveFileName with consistent signature."""
         result = QFileDialog.getSaveFileName(parent, caption, directory, filter, selectedFilter)
         return result[0], result[1]
+
+    import shiboken6 as shiboken
 
 
 # Common aliases for convenience
@@ -354,4 +358,6 @@ __all__ = [
     "is_pyside6",
     "get_open_file_name",
     "get_save_file_name",
+    # "shiboken"
+    "shiboken",
 ]

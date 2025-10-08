@@ -5,7 +5,8 @@ import logging
 import maya.cmds as cmds
 
 from ....lib_ui.base_window import BaseMainWindow
-from ....lib_ui.maya_ui import error_handler, get_maya_window, undo_chunk
+from ....lib_ui.maya_decorator import error_handler, undo_chunk
+from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, Qt
 from . import command
@@ -249,7 +250,7 @@ def show_ui():
         except RuntimeError:
             pass
 
-    parent = get_maya_window()
+    parent = get_maya_main_window()
     _instance = MainWindow(parent)
     _instance.show()
     return _instance
