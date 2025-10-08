@@ -38,6 +38,10 @@ class ToolRegistry:
         Args:
             tools_path (Path | None): Path to tools directory (default: scripts/faketools/tools)
         """
+        # Clear existing tools to prevent duplicates
+        self._tools.clear()
+        self._categories.clear()
+
         if tools_path is None:
             # Get the default tools path
             module_dir = Path(__file__).parent.parent
@@ -168,7 +172,10 @@ class ToolRegistry:
         # Update category index
         if category not in self._categories:
             self._categories[category] = []
-        self._categories[category].append(tool_id)
+
+        # Only append if not already in the list (safety check)
+        if tool_id not in self._categories[category]:
+            self._categories[category].append(tool_id)
 
         logger.info(f"Registered tool from config: {tool_id}")
 
@@ -197,7 +204,10 @@ class ToolRegistry:
         # Update category index
         if category not in self._categories:
             self._categories[category] = []
-        self._categories[category].append(tool_id)
+
+        # Only append if not already in the list (safety check)
+        if tool_id not in self._categories[category]:
+            self._categories[category].append(tool_id)
 
         logger.info(f"Registered tool class: {tool_id}")
 
@@ -287,14 +297,21 @@ class ToolRegistry:
 
             menu_items = []
             for tool in tools:
+                # Use menu_label from config, fallback to name
+                label = tool["name"]
+                if "config" in tool and "menu_label" in tool["config"]:
+                    label = tool["config"]["menu_label"]
+
                 menu_item = {
-                    "label": tool["name"],
+                    "label": label,
                     "tool_id": tool["id"],
                     "command": self._generate_menu_command(tool["id"]),
                 }
 
-                # Add metadata if available
-                if "metadata" in tool:
+                # Add description from config or metadata
+                if "config" in tool:
+                    menu_item["description"] = tool["config"].get("description", "")
+                elif "metadata" in tool:
                     menu_item["description"] = tool["metadata"].get("description", "")
 
                 menu_items.append(menu_item)

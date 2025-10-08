@@ -88,6 +88,8 @@ tools/{category}/{tool_name}/
 
 Tools must define `TOOL_CONFIG` in `__init__.py`:
 ```python
+"""Tool description."""
+
 TOOL_CONFIG = {
     "name": "Tool Display Name",
     "version": "1.0.0",
@@ -97,7 +99,11 @@ TOOL_CONFIG = {
     "author": "Author Name",
     "category": "rig",  # rig/model/anim/common
 }
+
+__all__ = ["TOOL_CONFIG"]
 ```
+
+**IMPORTANT**: Do NOT import ui or command modules in `__init__.py`. Only define `TOOL_CONFIG` and `__all__`. The registry system will dynamically import ui modules when needed. This prevents import errors during tool discovery.
 
 ### Resolution-Independent UI Design
 
@@ -197,6 +203,29 @@ These cases are acceptable:
 
 ## Development Commands
 
+### Module Cleanup (Development)
+During development, you may need to reload modules after making changes. Use the module cleaner to remove all faketools modules from memory:
+
+```python
+# In Maya Script Editor
+import faketools.module_cleaner
+faketools.module_cleaner.cleanup()
+
+# Or use the short alias
+faketools.module_cleaner.clean()
+
+# Then reload
+import faketools
+import faketools.menu
+faketools.menu.add_menu()
+```
+
+This will:
+1. Close all open tool windows
+2. Remove the FakeTools menu
+3. Remove all faketools modules from `sys.modules`
+4. Force garbage collection
+
 ### Linting and Formatting
 ```bash
 # Format code
@@ -295,8 +324,6 @@ When creating a new tool:
 4. Create `command.py` with pure Maya operations (no decorators)
 5. Test in Maya with: `import faketools.menu; faketools.menu.reload_menu()`
 
-Refer to [scripts/faketools/tools/common/example_tool/](scripts/faketools/tools/common/example_tool/) as a template.
-
 ## Workflow
 
 **Always run Ruff at the end of any code changes:**
@@ -375,4 +402,3 @@ file_path = data_manager.get_data_path("character_a.json")
 - **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
 - **[SETTINGS_USAGE.md](SETTINGS_USAGE.md)**: Settings system usage guide (Japanese)
 - **[LOGGING_USAGE.md](LOGGING_USAGE.md)**: Logging system usage guide (Japanese)
-- **Example Tool**: [scripts/faketools/tools/common/example_tool/](scripts/faketools/tools/common/example_tool/) demonstrates complete tool structure
