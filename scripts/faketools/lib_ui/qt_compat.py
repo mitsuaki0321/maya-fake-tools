@@ -52,6 +52,7 @@ try:
         QFileDialog,
         QFontDialog,
         QFormLayout,
+        QFrame,
         QGraphicsItem,
         QGraphicsScene,
         QGraphicsView,
@@ -157,6 +158,7 @@ except ImportError:
         QFileDialog,
         QFontDialog,
         QFormLayout,
+        QFrame,
         QGraphicsItem,
         QGraphicsScene,
         QGraphicsView,
@@ -342,6 +344,7 @@ __all__ = [
     "QStyleOption",
     "QStyleOptionButton",
     "QStyleOptionComboBox",
+    "QFrame",
     # Version info
     "QT_VERSION",
     "QT_VERSION_MAJOR",
