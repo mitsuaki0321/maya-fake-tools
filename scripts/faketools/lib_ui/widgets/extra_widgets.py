@@ -100,3 +100,41 @@ class ToolIconButton(QPushButton):
         h, s, v, a = color.getHsv()
         v = max(0, min(v * factor, 255))
         return QColor.fromHsv(h, s, v, a)
+
+
+class CheckBoxButton(QPushButton):
+    """Check box button widget."""
+
+    def __init__(self, icon_on, icon_off, parent=None):
+        """Constructor.
+
+        Args:
+            icon_on (QIcon): The icon when checked.
+            icon_off (QIcon): The icon when unchecked.
+            parent (QWidget): Parent widget.
+        """
+        super().__init__(parent=parent)
+
+        self.icon_on = QIcon(icons.get_path(icon_on))
+        self.icon_off = QIcon(icons.get_path(icon_off))
+
+        self.setCheckable(True)
+        self.setChecked(False)
+
+        self.setIcon(self.icon_off)
+        self.setIconSize(self.icon_on.actualSize(self.size()))
+
+        self.setStyleSheet("border: none;")
+
+        self.toggled.connect(self.update_icon)
+
+    def update_icon(self, checked):
+        """Update the icon based on the checked state.
+
+        Args:
+            checked (bool): The checked state.
+        """
+        if checked:
+            self.setIcon(self.icon_on)
+        else:
+            self.setIcon(self.icon_off)

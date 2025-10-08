@@ -14,7 +14,7 @@ Usage:
 # Try to import PySide2 first (Maya 2022 and earlier)
 try:
     from PySide2 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide2.QtCore import QAbstractItemModel, QEvent, QObject, QSize, Qt, QThread, QTimer, Signal, Slot
+    from PySide2.QtCore import QAbstractItemModel, QEvent, QObject, QPoint, QRectF, QSize, Qt, QThread, QTimer, Signal, Slot
     from PySide2.QtGui import (
         QBrush,
         QColor,
@@ -35,6 +35,7 @@ try:
         QRegExpValidator,
         QStandardItem,
         QStandardItemModel,
+        QTransform,
         QValidator,
     )
     from PySide2.QtWidgets import (
@@ -54,7 +55,9 @@ try:
         QFormLayout,
         QFrame,
         QGraphicsItem,
+        QGraphicsRectItem,
         QGraphicsScene,
+        QGraphicsTextItem,
         QGraphicsView,
         QGraphicsWidget,
         QGridLayout,
@@ -75,6 +78,7 @@ try:
         QProgressBar,
         QPushButton,
         QRadioButton,
+        QRubberBand,
         QScrollArea,
         QSizePolicy,
         QSlider,
@@ -122,7 +126,7 @@ try:
 except ImportError:
     # Fall back to PySide6 (Maya 2023 and later)
     from PySide6 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide6.QtCore import QAbstractItemModel, QEvent, QObject, QSize, Qt, QThread, QTimer, Signal, Slot
+    from PySide6.QtCore import QAbstractItemModel, QEvent, QObject, QPoint, QRectF, QSize, Qt, QThread, QTimer, Signal, Slot
     from PySide6.QtGui import (
         QAction,
         QActionGroup,
@@ -145,6 +149,7 @@ except ImportError:
         QRegularExpressionValidator as QRegExpValidator,
         QStandardItem,
         QStandardItemModel,
+        QTransform,
         QValidator,
     )
     from PySide6.QtWidgets import (
@@ -162,7 +167,9 @@ except ImportError:
         QFormLayout,
         QFrame,
         QGraphicsItem,
+        QGraphicsRectItem,
         QGraphicsScene,
+        QGraphicsTextItem,
         QGraphicsView,
         QGraphicsWidget,
         QGridLayout,
@@ -183,6 +190,7 @@ except ImportError:
         QProgressBar,
         QPushButton,
         QRadioButton,
+        QRubberBand,
         QScrollArea,
         QSizePolicy,
         QSlider,
@@ -262,6 +270,8 @@ __all__ = [
     "QTimer",
     "QThread",
     "QSize",
+    "QPoint",
+    "QRectF",
     # GUI classes
     "QFont",
     "QFontMetrics",
@@ -281,6 +291,7 @@ __all__ = [
     "QBrush",
     "QPolygon",
     "QPolygonF",
+    "QTransform",
     # Widget classes
     "QApplication",
     "QMainWindow",
@@ -339,7 +350,10 @@ __all__ = [
     "QGraphicsScene",
     "QGraphicsView",
     "QGraphicsItem",
+    "QGraphicsRectItem",
+    "QGraphicsTextItem",
     "QGraphicsWidget",
+    "QRubberBand",
     "QSizePolicy",
     "QSpacerItem",
     "QCompleter",
