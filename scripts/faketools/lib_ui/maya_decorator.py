@@ -7,6 +7,7 @@ import functools
 import traceback
 from typing import TYPE_CHECKING
 
+from maya.api.OpenMaya import MGlobal
 import maya.cmds as cmds
 
 if TYPE_CHECKING:
@@ -23,6 +24,9 @@ def error_handler(func: Callable) -> Callable:
     Args:
         func (Callable): Function to wrap
 
+    Notes:
+        - functools.wraps is not used because it prevents error output from appearing in Maya's command port.
+
     Example:
         @error_handler
         def on_button_clicked(self):
@@ -30,14 +34,12 @@ def error_handler(func: Callable) -> Callable:
             pass
     """
 
-    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            error_msg = f"Error in {func.__name__}: {str(e)}\n\n{traceback.format_exc()}"
-            cmds.confirmDialog(title="Error", message=error_msg, button=["OK"], defaultButton="OK", icon="critical")
-            raise
+            traceback.print_exc()
+            MGlobal.displayError(str(e))
 
     return wrapper
 

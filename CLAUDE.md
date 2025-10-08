@@ -26,11 +26,21 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - All Qt imports must use this module, never import PySide2/6 directly
    - Provides helper functions: `get_open_file_name()`, `get_save_file_name()`
 
-4. **Maya UI Decorators** ([scripts/faketools/lib_ui/maya_ui.py](scripts/faketools/lib_ui/maya_ui.py))
-   - `@error_handler`: Catches errors and displays in Maya dialog (UI layer only)
-   - `@undo_chunk(name)`: Groups operations into single undo operation (UI layer only)
-   - `@disable_undo`: Disables undo for query operations (UI layer only)
-   - `get_maya_window()`: Returns Maya main window as Qt parent widget
+4. **Maya UI Libraries** ([scripts/faketools/lib_ui/](scripts/faketools/lib_ui/))
+   - **maya_decorator.py**: UI decorators
+     - `@error_handler`: Catches errors and displays in Maya dialog (UI layer only)
+     - `@undo_chunk(name)`: Groups operations into single undo operation (UI layer only)
+     - `@disable_undo`: Disables undo for query operations (UI layer only)
+   - **maya_dialog.py**: Dialog helpers
+     - `show_error_dialog()`, `show_warning_dialog()`, `show_info_dialog()`, `confirm_dialog()`
+   - **maya_ui.py**: Maya UI functions
+     - `get_channels()`: Get attributes from channel box
+     - `get_modifiers()`: Get current modifier keys (Shift, Ctrl, Alt)
+   - **maya_qt.py**: Qt-Maya conversion utilities
+     - `qt_widget_from_maya_control()`: Convert Maya control to Qt widget
+     - `maya_name_from_qt_widget()`: Get Maya name from Qt widget
+     - `qt_widget_from_maya_window()`: Convert Maya window to Qt widget
+     - `get_maya_main_window()`: Get Maya main window as Qt parent
 
 5. **BaseTool** ([scripts/faketools/core/base/tool.py](scripts/faketools/core/base/tool.py))
    - Optional base class for tools (inheritance not required)
@@ -53,6 +63,12 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - Use this for all tool UI preferences (window size, checkbox states, etc.)
    - **Tool Data Manager** ([scripts/faketools/lib_ui/tool_data.py](scripts/faketools/lib_ui/tool_data.py)): Per-tool data directory management for files
    - See [SETTINGS_USAGE.md](SETTINGS_USAGE.md) for detailed guide
+
+8. **Shared Utilities** ([scripts/faketools/lib/](scripts/faketools/lib/))
+   - **lib_attribute.py**: Maya attribute utilities
+     - `is_modifiable(node, attribute)`: Check if attribute can be modified (not locked/connected)
+     - `get_channelBox_attr(node)`: Get channel box visible attributes
+     - `AttributeLockHandler`: Context manager for temporarily unlocking attributes
 
 ## Tool Structure
 
@@ -83,6 +99,110 @@ tools/{category}/{tool_name}/
   - NO decorators allowed (pure functions)
   - Returns results to UI layer
   - No error dialogs, only return values/raise exceptions
+
+### Recommended UI Pattern
+
+**UI Layer Structure** (see [transform_connector/ui.py](scripts/faketools/tools/rig/transform_connector/ui.py) as reference):
+
+```python
+"""Tool UI layer."""
+
+import logging
+
+from ....lib_ui import (
+    BaseMainWindow,
+    ToolOptionSettings,
+    error_handler,
+    get_maya_main_window,
+    undo_chunk,
+)
+from ....lib_ui.qt_compat import QPushButton, QVBoxLayout
+from . import command
+
+logger = logging.getLogger(__name__)
+_instance = None  # Global instance for singleton pattern
+
+
+class MainWindow(BaseMainWindow):
+    """Main window for the tool."""
+
+    def __init__(self, parent=None):
+        """Initialize the window."""
+        super().__init__(
+            parent=parent,
+            object_name="MyToolMainWindow",  # Unique name
+            window_title="My Tool",
+            central_layout="vertical",  # or "horizontal"
+        )
+        self.settings = ToolOptionSettings(__name__)
+        self.setup_ui()
+        self._restore_settings()
+
+    def setup_ui(self):
+        """Setup the user interface."""
+        # Create widgets
+        button = QPushButton("Execute")
+        button.clicked.connect(self._on_execute)
+        self.central_layout.addWidget(button)
+
+    @error_handler
+    @undo_chunk("My Tool: Execute")
+    def _on_execute(self):
+        """Handle button click."""
+        # Call command layer
+        result = command.execute_operation()
+        logger.info(f"Operation completed: {result}")
+
+    def _restore_settings(self):
+        """Restore UI settings from saved preferences."""
+        geometry = self.settings.get_window_geometry()
+        if geometry:
+            self.resize(*geometry["size"])
+            if "position" in geometry:
+                self.move(*geometry["position"])
+
+    def _save_settings(self):
+        """Save UI settings to preferences."""
+        self.settings.set_window_geometry(
+            size=[self.width(), self.height()],
+            position=[self.x(), self.y()]
+        )
+
+    def closeEvent(self, event):
+        """Handle window close event."""
+        self._save_settings()
+        super().closeEvent(event)
+
+
+def show_ui():
+    """Show the tool UI (entry point)."""
+    global _instance
+
+    # Close existing instance
+    if _instance is not None:
+        try:
+            _instance.close()
+            _instance.deleteLater()
+        except RuntimeError:
+            pass
+
+    # Create new instance
+    parent = get_maya_main_window()
+    _instance = MainWindow(parent)
+    _instance.show()
+    return _instance
+
+
+__all__ = ["MainWindow", "show_ui"]
+```
+
+**Key Points:**
+- Inherit from `BaseMainWindow` (not QMainWindow or QWidget)
+- Use singleton pattern with global `_instance`
+- Implement `_restore_settings()` and `_save_settings()` for persistence
+- Use `@error_handler` and `@undo_chunk` decorators on UI callbacks
+- Call command layer functions, never implement logic in UI layer
+- Use `closeEvent()` to save settings before closing
 
 ### Tool Registration
 
@@ -196,10 +316,21 @@ These cases are acceptable:
 - **plug-ins/**: Maya plugins (currently empty, planned for future)
 - **scripts/faketools/**: Main package
   - `core/`: Framework core (registry, base classes)
-  - `lib/`: Shared utilities (planned for future)
-  - `lib_ui/`: UI utilities (Qt compat, Maya decorators, widgets)
-  - `tools/`: Category-organized tools
+  - `lib/`: Shared Maya utilities (attribute operations, etc.)
+  - `lib_ui/`: UI-specific utilities
+    - `base_window.py`: BaseMainWindow and resolution utilities
+    - `maya_decorator.py`: UI decorators (@error_handler, @undo_chunk, @disable_undo)
+    - `maya_dialog.py`: Dialog helpers
+    - `maya_qt.py`: Qt-Maya conversion utilities
+    - `maya_ui.py`: Maya UI functions (get_channels, get_modifiers)
+    - `optionvar.py`: Tool settings management
+    - `qt_compat.py`: PySide2/6 compatibility layer
+    - `tool_data.py`: Tool data directory management
+    - `ui_utils.py`: Resolution-independent UI calculations
+  - `tools/`: Category-organized tools (rig/model/anim/common)
   - `menu.py`: Menu system
+  - `config.py`: Global configuration
+  - `logging_config.py`: Logging system
 
 ## Development Commands
 
@@ -299,10 +430,30 @@ from .ui import MainWindow         # Same tool's ui.py
 ```
 
 ### Global Library Imports (from tool files)
+
+**Recommended: Use consolidated imports from lib_ui**
 ```python
-# From tools/{category}/{tool_name}/ui.py to lib_ui (4 levels up):
+# From tools/{category}/{tool_name}/ui.py
+from ....lib_ui import (
+    BaseMainWindow,
+    ToolOptionSettings,
+    error_handler,
+    get_maya_main_window,
+    undo_chunk,
+)
+from ....lib_ui.qt_compat import QPushButton, QVBoxLayout, QWidget
+```
+
+**Direct module imports (alternative)**
+```python
+# From tools/{category}/{tool_name}/ui.py
+from ....lib_ui.base_window import BaseMainWindow
+from ....lib_ui.maya_decorator import error_handler, undo_chunk
+from ....lib_ui.maya_dialog import show_error_dialog, confirm_dialog
+from ....lib_ui.maya_qt import get_maya_main_window, qt_widget_from_maya_window
+from ....lib_ui.maya_ui import get_channels, get_modifiers
+from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QWidget, QPushButton
-from ....lib_ui.maya_ui import error_handler, get_maya_window, undo_chunk
 ```
 
 ### CRITICAL: Never Import PySide Directly

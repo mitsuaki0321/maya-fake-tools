@@ -1,6 +1,6 @@
 """Transform Connector UI."""
 
-import logging
+from logging import getLogger
 
 import maya.cmds as cmds
 
@@ -11,7 +11,7 @@ from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, Qt
 from . import command
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 _instance = None
 
