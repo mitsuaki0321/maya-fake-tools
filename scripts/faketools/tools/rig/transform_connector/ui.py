@@ -4,18 +4,10 @@ import logging
 
 import maya.cmds as cmds
 
+from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_ui import error_handler, get_maya_window, undo_chunk
 from ....lib_ui.optionvar import ToolOptionSettings
-from ....lib_ui.qt_compat import (
-    QCheckBox,
-    QGridLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    Qt,
-    QVBoxLayout,
-    QWidget,
-)
+from ....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, Qt
 from . import command
 
 logger = logging.getLogger(__name__)
@@ -23,7 +15,7 @@ logger = logging.getLogger(__name__)
 _instance = None
 
 
-class MainWindow(QWidget):
+class MainWindow(BaseMainWindow):
     """
     Transform Connector Main Window.
 
@@ -38,9 +30,12 @@ class MainWindow(QWidget):
         Args:
             parent (QWidget | None): Parent widget (typically Maya main window)
         """
-        super().__init__(parent)
-        self.setWindowTitle("Transform Connector")
-        self.setObjectName("TransformConnectorMainWindow")
+        super().__init__(
+            parent=parent,
+            object_name="TransformConnectorMainWindow",
+            window_title="Transform Connector",
+            central_layout="vertical",
+        )
 
         # UI settings
         self.settings = ToolOptionSettings(__name__)
@@ -52,8 +47,6 @@ class MainWindow(QWidget):
 
     def setup_ui(self):
         """Setup the user interface."""
-        main_layout = QVBoxLayout(self)
-
         # Attribute checkboxes grid
         grid_layout = QGridLayout()
 
@@ -97,20 +90,20 @@ class MainWindow(QWidget):
                 on_button.clicked.connect(lambda checked=False, attr=attribute: self._all_on_checked(self.checkboxes[attr]))
                 off_button.clicked.connect(lambda checked=False, attr=attribute: self._all_off_checked(self.checkboxes[attr]))
 
-        main_layout.addLayout(grid_layout)
+        self.central_layout.addLayout(grid_layout)
 
         # Action buttons
         copy_value_button = QPushButton("Copy Value")
         copy_value_button.clicked.connect(self._copy_value)
-        main_layout.addWidget(copy_value_button)
+        self.central_layout.addWidget(copy_value_button)
 
         connect_value_button = QPushButton("Connect Value")
         connect_value_button.clicked.connect(self._connect_attr)
-        main_layout.addWidget(connect_value_button)
+        self.central_layout.addWidget(connect_value_button)
 
         zero_out_button = QPushButton("Zero Out")
         zero_out_button.clicked.connect(self._zero_out)
-        main_layout.addWidget(zero_out_button)
+        self.central_layout.addWidget(zero_out_button)
 
     @staticmethod
     def _all_on_checked(checkboxes):

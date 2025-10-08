@@ -14,13 +14,14 @@ Usage:
 # Try to import PySide2 first (Maya 2022 and earlier)
 try:
     from PySide2 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide2.QtCore import QEvent, QObject, Qt, QThread, QTimer, Signal, Slot
+    from PySide2.QtCore import QAbstractItemModel, QEvent, QObject, QSize, Qt, QThread, QTimer, Signal, Slot
     from PySide2.QtGui import (
         QBrush,
         QColor,
         QCursor,
         QDoubleValidator,
         QFont,
+        QFontMetrics,
         QIcon,
         QImage,
         QIntValidator,
@@ -32,10 +33,11 @@ try:
         QPolygon,
         QPolygonF,
         QRegExpValidator,
+        QStandardItem,
+        QStandardItemModel,
         QValidator,
     )
     from PySide2.QtWidgets import (
-        QAbstractItemModel,
         QAbstractItemView,
         QAction,
         QActionGroup,
@@ -80,8 +82,6 @@ try:
         QSplitter,
         QStackedLayout,
         QStackedWidget,
-        QStandardItem,
-        QStandardItemModel,
         QStatusBar,
         QStyle,
         QStyledItemDelegate,
@@ -119,7 +119,7 @@ try:
 except ImportError:
     # Fall back to PySide6 (Maya 2023 and later)
     from PySide6 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide6.QtCore import QEvent, QObject, Qt, QThread, QTimer, Signal, Slot
+    from PySide6.QtCore import QAbstractItemModel, QEvent, QObject, QSize, Qt, QThread, QTimer, Signal, Slot
     from PySide6.QtGui import (
         QAction,
         QActionGroup,
@@ -128,6 +128,7 @@ except ImportError:
         QCursor,
         QDoubleValidator,
         QFont,
+        QFontMetrics,
         QIcon,
         QImage,
         QIntValidator,
@@ -139,10 +140,11 @@ except ImportError:
         QPolygon,
         QPolygonF,
         QRegularExpressionValidator as QRegExpValidator,
+        QStandardItem,
+        QStandardItemModel,
         QValidator,
     )
     from PySide6.QtWidgets import (
-        QAbstractItemModel,
         QAbstractItemView,
         QApplication,
         QButtonGroup,
@@ -185,8 +187,6 @@ except ImportError:
         QSplitter,
         QStackedLayout,
         QStackedWidget,
-        QStandardItem,
-        QStandardItemModel,
         QStatusBar,
         QStyle,
         QStyledItemDelegate,
@@ -255,8 +255,10 @@ __all__ = [
     "QEvent",
     "QTimer",
     "QThread",
+    "QSize",
     # GUI classes
     "QFont",
+    "QFontMetrics",
     "QIcon",
     "QPalette",
     "QPixmap",

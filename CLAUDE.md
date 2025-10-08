@@ -99,6 +99,89 @@ TOOL_CONFIG = {
 }
 ```
 
+### Resolution-Independent UI Design
+
+**CRITICAL RULE**: Direct pixel/size values are **PROHIBITED** except in special cases.
+
+**Why**: UIs must work across different screen resolutions and DPI settings without modification.
+
+#### Window Class Pattern
+
+Always use `BaseMainWindow` for tool windows:
+
+```python
+from ....lib_ui.base_window import BaseMainWindow
+
+class MainWindow(BaseMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(
+            parent=parent,
+            object_name="MyToolMainWindow",
+            window_title="My Tool",
+            central_layout="vertical"  # or "horizontal"
+        )
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Use self.central_layout (provided by BaseMainWindow)
+        self.central_layout.addWidget(my_widget)
+```
+
+**Benefits of BaseMainWindow:**
+- Inherits from `QMainWindow` (supports menu bar, status bar, toolbars)
+- Auto-configures central widget and layout
+- Sets `Qt.WA_DeleteOnClose` for proper cleanup
+- Applies resolution-independent spacing automatically
+
+#### ❌ Prohibited Patterns
+
+```python
+# WRONG - Hardcoded pixel values
+self.resize(300, 100)
+button.setFixedWidth(120)
+layout.setSpacing(10)
+layout.setContentsMargins(5, 5, 5, 5)
+```
+
+#### ✅ Correct Patterns
+
+```python
+from ....lib_ui.ui_utils import get_relative_size, get_spacing
+from ....lib_ui.base_window import get_margins
+
+# Dynamic sizing based on font metrics
+width, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
+self.resize(width, height)
+
+# Style-based spacing
+spacing = get_spacing(self, direction="vertical")
+layout.setSpacing(int(spacing * 0.5))  # Half of default spacing
+
+# Style-based margins
+left, top, right, bottom = get_margins(self)
+layout.setContentsMargins(left, top, right, bottom)
+```
+
+#### Available UI Utilities
+
+**From `lib_ui.base_window`:**
+- `get_spacing(widget, direction="vertical")`: Get style-based spacing
+- `get_margins(widget)`: Get style-based margins (left, top, right, bottom)
+
+**From `lib_ui.ui_utils`:**
+- `get_relative_size(widget, width_ratio, height_ratio)`: Calculate size based on font metrics
+- `get_default_button_size(widget)`: Get appropriate button size
+- `get_text_width(text, widget)`: Calculate text width in widget's font
+- `get_line_height(widget)`: Get line height for widget's font
+- `scale_by_dpi(value, widget)`: Scale value for DPI (use for icon sizes)
+
+#### Acceptable Exceptions
+
+These cases are acceptable:
+- **Multipliers on style-based values**: `spacing * 0.75`, `margin * 1.5`
+- **Icon sizes with DPI scaling**: `scale_by_dpi(16)` for 16px icons
+- **Minimum constraints from style values**: `setMinimumWidth(get_text_width("Label", widget))`
+
 ## Project Structure
 
 - **faketools.mod**: Maya module descriptor defining package paths
