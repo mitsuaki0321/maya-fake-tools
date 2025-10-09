@@ -5,13 +5,13 @@ import logging
 
 import maya.cmds as cmds
 
+from ....lib import lib_optimize
 from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QCheckBox, QHBoxLayout, QPushButton, QSizePolicy
 from ....lib_ui.widgets import extra_widgets
-from . import command
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,9 @@ class MainWindow(BaseMainWindow):
         self.settings = ToolOptionSettings(__name__)
 
         # Optimizer instances and checkboxes
-        self.optimizers = command.list_optimizers()
+        self.optimize_cls_list = []
+        for cls in lib_optimize.OptimizeBase.__subclasses__():
+            self.optimize_cls_list.append(cls)
         self.enable_checkboxes = []
 
         self.setup_ui()
@@ -52,17 +54,17 @@ class MainWindow(BaseMainWindow):
     def setup_ui(self):
         """Setup the user interface."""
         # Create optimizer checkboxes and run buttons
-        for optimizer in self.optimizers:
+        for optimize_cls in self.optimize_cls_list:
             layout = QHBoxLayout()
 
-            checkbox = QCheckBox(optimizer.label)
-            checkbox.setToolTip(optimizer.description)
+            checkbox = QCheckBox(optimize_cls._name)
+            checkbox.setToolTip(optimize_cls._description)
             layout.addWidget(checkbox)
             self.enable_checkboxes.append(checkbox)
 
             button = QPushButton("Run")
             button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-            button.clicked.connect(partial(optimizer.execute, echo=True))
+            button.clicked.connect(partial(self._optimize_run, optimize_cls))
             layout.addWidget(button)
 
             self.central_layout.addLayout(layout)
@@ -110,28 +112,22 @@ class MainWindow(BaseMainWindow):
             checkbox.setChecked(not checkbox.isChecked())
 
     @error_handler
+    @undo_chunk("Optimize Run")
+    def _optimize_run(self, optimize_cls):
+        """Run a single optimization operation."""
+        optimize_cls(echo=True)
+
+    @error_handler
     @undo_chunk("Optimize Scene")
     def _execute(self):
         """Execute selected scene optimizations."""
         if not any([checkbox.isChecked() for checkbox in self.enable_checkboxes]):
-            cmds.warning("Please check the optimizer you want to execute.")
+            cmds.warning("Please check the optimize method you want to execute.")
             return
 
-        start_msg = "Start Optimize Scene"
-        print("#" * len(start_msg))
-        print(start_msg)
-        print("#" * len(start_msg))
-        print("")
-
-        for checkbox, optimizer in zip(self.enable_checkboxes, self.optimizers, strict=False):
+        for checkbox, optimize_cls in zip(self.enable_checkboxes, self.optimize_cls_list, strict=False):
             if checkbox.isChecked():
-                optimizer.execute(echo=True)
-
-        end_msg = "End Optimize Scene"
-        print("")
-        print("#" * len(end_msg))
-        print(end_msg)
-        print("#" * len(end_msg))
+                optimize_cls(echo=True)
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
