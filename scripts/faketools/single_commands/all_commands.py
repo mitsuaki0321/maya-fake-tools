@@ -4,14 +4,14 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ..base_commands import SelectAllCommand
 from ..lib import lib_transform
 from ..lib_ui import maya_ui
+from .base_commands import AllCommand
 
 logger = getLogger(__name__)
 
 
-class LockAndHideCommand(SelectAllCommand):
+class LockAndHideCommand(AllCommand):
     """Command to lock and hide selected nodes."""
 
     _name = "LockAndHideCommand"
@@ -50,7 +50,7 @@ class LockAndHideCommand(SelectAllCommand):
                 logger.debug(f"Locked and hid attributes {', '.join(adjusted_attrs)} on node '{node}'.")
 
 
-class UnlockAndShowCommand(SelectAllCommand):
+class UnlockAndShowCommand(AllCommand):
     """Command to unlock and show selected nodes."""
 
     _name = "UnlockAndShowCommand"
@@ -102,7 +102,7 @@ class UnlockAndShowCommand(SelectAllCommand):
             cmds.delete(tmp_node)
 
 
-class ZeroOutTransformsCommand(SelectAllCommand):
+class ZeroOutTransformsCommand(AllCommand):
     """Command to zero out transforms of selected nodes."""
 
     _name = "ZeroOutTransformsCommand"
@@ -139,7 +139,7 @@ class ZeroOutTransformsCommand(SelectAllCommand):
             logger.debug(f"Zeroed out transforms for node: {target_node}")
 
 
-class BreakConnectionsCommand(SelectAllCommand):
+class BreakConnectionsCommand(AllCommand):
     """Command to break all connections of selected nodes."""
 
     _name = "BreakConnectionsCommand"
@@ -184,7 +184,7 @@ class BreakConnectionsCommand(SelectAllCommand):
                 logger.debug(f"Broke connection from {source_plug[0]} to {plug}")
 
 
-class FreezeTransformsCommand(SelectAllCommand):
+class FreezeTransformsCommand(AllCommand):
     """Command to freeze transforms of selected nodes."""
 
     _name = "FreezeTransformsCommand"
@@ -209,7 +209,7 @@ class FreezeTransformsCommand(SelectAllCommand):
             logger.debug(f"Froze transforms and pivot for node: {target_node}")
 
 
-class FreezeMeshVerticesCommand(SelectAllCommand):
+class FreezeMeshVerticesCommand(AllCommand):
     """Command to freeze mesh vertices of selected nodes."""
 
     _name = "FreezeMeshVerticesCommand"
@@ -247,7 +247,7 @@ class FreezeMeshVerticesCommand(SelectAllCommand):
             logger.debug(f"Froze mesh vertices for node: {target_node}")
 
 
-class DeleteConstraintsCommand(SelectAllCommand):
+class DeleteConstraintsCommand(AllCommand):
     """Command to delete constraints of selected nodes."""
 
     _name = "DeleteConstraintsCommand"
@@ -276,7 +276,7 @@ class DeleteConstraintsCommand(SelectAllCommand):
         logger.debug(f"Deleted constraints for nodes: {', '.join(transforms)}")
 
 
-class JointsToChainCommand(SelectAllCommand):
+class JointsToChainCommand(AllCommand):
     """Command to convert selected joints to a joint chain."""
 
     _name = "JointsToChainCommand"
@@ -351,7 +351,7 @@ class JointsToChainCommand(SelectAllCommand):
         logger.debug(f"Chained nodes: {nodes}")
 
 
-class MirrorJointsCommand(SelectAllCommand):
+class MirrorJointsCommand(AllCommand):
     """Command to mirror selected joints."""
 
     _name = "MirrorJointsCommand"
@@ -378,7 +378,7 @@ class MirrorJointsCommand(SelectAllCommand):
             logger.debug(f"Mirrored joints: {target_node} -> {mirror_node}")
 
 
-class DeleteExtraAttributesCommand(SelectAllCommand):
+class DeleteExtraAttributesCommand(AllCommand):
     """Command to delete extra attributes of selected nodes."""
 
     _name = "DeleteExtraAttributesCommand"

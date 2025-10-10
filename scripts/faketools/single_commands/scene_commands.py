@@ -1,7 +1,7 @@
 """Command to process the scene."""
 
-from ..base_commands import SceneCommand
 from ..lib import lib_optimize
+from .base_commands import SceneCommand
 
 
 class OptimizeSceneCommand(SceneCommand):

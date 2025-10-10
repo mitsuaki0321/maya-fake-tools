@@ -8,6 +8,7 @@ import logging
 
 import maya.cmds as cmds
 
+from . import single_commands_menu
 from .core.registry import get_registry
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,10 @@ def add_menu():
 
     # Create main menu
     menu = cmds.menu(MENU_NAME, parent="MayaWindow", label=MENU_LABEL, tearOff=True)
+
+    # Add single commands menu first
+    single_commands_menu.show_menu(parent_menu=menu)
+    cmds.menuItem(divider=True, parent=menu)
 
     # Discover tools
     registry = get_registry()

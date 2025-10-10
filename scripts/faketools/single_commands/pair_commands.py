@@ -4,7 +4,7 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ..base_commands import PairCommand
+from .base_commands import PairCommand
 
 logger = getLogger(__name__)
 
