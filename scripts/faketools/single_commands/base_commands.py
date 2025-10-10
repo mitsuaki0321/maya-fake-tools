@@ -9,6 +9,24 @@ class BaseCommand(ABC):
     _name = "BaseCommand"
     _description = "Base command description"
 
+    @classmethod
+    def get_name(cls) -> str:
+        """Get the name of the command.
+
+        Returns:
+            str: The name of the command.
+        """
+        return cls._name
+
+    @classmethod
+    def get_description(cls) -> str:
+        """Get the description of the command.
+
+        Returns:
+            str: The description of the command.
+        """
+        return cls._description
+
     @abstractmethod
     def execute(self, *args, **kwargs):
         """Execute the command."""

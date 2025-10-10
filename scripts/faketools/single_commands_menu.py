@@ -29,8 +29,10 @@ def show_menu(parent_menu: str) -> None:
     # Scene commands
     scene_cmds = getattr(single_commands.scene_commands, "__all__", [])
     for cmd_name in scene_cmds:
+        cmd_cls = getattr(single_commands.scene_commands, cmd_name)
+        label = cmd_cls.get_name()
         cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
-        cmds.menuItem(label=cmd_name, command=cmd, parent=menu)
+        cmds.menuItem(label=label, command=cmd, parent=menu)
 
     if scene_cmds:
         cmds.menuItem(divider=True, parent=menu)
@@ -38,8 +40,10 @@ def show_menu(parent_menu: str) -> None:
     # All commands
     all_cmds = getattr(single_commands.all_commands, "__all__", [])
     for cmd_name in all_cmds:
+        cmd_cls = getattr(single_commands.all_commands, cmd_name)
+        label = cmd_cls.get_name()
         cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
-        cmds.menuItem(label=cmd_name, command=cmd, parent=menu)
+        cmds.menuItem(label=label, command=cmd, parent=menu)
 
     if all_cmds:
         cmds.menuItem(divider=True, parent=menu)
@@ -47,8 +51,10 @@ def show_menu(parent_menu: str) -> None:
     # Pair commands
     pair_cmds = getattr(single_commands.pair_commands, "__all__", [])
     for cmd_name in pair_cmds:
+        cmd_cls = getattr(single_commands.pair_commands, cmd_name)
+        label = cmd_cls.get_name()
         cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
-        cmds.menuItem(label=cmd_name, command=cmd, parent=menu)
+        cmds.menuItem(label=label, command=cmd, parent=menu)
 
     logger.debug(f"Added single command menu: {menu}")
 

@@ -116,10 +116,9 @@ class CopyTransformCommand(PairCommand):
             return
 
         for attr in ["translate", "rotate", "scale"]:
-            target_attrs = cmds.attributeQuery(attr, node=source_node, listChildren=True)
-            target_attrs += [attr]
+            child_attrs = cmds.attributeQuery(attr, node=source_node, listChildren=True)
 
-            locked_attrs = [a for a in target_attrs if cmds.getAttr(f"{target_node}.{a}", lock=True)]
+            locked_attrs = [a for a in child_attrs if cmds.getAttr(f"{target_node}.{a}", lock=True)]
             if locked_attrs:
                 logger.warning(f"Skip copy transform. Locked attributes: {target_node}.{', '.join(locked_attrs)}")
                 continue
@@ -148,14 +147,13 @@ class ConnectTransformCommand(PairCommand):
             return
 
         for attr in ["translate", "rotate", "scale"]:
-            target_attrs = cmds.attributeQuery(attr, node=source_node, listChildren=True)
-            target_attrs += [attr]
+            child_attrs = cmds.attributeQuery(attr, node=source_node, listChildren=True)
 
-            for child_attr in target_attrs:
+            for child_attr in child_attrs:
                 source_attr = f"{source_node}.{child_attr}"
                 target_attr = f"{target_node}.{child_attr}"
 
-                if cmds.isConnected(target_attr, source_attr):
+                if cmds.isConnected(source_attr, target_attr):
                     continue
 
                 lock_state = cmds.getAttr(target_attr, lock=True)
