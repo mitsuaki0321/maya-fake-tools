@@ -69,6 +69,26 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `is_modifiable(node, attribute)`: Check if attribute can be modified (not locked/connected)
      - `get_channelBox_attr(node)`: Get channel box visible attributes
      - `AttributeLockHandler`: Context manager for temporarily unlocking attributes
+   - **lib_singleCommand.py**: Command pattern base classes
+     - `SceneCommand`: Base class for scene-wide operations (auto-executes on init)
+     - `AllCommand`: Base class for operations on all selected nodes
+     - `PairCommand`: Base class for operations between source and target node pairs
+   - **lib_name.py**: String and naming utilities
+     - `num_to_alpha(num)`, `alpha_to_num(alpha)`: Convert between numbers and letters
+     - `solve_names(names, regex_name)`: Generate names with @/#/~ placeholders
+     - `get_namespace(name)`, `get_without_namespace(name)`: Namespace handling
+     - `replace_namespaces(names, namespace)`: Replace namespaces in names
+   - **lib_selection.py**: Node selection and filtering utilities
+     - `NodeFilter`: Filter nodes by type or regex pattern
+     - `DagHierarchy`: Navigate DAG hierarchy (parent, children, siblings, shapes)
+     - `SelectionMode`: Manage Maya's object/component selection modes
+     - `HiliteSelection`: Manage hilite selection state
+     - `restore_selection()`: Context manager to restore selection
+   - **lib_memberShip.py**: Component membership and deformer utilities
+     - `ComponentTags`: Manage Maya component tags (create, query, add, remove)
+     - `DeformerMembership`: Manage deformer membership with component tags
+     - `is_use_component_tag()`: Check if component tags are enabled in preferences
+     - `remove_deformer_blank_indices(deformer)`: Clean up deformer indices
 
 ## Tool Structure
 
@@ -85,6 +105,56 @@ tools/{category}/{tool_name}/
 ├── ui.py           # UI layer with show_ui() function
 └── command.py      # Business logic (Maya operations)
 ```
+
+### Command Pattern Architecture
+
+The framework provides base command classes in `lib_singleCommand.py` for implementing reusable Maya operations:
+
+**SceneCommand Pattern:**
+```python
+from faketools.lib.lib_singleCommand import SceneCommand
+
+class OptimizeScene(SceneCommand):
+    def execute(self):
+        """Executes automatically on instantiation."""
+        # Scene-wide operations here
+        pass
+
+# Usage: OptimizeScene()  # Auto-executes
+```
+
+**AllCommand Pattern** (operates on all selected nodes):
+```python
+from faketools.lib.lib_singleCommand import AllCommand
+
+class LockAndHide(AllCommand):
+    def execute(self, nodes: list[str]):
+        """Process all nodes."""
+        for node in nodes:
+            # Process each node
+            pass
+
+# Usage: LockAndHide(nodes)  # Validates nodes, then calls execute
+```
+
+**PairCommand Pattern** (operates on source→target pairs):
+```python
+from faketools.lib.lib_singleCommand import PairCommand
+
+class SnapPosition(PairCommand):
+    def execute(self, source_node: str, target_node: str):
+        """Process source-target pair."""
+        # Snap target to source
+        pass
+
+# Usage: SnapPosition(source_nodes, target_nodes)
+# Note: If len(source_nodes)==1, it's duplicated to match target_nodes length
+```
+
+**Key Behaviors:**
+- All command classes auto-validate node existence via `validate_nodes()`
+- Commands execute immediately on instantiation (no separate `.run()` call)
+- Use these classes for reusable operations exposed through tool UIs
 
 ### Layer Separation Pattern
 

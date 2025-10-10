@@ -1,6 +1,4 @@
-"""
-Maya attribute functions.
-"""
+"""Maya attribute functions."""
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds

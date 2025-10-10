@@ -1,6 +1,4 @@
-"""
-Node selection functions.
-"""
+"""Node selection functions."""
 
 from contextlib import contextmanager
 from logging import getLogger

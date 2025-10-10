@@ -1,6 +1,4 @@
-"""
-String manipulation functions.
-"""
+"""String manipulation functions."""
 
 from logging import getLogger
 import re
