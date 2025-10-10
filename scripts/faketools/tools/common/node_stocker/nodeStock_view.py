@@ -219,7 +219,7 @@ class NodeStockGraphicsScene(QGraphicsScene):
 class NodeStockGraphicsView(QGraphicsView):
     """Customized QGraphicsView."""
 
-    rubber_band_selection = Signal([object])
+    rubber_band_selection = Signal(object)
 
     def __init__(self, scene: QGraphicsScene, parent=None):
         """Initialize the custom graphics view.

@@ -7,31 +7,14 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ....lib import lib_name
-from ....lib_ui import icons, maya_decorator, maya_qt, maya_ui, tool_data
+from ....lib_ui import maya_decorator, maya_qt, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.optionvar import ToolOptionSettings
-from ....lib_ui.qt_compat import (
-    QButtonGroup,
-    QCheckBox,
-    QComboBox,
-    QHBoxLayout,
-    QIcon,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QRadioButton,
-    QSizePolicy,
-    QSpacerItem,
-    QStatusBar,
-    QStyle,
-    Qt,
-    QVBoxLayout,
-    QWidget,
-    Signal,
-)
+from ....lib_ui.qt_compat import QHBoxLayout, QLabel, QStatusBar, QStyle, Qt, QVBoxLayout
 from ....lib_ui.widgets import extra_widgets
 from . import nodeStock_view
 from .command import NodeStockFile, NodeStorage
+from .widgets import NameReplaceField, NameSpaceBox, StockAreaSwitchButtons, ToolBar
 
 logger = getLogger(__name__)
 
@@ -69,8 +52,6 @@ class MainWindow(BaseMainWindow):
         self.settings = ToolOptionSettings(__name__)
 
         self._current_scene_data = {}
-        self._hilite_nodes = []
-        self._hilite_selected_nodes = []
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -133,14 +114,6 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addLayout(layout)
 
-        # Option settings
-        self.tool_bar.set_hilite(self.settings.read("hilite", False))
-        self.name_space_box.set_enabled(self.settings.read("name_space_enabled", False))
-        self.name_replace_field.set_enabled(self.settings.read("name_replace_enabled", False))
-        self.name_replace_field.set_search_replace_text(*self.settings.read("search_replace", ("", "")))
-        self.name_replace_field.set_switched(self.settings.read("name_replace_switched", False))
-        self.name_replace_field.set_re(self.settings.read("name_replace_re", False))
-
         # Signals & Slots
         self.switch_buttons.button_selection_changed.connect(self._switch_scene)
         self.tool_bar.refresh_button_clicked.connect(self._refresh_window)
@@ -153,11 +126,8 @@ class MainWindow(BaseMainWindow):
         self.font_metrics = self.node_names_label.fontMetrics()
         self.status_bar_spacing = self.node_length_label.width() + self.status_separator.width() + margin + padding
 
-        # For resize view
-        minimum_size = self.minimumSizeHint()
-        width = minimum_size.width() * 1.1
-        height = minimum_size.height()
-        self.resize(width, height)
+        # Restore settings
+        self._restore_settings()
 
     def _switch_scene(self, index: int) -> None:
         """Switch the scene in the graphic widget.
@@ -197,8 +167,6 @@ class MainWindow(BaseMainWindow):
                     button.right_button_clicked.connect(self._remove_nodes)
                     button.hovered.connect(self.__update_status_bar)
                     button.unhovered.connect(self._clear_status_bar)
-                    button.hovered.connect(self._highlight_nodes)
-                    button.unhovered.connect(self._unhighlight_nodes)
                     scene.addItem(button)
 
             self.view.setSceneRect(scene.sceneRect())
@@ -286,39 +254,6 @@ class MainWindow(BaseMainWindow):
         self.node_length_label.setText(self._get_node_length_label(0))
         self.node_names_label.clear()
 
-    def _highlight_nodes(self, button: nodeStock_view.NodeStockButton) -> None:
-        """Highlight the nodes in the Maya scene when the button is hovered.
-
-        Args:
-            button (nodeStock_view.NodeStockButton): The button.
-        """
-        if not self.tool_bar.is_hilite():
-            return
-
-        self._hilite_nodes = []
-        nodes = self._current_scene_data.get(button.key, [])
-        if not nodes:
-            return
-
-        # Get the replace and name space settings.
-        nodes = self._replace_node_names(nodes, echo_error=False)
-        nodes = self._name_space_with_nodes(nodes)
-        nodes = [node for node in nodes if cmds.objExists(node)]
-        if not nodes:
-            return
-
-        self._hilite_selected_nodes = cmds.ls(sl=True)
-        cmds.hilite(nodes)
-        self._hilite_nodes = nodes
-
-    def _unhighlight_nodes(self) -> None:
-        """Unhighlight the nodes in the Maya scene when the button is unhovered."""
-        if not self._hilite_nodes:
-            return
-
-        cmds.hilite(self._hilite_nodes, u=True)
-        cmds.select(self._hilite_selected_nodes, r=True)
-
     def _select_nodes_with_modifier(self, nodes: list[str]) -> None:
         """Select the nodes in the scene.
 
@@ -348,9 +283,6 @@ class MainWindow(BaseMainWindow):
             cmds.select(sel_nodes, r=True)
             cmds.select(nodes, d=True)
             logger.debug(f"Deselect selected new nodes: {nodes}")
-
-        if self.tool_bar.is_hilite():
-            self._hilite_selected_nodes = cmds.ls(sl=True)
 
     def _replace_node_names(self, nodes: list[str], echo_error: bool = False) -> list[str]:
         """Replace the node names.
@@ -422,7 +354,7 @@ class MainWindow(BaseMainWindow):
     @maya_decorator.undo_chunk("Select Nodes by Rubber Band")
     @maya_decorator.error_handler
     def _select_nodes_rubber_band(self, buttons: list[nodeStock_view.NodeStockButton]) -> None:
-        """Select the nodes when the left button is clicked."""
+        """Select the nodes when the rubber band selection is made."""
         if not buttons:
             logger.debug("No buttons to select.")
             return
@@ -435,7 +367,7 @@ class MainWindow(BaseMainWindow):
             logger.debug("No nodes to select.")
             return
 
-        self._select_nodes(nodes)
+        self._select_nodes_with_modifier(nodes)
 
         logger.debug(f"Selected nodes by rubber band: {nodes}")
 
@@ -479,286 +411,52 @@ class MainWindow(BaseMainWindow):
 
         logger.debug(f"Removed nodes: {nodes}")
 
-    def closeEvent(self, event) -> None:
-        """Close the window."""
-        # Save option settings
-        self.settings.write("hilite", self.tool_bar.is_hilite())
+    def _restore_settings(self):
+        """Restore UI settings from saved preferences."""
+        # Restore window geometry
+        geometry = self.settings.get_window_geometry()
+        if geometry:
+            self.resize(*geometry["size"])
+            if "position" in geometry:
+                self.move(*geometry["position"])
+        else:
+            # Default size if no saved geometry
+            minimum_size = self.minimumSizeHint()
+            width = minimum_size.width() * 1.1
+            height = minimum_size.height()
+            self.resize(width, height)
+
+        # Restore widget settings
+        self.name_space_box.set_enabled(self.settings.read("name_space_enabled", False))
+        self.name_replace_field.set_enabled(self.settings.read("name_replace_enabled", False))
+        self.name_replace_field.set_search_replace_text(*self.settings.read("search_replace", ("", "")))
+        self.name_replace_field.set_switched(self.settings.read("name_replace_switched", False))
+        self.name_replace_field.set_re(self.settings.read("name_replace_re", False))
+
+        logger.debug("UI settings restored")
+
+    def _save_settings(self):
+        """Save UI settings to preferences."""
+        # Save window geometry
+        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+
+        # Save widget settings
         self.settings.write("name_space_enabled", self.name_space_box.is_enabled())
         self.settings.write("name_replace_enabled", self.name_replace_field.is_enabled())
         self.settings.write("search_replace", self.name_replace_field.get_search_replace_text())
         self.settings.write("name_replace_switched", self.name_replace_field.is_switched())
         self.settings.write("name_replace_re", self.name_replace_field.is_re())
 
+        logger.debug("UI settings saved")
+
+    def closeEvent(self, event) -> None:
+        """Handle window close event.
+
+        Args:
+            event: Close event
+        """
+        self._save_settings()
         super().closeEvent(event)
-
-
-class ToolBar(QWidget):
-    """Tool bar for the node stocker."""
-
-    refresh_button_clicked = Signal()
-
-    def __init__(self, parent=None):
-        """Constructor."""
-        super().__init__(parent=parent)
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-
-        spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.main_layout.addItem(spacer)
-
-        self.hilite_button = extra_widgets.CheckBoxButton(icon_off="node_stocker_001", icon_on="node_stocker_002")
-        self.main_layout.addWidget(self.hilite_button)
-
-        self.refresh_button = QPushButton()
-        icon = QIcon(icons.get_path("node_stocker_003"))
-        self.refresh_button.setIcon(icon)
-        self.refresh_button.setStyleSheet("""
-            QPushButton {
-                border: none;
-            }
-            QPushButton:pressed {
-                background-color: #5285a6;
-            }
-        """)
-        self.main_layout.addWidget(self.refresh_button)
-
-        self.setLayout(self.main_layout)
-
-        # Signals & Slots
-        self.refresh_button.clicked.connect(self.refresh_button_clicked.emit)
-
-    def is_hilite(self) -> bool:
-        """Check if the hilite button is checked.
-
-        Returns:
-            bool: True if the hilite button is checked.
-        """
-        return self.hilite_button.isChecked()
-
-    def set_hilite(self, checked: bool) -> None:
-        """Set the hilite button checked.
-
-        Args:
-            checked (bool): True if the hilite button is checked.
-        """
-        self.hilite_button.setChecked(checked)
-
-
-class StockAreaSwitchButtons(QWidget):
-    """Switch buttons for the stock area stack widget."""
-
-    button_selection_changed = Signal(int)
-
-    def __init__(self, num_buttons: int = 10, parent=None):
-        """Constructor.
-
-        Args:
-            num_buttons (int): The number of buttons.
-        """
-        super().__init__(parent=parent)
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.button_group = QButtonGroup(self)
-        self.button_group.setExclusive(True)
-
-        for i in range(num_buttons):
-            radio_button = QRadioButton()
-            self.button_group.addButton(radio_button, i)
-            self.main_layout.addWidget(radio_button)
-
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        self.main_layout.addItem(spacer)
-
-        self.setLayout(self.main_layout)
-
-        # Signals & Slots
-        self.button_group.buttonClicked.connect(self._button_clicked)
-
-    def set_index(self, index: int) -> None:
-        """Set the index of the radio button to be selected."""
-        self.button_group.button(index).setChecked(True)
-
-    def _button_clicked(self, button: QRadioButton) -> None:
-        """Emit the signal when the button is clicked."""
-        self.button_selection_changed.emit(self.button_group.id(button))
-
-
-class NameSpaceBox(QWidget):
-    """Name Space Box."""
-
-    def __init__(self, parent=None):
-        """Constructor."""
-        super().__init__(parent=parent)
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.check_box = QCheckBox()
-        self.main_layout.addWidget(self.check_box)
-
-        self.name_space_box = QComboBox()
-        self.main_layout.addWidget(self.name_space_box, stretch=1)
-
-        self.setLayout(self.main_layout)
-
-        self.refresh_name_spaces()
-
-        # Signals & Slots
-        self.check_box.stateChanged.connect(self.name_space_box.setEnabled)
-
-    def refresh_name_spaces(self) -> None:
-        """Populate the name space box with the name spaces."""
-        name_spaces = lib_name.list_all_namespace()
-        name_spaces.insert(0, "")
-        self.name_space_box.clear()
-        self.name_space_box.addItems(name_spaces)
-
-    def get_name_space(self) -> str:
-        """Get the name space.
-
-        Returns:
-            str: The name space.
-        """
-        if not self.check_box.isChecked():
-            return ""
-
-        return self.name_space_box.currentText()
-
-    def set_enabled(self, enabled: bool) -> None:
-        """Set the name space box enabled.
-
-        Args:
-            enabled (bool): True if the name space box is enabled.
-        """
-        self.check_box.setChecked(enabled)
-
-    def is_enabled(self) -> bool:
-        """Check if the name space box is enabled.
-
-        Returns:
-            bool: True if the name space box is enabled.
-        """
-        return self.check_box.isChecked()
-
-
-class NameReplaceField(QWidget):
-    """Name Replace Field."""
-
-    def __init__(self, parent=None):
-        """Constructor."""
-        super().__init__(parent=parent)
-
-        self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-
-        self.check_box = QCheckBox()
-        self.main_layout.addWidget(self.check_box)
-
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(1)
-
-        self.search_field = QLineEdit()
-        layout.addWidget(self.search_field)
-
-        self.switch_button = extra_widgets.CheckBoxButton(icon_off="node_stocker_004", icon_on="node_stocker_005")
-        layout.addWidget(self.switch_button)
-
-        self.replace_field = QLineEdit()
-        layout.addWidget(self.replace_field)
-
-        self.re_button = extra_widgets.CheckBoxButton(icon_off="node_stocker_006", icon_on="node_stocker_007")
-        layout.addWidget(self.re_button)
-
-        self.main_layout.addLayout(layout)
-
-        self.setLayout(self.main_layout)
-
-        # Signals & Slots
-        self.check_box.stateChanged.connect(self.enabled_changed)
-
-    def set_enabled(self, enabled: bool) -> None:
-        """Set the name replace field enabled.
-
-        Args:
-            enabled (bool): True if the name replace field is enabled.
-        """
-        self.check_box.setChecked(enabled)
-
-    def is_enabled(self) -> bool:
-        """Check if the name replace field is enabled.
-
-        Returns:
-            bool: True if the name replace field is enabled.
-        """
-        return self.check_box.isChecked()
-
-    def enabled_changed(self, enabled: bool) -> None:
-        """Set the name replace field enabled.
-
-        Args:
-            enabled (bool): True if the name replace field is enabled.
-        """
-        self.search_field.setEnabled(enabled)
-        self.switch_button.setEnabled(enabled)
-        self.replace_field.setEnabled(enabled)
-        self.re_button.setEnabled(enabled)
-
-    def is_switched(self) -> bool:
-        """Check if the switch button is checked.
-
-        Returns:
-            bool: True if the switch button is checked.
-        """
-        return self.switch_button.isChecked()
-
-    def set_switched(self, checked: bool) -> None:
-        """Set the switch button checked.
-
-        Args:
-            checked (bool): True if the switch button is checked.
-        """
-        self.switch_button.setChecked(checked)
-
-    def is_re(self) -> bool:
-        """Check if the re button is checked.
-
-        Returns:
-            bool: True if the re button is checked.
-        """
-        return self.re_button.isChecked()
-
-    def set_re(self, checked: bool) -> None:
-        """Set the re button checked.
-
-        Args:
-            checked (bool): True if the re button is checked.
-        """
-        self.re_button.setChecked(checked)
-
-    def get_search_replace_text(self) -> tuple[str, str]:
-        """Get the search and replace text.
-
-        Returns:
-            tuple[str, str]: The search and replace text.
-        """
-        search_text = self.search_field.text()
-        replace_text = self.replace_field.text()
-
-        return search_text, replace_text
-
-    def set_search_replace_text(self, search_text: str, replace_text: str) -> None:
-        """Set the search and replace text.
-
-        Args:
-            search_text (str): The search text.
-            replace_text (str): The replace text.
-        """
-        self.search_field.setText(search_text)
-        self.replace_field.setText(replace_text)
 
 
 def show_ui():
