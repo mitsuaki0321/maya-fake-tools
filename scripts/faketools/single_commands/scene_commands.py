@@ -7,7 +7,7 @@ from .base_commands import SceneCommand
 class OptimizeSceneCommand(SceneCommand):
     """Command to optimize the entire scene."""
 
-    _name = "OptimizeSceneCommand"
+    _name = "Optimize Scene"
     _description = "Command to optimize the entire scene"
 
     def execute(self):

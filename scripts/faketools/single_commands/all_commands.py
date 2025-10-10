@@ -14,7 +14,7 @@ logger = getLogger(__name__)
 class LockAndHideCommand(AllCommand):
     """Command to lock and hide selected nodes."""
 
-    _name = "LockAndHideCommand"
+    _name = "Lock and Hide"
     _description = "Command to lock and hide selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -53,7 +53,7 @@ class LockAndHideCommand(AllCommand):
 class UnlockAndShowCommand(AllCommand):
     """Command to unlock and show selected nodes."""
 
-    _name = "UnlockAndShowCommand"
+    _name = "Unlock and Show"
     _description = "Command to unlock and show selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -105,7 +105,7 @@ class UnlockAndShowCommand(AllCommand):
 class ZeroOutTransformsCommand(AllCommand):
     """Command to zero out transforms of selected nodes."""
 
-    _name = "ZeroOutTransformsCommand"
+    _name = "Zero Out"
     _description = "Command to zero out transforms of selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -142,7 +142,7 @@ class ZeroOutTransformsCommand(AllCommand):
 class BreakConnectionsCommand(AllCommand):
     """Command to break all connections of selected nodes."""
 
-    _name = "BreakConnectionsCommand"
+    _name = "Break Connections"
     _description = "Command to break all connections of selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -187,7 +187,7 @@ class BreakConnectionsCommand(AllCommand):
 class FreezeTransformsCommand(AllCommand):
     """Command to freeze transforms of selected nodes."""
 
-    _name = "FreezeTransformsCommand"
+    _name = "Freeze Transforms"
     _description = "Command to freeze transforms of selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -212,7 +212,7 @@ class FreezeTransformsCommand(AllCommand):
 class FreezeMeshVerticesCommand(AllCommand):
     """Command to freeze mesh vertices of selected nodes."""
 
-    _name = "FreezeMeshVerticesCommand"
+    _name = "Freeze Mesh Vertices"
     _description = "Command to freeze mesh vertices of selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -250,7 +250,7 @@ class FreezeMeshVerticesCommand(AllCommand):
 class DeleteConstraintsCommand(AllCommand):
     """Command to delete constraints of selected nodes."""
 
-    _name = "DeleteConstraintsCommand"
+    _name = "Delete Constraints"
     _description = "Command to delete constraints of selected nodes"
 
     def execute(self, target_nodes: list[str]):
@@ -279,7 +279,7 @@ class DeleteConstraintsCommand(AllCommand):
 class JointsToChainCommand(AllCommand):
     """Command to convert selected joints to a joint chain."""
 
-    _name = "JointsToChainCommand"
+    _name = "Joints to Chain"
     _description = "Command to convert selected joints to a joint chain"
 
     def execute(self, target_nodes: list[str]):
@@ -354,7 +354,7 @@ class JointsToChainCommand(AllCommand):
 class MirrorJointsCommand(AllCommand):
     """Command to mirror selected joints."""
 
-    _name = "MirrorJointsCommand"
+    _name = "Mirror Joints"
     _description = "Command to mirror selected joints"
 
     def execute(self, target_nodes: list[str]):
@@ -381,7 +381,7 @@ class MirrorJointsCommand(AllCommand):
 class DeleteExtraAttributesCommand(AllCommand):
     """Command to delete extra attributes of selected nodes."""
 
-    _name = "DeleteExtraAttributesCommand"
+    _name = "Delete Extra Attributes"
     _description = "Command to delete extra attributes of selected nodes"
 
     def execute(self, target_nodes: list[str]):

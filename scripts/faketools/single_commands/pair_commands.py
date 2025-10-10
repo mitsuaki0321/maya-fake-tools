@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 class SnapPositionCommand(PairCommand):
     """Command to snap the position from source node to target node."""
 
-    _name = "SnapPositionCommand"
+    _name = "Snap Positions"
     _description = "Command to snap the position from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -34,7 +34,7 @@ class SnapPositionCommand(PairCommand):
 class SnapRotationCommand(PairCommand):
     """Command to snap the rotation from source node to target node."""
 
-    _name = "SnapRotationCommand"
+    _name = "Snap Rotations"
     _description = "Command to snap the rotation from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -56,7 +56,7 @@ class SnapRotationCommand(PairCommand):
 class SnapScaleCommand(PairCommand):
     """Command to snap the scale from source node to target node."""
 
-    _name = "SnapScaleCommand"
+    _name = "Snap Scales"
     _description = "Command to snap the scale from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -78,7 +78,7 @@ class SnapScaleCommand(PairCommand):
 class SnapTranslateAndRotateCommand(PairCommand):
     """Command to snap the translate and rotate from source node to target node."""
 
-    _name = "SnapTranslateAndRotateCommand"
+    _name = "Snap Translate and Rotate"
     _description = "Command to snap the translate and rotate from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -101,7 +101,7 @@ class SnapTranslateAndRotateCommand(PairCommand):
 class CopyTransformCommand(PairCommand):
     """Command to copy the transform from source node to target node."""
 
-    _name = "CopyTransformCommand"
+    _name = "Copy Transform"
     _description = "Command to copy the transform from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -133,7 +133,7 @@ class CopyTransformCommand(PairCommand):
 class ConnectTransformCommand(PairCommand):
     """Command to connect the transform from source node to target node."""
 
-    _name = "ConnectTransformCommand"
+    _name = "Connect Transform"
     _description = "Command to connect the transform from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -173,7 +173,7 @@ class ConnectTransformCommand(PairCommand):
 class CopyWeightCommand(PairCommand):
     """Command to copy the skin weights from source node to target node."""
 
-    _name = "CopyWeightCommand"
+    _name = "Copy Weights"
     _description = "Command to copy the skin weights from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -186,10 +186,10 @@ class CopyWeightCommand(PairCommand):
         pass  # TODO: Implement this method.
 
 
-class ConnectTopologyCommand(PairCommand):
+class ConnectShapeCommand(PairCommand):
     """Command to connect the topology from source node to target node."""
 
-    _name = "ConnectTopologyCommand"
+    _name = "Connect Shape"
     _description = "Command to connect the topology from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -202,10 +202,10 @@ class ConnectTopologyCommand(PairCommand):
         pass  # TODO: Implement this method.
 
 
-class CopyTopologyCommand(PairCommand):
+class CopyShapeCommand(PairCommand):
     """Command to copy the topology from source node to target node."""
 
-    _name = "CopyTopologyCommand"
+    _name = "Copy Shape"
     _description = "Command to copy the topology from source node to target node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -218,10 +218,10 @@ class CopyTopologyCommand(PairCommand):
         pass  # TODO: Implement this method.
 
 
-class ParentCommand(PairCommand):
+class ParentTransformCommand(PairCommand):
     """Command to parent the target node under the source node."""
 
-    _name = "ParentCommand"
+    _name = "Parent Transform"
     _description = "Command to parent the target node under the source node"
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -246,7 +246,7 @@ __all__ = [
     "CopyTransformCommand",
     "ConnectTransformCommand",
     "CopyWeightCommand",
-    "ConnectTopologyCommand",
-    "CopyTopologyCommand",
-    "ParentCommand",
+    "ConnectShapeCommand",
+    "CopyShapeCommand",
+    "ParentTransformCommand",
 ]
