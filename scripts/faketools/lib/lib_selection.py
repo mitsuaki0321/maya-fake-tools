@@ -9,587 +9,603 @@ import maya.cmds as cmds
 logger = getLogger(__name__)
 
 
-class NodeFilter:
-    """Node selection by filter. (by type, by regex)"""
+def is_unique_node(node: str) -> bool:
+    """Check if the node exists and is unique.
 
-    def __init__(self, nodes: list[str]):
-        """Constructor.
+    Args:
+        node (str): The node name to check.
 
-        Args:
-            nodes (list[str]): The node list.
-        """
-        if not nodes:
-            raise ValueError("Nodes are not specified.")
-        elif not isinstance(nodes, list):
-            raise ValueError("Nodes must be a list.")
+    Returns:
+        bool: True if the node exists and is unique, False otherwise.
 
-        not_exists_nodes = [node for node in nodes if not cmds.objExists(node)]
-        if not_exists_nodes:
-            raise ValueError(f"Nodes do not exist: {not_exists_nodes}")
+    Example:
+        >>> is_unique_node("pSphere1")
+        True
+        >>> is_unique_node("duplicate_name")  # If multiple nodes exist
+        False
+        >>> is_unique_node("nonexistent")
+        False
+    """
+    if not node:
+        return False
 
-        self.nodes = nodes
+    found_nodes = cmds.ls(node)
+    return len(found_nodes) == 1
 
-    def by_type(self, node_type: str, **kwargs) -> list[str]:
-        """Filters the nodes by the type.
 
-        Args:
-            node_type (str): The node type.
+def _validate_nodes(nodes: list[str]) -> None:
+    """Validate nodes list.
 
-        Keyword Args:
-            invert_match (bool): Whether to invert the match. Default is False.
+    Args:
+        nodes (list[str]): The node list to validate.
 
-        Returns:
-            list: The filtered nodes.
-        """
-        invert_match = kwargs.get("invert_match", False)
+    Raises:
+        ValueError: If nodes are not specified, not a list, don't exist, or are not unique.
+    """
+    if not nodes:
+        raise ValueError("Nodes are not specified.")
+    if not isinstance(nodes, list):
+        raise ValueError("Nodes must be a list.")
 
-        nodes = []
-        for node in self.nodes:
-            node_types = cmds.nodeType(node, inherited=True)
-            if invert_match:
-                if node_type not in node_types:
-                    nodes.append(node)
-            else:
-                if node_type in node_types:
-                    nodes.append(node)
+    not_exists_nodes = [node for node in nodes if not cmds.objExists(node)]
+    if not_exists_nodes:
+        raise ValueError(f"Nodes do not exist: {not_exists_nodes}")
 
+    # Check uniqueness for each node
+    for node in nodes:
+        found_nodes = cmds.ls(node)
+        if len(found_nodes) > 1:
+            long_nodes = cmds.ls(node, long=True)
+            raise ValueError(f"Multiple nodes found with name '{node}'. Please use full path:\n" + "\n".join(f"  - {n}" for n in long_nodes))
+
+
+def _validate_dag_nodes(nodes: list[str]) -> None:
+    """Validate that nodes are DAG nodes.
+
+    Args:
+        nodes (list[str]): The node list to validate.
+
+    Raises:
+        ValueError: If nodes are not specified, not a list, don't exist, or are not DAG nodes.
+    """
+    _validate_nodes(nodes)
+
+    not_dag_nodes = [node for node in nodes if "dagNode" not in cmds.nodeType(node, inherited=True)]
+    if not_dag_nodes:
+        raise ValueError(f"Nodes are not dagNode: {not_dag_nodes}")
+
+
+def _to_fullpath(nodes: list[str], fullpath: bool) -> list[str]:
+    """Convert nodes to fullpath if requested.
+
+    Args:
+        nodes (list[str]): The node list.
+        fullpath (bool): If True, return full path.
+
+    Returns:
+        list[str]: The converted node list.
+    """
+    if not nodes:
+        return []
+
+    if fullpath:
+        return cmds.ls(nodes, long=True)
+    else:
         return nodes
 
-    def by_regex(self, regex: str, **kwargs) -> list[str]:
-        """Filters the nodes by the regex.
 
-        Args:
-            regex (str): The regex.
+def filter_by_type(nodes: list[str], node_type: str, invert_match: bool = False, fullpath: bool = False) -> list[str]:
+    """Filter nodes by Maya node type.
 
-        Keyword Args:
-            invert_match (bool): Whether to invert the match. Default is False.
+    Args:
+        nodes (list[str]): Nodes to filter.
+        node_type (str): Maya node type to filter by (e.g., "transform", "joint", "mesh").
+        invert_match (bool): If True, return nodes that do NOT match the type. Default is False.
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-        Returns:
-            list: The filtered nodes.
-        """
-        invert_match = kwargs.get("invert_match", False)
-        ignorecase = kwargs.get("ignorecase", False)
+    Returns:
+        list[str]: Filtered nodes matching the criteria.
 
-        p = re.compile(regex, re.IGNORECASE) if ignorecase else re.compile(regex)
+    Raises:
+        ValueError: If nodes are invalid, don't exist, or are not unique.
 
-        nodes = []
-        for node in self.nodes:
-            if invert_match:
-                if not p.match(node):
-                    nodes.append(node)
-            else:
-                if p.match(node):
-                    nodes.append(node)
+    Example:
+        >>> filter_by_type(["pCube1", "joint1", "pSphere1"], "joint")
+        ["joint1"]
+        >>> filter_by_type(["pCube1", "joint1"], "joint", invert_match=True)
+        ["pCube1"]
+    """
+    _validate_nodes(nodes)
 
-        return nodes
+    filtered_nodes = []
+    for node in nodes:
+        node_types = cmds.nodeType(node, inherited=True)
+        if invert_match:
+            if node_type not in node_types:
+                filtered_nodes.append(node)
+        else:
+            if node_type in node_types:
+                filtered_nodes.append(node)
+
+    return _to_fullpath(filtered_nodes, fullpath)
 
 
-class DagHierarchy:
-    """Get the hierarchy nodes for dagNodes."""
+def filter_by_regex(nodes: list[str], regex: str, invert_match: bool = False, ignorecase: bool = False, fullpath: bool = False) -> list[str]:
+    """Filter nodes by regular expression pattern.
 
-    def __init__(self, nodes: list[str]):
-        """Constructor.
+    Args:
+        nodes (list[str]): Nodes to filter.
+        regex (str): Regular expression pattern to match against node names.
+        invert_match (bool): If True, return nodes that do NOT match the pattern. Default is False.
+        ignorecase (bool): If True, perform case-insensitive matching. Default is False.
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-        Args:
-            nodes (list[str]): The node list.
-        """
-        if not nodes:
-            raise ValueError("Nodes are not specified.")
-        elif not isinstance(nodes, list):
-            raise ValueError("Nodes must be a list.")
+    Returns:
+        list[str]: Filtered nodes matching the criteria.
 
-        not_exists_nodes = [node for node in nodes if not cmds.objExists(node)]
-        if not_exists_nodes:
-            cmds.error(f"Nodes do not exist: {not_exists_nodes}")
+    Raises:
+        ValueError: If nodes are invalid, don't exist, or are not unique.
 
-        not_dag_nodes = [node for node in nodes if "dagNode" not in cmds.nodeType(node, inherited=True)]
-        if not_dag_nodes:
-            cmds.error(f"Nodes are not dagNode: {not_dag_nodes}")
+    Example:
+        >>> filter_by_regex(["ctrl_L", "ctrl_R", "joint1"], r"ctrl_.*")
+        ["ctrl_L", "ctrl_R"]
+        >>> filter_by_regex(["CTRL_L", "ctrl_R"], r"ctrl_.*", ignorecase=True)
+        ["CTRL_L", "ctrl_R"]
+    """
+    _validate_nodes(nodes)
 
-        self.nodes = nodes
+    pattern = re.compile(regex, re.IGNORECASE) if ignorecase else re.compile(regex)
 
-    def get_parent(self) -> list[str]:
-        """Get the parent nodes.
+    filtered_nodes = []
+    for node in nodes:
+        if invert_match:
+            if not pattern.match(node):
+                filtered_nodes.append(node)
+        else:
+            if pattern.match(node):
+                filtered_nodes.append(node)
 
-        Notes:
-            - Only transform node is supported.
+    return _to_fullpath(filtered_nodes, fullpath)
 
-        Returns:
-            list[str]: The parent nodes.
-        """
-        result_nodes = []
-        for node in self.nodes:
-            parent = cmds.listRelatives(node, parent=True, path=True)
-            if parent and parent[0] not in result_nodes:
-                result_nodes.append(parent[0])
 
-        return result_nodes
+def get_parents(nodes: list[str], fullpath: bool = False) -> list[str]:
+    """Get immediate parent nodes from multiple nodes.
 
-    def get_children(self, include_shape: bool = False) -> list[str]:
-        """Get the children nodes.
+    Collects the direct parent of each input node. Duplicates are automatically removed.
 
-        Args:
-            include_shape (bool): Whether to include shapes. Default is False.
+    Args:
+        nodes (list[str]): Nodes to get parents from.
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-        Returns:
-            list[str]: The children nodes.
-        """
-        result_nodes = []
-        for node in self.nodes:
-            if include_shape:
-                children = cmds.listRelatives(node, children=True, path=True)
-            else:
-                children = cmds.listRelatives(node, children=True, path=True, type="transform")
+    Returns:
+        list[str]: Unique parent nodes.
 
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
+
+    Example:
+        >>> get_parents(["joint2", "joint3"])  # joint1|joint2, joint1|joint3
+        ["joint1"]
+        >>> get_parents(["pCube1", "pSphere1"])
+        ["persp", "top"]  # If they have different parents
+    """
+    _validate_dag_nodes(nodes)
+
+    result_nodes = []
+    for node in nodes:
+        parent = cmds.listRelatives(node, parent=True, path=True)
+        if parent and parent[0] not in result_nodes:
+            result_nodes.append(parent[0])
+
+    return _to_fullpath(result_nodes, fullpath)
+
+
+def get_all_parents(node: str, fullpath: bool = False, reverse: bool = False) -> list[str]:
+    """Get all ancestor nodes from a single node up to the root.
+
+    Walks up the hierarchy from the node to the scene root, collecting all parents.
+
+    Args:
+        node (str): Node to get ancestors from.
+        fullpath (bool): If True, return results as full paths. Default is False.
+        reverse (bool): If True, return root-to-node order instead of node-to-root. Default is False.
+
+    Returns:
+        list[str]: All ancestor nodes. Empty list if node has no parent.
+            - If reverse=False: [direct parent, grandparent, ..., root]
+            - If reverse=True: [root, ..., grandparent, direct parent]
+
+    Raises:
+        ValueError: If node is invalid, doesn't exist, is not unique, or is not a DAG node.
+
+    Example:
+        >>> get_all_parents("joint3")  # Hierarchy: joint1|joint2|joint3
+        ["joint2", "joint1"]
+        >>> get_all_parents("joint3", reverse=True)
+        ["joint1", "joint2"]
+        >>> get_all_parents("joint3", fullpath=True)
+        ["joint1|joint2", "joint1"]
+    """
+    _validate_dag_nodes([node])
+
+    parents = []
+    current = node
+
+    while True:
+        parent = cmds.listRelatives(current, parent=True, path=True)
+        if not parent:
+            break
+
+        parents.append(parent[0])
+        current = parent[0]
+
+    if reverse:
+        parents.reverse()
+
+    return _to_fullpath(parents, fullpath)
+
+
+def get_children(nodes: list[str], include_shape: bool = False, fullpath: bool = False) -> list[str]:
+    """Get immediate child nodes from multiple nodes.
+
+    Collects direct children of each input node. Duplicates are automatically removed.
+
+    Args:
+        nodes (list[str]): Nodes to get children from.
+        include_shape (bool): If True, include shape nodes in results. Default is False (transforms only).
+        fullpath (bool): If True, return results as full paths. Default is False.
+
+    Returns:
+        list[str]: Unique child nodes.
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
+
+    Example:
+        >>> get_children(["group1", "group2"])
+        ["pCube1", "pSphere1", "joint1"]
+        >>> get_children(["pCube1"], include_shape=True)
+        ["pCubeShape1"]
+    """
+    _validate_dag_nodes(nodes)
+
+    result_nodes = []
+    for node in nodes:
+        if include_shape:
+            children = cmds.listRelatives(node, children=True, path=True)
+        else:
+            children = cmds.listRelatives(node, children=True, path=True, type="transform")
+
+        if children:
+            for child in children:
+                if child not in result_nodes:
+                    result_nodes.append(child)
+
+    return _to_fullpath(result_nodes, fullpath)
+
+
+def get_siblings(nodes: list[str], fullpath: bool = False) -> list[str]:
+    """Get sibling transform nodes from multiple nodes.
+
+    Collects all transform siblings (nodes sharing the same parent) for each input node.
+    Duplicates are automatically removed. Input nodes are included in results.
+
+    Args:
+        nodes (list[str]): Nodes to get siblings from.
+        fullpath (bool): If True, return results as full paths. Default is False.
+
+    Returns:
+        list[str]: Unique sibling nodes (including input nodes).
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
+
+    Example:
+        >>> get_siblings(["joint2"])  # Siblings: joint1, joint2, joint3
+        ["joint1", "joint2", "joint3"]
+        >>> get_siblings(["pCube1", "pSphere1"])  # Both are top-level nodes
+        ["pCube1", "pSphere1", "pCylinder1"]  # All top-level transforms
+    """
+    _validate_dag_nodes(nodes)
+
+    result_nodes = []
+    for node in nodes:
+        if "transform" not in cmds.nodeType(node, inherited=True):
+            continue
+
+        parent = cmds.listRelatives(node, parent=True, path=True)
+        if parent:
+            children = cmds.listRelatives(parent[0], children=True, path=True, type="transform")
             if children:
                 for child in children:
                     if child not in result_nodes:
                         result_nodes.append(child)
-
-        return result_nodes
-
-    def get_siblings(self) -> list[str]:
-        """Get the sibling transform nodes.
-
-        Returns:
-            list[str]: The sibling nodes.
-        """
-        result_nodes = []
-        for node in self.nodes:
-            if "transform" not in cmds.nodeType(node, inherited=True):
-                continue
-
-            parent = cmds.listRelatives(node, parent=True, path=True)
-            if parent:
-                children = cmds.listRelatives(parent[0], children=True, path=True, type="transform")
-                if children:
-                    for child in children:
-                        if child not in result_nodes:
-                            result_nodes.append(child)
-            else:
-                world_nodes = cmds.ls(assemblies=True, long=True)
-                for world_node in world_nodes:
-                    if world_node in ["|persp", "|top", "|front", "|side"]:
-                        continue
-
-                    if world_node not in result_nodes:
-                        result_nodes.append(world_node)
-
-        return result_nodes
-
-    def get_shapes(self, shape_type: str | None = None) -> list[str]:
-        """Get the shapes.
-
-        Args:
-            shape_type (Optional[str]): The shape type.If None, all shapes are returned.
-
-        Notes:
-            - Only transform nodes are supported.
-
-        Returns:
-            list[str]: The shapes.
-        """
-        shapes = self.get_children(include_shape=True)
-        if not shapes:
-            return []
-
-        if shape_type:
-            return cmds.ls(shapes, type=shape_type, long=True)
         else:
-            return shapes
-
-    def get_hierarchy(self, include_shape: bool = False) -> list[str]:
-        """Get the hierarchy nodes.
-
-        Args:
-            include_shape (bool): Whether to include shapes. Default is False.
-
-        Returns:
-            list[str]: The children nodes.
-        """
-        result_nodes = []
-
-        def _get_children_recursive(node: str):
-            """Get the children nodes recursively."""
-            if node not in result_nodes:
-                result_nodes.append(node)
-
-            if "transform" not in cmds.nodeType(node, inherited=True):
-                return
-
-            if include_shape:
-                children = cmds.listRelatives(node, children=True, path=True)
-            else:
-                children = cmds.listRelatives(node, children=True, path=True, type="transform")
-
-            if children:
-                for child in children:
-                    _get_children_recursive(child)
-
-        for node in self.nodes:
-            _get_children_recursive(node)
-
-        return result_nodes
-
-    def get_children_bottoms(self) -> list[str]:
-        """Get the hierarchy bottom nodes.
-
-        Returns:
-            list[str]: The leaf nodes.
-        """
-        nodes = self.get_hierarchy(include_shape=False)
-
-        result_nodes = []
-        for node in nodes:
-            children = cmds.listRelatives(node, children=True, path=True, type="transform")
-            if not children:
-                result_nodes.append(node)
-
-        return result_nodes
-
-    def get_hierarchy_tops(self) -> list[str]:
-        """Get the hierarchy top nodes.
-
-        Notes:
-            - Retrieves only the top nodes among the selected nodes. For example, if joint1|joint2|joint3 is selected, joint1 is retrieved.
-
-        Returns:
-            list[str]: The top nodes.
-        """
-        nodes = cmds.ls(self.nodes, l=True)
-        nodes = sorted(nodes, key=lambda x: x.count("|"), reverse=True)
-
-        except_nodes = []
-        for node in nodes:
-            for comp_node in nodes:
-                if node == comp_node:
+            world_nodes = cmds.ls(assemblies=True, long=True)
+            for world_node in world_nodes:
+                if world_node in ["|persp", "|top", "|front", "|side"]:
                     continue
 
-                if node.startswith(comp_node):
-                    except_nodes.append(node)
-                    break
+                if world_node not in result_nodes:
+                    result_nodes.append(world_node)
 
-        return cmds.ls([node for node in nodes if node not in except_nodes])
+    return _to_fullpath(result_nodes, fullpath)
 
 
-class SelectionMode:
-    """Selection mode."""
+def get_shapes(nodes: list[str], shape_type: str | None = None, fullpath: bool = False) -> list[str]:
+    """Get shape nodes from transform nodes.
 
-    @property
-    def object_mode_types(self) -> list[str]:
-        """Get the object mode types.
+    Retrieves shape nodes (geometry) from transform nodes. Duplicates are automatically removed.
 
-        Returns:
-            list[str]: The object mode types.
-        """
-        return [
-            "byName",
-            "camera",
-            "cluster",
-            "collisionModel",
-            "curve",
-            "curveOnSurface",
-            "dimension",
-            "dynamicConstraint",
-            "emitter",
-            "field",
-            "fluid",
-            "follicle",
-            "hairSystem",
-            "handle",
-            "ikEndEffector",
-            "ikHandle",
-            "implicitGeometry",
-            "joint",
-            "lattice",
-            "light",
-            "locator",
-            "locatorUV",
-            "locatorXYZ",
-            "nCloth",
-            "nParticleShape",
-            "nRigid",
-            "nonlinear",
-            "nurbsCurve",
-            "nurbsSurface",
-            "orientationLocator",
-            "particleShape",
-            "plane",
-            "polymesh",
-            "rigidBody",
-            "rigidConstraint",
-            "sculpt",
-            "spring",
-            "subdiv",
-            "texture",
-        ]
+    Args:
+        nodes (list[str]): Transform nodes to get shapes from.
+        shape_type (str | None): Filter by shape type (e.g., "mesh", "nurbsCurve"). None returns all shapes.
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-    @property
-    def component_mode_types(self) -> list[str]:
-        """Get the component mode types.
+    Returns:
+        list[str]: Shape nodes.
 
-        Returns:
-            list[str]: The component mode types.
-        """
-        return [
-            "controlVertex",
-            "curveKnot",
-            "curveParameterPoint",
-            "edge",
-            "editPoint",
-            "facet",
-            "hull",
-            "imagePlane",
-            "isoparm",
-            "jointPivot",
-            "latticePoint",
-            "localRotationAxis",
-            "nParticle",
-            "particle",
-            "polymeshEdge",
-            "polymeshFace",
-            "polymeshUV",
-            "polymeshVertex",
-            "polymeshVtxFace",
-            "rotatePivot",
-            "scalePivot",
-            "selectHandle",
-            "springComponent",
-            "subdivMeshEdge",
-            "subdivMeshFace",
-            "subdivMeshPoint",
-            "subdivMeshUV",
-            "surfaceEdge",
-            "surfaceFace",
-            "surfaceKnot",
-            "surfaceParameterPoint",
-            "surfaceRange",
-            "surfaceUV",
-            "vertex",
-        ]
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
 
-    def get_mode(self) -> str:
-        """Get the current selection mode. (object or component)
+    Example:
+        >>> get_shapes(["pCube1", "pSphere1"])
+        ["pCubeShape1", "pSphereShape1"]
+        >>> get_shapes(["pCube1", "nurbsCircle1"], shape_type="mesh")
+        ["pCubeShape1"]  # Only mesh shapes
+    """
+    _validate_dag_nodes(nodes)
 
-        Returns:
-            str: The selection mode.
-        """
-        if cmds.selectMode(q=True, object=True):
-            return "object"
-        elif cmds.selectMode(q=True, component=True):
-            return "component"
+    shapes = get_children(nodes, include_shape=True, fullpath=True)
+    if not shapes:
+        return []
 
-    def to_object(self) -> list[str]:
-        """Change the selection to the object mode."""
-        cmds.selectMode(object=True)
+    if shape_type:
+        filtered_shapes = cmds.ls(shapes, type=shape_type, long=True)
+    else:
+        filtered_shapes = shapes
 
-    def get_object_mode(self, mode: str) -> bool:
-        """Get the object mode.
+    return _to_fullpath(filtered_shapes, fullpath)
 
-        Returns:
-            bool or None: The object mode.
 
-        """
-        if not mode:
-            ValueError("Mode is not specified.")
+def get_hierarchy(nodes: list[str], include_shape: bool = False, fullpath: bool = False) -> list[str]:
+    """Get complete hierarchies (nodes and all descendants) from multiple nodes.
 
-        if not self._validate_object_mode():
-            return None
+    Recursively collects each input node and all its descendants. Duplicates are automatically removed.
 
-        if mode not in self.object_mode_types:
-            cmds.error(f"Unsupported mode: {mode}")
+    Args:
+        nodes (list[str]): Root nodes to get hierarchies from.
+        include_shape (bool): If True, include shape nodes in results. Default is False (transforms only).
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-        return cmds.selectType(q=True, **{mode: True})
+    Returns:
+        list[str]: All nodes in the hierarchies (including input nodes).
 
-    def set_object_mode(self, mode: str, value: bool = True) -> None:
-        """Change the object mode.
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
 
-        Args:
-            mode (str): The object mode.
-            value (bool): If True, the mode is enabled. If False, the mode is disabled.
-        """
-        if not mode:
-            ValueError("Mode is not specified.")
+    Example:
+        >>> get_hierarchy(["group1"])  # group1 contains joint1|joint2|joint3
+        ["group1", "joint1", "joint2", "joint3"]
+        >>> get_hierarchy(["pCube1"], include_shape=True)
+        ["pCube1", "pCubeShape1"]
+    """
+    _validate_dag_nodes(nodes)
 
-        self.to_object()
+    result_nodes = []
 
-        if mode not in self.object_mode_types:
-            cmds.error(f"Unsupported mode: {mode}")
+    def _get_children_recursive(node: str):
+        """Recursively collect node and all descendants."""
+        if node not in result_nodes:
+            result_nodes.append(node)
 
-        cmds.selectType(**{mode: value})
-
-        logger.debug(f"Set the object mode to: {mode} -> {value}")
-
-    def toggle_object_mode(self, modes: list[str]) -> None:
-        """Toggle the object mode.
-
-        Args:
-            modes (list[str]): The object mode.
-        """
-        if not modes:
-            ValueError("Modes are not specified.")
-
-        if not self._validate_object_mode():
+        if "transform" not in cmds.nodeType(node, inherited=True):
             return
 
-        for mode in modes:
-            if mode not in self.object_mode_types:
-                cmds.error(f"Unsupported mode: {mode}")
+        if include_shape:
+            children = cmds.listRelatives(node, children=True, path=True)
+        else:
+            children = cmds.listRelatives(node, children=True, path=True, type="transform")
 
-            cmds.selectType(**{mode: not self.get_object_mode(mode)})
+        if children:
+            for child in children:
+                _get_children_recursive(child)
 
-            logger.debug(f"Toggle the object mode: {mode}")
+    for node in nodes:
+        _get_children_recursive(node)
 
-    def list_current_object_mode(self) -> list[str]:
-        """Get the current object mode.
-
-        Returns:
-            list[str]: The current object mode.
-        """
-        if not self._validate_object_mode():
-            return None
-
-        modes = []
-        for mode in self.object_mode_types:
-            print(mode)
-            if self.get_object_mode(mode):
-                modes.append(mode)
-
-        return modes
-
-    def to_component(self) -> list[str]:
-        """Change the selection to the component mode."""
-        cmds.selectMode(component=True)
-
-    def get_component_mode(self, mode: str) -> bool:
-        """Get the component mode.
-
-        Returns:
-            bool or None: The component mode.
-
-        """
-        if not mode:
-            ValueError("Mode is not specified.")
-
-        if not self._validate_component_mode():
-            return None
-
-        if mode not in self.component_mode_types:
-            cmds.error(f"Unsupported mode: {mode}")
-
-        return cmds.selectType(q=True, **{mode: True})
-
-    def set_component_mode(self, mode: str, value: bool = True) -> None:
-        """Change the component mode.
-
-        Args:
-            mode (str): The component mode.
-            value (bool): If True, the mode is enabled. If False, the mode is disabled.
-        """
-        if not mode:
-            ValueError("Mode is not specified.")
-
-        self.to_component()
-
-        if mode not in self.component_mode_types:
-            cmds.error(f"Unsupported mode: {mode}")
-
-        cmds.selectType(**{mode: value})
-
-        logger.debug(f"Set the component mode to: {mode} -> {value}")
-
-    def toggle_component_mode(self, modes: list[str]) -> None:
-        """Toggle the component mode.
-
-        Args:
-            modes (list[str]): The component mode.
-        """
-        if not modes:
-            ValueError("Modes are not specified.")
-
-        if not self._validate_component_mode():
-            return
-
-        for mode in modes:
-            if mode not in self.component_mode_types:
-                cmds.error(f"Unsupported mode: {mode}")
-
-            cmds.selectType(**{mode: not self.get_component_mode(mode)})
-
-            logger.debug(f"Toggle the component mode: {mode}")
-
-    def list_current_component_mode(self) -> list[str]:
-        """Get the current component mode.
-
-        Returns:
-            list[str]: The current component mode.
-        """
-        if self._validate_component_mode():
-            return None
-
-        modes = []
-        for mode in self.component_mode_types:
-            if self.get_component_mode(mode):
-                modes.append(mode)
-
-        return modes
-
-    def _validate_object_mode(self) -> bool:
-        """Validate the object mode."""
-        if self.get_mode() != "object":
-            logger.debug("The current mode is not object.")
-            return False
-
-        return True
-
-    def _validate_component_mode(self):
-        """Validate the component mode."""
-        if self.get_mode() != "component":
-            logger.debug("The current mode is not component.")
-            return False
-
-        return True
+    return _to_fullpath(result_nodes, fullpath)
 
 
-class HiliteSelection:
-    def list_nodes(self, full_path: bool = False) -> list[str]:
-        """List the hilite nodes.
+def get_leaf_nodes(nodes: list[str], fullpath: bool = False) -> list[str]:
+    """Get leaf nodes (nodes with no transform children) from hierarchies.
 
-        Args:
-            full_path (bool): Whether to return the full path. Default is False.
+    Finds all leaf/end nodes within the hierarchies of the input nodes.
+    A leaf node is a transform with no transform children.
 
-        Returns:
-            list[str]: The hilite nodes.
-        """
-        return cmds.ls(hilite=True, long=full_path)
+    Args:
+        nodes (list[str]): Root nodes to search hierarchies.
+        fullpath (bool): If True, return results as full paths. Default is False.
 
-    def hilite(self, nodes: list[str], replace: bool = True) -> None:
-        """Hilite the nodes.
+    Returns:
+        list[str]: All leaf nodes in the hierarchies.
 
-        Args:
-            nodes (list[str]): The nodes.
-            replace (bool): If True, replace the current hilite. If False, add to the current hilite. Default is True.
-        """
-        if not nodes:
-            ValueError("Nodes are not specified.")
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
 
-        if not isinstance(nodes, list):
-            ValueError("Nodes must be a list.")
+    Example:
+        >>> get_leaf_nodes(["group1"])  # group1|joint1|joint2|joint3 (joint3 is leaf)
+        ["joint3"]
+        >>> get_leaf_nodes(["arm_rig"])  # Multiple end joints
+        ["hand_L", "hand_R", "clavicle_end"]
+    """
+    _validate_dag_nodes(nodes)
 
-        cmds.hilite(nodes, replace=replace)
+    hierarchy_nodes = get_hierarchy(nodes, include_shape=False, fullpath=True)
 
-    def clear(self) -> None:
-        """Clear the hilite."""
-        hilite_nodes = self.list_nodes()
-        if not hilite_nodes:
-            return
+    result_nodes = []
+    for node in hierarchy_nodes:
+        children = cmds.listRelatives(node, children=True, path=True, type="transform")
+        if not children:
+            result_nodes.append(node)
 
-        cmds.hilite(hilite_nodes, unHilite=True)
+    return _to_fullpath(result_nodes, fullpath)
+
+
+def get_top_nodes(nodes: list[str], fullpath: bool = False) -> list[str]:
+    """Get top-level nodes from a selection (remove descendants).
+
+    Filters input nodes to return only those that are not descendants of other input nodes.
+    Useful for getting root nodes when a mix of parents and children are selected.
+
+    Args:
+        nodes (list[str]): Nodes to filter.
+        fullpath (bool): If True, return results as full paths. Default is False.
+
+    Returns:
+        list[str]: Top-level nodes (no node is a descendant of another).
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, or are not DAG nodes.
+
+    Example:
+        >>> get_top_nodes(["joint1", "joint1|joint2", "joint1|joint2|joint3"])
+        ["joint1"]
+        >>> get_top_nodes(["group1", "group2"])  # Both are roots
+        ["group1", "group2"]
+    """
+    _validate_dag_nodes(nodes)
+
+    long_nodes = cmds.ls(nodes, long=True)
+    sorted_nodes = sorted(long_nodes, key=lambda x: x.count("|"), reverse=True)
+
+    except_nodes = []
+    for node in sorted_nodes:
+        for comp_node in sorted_nodes:
+            if node == comp_node:
+                continue
+
+            if node.startswith(comp_node):
+                except_nodes.append(node)
+                break
+
+    result_nodes = [node for node in sorted_nodes if node not in except_nodes]
+
+    return _to_fullpath(result_nodes, fullpath)
+
+
+def reorder_outliner(nodes: list[str], mode: str = "name", reverse: bool = False) -> None:
+    """Reorder nodes in Maya outliner.
+
+    Reorders sibling nodes in the outliner based on sorting criteria.
+    All nodes must be siblings (share the same parent).
+    Nodes not specified in the input list will keep their original positions.
+
+    Args:
+        nodes (list[str]): Nodes to reorder. All nodes must be siblings (same parent).
+        mode (str): Sorting mode:
+            - "name": Sort alphabetically by node name (default)
+            - "name_reversed": Sort alphabetically by reversed node name
+        reverse (bool): If True, reverse the final sort order. Default is False.
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, are not DAG nodes,
+                   or are not all in the same hierarchy level (different parents).
+
+    Example:
+        >>> # Original order: ['joint1', 'joint3', 'joint2', 'joint4']
+        >>> reorder_outliner(["joint3", "joint2"], mode="name")
+        # Result: ['joint1', 'joint2', 'joint3', 'joint4']
+        # joint1 and joint4 keep their positions, only joint3 and joint2 are sorted
+
+        >>> reorder_outliner(["node_C", "node_A", "node_B"], mode="name", reverse=True)
+        # Result: node_C, node_B, node_A (if these are the only children)
+
+        >>> reorder_outliner(["abc", "cba", "bca"], mode="name_reversed")
+        # Result: abc, bca, cba (sorted by reversed names: cba, acb, abc)
+    """
+    _validate_dag_nodes(nodes)
+
+    # Get full paths for all nodes
+    long_nodes = cmds.ls(nodes, long=True)
+
+    # Check if all nodes have the same parent
+    parents = set()
+    parent_node = None
+    for node in long_nodes:
+        parent = cmds.listRelatives(node, parent=True, fullPath=True)
+        parent_path = parent[0] if parent else None
+        parents.add(parent_path)
+        if parent_node is None:
+            parent_node = parent_path
+
+    if len(parents) > 1:
+        parent_list = [p if p else "world" for p in sorted(parents)]
+        raise ValueError(f"All nodes must be siblings (same parent). Found nodes with different parents: {parent_list}")
+
+    # Get all siblings in their current outliner order
+    if parent_node:
+        all_siblings = cmds.listRelatives(parent_node, children=True, fullPath=True, type="transform") or []
+    else:
+        # World nodes (top-level)
+        all_siblings = cmds.ls(assemblies=True, long=True)
+
+    # Create set for quick lookup
+    input_node_set = set(long_nodes)
+
+    # Sort only the input nodes based on mode
+    if mode == "name":
+        # Sort by node name (without path)
+        sorted_input_nodes = sorted(long_nodes, key=lambda x: x.split("|")[-1])
+    elif mode == "name_reversed":
+        # Sort by reversed node name
+        sorted_input_nodes = sorted(long_nodes, key=lambda x: x.split("|")[-1][::-1])
+    else:
+        raise ValueError(f"Invalid mode '{mode}'. Must be 'name' or 'name_reversed'.")
+
+    if reverse:
+        sorted_input_nodes = sorted_input_nodes[::-1]
+
+    # Create final order by replacing input nodes with sorted versions
+    # while keeping other nodes in their original positions
+    final_order = []
+    sorted_index = 0
+
+    for sibling in all_siblings:
+        if sibling in input_node_set:
+            # Replace with sorted node from the input list
+            final_order.append(sorted_input_nodes[sorted_index])
+            sorted_index += 1
+        else:
+            # Keep original position for nodes not in input list
+            final_order.append(sibling)
+
+    # Reorder nodes in the outliner according to final order
+    for node in final_order:
+        cmds.reorder(node, back=True)
 
 
 @contextmanager
 def restore_selection():
-    """Context manager to restore the existing selection state."""
+    """Context manager to preserve and restore Maya's current selection.
+
+    Captures the current selection before executing code, then restores it afterwards.
+    Handles cases where selected nodes are deleted during the operation.
+
+    Yields:
+        None
+
+    Example:
+        >>> with restore_selection():
+        ...     cmds.select("pCube1")
+        ...     # Do operations that change selection
+        >>> # Original selection is now restored
+
+        >>> # If nodes are deleted, only existing nodes are restored
+        >>> with restore_selection():
+        ...     cmds.delete("pCube1")  # Delete a selected node
+        >>> # Only remaining selected nodes are restored
+    """
     initial_selection = cmds.ls(selection=True, long=True)
     try:
         yield
@@ -612,3 +628,20 @@ def restore_selection():
                 cmds.select(exists_nodes, replace=True)
             else:
                 cmds.select(cl=True)
+
+
+__all__ = [
+    "is_unique_node",
+    "filter_by_type",
+    "filter_by_regex",
+    "get_parents",
+    "get_all_parents",
+    "get_children",
+    "get_siblings",
+    "get_shapes",
+    "get_hierarchy",
+    "get_leaf_nodes",
+    "get_top_nodes",
+    "reorder_outliner",
+    "restore_selection",
+]
