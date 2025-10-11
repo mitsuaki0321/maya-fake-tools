@@ -89,6 +89,13 @@ class SubstitutionSelectionWidget(QWidget):
         self.mirror_checkbox = extra_widgets.TextCheckBoxButton(text="MIR", width=button_size, height=button_size, font_size=font_size, parent=self)
         main_layout.addWidget(self.mirror_checkbox)
 
+        # World/Local space toggle
+        self.mirror_space_checkbox = extra_widgets.TextCheckBoxButton(
+            text="WRD", width=button_size, height=button_size, font_size=font_size, parent=self
+        )
+        self.mirror_space_checkbox.setChecked(True)
+        main_layout.addWidget(self.mirror_space_checkbox)
+
         # Position/Rotation checkboxes (horizontal layout)
         self.mirror_pos_checkbox = extra_widgets.TextCheckBoxButton(
             text="POS", width=button_size, height=button_size, font_size=font_size, parent=self
@@ -260,6 +267,7 @@ class SubstitutionSelectionWidget(QWidget):
 
         mirror_pos = self.mirror_pos_checkbox.isChecked()
         mirror_rot = self.mirror_rot_checkbox.isChecked()
+        mirror_space = "world" if self.mirror_space_checkbox.isChecked() else "local"
         search_text, replace_text = self._get_substitution_option()
 
         nodes = [node.split("|")[-1] for node in nodes]
@@ -280,7 +288,7 @@ class SubstitutionSelectionWidget(QWidget):
             cmds.xform(name, matrix=source_matrix, worldSpace=True)
 
             # Mirror target using operations.mirror_transforms
-            mirror_transforms(name, axis="x", mirror_position=mirror_pos, mirror_rotation=mirror_rot, space="world")
+            mirror_transforms(name, axis="x", mirror_position=mirror_pos, mirror_rotation=mirror_rot, space=mirror_space)
 
             result_nodes.append(name)
 
@@ -296,6 +304,7 @@ class SubstitutionSelectionWidget(QWidget):
         search_text, replace_text = self._get_substitution_option()
 
         mirror = self.mirror_checkbox.isChecked()
+        mirror_space = "world" if self.mirror_space_checkbox.isChecked() else "local"
         mirror_pos = self.mirror_pos_checkbox.isChecked()
         mirror_rot = self.mirror_rot_checkbox.isChecked()
         freeze = self.freeze_checkbox.isChecked()
@@ -313,7 +322,7 @@ class SubstitutionSelectionWidget(QWidget):
             if mirror:
                 for node in result_top_nodes:
                     # Mirror node using operations.mirror_transforms
-                    mirror_transforms(node, axis="x", mirror_position=mirror_pos, mirror_rotation=mirror_rot, space="world")
+                    mirror_transforms(node, axis="x", mirror_position=mirror_pos, mirror_rotation=mirror_rot, space=mirror_space)
                     if freeze:
                         lib_transform.freeze_transform(node)
                         lib_transform.freeze_transform_pivot(node)
