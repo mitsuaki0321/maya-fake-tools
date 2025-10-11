@@ -8,7 +8,7 @@ import pickle
 
 import maya.cmds as cmds
 
-from .....lib import lib_retarget
+from ....lib import lib_retarget
 from .hierarchy import TransformHierarchy
 from .position_methods import DefaultPosition, MeshBaryPosition, MeshRBFPosition
 

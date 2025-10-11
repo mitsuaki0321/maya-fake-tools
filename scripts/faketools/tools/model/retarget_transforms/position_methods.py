@@ -10,7 +10,7 @@ import maya.api.OpenMaya as om
 import maya.cmds as cmds
 import numpy as np
 
-from .....lib import lib_retarget
+from ....lib import lib_retarget
 
 logger = logging.getLogger(__name__)
 

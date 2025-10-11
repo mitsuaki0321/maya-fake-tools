@@ -14,7 +14,22 @@ Usage:
 # Try to import PySide2 first (Maya 2022 and earlier)
 try:
     from PySide2 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide2.QtCore import QAbstractItemModel, QEvent, QObject, QPoint, QRectF, QSize, Qt, QThread, QTimer, Signal, Slot
+    from PySide2.QtCore import (
+        QAbstractItemModel,
+        QEvent,
+        QItemSelectionModel,
+        QObject,
+        QPoint,
+        QRectF,
+        QSize,
+        QSortFilterProxyModel,
+        QStringListModel,
+        Qt,
+        QThread,
+        QTimer,
+        Signal,
+        Slot,
+    )
     from PySide2.QtGui import (
         QBrush,
         QColor,
@@ -126,7 +141,22 @@ try:
 except ImportError:
     # Fall back to PySide6 (Maya 2023 and later)
     from PySide6 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
-    from PySide6.QtCore import QAbstractItemModel, QEvent, QObject, QPoint, QRectF, QSize, Qt, QThread, QTimer, Signal, Slot
+    from PySide6.QtCore import (
+        QAbstractItemModel,
+        QEvent,
+        QItemSelectionModel,
+        QObject,
+        QPoint,
+        QRectF,
+        QSize,
+        QSortFilterProxyModel,
+        QStringListModel,
+        Qt,
+        QThread,
+        QTimer,
+        Signal,
+        Slot,
+    )
     from PySide6.QtGui import (
         QAction,
         QActionGroup,
@@ -340,6 +370,9 @@ __all__ = [
     "QAbstractItemModel",
     "QStandardItemModel",
     "QStandardItem",
+    "QStringListModel",
+    "QSortFilterProxyModel",
+    "QItemSelectionModel",
     "QItemDelegate",
     "QStyledItemDelegate",
     "QFileDialog",
