@@ -4,7 +4,7 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ..lib import lib_transform
+from ..lib import lib_shape, lib_transform
 from ..lib_ui import maya_ui
 from .base_commands import AllCommand
 
@@ -409,6 +409,41 @@ class DeleteExtraAttributesCommand(AllCommand):
                 logger.debug(f"Deleted extra attributes {', '.join(deleted_attrs)} from node: {target_node}")
 
 
+class DuplicateOriginalShapeCommand(AllCommand):
+    """Command to duplicate original shape from source to destination."""
+
+    _name = "Duplicate Original Shape"
+    _description = "Command to duplicate or connect original shape from source to destination"
+
+    def execute(self, target_nodes: list[str]):
+        """Execute the command.
+
+        Args:
+            target_nodes (list[str]): The target nodes, expects exactly two nodes [source, destination].
+        """
+        super().execute(target_nodes)
+
+        duplicate_nodes = []
+        for target_node in target_nodes:
+            if not cmds.objectType(target_node, isAType="transform"):
+                logger.warning(f"Node is not a transform: {target_node}, skipping.")
+                return
+
+            shapes = cmds.listRelatives(target_node, shapes=True, pa=True, ni=True) or []
+            if not shapes:
+                logger.warning(f"No shapes found under: {target_node}, skipping.")
+                return
+
+            duplicate_node = lib_shape.duplicate_original_shape(shapes[0])
+            duplicate_nodes.append(duplicate_node)
+
+        if duplicate_nodes:
+            cmds.select(duplicate_nodes, r=True)
+            logger.debug(f"Processed nodes: {', '.join(duplicate_nodes)}")
+        else:
+            logger.warning("No nodes were processed.")
+
+
 __all__ = [
     "LockAndHideCommand",
     "UnlockAndShowCommand",
@@ -420,4 +455,5 @@ __all__ = [
     "JointsToChainCommand",
     "MirrorJointsCommand",
     "DeleteExtraAttributesCommand",
+    "DuplicateOriginalShapeCommand",
 ]

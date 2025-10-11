@@ -4,6 +4,7 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
+from ..lib.lib_shape import connect_shapes
 from .base_commands import PairCommand
 
 logger = getLogger(__name__)
@@ -197,7 +198,18 @@ class ConnectShapeCommand(PairCommand):
             source_node (str): The source node to process.
             target_node (str): The target node to process.
         """
-        pass  # TODO: Implement this method.
+        if not cmds.objectType(source_node, isAType="transform") or not cmds.objectType(target_node, isAType="transform"):
+            logger.warning(f"Skip copy transform. Not a transform node: {source_node}, {target_node}")
+            return
+
+        shape = cmds.listRelatives(source_node, shapes=True, fullPath=True)
+        target_shape = cmds.listRelatives(target_node, shapes=True, fullPath=True)
+
+        if not shape or not target_shape:
+            logger.warning(f"Skip connect shape. No shape found: {source_node}, {target_node}")
+            return
+
+        connect_shapes(shape[0], target_shape[0], only_copy=False)
 
 
 class CopyShapeCommand(PairCommand):
@@ -213,7 +225,18 @@ class CopyShapeCommand(PairCommand):
             source_node (str): The source node to process.
             target_node (str): The target node to process.
         """
-        pass  # TODO: Implement this method.
+        if not cmds.objectType(source_node, isAType="transform") or not cmds.objectType(target_node, isAType="transform"):
+            logger.warning(f"Skip copy transform. Not a transform node: {source_node}, {target_node}")
+            return
+
+        shape = cmds.listRelatives(source_node, shapes=True, fullPath=True)
+        target_shape = cmds.listRelatives(target_node, shapes=True, fullPath=True)
+
+        if not shape or not target_shape:
+            logger.warning(f"Skip copy shape. No shape found: {source_node}, {target_node}")
+            return
+
+        connect_shapes(shape[0], target_shape[0], only_copy=True)
 
 
 class ParentTransformCommand(PairCommand):
