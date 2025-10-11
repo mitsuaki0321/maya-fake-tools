@@ -90,6 +90,23 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `is_use_component_tag()`: Check if component tags are enabled in preferences
      - `remove_deformer_blank_indices(deformer)`: Clean up deformer indices
 
+9. **Operations** ([scripts/faketools/operations/](scripts/faketools/operations/))
+   - High-level operations that combine multiple `lib` utilities
+   - **IMPORTANT RULES**:
+     - Operations **CAN** depend on `lib` modules
+     - Operations **CANNOT** depend on each other
+     - Each operation module should have a **single, focused responsibility**
+     - Operations are **lib modules that depend on other lib modules**
+   - **Architecture Hierarchy**:
+     - `lib/` → Basic utilities (no dependencies within lib)
+     - `operations/` → High-level operations (can use lib)
+     - `tools/*/command.py` → Tool-specific commands (can use both lib and operations)
+   - **Current Operations**:
+     - **mirror.py**: Transform mirroring operations
+       - `mirror_transforms(node, axis, mirror_position, mirror_rotation, space)`: Mirror node transform across axis
+         - `space="world"`: Mirror in world space
+         - `space="local"`: Mirror in local space (relative to parent)
+
 ## Tool Structure
 
 Tools are organized under [scripts/faketools/tools/](scripts/faketools/tools/) by category:
@@ -386,7 +403,8 @@ These cases are acceptable:
 - **plug-ins/**: Maya plugins (currently empty, planned for future)
 - **scripts/faketools/**: Main package
   - `core/`: Framework core (registry, base classes)
-  - `lib/`: Shared Maya utilities (attribute operations, etc.)
+  - `lib/`: Shared Maya utilities (basic, no inter-dependencies)
+  - `operations/`: High-level operations (combines lib utilities)
   - `lib_ui/`: UI-specific utilities
     - `base_window.py`: BaseMainWindow and resolution utilities
     - `maya_decorator.py`: UI decorators (@error_handler, @undo_chunk, @disable_undo)
@@ -524,6 +542,22 @@ from ....lib_ui.maya_qt import get_maya_main_window, qt_widget_from_maya_window
 from ....lib_ui.maya_ui import get_channels, get_modifiers
 from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QWidget, QPushButton
+```
+
+### Operations Imports (from tool command.py)
+```python
+# From tools/{category}/{tool_name}/command.py
+from ...operations import mirror_transforms
+from ...lib.lib_selection import DagHierarchy
+
+# Use operations for high-level reusable operations
+# Use lib for basic utilities
+def execute():
+    # Mirror in world space
+    mirror_transforms("pCube1", axis="x", space="world")
+
+    # Mirror in local space (relative to parent)
+    mirror_transforms("pCube1", axis="x", space="local")
 ```
 
 ### CRITICAL: Never Import PySide Directly
