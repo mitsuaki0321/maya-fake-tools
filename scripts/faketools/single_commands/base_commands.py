@@ -100,7 +100,7 @@ class AllCommand(BaseCommand):
         pass
 
 
-class OneToOneCommand(BaseCommand):
+class PairCommand(BaseCommand):
     """Command to process pairs of nodes (source -> target).
 
     Notes:
@@ -109,7 +109,7 @@ class OneToOneCommand(BaseCommand):
         - Otherwise, source_nodes and target_nodes must have the same length.
     """
 
-    _name = "OneToOneCommand"
+    _name = "PairCommand"
     _description = "Command to process one node to one other node"
 
     def __init__(self, source_nodes: list[str], target_nodes: list[str]):
@@ -167,14 +167,9 @@ class OneToOneCommand(BaseCommand):
         pass
 
 
-# Alias for compatibility with reference implementation
-PairCommand = OneToOneCommand
-
-
 __all__ = [
     "BaseCommand",
     "SceneCommand",
     "AllCommand",
-    "OneToOneCommand",
     "PairCommand",
 ]
