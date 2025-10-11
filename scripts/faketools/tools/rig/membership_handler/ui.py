@@ -79,8 +79,8 @@ class MainWindow(BaseMainWindow):
         self.deformer_field.setText(sel_deformers[0])
         self.deformer = lib_memberShip.DeformerMembership(sel_deformers[0])
 
-    @maya_decorator.undo_chunk("Update Memberships")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Update Memberships")
     def update_memberships(self):
         """Update the memberships."""
         if not self.deformer:

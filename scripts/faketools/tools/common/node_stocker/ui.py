@@ -339,8 +339,8 @@ class MainWindow(BaseMainWindow):
 
         return nodes
 
-    @maya_decorator.undo_chunk("Select Nodes")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Select Nodes")
     def _select_nodes(self, button: nodeStock_view.NodeStockButton) -> None:
         """Select the nodes when the left button is clicked."""
         nodes = self._current_scene_data.get(button.key, [])
@@ -351,8 +351,8 @@ class MainWindow(BaseMainWindow):
 
         logger.debug(f"Selected nodes: {nodes}")
 
-    @maya_decorator.undo_chunk("Select Nodes by Rubber Band")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Select Nodes by Rubber Band")
     def _select_nodes_rubber_band(self, buttons: list[nodeStock_view.NodeStockButton]) -> None:
         """Select the nodes when the rubber band selection is made."""
         if not buttons:
