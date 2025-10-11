@@ -7,7 +7,7 @@ This tool allows you to copy, connect, or zero out transform attributes
 
 TOOL_CONFIG = {
     "name": "Transform Connector",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "description": "Connect and copy transform attributes between objects",
     "menu_label": "Transform Connector",
     "requires_selection": False,

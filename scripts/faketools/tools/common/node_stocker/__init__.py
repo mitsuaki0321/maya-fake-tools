@@ -7,7 +7,7 @@ This tool provides functionalities to store and manage nodes in Maya scenes.
 # Tool configuration for registration
 TOOL_CONFIG = {
     "name": "Node Stocker",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "description": "Store and manage nodes in Maya scenes.",
     "menu_label": "Node Stocker",
     "requires_selection": False,

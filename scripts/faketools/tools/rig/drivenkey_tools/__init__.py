@@ -6,7 +6,7 @@ This tool provides functionalities to create, transfer, and manage driven keys i
 
 TOOL_CONFIG = {
     "name": "Driven Key Tools",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "description": "Create and manage driven keys in Maya",
     "menu_label": "Driven Key Tools",
     "requires_selection": False,
