@@ -46,4 +46,55 @@ def get_modifiers() -> list[str]:
     return keys
 
 
-__all__ = ["get_channels", "get_modifiers"]
+class ProgressBar:
+    """Context manager for Maya's main progress bar.
+
+    Args:
+        maxVal (int): Maximum value for the progress bar.
+        **kwargs: Additional keyword arguments.
+            message/msg (str): Progress bar status message. Defaults to "Calculation ...".
+
+    Example:
+        >>> with ProgressBar(100, msg="Processing") as progress:
+        ...     for i in range(100):
+        ...         if progress.breakPoint():
+        ...             break
+    """
+
+    def __init__(self, maxVal, **kwargs):
+        """Initialize progress bar.
+
+        Args:
+            maxVal (int): Maximum value for the progress bar.
+            **kwargs: Additional keyword arguments (message/msg).
+        """
+        msg = kwargs.get("message", kwargs.get("msg", "Calculation ..."))
+        self.pBar = mel.eval("$tmp = $gMainProgressBar")
+        cmds.progressBar(self.pBar, e=True, beginProgress=True, isInterruptable=True, status=msg, maxValue=maxVal)
+
+    def breakPoint(self):
+        """Check if user cancelled and increment progress.
+
+        Returns:
+            bool: True if user cancelled, False otherwise.
+        """
+        if cmds.progressBar(self.pBar, q=True, isCancelled=True):
+            return True
+        else:
+            cmds.progressBar(self.pBar, e=True, step=1)
+            return False
+
+    def __enter__(self):
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Exit context manager and end progress."""
+        cmds.progressBar(self.pBar, e=True, endProgress=True)
+
+
+# Keep old name for backwards compatibility
+progress_bar = ProgressBar
+
+
+__all__ = ["get_channels", "get_modifiers", "ProgressBar", "progress_bar"]
