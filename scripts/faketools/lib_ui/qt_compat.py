@@ -17,6 +17,7 @@ try:
     from PySide2.QtCore import (
         QAbstractItemModel,
         QEvent,
+        QFileSystemModel,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -144,6 +145,7 @@ except ImportError:
     from PySide6.QtCore import (
         QAbstractItemModel,
         QEvent,
+        QFileSystemModel,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -375,6 +377,7 @@ __all__ = [
     "QItemSelectionModel",
     "QItemDelegate",
     "QStyledItemDelegate",
+    "QFileSystemModel",
     "QFileDialog",
     "QColorDialog",
     "QFontDialog",
