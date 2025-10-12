@@ -1,7 +1,7 @@
-"""
-Retarget Transforms Tool for same topology geometries.
+"""Retarget Transforms
 
-This module provides configuration for the Retarget Transforms Tool in Maya.
+Transfer transform hierarchies between objects with matching topology.
+Matches transforms by name and applies positions, rotations, and scales.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Tool to retarget transforms with the same topology",
     "menu_label": "Retarget Transforms",
+    "menu_order": 30,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",

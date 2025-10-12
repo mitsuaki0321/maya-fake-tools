@@ -1,8 +1,7 @@
-"""
-Create transform tools for on selected curves.
+"""Transform Creator on Curve
 
-This tool allows you to create transform nodes (groups) aligned to selected curves,
-with options for parenting, naming, and orientation.
+Create transform nodes positioned along selected curves.
+Distribute transforms evenly or at specific parameters with orientation options.
 """
 
 TOOL_CONFIG = {
@@ -10,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Create transform nodes aligned to selected curves",
     "menu_label": "Transform Creator on Curve",
+    "menu_order": 30,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

@@ -1,8 +1,7 @@
-"""
-Transform Connector tool for connecting transformations between objects.
+"""Transform Connector
 
-This tool allows you to copy, connect, or zero out transform attributes
-(translate, rotate, scale, jointOrient, visibility) between Maya transform nodes.
+Copy, connect, or zero out transform attributes between objects.
+Supports translate, rotate, scale, jointOrient, and visibility attributes.
 """
 
 TOOL_CONFIG = {
@@ -10,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Connect and copy transform attributes between objects",
     "menu_label": "Transform Connector",
+    "menu_order": 10,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

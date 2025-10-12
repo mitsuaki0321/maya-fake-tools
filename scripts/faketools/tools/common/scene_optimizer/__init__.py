@@ -1,15 +1,15 @@
-"""
-Scene Optimizer tool for Maya.
+"""Scene Optimizer
 
-Provides various optimization functions for Maya scenes.
+Optimize and clean up Maya scenes.
+Remove unused nodes, optimize transforms, and perform batch cleanup operations.
 """
 
-# Tool configuration for registration
 TOOL_CONFIG = {
     "name": "Scene Optimizer",
     "version": "1.0.0",
     "description": "Optimize Maya scenes with various cleanup operations",
     "menu_label": "Scene Optimizer",
+    "menu_order": 30,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "common",

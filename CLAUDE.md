@@ -19,6 +19,7 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
 2. **Menu System** ([scripts/faketools/menu.py](scripts/faketools/menu.py))
    - Creates dynamic "FakeTools" menu in Maya's main menu bar
    - Automatically organizes tools by category (rig/model/anim/common)
+   - Tools within each category are sorted by `menu_order` (ascending), then alphabetically
    - Functions: `add_menu()`, `remove_menu()`, `reload_menu()`
 
 3. **Qt Compatibility Layer** ([scripts/faketools/lib_ui/qt_compat.py](scripts/faketools/lib_ui/qt_compat.py))
@@ -306,6 +307,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Tool description",
     "menu_label": "Menu Item Label",
+    "menu_order": 10,  # Optional: Controls display order in menu (default: 100)
     "requires_selection": False,
     "author": "Author Name",
     "category": "rig",  # rig/model/anim/common
@@ -313,6 +315,20 @@ TOOL_CONFIG = {
 
 __all__ = ["TOOL_CONFIG"]
 ```
+
+**TOOL_CONFIG Parameters:**
+- `name` (str): Tool display name
+- `version` (str): Tool version (semantic versioning)
+- `description` (str): Brief description of tool functionality
+- `menu_label` (str): Label displayed in Maya menu
+- `menu_order` (int, optional): Controls display order within category menu
+  - Lower numbers appear first (e.g., 10 appears before 20)
+  - Default value: 100 (if not specified)
+  - Tools with same order are sorted alphabetically by label
+  - Use increments of 10 (10, 20, 30...) to allow easy insertion of new tools
+- `requires_selection` (bool): Whether tool requires Maya selection to execute
+- `author` (str): Tool author name
+- `category` (str): Tool category - must be one of: `rig`, `model`, `anim`, `common`
 
 **IMPORTANT**: Do NOT import ui or command modules in `__init__.py`. Only define `TOOL_CONFIG` and `__all__`. The registry system will dynamically import ui modules when needed. This prevents import errors during tool discovery.
 

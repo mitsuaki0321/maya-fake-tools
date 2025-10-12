@@ -302,10 +302,16 @@ class ToolRegistry:
                 if "config" in tool and "menu_label" in tool["config"]:
                     label = tool["config"]["menu_label"]
 
+                # Get menu_order from config (default to 100)
+                menu_order = 100
+                if "config" in tool and "menu_order" in tool["config"]:
+                    menu_order = tool["config"]["menu_order"]
+
                 menu_item = {
                     "label": label,
                     "tool_id": tool["id"],
                     "command": self._generate_menu_command(tool["id"]),
+                    "menu_order": menu_order,
                 }
 
                 # Add description from config or metadata
@@ -315,6 +321,9 @@ class ToolRegistry:
                     menu_item["description"] = tool["metadata"].get("description", "")
 
                 menu_items.append(menu_item)
+
+            # Sort menu items by menu_order, then by label
+            menu_items.sort(key=lambda x: (x["menu_order"], x["label"]))
 
             menu_structure[category] = menu_items
 

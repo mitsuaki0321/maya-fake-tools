@@ -1,7 +1,7 @@
-"""
-Bounded Box Creator Tool
+"""Bounding Box Creator
 
-This module provides configuration for the Bounded Box Creator tool in Maya.
+Create bounding box geometry around selected objects.
+Generates polygon cubes matching the dimensions of object bounds.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Create bounding boxes around selected objects in Maya",
     "menu_label": "Bounding Box Creator",
+    "menu_order": 10,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",

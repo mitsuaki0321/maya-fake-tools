@@ -1,6 +1,7 @@
-"""
-Connection lister for connect and copy transform attributes between objects.
-Single command between source and target or multiple commands in a batch process.
+"""Connection Lister
+
+Connect and copy attributes between source and target objects.
+Supports both manual attribute selection and batch operations with single commands.
 """
 
 TOOL_CONFIG = {
@@ -8,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Connect and copy transform attributes between objects",
     "menu_label": "Connection Lister",
+    "menu_order": 80,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

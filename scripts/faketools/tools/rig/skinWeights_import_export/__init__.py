@@ -1,8 +1,7 @@
-"""
-Skin Weights Import/Export Tool for Maya.
+"""Skin Weights Import/Export
 
-This tool allows users to import and export skin weights for skinned geometries in Autodesk Maya.
-It supports JSON and Pickle formats for data storage.
+Import and export skin weights to external files.
+Supports JSON and Pickle formats for persistent weight storage.
 """
 
 TOOL_CONFIG = {
@@ -10,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Import and export skin weights for skinned geometries.",
     "menu_label": "Skin Weights I/E",
+    "menu_order": 130,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

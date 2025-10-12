@@ -1,7 +1,7 @@
-"""
-Curve and Surface Creator for Maya.
+"""Curve and Surface Creator
 
-This tool provides functionalities to create and manipulate curves and surfaces in Maya.
+Create and manipulate NURBS curves and surfaces.
+Includes utilities for curve extraction, rebuilding, and surface operations.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Create and manipulate curves and surfaces in Maya",
     "menu_label": "Curve/Surface Creator",
+    "menu_order": 50,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

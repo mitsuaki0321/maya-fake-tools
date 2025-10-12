@@ -1,8 +1,7 @@
-"""
-Attribute Lister for listing and managing attributes in Maya.
+"""Attribute Lister
 
-This tool allows you to list, filter, and manage attributes on Maya nodes,
-including options to show/hide default attributes, locked attributes,
+List, filter, and manage attributes on Maya nodes.
+View and modify attribute properties including locked and hidden states.
 """
 
 TOOL_CONFIG = {
@@ -10,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "List and manage attributes on Maya nodes",
     "menu_label": "Attribute Lister",
+    "menu_order": 90,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

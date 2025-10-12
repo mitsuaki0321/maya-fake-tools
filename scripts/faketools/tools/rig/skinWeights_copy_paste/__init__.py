@@ -1,7 +1,7 @@
-"""
-Skin Weights Copy/Paste tool.
+"""Skin Weights Copy/Paste
 
-This tool allows you to copy and paste skin weights between mesh components,
+Copy and paste skin weights between mesh vertices or components.
+Quick workflow for transferring weights within the same mesh.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Copy and paste skin weights between mesh components",
     "menu_label": "Skin Weights Copy/Paste",
+    "menu_order": 120,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",

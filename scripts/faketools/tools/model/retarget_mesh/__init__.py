@@ -1,7 +1,7 @@
-"""
-Retarget Mesh Tool for same topology meshes.
+"""Retarget Mesh
 
-This module provides configuration for the Retarget Mesh Tool in Maya.
+Transfer vertex positions between meshes with identical topology.
+Useful for shape retargeting and mesh pose transfers.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Tool to retarget meshes with the same topology",
     "menu_label": "Retarget Mesh",
+    "menu_order": 20,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",

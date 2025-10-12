@@ -1,7 +1,7 @@
-"""
-Skin Weights tools.
+"""Skin Tools
 
-This package contains tools for managing skin weights on rigged models.
+Comprehensive skin weight management utilities.
+Includes weight painting helpers, influence management, and skin cluster operations.
 """
 
 TOOL_CONFIG = {
@@ -9,6 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Tools for managing skin weights on rigged models",
     "menu_label": "Skin Tools",
+    "menu_order": 110,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "rig",
