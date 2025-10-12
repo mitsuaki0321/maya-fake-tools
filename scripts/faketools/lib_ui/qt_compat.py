@@ -17,7 +17,6 @@ try:
     from PySide2.QtCore import (
         QAbstractItemModel,
         QEvent,
-        QFileSystemModel,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -67,6 +66,7 @@ try:
         QDialog,
         QDoubleSpinBox,
         QFileDialog,
+        QFileSystemModel,
         QFontDialog,
         QFormLayout,
         QFrame,
@@ -145,7 +145,6 @@ except ImportError:
     from PySide6.QtCore import (
         QAbstractItemModel,
         QEvent,
-        QFileSystemModel,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -195,6 +194,7 @@ except ImportError:
         QDialog,
         QDoubleSpinBox,
         QFileDialog,
+        QFileSystemModel,
         QFontDialog,
         QFormLayout,
         QFrame,
