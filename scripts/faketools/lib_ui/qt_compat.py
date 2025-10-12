@@ -17,6 +17,7 @@ try:
     from PySide2.QtCore import (
         QAbstractItemModel,
         QEvent,
+        QFileSystemWatcher,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -145,6 +146,7 @@ except ImportError:
     from PySide6.QtCore import (
         QAbstractItemModel,
         QEvent,
+        QFileSystemWatcher,
         QItemSelectionModel,
         QObject,
         QPoint,
@@ -304,6 +306,7 @@ __all__ = [
     "QSize",
     "QPoint",
     "QRectF",
+    "QFileSystemWatcher",
     # GUI classes
     "QFont",
     "QFontMetrics",

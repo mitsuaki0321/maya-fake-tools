@@ -10,9 +10,21 @@ import maya.cmds as cmds
 from ....lib_ui import maya_decorator, maya_ui, optionvar, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.qt_compat import QFileSystemModel, QHBoxLayout, QLabel, QLineEdit, QMenu, QPushButton, Qt, QTreeView
+from ....lib_ui.qt_compat import (
+    QFileSystemWatcher,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
+    QPushButton,
+    Qt,
+    QTreeWidget,
+    QTreeWidgetItem,
+)
+from ....lib_ui.ui_utils import scale_by_dpi
 from ....lib_ui.widgets import extra_widgets
 from .command import SkinClusterData, SkinClusterDataIO
+from .file_item_widget import FileItemWidget
 
 logger = getLogger(__name__)
 _instance = None
@@ -67,30 +79,22 @@ class MainWindow(BaseMainWindow):
         label.setStyleSheet("font-weight: bold;")
         self.central_layout.addWidget(label)
 
-        self.model = QFileSystemModel()
-        self.model.setRootPath(self.root_path)
-        self.model.setNameFilters(["*.json", "*.pickle"])
-        self.model.setNameFilterDisables(False)
+        # File tree widget
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_context_menu)
+        self.tree_widget.setHeaderHidden(True)
+        self.tree_widget.setIndentation(scale_by_dpi(16, self))
+        self.central_layout.addWidget(self.tree_widget)
 
-        self.tree_view = QTreeView()
-        self.tree_view.setModel(self.model)
-        self.tree_view.setRootIndex(self.model.index(self.root_path))
+        # File system watcher
+        self.file_watcher = QFileSystemWatcher()
+        self.file_watcher.addPath(self.root_path)
+        self.file_watcher.directoryChanged.connect(self._populate_file_list)
 
-        tree_view_header = self.tree_view.header()
-        tree_view_header.hide()
-
-        for col in range(1, self.model.columnCount()):
-            self.tree_view.hideColumn(col)
-
-        self.model.setOption(QFileSystemModel.DontUseCustomDirectoryIcons, True)
-
-        self.tree_view.setEditTriggers(QTreeView.NoEditTriggers)
-        self.tree_view.setSelectionMode(QTreeView.ExtendedSelection)
-
-        self.tree_view.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tree_view.customContextMenuRequested.connect(self.on_context_menu)
-
-        self.central_layout.addWidget(self.tree_view)
+        # Populate initial file list
+        self._populate_file_list()
 
         layout = QHBoxLayout()
 
@@ -124,23 +128,184 @@ class MainWindow(BaseMainWindow):
         export_button.clicked.connect(self.export_weights)
         import_button.clicked.connect(self.import_weights)
 
+        # Apply stylesheet to tree widget
+        self.tree_widget.setStyleSheet(
+            """
+            QTreeWidget {
+                border: 1px solid palette(mid);
+                background-color: palette(base);
+            }
+            QTreeWidget::item {
+                border: none;
+                padding: 0px;
+            }
+            QTreeWidget::item:selected {
+                background-color: palette(highlight);
+            }
+            """
+        )
+
         # Initialize the UI
         minimum_size = self.minimumSizeHint()
         self.resize(minimum_size.width() * 2.0, minimum_size.height())
 
         self._restore_settings()
 
+    def _populate_file_list(self):
+        """Populate the tree widget with files and directories."""
+        self.tree_widget.clear()
+
+        if not os.path.exists(self.root_path):
+            return
+
+        # Build directory structure
+        dir_items = {}  # path -> QTreeWidgetItem
+
+        for root, dirs, files in os.walk(self.root_path):
+            # Sort directories and files
+            dirs.sort()
+            files.sort()
+
+            # Get or create parent item
+            if root == self.root_path:
+                parent_item = None
+            else:
+                parent_item = dir_items.get(root)
+
+            # Add directories
+            for dir_name in dirs:
+                dir_path = os.path.join(root, dir_name)
+
+                # Create directory item
+                if parent_item:
+                    dir_tree_item = QTreeWidgetItem(parent_item)
+                else:
+                    dir_tree_item = QTreeWidgetItem(self.tree_widget)
+
+                # Create custom widget for directory
+                widget = FileItemWidget(
+                    dir_path,
+                    on_select_influences=self._select_influences_from_item,
+                    on_select_geometry=self._select_geometry_from_item,
+                    parent=self.tree_widget,
+                )
+
+                dir_tree_item.setSizeHint(0, widget.sizeHint())
+                self.tree_widget.setItemWidget(dir_tree_item, 0, widget)
+
+                # Store directory item for children
+                dir_items[dir_path] = dir_tree_item
+
+                # Collapse by default
+                dir_tree_item.setExpanded(False)
+
+            # Add files (filter by extension)
+            for file_name in files:
+                if file_name.endswith(".json") or file_name.endswith(".pickle"):
+                    file_path = os.path.join(root, file_name)
+
+                    # Create file item
+                    if parent_item:
+                        file_tree_item = QTreeWidgetItem(parent_item)
+                    else:
+                        file_tree_item = QTreeWidgetItem(self.tree_widget)
+
+                    # Create custom widget for file
+                    widget = FileItemWidget(
+                        file_path,
+                        on_select_influences=self._select_influences_from_item,
+                        on_select_geometry=self._select_geometry_from_item,
+                        parent=self.tree_widget,
+                    )
+
+                    file_tree_item.setSizeHint(0, widget.sizeHint())
+                    self.tree_widget.setItemWidget(file_tree_item, 0, widget)
+
+    def _select_influences_from_item(self, file_path):
+        """Select influences from a single file.
+
+        Args:
+            file_path (str): The file path
+        """
+        self._select_influences_impl([file_path])
+
+    def _select_geometry_from_item(self, file_path):
+        """Select geometry from a single file.
+
+        Args:
+            file_path (str): The file path
+        """
+        self._select_geometry_impl([file_path])
+
+    def _select_influences_impl(self, file_path_list):
+        """Select influences from file list.
+
+        Args:
+            file_path_list (list): List of file paths
+        """
+        if not file_path_list:
+            cmds.error("No file selected.")
+
+        sel_nodes = []
+        for file_path in file_path_list:
+            if os.path.isdir(file_path):
+                # Recursively get files in directory
+                for root, _, files in os.walk(file_path):
+                    for file in files:
+                        if file.endswith(".json") or file.endswith(".pickle"):
+                            file_path_inner = os.path.join(root, file)
+                            data = SkinClusterDataIO().load_data(file_path_inner)
+                            for inf in data.influences:
+                                if inf not in sel_nodes:
+                                    sel_nodes.append(inf)
+            else:
+                data = SkinClusterDataIO().load_data(file_path)
+                for inf in data.influences:
+                    if inf not in sel_nodes:
+                        sel_nodes.append(inf)
+
+        cmds.select(sel_nodes, r=True)
+
+    def _select_geometry_impl(self, file_path_list):
+        """Select geometry from file list.
+
+        Args:
+            file_path_list (list): List of file paths
+        """
+        if not file_path_list:
+            cmds.error("No file selected.")
+
+        sel_nodes = []
+        for file_path in file_path_list:
+            if os.path.isdir(file_path):
+                # Recursively get files in directory
+                for root, _, files in os.walk(file_path):
+                    for file in files:
+                        if file.endswith(".json") or file.endswith(".pickle"):
+                            file_path_inner = os.path.join(root, file)
+                            data = SkinClusterDataIO().load_data(file_path_inner)
+                            if data.geometry_name not in sel_nodes:
+                                sel_nodes.append(data.geometry_name)
+            else:
+                data = SkinClusterDataIO().load_data(file_path)
+                if data.geometry_name not in sel_nodes:
+                    sel_nodes.append(data.geometry_name)
+
+        cmds.select(sel_nodes, r=True)
+
     def on_context_menu(self, point):
-        """Show the context menu for the tree view."""
+        """Show the context menu for the tree widget."""
         menu = QMenu()
 
-        action = menu.addAction("Select Influences")
-        action.triggered.connect(self._select_influences)
-        menu.addAction(action)
+        # Check if any items are selected
+        selected_items = self.tree_widget.selectedItems()
+        has_selection = len(selected_items) > 0
 
-        action = menu.addAction("Select Geometry")
-        action.triggered.connect(self._select_geometry)
-        menu.addAction(action)
+        # Delete action
+        delete_action = menu.addAction("Delete")
+        delete_action.setEnabled(has_selection)
+        delete_action.triggered.connect(self._delete_selected_items)
+        menu.addAction(delete_action)
 
         menu.addSeparator()
 
@@ -148,7 +313,7 @@ class MainWindow(BaseMainWindow):
         action.triggered.connect(self._open_directory)
         menu.addAction(action)
 
-        menu.exec_(self.tree_view.mapToGlobal(point))
+        menu.exec_(self.tree_widget.mapToGlobal(point))
 
     def on_quick_button_context_menu(self, point):
         """Show the context menu for quick mode."""
@@ -178,32 +343,56 @@ class MainWindow(BaseMainWindow):
     def _select_influences(self):
         """Select influences."""
         file_path_list = self._get_file_path_list()
-        if not file_path_list:
-            cmds.error("No file selected.")
-
-        sel_nodes = []
-        for file_path in file_path_list:
-            data = SkinClusterDataIO().load_data(file_path)
-            for inf in data.influences:
-                if inf not in sel_nodes:
-                    sel_nodes.append(inf)
-
-        cmds.select(sel_nodes, r=True)
+        self._select_influences_impl(file_path_list)
 
     @maya_decorator.error_handler
     def _select_geometry(self):
         """Select geometry."""
         file_path_list = self._get_file_path_list()
-        if not file_path_list:
-            cmds.error("No file selected.")
+        self._select_geometry_impl(file_path_list)
 
-        sel_nodes = []
-        for file_path in file_path_list:
-            data = SkinClusterDataIO().load_data(file_path)
-            if data.geometry_name not in sel_nodes:
-                sel_nodes.append(data.geometry_name)
+    @maya_decorator.error_handler
+    def _delete_selected_items(self):
+        """Delete selected files and directories."""
+        selected_items = self.tree_widget.selectedItems()
+        if not selected_items:
+            return
 
-        cmds.select(sel_nodes, r=True)
+        # Get file paths from selected items
+        file_paths = []
+        for item in selected_items:
+            widget = self.tree_widget.itemWidget(item, 0)
+            if widget:
+                file_paths.append(widget.file_path)
+
+        if not file_paths:
+            return
+
+        # Confirm deletion
+        from ....lib_ui import maya_dialog
+
+        count = len(file_paths)
+        message = f"Delete {count} item(s)?\n\nThis action cannot be undone."
+        if not maya_dialog.confirm_dialog("Confirm Deletion", message):
+            return
+
+        # Delete files and directories
+        for file_path in file_paths:
+            try:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    logger.debug(f"Deleted file: {file_path}")
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+                    logger.debug(f"Deleted directory: {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to delete {file_path}: {e}")
+                cmds.warning(f"Failed to delete {os.path.basename(file_path)}: {e}")
+
+        # Refresh the file list
+        self._populate_file_list()
+
+        logger.info(f"Deleted {count} item(s)")
 
     @maya_decorator.error_handler
     def _open_directory(self):
@@ -255,22 +444,25 @@ class MainWindow(BaseMainWindow):
 
     def _get_file_path_list(self):
         """Get the selected file path list."""
-        indexes = self.tree_view.selectionModel().selectedIndexes()
-        file_path_list = [self.model.filePath(index) for index in indexes if index.column() == 0]
+        selected_items = self.tree_widget.selectedItems()
 
         result_path_list = []
-        for file_path in file_path_list:
-            if os.path.isfile(file_path) and file_path not in result_path_list:
-                result_path_list.append(os.path.normpath(file_path))
-            else:
-                for root, _, files in os.walk(file_path):
-                    for file in files:
-                        if not (file.endswith(".json") or file.endswith(".pickle")):
-                            continue
+        for item in selected_items:
+            widget = self.tree_widget.itemWidget(item, 0)
+            if widget:
+                file_path = widget.file_path
+                if os.path.isfile(file_path) and file_path not in result_path_list:
+                    result_path_list.append(os.path.normpath(file_path))
+                else:
+                    # Directory - recursively get files
+                    for root, _, files in os.walk(file_path):
+                        for file in files:
+                            if not (file.endswith(".json") or file.endswith(".pickle")):
+                                continue
 
-                        file_path = os.path.join(root, file)
-                        if file_path not in result_path_list:
-                            result_path_list.append(os.path.normpath(file_path))
+                            file_path_inner = os.path.join(root, file)
+                            if file_path_inner not in result_path_list:
+                                result_path_list.append(os.path.normpath(file_path_inner))
 
         logger.debug(f"Selected file path list: {result_path_list}")
 
@@ -297,6 +489,9 @@ class MainWindow(BaseMainWindow):
             SkinClusterDataIO().export_weights(skinCluster_data, output_dir_path, format=format)
 
         logger.debug("Completed export skinCluster weights.")
+
+        # Refresh file list
+        self._populate_file_list()
 
     @maya_decorator.undo_chunk("Import SkinCluster Weights")
     @maya_decorator.error_handler
