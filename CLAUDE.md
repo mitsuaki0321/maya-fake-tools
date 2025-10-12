@@ -37,11 +37,14 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - **maya_ui.py**: Maya UI functions
      - `get_channels()`: Get attributes from channel box
      - `get_modifiers()`: Get current modifier keys (Shift, Ctrl, Alt)
+     - `ProgressBar`: Context manager for Maya's main progress bar with cancellation support
    - **maya_qt.py**: Qt-Maya conversion utilities
      - `qt_widget_from_maya_control()`: Convert Maya control to Qt widget
      - `maya_name_from_qt_widget()`: Get Maya name from Qt widget
      - `qt_widget_from_maya_window()`: Convert Maya window to Qt widget
      - `get_maya_main_window()`: Get Maya main window as Qt parent
+   - **icons.py**: Icon resource utilities
+     - `get_path(picture_name)`: Get absolute path to icon PNG files from lib_ui/images/
 
 5. **BaseTool** ([scripts/faketools/core/base/tool.py](scripts/faketools/core/base/tool.py))
    - Optional base class for tools (inheritance not required)
