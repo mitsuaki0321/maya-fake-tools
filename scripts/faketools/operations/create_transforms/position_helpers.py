@@ -34,7 +34,7 @@ def get_selected_positions(
         Optional[tuple[list[list[float]], list[list[float]]]: The position and rotation.
     """
     sel_transforms = cmds.ls(sl=True, type="transform")
-    sel_components = cmds.filterExpand(sm=[28, 30, 31, 32, 34])
+    sel_components = cmds.filterExpand(sm=[28, 30, 31, 32, 34, 46])  # Added 46 for lattice points
 
     if not sel_transforms and not sel_components:
         logger.warning("No valid object selected.")
@@ -128,6 +128,10 @@ def _get_component_positions(
     surface_positions, surface_rotations = _get_surface_positions(components_filter, include_rotation, closest_position)
     component_positions.extend(surface_positions)
     component_rotations.extend(surface_rotations)
+
+    # Process lattice components
+    lattice_positions = _get_lattice_positions(components_filter)
+    component_positions.extend(lattice_positions)
 
     # Convert MPoint to list
     component_positions = [[v.x, v.y, v.z] for v in component_positions]
@@ -442,3 +446,28 @@ def _get_surface_positions(
             )
 
     return positions, rotations
+
+
+def _get_lattice_positions(components_filter: ComponentFilter) -> list[om.MPoint]:
+    """Get positions from lattice components.
+
+    Args:
+        components_filter (ComponentFilter): Filtered components.
+
+    Returns:
+        list[MPoint]: Lattice point positions.
+    """
+    positions = []
+
+    lattice_components = components_filter.get_lattice_points()
+
+    for shape, indices in lattice_components.items():
+        # Get lattice point positions using xform
+        lattice_transform = cmds.listRelatives(shape, parent=True, path=True)[0]
+        for index in indices:
+            s, t, u = index  # Lattice points have 3D indices
+            point_name = f"{lattice_transform}.pt[{s}][{t}][{u}]"
+            position = cmds.xform(point_name, query=True, worldSpace=True, translation=True)
+            positions.append(om.MPoint(position[0], position[1], position[2]))
+
+    return positions

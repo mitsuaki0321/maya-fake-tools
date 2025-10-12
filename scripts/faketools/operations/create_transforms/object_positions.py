@@ -2,8 +2,6 @@
 
 from logging import getLogger
 
-import maya.cmds as cmds
-
 from ...lib import lib_math
 from .position_helpers import get_selected_positions
 
@@ -99,22 +97,24 @@ def closest_position(**kwargs) -> list[dict[str, list[float]]]:
 
 
 def inner_divide(**kwargs) -> list[dict[str, list[float]]]:
-    """Get the inner divided points of the selected object.
+    """Get the inner divided points of the selected objects or components.
 
     Keyword Args:
         divisions (int): The number of divisions. Default is 1.
-        include_rotation (bool): Whether to include rotation. Default is False.
 
     Returns:
-        list[{position: list[float], rotation: list[float]}]: The position and rotation.
+        list[{position: list[float], rotation: list[float]}]: The position and rotation (rotation is always empty).
     """
-    transforms = cmds.ls(sl=True, type="transform")
-    if not transforms:
+    # Get positions from selection (transforms or components)
+    positions_data = get_selected_positions()
+    if not positions_data:
         logger.warning("No valid object selected.")
         return
 
-    if len(transforms) < 2:
-        logger.warning("Select two or more objects.")
+    reference_positions = positions_data[0]
+
+    if len(reference_positions) < 2:
+        logger.warning("Select two or more objects or components.")
         return
 
     divisions = kwargs.get("divisions", 1)
@@ -123,28 +123,15 @@ def inner_divide(**kwargs) -> list[dict[str, list[float]]]:
         logger.warning("Invalid divisions.")
         return
 
-    include_rotation = kwargs.get("include_rotation", False)
-
-    reference_positions = [cmds.xform(transform, q=True, ws=True, t=True) for transform in transforms]
-    if include_rotation:
-        reference_rotations = [cmds.xform(transform, q=True, ws=True, ro=True) for transform in transforms]
-
-    num_transforms = len(transforms)
+    num_positions = len(reference_positions)
 
     result_positions = []
-    result_rotations = []
-    for i in range(num_transforms - 1):
+    for i in range(num_positions - 1):
         positions = lib_math.inner_divide(reference_positions[i], reference_positions[i + 1], spans=divisions)
-        if i != (num_transforms - 2):
+        if i != (num_positions - 2):
             positions.pop(-1)
         result_positions.extend(positions)
 
-        if include_rotation:
-            if i != (num_transforms - 2):
-                result_rotations.extend([reference_rotations[i]] * divisions)
-            else:
-                result_rotations.extend([reference_rotations[i]] * (divisions + 1))
-
     logger.debug(f"Inner divided points: {result_positions}")
 
-    return [{"position": result_positions, "rotation": result_rotations}]
+    return [{"position": result_positions, "rotation": []}]

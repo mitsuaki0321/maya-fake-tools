@@ -109,6 +109,17 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addLayout(layout)
 
+        layout = QHBoxLayout()
+
+        surface_dir_label = QLabel("SurfaceDir:")
+        layout.addWidget(surface_dir_label)
+
+        self.surface_direction_box = QComboBox()
+        self.surface_direction_box.addItems(self.surface_direction_data().keys())
+        layout.addWidget(self.surface_direction_box, stretch=1)
+
+        self.central_layout.addLayout(layout)
+
         self.central_layout.addWidget(extra_widgets.HorizontalSeparator())
 
         self.reverse_cb = QCheckBox("Reverse")
@@ -129,10 +140,10 @@ class MainWindow(BaseMainWindow):
         # Initialize
         # Rearrange label width
         max_width = 0
-        for label in [size_label, div_label, aim_label, up_label]:
+        for label in [size_label, div_label, aim_label, up_label, surface_dir_label]:
             max_width = max(max_width, label.sizeHint().width())
 
-        for label in [size_label, div_label, aim_label, up_label]:
+        for label in [size_label, div_label, aim_label, up_label, surface_dir_label]:
             label.setFixedWidth(max_width)
             label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
@@ -157,6 +168,15 @@ class MainWindow(BaseMainWindow):
             dict: Up vector label and method pairs.
         """
         return {"SceneUp": "scene_up", "CurveNormal": "normal", "SurfaceNormal": "surface_normal"}
+
+    @staticmethod
+    def surface_direction_data() -> dict:
+        """Surface direction method list.
+
+        Returns:
+            dict: Surface direction label and method pairs.
+        """
+        return {"U Direction": "u", "V Direction": "v"}
 
     @staticmethod
     def method_data() -> dict:
@@ -207,6 +227,7 @@ class MainWindow(BaseMainWindow):
         divisions = self.divisions_field.value()
         aim_vector_method = self.aim_vector_data()[self.aim_vector_box.currentText()]
         up_vector_method = self.up_vector_data()[self.up_vector_box.currentText()]
+        surface_direction = self.surface_direction_data()[self.surface_direction_box.currentText()]
 
         # Create transform nodes
         make_transform = create_transforms.CreateTransforms(
@@ -214,7 +235,11 @@ class MainWindow(BaseMainWindow):
         )
 
         result_nodes = make_transform.create(
-            include_rotation=include_rotation, divisions=divisions, aim_vector_method=aim_vector_method, up_vector_method=up_vector_method
+            include_rotation=include_rotation,
+            divisions=divisions,
+            aim_vector_method=aim_vector_method,
+            up_vector_method=up_vector_method,
+            surface_direction=surface_direction,
         )
 
         if result_nodes:
@@ -235,6 +260,7 @@ class MainWindow(BaseMainWindow):
         self.rotate_offset_field_z.setValue(self.settings.read("rotate_offsetZ", 0.0))
         self.aim_vector_box.setCurrentIndex(self.settings.read("aim_vector", 0))
         self.up_vector_box.setCurrentIndex(self.settings.read("up_vector", 0))
+        self.surface_direction_box.setCurrentIndex(self.settings.read("surface_direction", 0))
         self.reverse_cb.setChecked(self.settings.read("reverse", False))
         self.chain_cb.setChecked(self.settings.read("chain", False))
 
@@ -258,6 +284,7 @@ class MainWindow(BaseMainWindow):
         self.settings.write("rotate_offsetZ", self.rotate_offset_field_z.value())
         self.settings.write("aim_vector", self.aim_vector_box.currentIndex())
         self.settings.write("up_vector", self.up_vector_box.currentIndex())
+        self.settings.write("surface_direction", self.surface_direction_box.currentIndex())
         self.settings.write("reverse", self.reverse_cb.isChecked())
         self.settings.write("chain", self.chain_cb.isChecked())
 

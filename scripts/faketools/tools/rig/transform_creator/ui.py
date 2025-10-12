@@ -131,7 +131,7 @@ class MainWindow(BaseMainWindow):
             "BoundingBoxCenter": {"function": "bounding_box_center", "include_rotation": False, "divisions": False, "tangent_from_component": False},  # noqa: E501
             "EachPositions": {"function": "each_positions", "include_rotation": True, "divisions": False, "tangent_from_component": True},
             "ClosestPoints": {"function": "closest_position", "include_rotation": True, "divisions": False, "tangent_from_component": True},
-            "InnerDivide": {"function": "inner_divide", "include_rotation": True, "divisions": True, "tangent_from_component": False},
+            "InnerDivide": {"function": "inner_divide", "include_rotation": False, "divisions": True, "tangent_from_component": False},
         }
 
     def switch_method(self, index):
