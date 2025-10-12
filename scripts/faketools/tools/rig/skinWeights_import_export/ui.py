@@ -38,7 +38,7 @@ class MainWindow(BaseMainWindow):
         self.settings = optionvar.ToolOptionSettings(__name__)
         tool_data_manager = tool_data.ToolDataManager("skinWeights_import_export", "rig")
         tool_data_manager.ensure_data_dir()
-        self.root_path = tool_data_manager.get_data_dir()
+        self.root_path = str(tool_data_manager.get_data_dir())
 
         # Quick mode
         label = QLabel("Quick Mode")
