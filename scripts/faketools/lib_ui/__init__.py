@@ -5,7 +5,7 @@ This module provides convenient imports for common UI components:
 - BaseMainWindow: Standard QMainWindow base class for tools
 - ToolOptionSettings: Per-tool settings stored in Maya optionVar
 - ToolDataManager: Per-tool data directory management
-- Maya UI decorators: error_handler, undo_chunk, disable_undo
+- Maya UI decorators: error_handler, undo_chunk, disable_undo, repeatable
 - Maya dialog helpers: show_error_dialog, show_warning_dialog, show_info_dialog, confirm_dialog
 - Maya UI functions: get_channels, get_modifiers
 - Maya Qt utilities: qt_widget_from_maya_control, maya_name_from_qt_widget, qt_widget_from_maya_window, get_maya_main_window
@@ -14,7 +14,7 @@ This module provides convenient imports for common UI components:
 """
 
 from .base_window import BaseMainWindow, get_margins, get_spacing
-from .maya_decorator import disable_undo, error_handler, undo_chunk
+from .maya_decorator import disable_undo, error_handler, repeatable, undo_chunk
 from .maya_dialog import confirm_dialog, show_error_dialog, show_info_dialog, show_warning_dialog
 from .maya_qt import get_maya_main_window, maya_name_from_qt_widget, qt_widget_from_maya_control, qt_widget_from_maya_window
 from .maya_ui import get_channels, get_modifiers
@@ -33,6 +33,7 @@ __all__ = [
     "error_handler",
     "undo_chunk",
     "disable_undo",
+    "repeatable",
     # Maya dialog helpers
     "show_error_dialog",
     "show_warning_dialog",

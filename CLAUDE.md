@@ -31,6 +31,7 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `@error_handler`: Catches errors and displays in Maya dialog (UI layer only)
      - `@undo_chunk(name)`: Groups operations into single undo operation (UI layer only)
      - `@disable_undo`: Disables undo for query operations (UI layer only)
+     - `@repeatable(label)`: Makes UI methods repeatable with Maya's repeat last command (G key)
    - **maya_dialog.py**: Dialog helpers
      - `show_error_dialog()`, `show_warning_dialog()`, `show_info_dialog()`, `confirm_dialog()`
    - **maya_ui.py**: Maya UI functions
@@ -651,6 +652,55 @@ file_path = data_manager.get_data_path("character_a.json")
 ## Future Work
 
 - **Plugins directory**: Currently empty, planned for future C++ plugins
+
+### Potential Improvements (Not Required)
+
+#### @repeatable Decorator Architecture Improvement
+
+**Current Implementation:**
+- `@repeatable` decorator is applied to UI layer methods
+- Depends on global `_instance` variable
+- Commands require UI to be open
+
+**Proposed Improvement:**
+```python
+# command.py - Pure command functions with @repeatable
+from ...lib_ui import repeatable, undo_chunk
+
+@undo_chunk("Move CVs Position")
+@repeatable("Move CVs Position")
+def move_cvs_position_command():
+    """Move curve CVs to vertex positions."""
+    cvs = cmds.filterExpand(sm=28, ex=True)
+    if not cvs:
+        cmds.error("Select nurbsCurve CVs.")
+        return
+
+    for cv in cvs:
+        move_cv_positions(cv)
+
+# ui.py - UI calls command functions
+from . import command
+
+@error_handler
+def move_cvs_position(self):
+    """Move curve CVs to vertex positions."""
+    command.move_cvs_position_command()
+```
+
+**Benefits:**
+- ✅ Commands work without UI
+- ✅ Can be called from scripts directly
+- ✅ Can be registered to shelves/hotkeys
+- ✅ Easier to test
+- ✅ Better separation of concerns
+
+**Considerations:**
+- Requires extending `@repeatable` to support standalone functions (not just class methods)
+- More complex initial setup for each tool
+- May be too much overhead for tools being migrated from legacy code
+
+**Decision:** Defer until more tools are migrated and patterns are established
 
 ## Additional Documentation
 
