@@ -1,5 +1,10 @@
 """
 NurbsCurve functions.
+
+This module provides the base NurbsCurve class and re-exports specialized classes
+for better code organization:
+- ConvertNurbsCurve: Curve conversion and modification operations (lib_nurbsCurve_convert.py)
+- NurbsCurvePositions: Position calculation operations (lib_nurbsCurve_positions.py)
 """
 
 from collections.abc import Sequence
@@ -455,3 +460,15 @@ class NurbsCurve:
         raise ValueError(
             f"Failed to find parameter for target chord length {target_length}. Best distance found: {best_distance} at parameter {best_param}"
         )
+
+
+# Re-export specialized classes for backward compatibility
+# Note: Imports placed here to avoid circular imports
+from .lib_nurbsCurve_convert import ConvertNurbsCurve  # noqa: E402
+from .lib_nurbsCurve_positions import NurbsCurvePositions  # noqa: E402
+
+__all__ = [
+    "NurbsCurve",
+    "ConvertNurbsCurve",
+    "NurbsCurvePositions",
+]
