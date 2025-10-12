@@ -5,7 +5,7 @@ from logging import getLogger
 from maya.api.OpenMaya import MGlobal
 import maya.cmds as cmds
 
-from ....lib_ui import base_window, icons, maya_decorator
+from ....lib_ui import BaseFramelessWindow, icons, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QIcon, QPushButton, QSlider, Qt, Signal
@@ -16,7 +16,7 @@ logger = getLogger(__name__)
 _instance = None
 
 
-class MainWindow(base_window.BaseMainWindow):
+class MainWindow(BaseFramelessWindow):
     """Main Window for Skin Weights Copy Paste Tool."""
 
     def __init__(self, parent=None):
@@ -93,13 +93,7 @@ class MainWindow(base_window.BaseMainWindow):
         self.paste_button.clicked.connect(self._paste_skinWeights)
 
         # Initialize the UI.
-        margins = base_window.get_margins(self.central_widget)
-        self.central_layout.setContentsMargins(*[margin * 0.5 for margin in margins])
-
-        minimum_size_hint = self.minimumSizeHint()
-        size_hint = self.sizeHint()
-        self.resize(size_hint.width() * 1.2, minimum_size_hint.height())
-
+        self.adjustSize()
         self._restore_settings()
 
     def _on_slider_value_changed(self):

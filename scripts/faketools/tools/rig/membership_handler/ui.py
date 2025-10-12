@@ -7,9 +7,7 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ....lib import lib_memberShip, lib_selection
-from ....lib_ui import maya_decorator
-from ....lib_ui.base_window import BaseMainWindow, get_margins
-from ....lib_ui.maya_qt import get_maya_main_window
+from ....lib_ui import BaseFramelessWindow, get_maya_main_window, maya_decorator
 from ....lib_ui.qt_compat import QLineEdit
 from ....lib_ui.widgets import extra_widgets
 
@@ -18,7 +16,7 @@ logger = getLogger(__name__)
 _instance = None
 
 
-class MainWindow(BaseMainWindow):
+class MainWindow(BaseFramelessWindow):
     """
     Membership Handler Main Window.
 
@@ -60,13 +58,8 @@ class MainWindow(BaseMainWindow):
         update_button.clicked.connect(self.update_memberships)
         select_button.clicked.connect(self.select_memberships)
 
-        # Initialize the UI.
-        margins = get_margins(self.central_widget)
-        self.central_layout.setContentsMargins(*[margin * 0.5 for margin in margins])
-
-        minimum_size_hint = self.minimumSizeHint()
-        size_hint = self.sizeHint()
-        self.resize(size_hint.width() * 1.2, minimum_size_hint.height())
+        # Adjust size to content
+        self.adjustSize()
 
     @maya_decorator.error_handler
     def set_deformer(self):

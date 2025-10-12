@@ -3,6 +3,7 @@ UI utilities for FakeTools.
 
 This module provides convenient imports for common UI components:
 - BaseMainWindow: Standard QMainWindow base class for tools
+- BaseFramelessWindow: Frameless window base class for compact tools
 - ToolOptionSettings: Per-tool settings stored in Maya optionVar
 - ToolDataManager: Per-tool data directory management
 - Maya UI decorators: error_handler, undo_chunk, disable_undo, repeatable
@@ -13,7 +14,7 @@ This module provides convenient imports for common UI components:
 - Resolution-independent UI utilities: get_spacing, get_margins
 """
 
-from .base_window import BaseMainWindow, get_margins, get_spacing
+from .base_window import BaseFramelessWindow, BaseMainWindow, get_margins, get_spacing
 from .maya_decorator import disable_undo, error_handler, repeatable, undo_chunk
 from .maya_dialog import confirm_dialog, show_error_dialog, show_info_dialog, show_warning_dialog
 from .maya_qt import get_maya_main_window, maya_name_from_qt_widget, qt_widget_from_maya_control, qt_widget_from_maya_window
@@ -24,8 +25,9 @@ from .tool_data import ToolDataManager
 from .ui_utils import get_default_button_size, get_line_height, get_relative_size, get_text_width, scale_by_dpi
 
 __all__ = [
-    # Base window class
+    # Base window classes
     "BaseMainWindow",
+    "BaseFramelessWindow",
     # Settings and data management
     "ToolOptionSettings",
     "ToolDataManager",
