@@ -5,6 +5,7 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ..lib.lib_shape import connect_shapes
+from ..operations.copy_weights import copy_skin_weights_with_bind
 from .base_commands import PairCommand
 
 logger = getLogger(__name__)
@@ -182,7 +183,7 @@ class CopyWeightCommand(PairCommand):
             source_node (str): The source node to process.
             target_node (str): The target node to process.
         """
-        pass  # TODO: Implement this method.
+        copy_skin_weights_with_bind(source_node, [target_node], uv=False)
 
 
 class ConnectShapeCommand(PairCommand):

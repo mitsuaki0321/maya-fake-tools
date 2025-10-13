@@ -9,7 +9,7 @@ import maya.cmds as cmds
 from .....lib_ui import base_window, maya_decorator, optionvar
 from .....lib_ui.qt_compat import QHBoxLayout, QPushButton, QSizePolicy, QWidget
 from .....lib_ui.widgets import extra_widgets
-from ..command import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
+from .....operations.copy_weights import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
 
 LEFT_TO_RIGHT = ["(.*)(L)", r"\g<1>R"]
 RIGHT_TO_LEFT = ["(.*)(R)", r"\g<1>L"]
