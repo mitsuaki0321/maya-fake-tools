@@ -61,6 +61,18 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - Provides helper functions: `get_open_file_name()`, `get_save_file_name()`
 
 4. **Maya UI Libraries** ([scripts/faketools/lib_ui/](scripts/faketools/lib_ui/))
+   - **base_window.py**: Base window classes
+     - `BaseMainWindow`: Standard QMainWindow base class with resolution-independent spacing
+     - `BaseFramelessWindow`: Frameless window with custom title bar for compact tools
+     - `get_spacing(widget, direction)`: Get style-based spacing (resolution-independent)
+     - `get_margins(widget)`: Get style-based margins (resolution-independent)
+   - **pie_menu.py**: Directional pie menu widget
+     - `PieMenu`: Popup pie menu with 2, 4, or 8 directional segments
+     - `PieMenuButton`: True mixin class (no base class) to add pie menu to any widget
+       - **IMPORTANT**: Always use as first base class in multiple inheritance
+       - Example: `class MyButton(PieMenuButton, QPushButton)`
+     - Supports customizable mouse button triggers (left, middle, right)
+     - See [PIE_MENU_USAGE.md](PIE_MENU_USAGE.md) for detailed guide
    - **maya_decorator.py**: UI decorators
      - `@error_handler`: Catches errors and displays in Maya dialog (UI layer only)
      - `@undo_chunk(name)`: Groups operations into single undo operation (UI layer only)
@@ -79,6 +91,9 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `get_maya_main_window()`: Get Maya main window as Qt parent
    - **icons.py**: Icon resource utilities
      - `get_path(picture_name)`: Get absolute path to icon PNG files from lib_ui/images/
+   - **widgets/**: Additional UI widgets
+     - `extra_widgets.py`: Extended UI widgets (various specialized widgets)
+     - `nodeAttr_widgets.py`: Node attribute widgets for Maya node manipulation
 
 5. **BaseTool** ([scripts/faketools/core/base/tool.py](scripts/faketools/core/base/tool.py))
    - Optional base class for tools (inheritance not required)
@@ -358,12 +373,35 @@ __all__ = ["MainWindow", "show_ui"]
 ```
 
 **Key Points:**
-- Inherit from `BaseMainWindow` (not QMainWindow or QWidget)
+- Inherit from `BaseMainWindow` (for standard windows) or `BaseFramelessWindow` (for compact, frameless windows)
 - Use singleton pattern with global `_instance`
 - Implement `_restore_settings()` and `_save_settings()` for persistence
 - Use `@error_handler` and `@undo_chunk` decorators on UI callbacks
 - Call command layer functions, never implement logic in UI layer
 - Use `closeEvent()` to save settings before closing
+
+**BaseFramelessWindow Alternative:**
+For compact tools, use `BaseFramelessWindow` instead of `BaseMainWindow`:
+```python
+from ....lib_ui import BaseFramelessWindow
+
+class MainWindow(BaseFramelessWindow):
+    def __init__(self, parent=None):
+        super().__init__(
+            parent=parent,
+            object_name="MyCompactToolWindow",
+            window_title="Compact Tool",
+            central_layout="vertical"
+        )
+        self.setup_ui()
+```
+
+Benefits of BaseFramelessWindow:
+- No system title bar (very compact)
+- Custom title bar with drag support
+- Close button with hover effect
+- Escape key to close
+- Resolution-independent spacing
 
 ### Tool Registration
 
@@ -409,10 +447,11 @@ __all__ = ["TOOL_CONFIG"]
 
 #### Window Class Pattern
 
-Always use `BaseMainWindow` for tool windows:
+Always use `BaseMainWindow` or `BaseFramelessWindow` for tool windows:
 
+**Standard window with title bar (BaseMainWindow):**
 ```python
-from ....lib_ui.base_window import BaseMainWindow
+from ....lib_ui import BaseMainWindow
 
 class MainWindow(BaseMainWindow):
     def __init__(self, parent=None):
@@ -429,11 +468,37 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addWidget(my_widget)
 ```
 
+**Compact frameless window (BaseFramelessWindow):**
+```python
+from ....lib_ui import BaseFramelessWindow
+
+class MainWindow(BaseFramelessWindow):
+    def __init__(self, parent=None):
+        super().__init__(
+            parent=parent,
+            object_name="MyCompactToolWindow",
+            window_title="Compact Tool",  # Shown in custom title bar
+            central_layout="vertical"  # or "horizontal"
+        )
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Use self.central_layout (provided by BaseFramelessWindow)
+        self.central_layout.addWidget(my_widget)
+```
+
 **Benefits of BaseMainWindow:**
 - Inherits from `QMainWindow` (supports menu bar, status bar, toolbars)
 - Auto-configures central widget and layout
 - Sets `Qt.WA_DeleteOnClose` for proper cleanup
 - Applies resolution-independent spacing automatically
+
+**Benefits of BaseFramelessWindow:**
+- Inherits from `QWidget` (lightweight, compact)
+- Custom title bar with close button
+- Draggable by title bar
+- Escape key closes window
+- Very compact design for tool palettes
 
 #### ❌ Prohibited Patterns
 
@@ -642,14 +707,23 @@ from .ui import MainWindow         # Same tool's ui.py
 ```python
 # From tools/{category}/{tool_name}/ui.py
 from ....lib_ui import (
-    BaseMainWindow,
-    ToolSettingsManager,  # For preset support (recommended)
-    ToolOptionSettings,   # For simple settings (alternative)
+    BaseMainWindow,          # Standard window base class
+    BaseFramelessWindow,     # Frameless window base class (compact)
+    PieMenu,                 # Directional pie menu widget
+    PieMenuButton,           # True mixin (no base class) - Use as first base class
+    ToolSettingsManager,     # For preset support (recommended)
+    ToolOptionSettings,      # For simple settings (alternative)
     error_handler,
     get_maya_main_window,
     undo_chunk,
 )
 from ....lib_ui.qt_compat import QPushButton, QVBoxLayout, QWidget
+
+# Example of PieMenuButton usage
+# class MyButton(PieMenuButton, QPushButton):  # PieMenuButton MUST be first
+#     def __init__(self):
+#         super().__init__("Button Text")
+#         self.setup_pie_menu(items=[...], trigger_button=Qt.MouseButton.MiddleButton)
 ```
 
 **Direct module imports (alternative)**
@@ -900,3 +974,4 @@ def move_cvs_position(self):
 - **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
 - **[SETTINGS_USAGE.md](SETTINGS_USAGE.md)**: Settings system usage guide (Japanese)
 - **[LOGGING_USAGE.md](LOGGING_USAGE.md)**: Logging system usage guide (Japanese)
+- **[PIE_MENU_USAGE.md](PIE_MENU_USAGE.md)**: PieMenu widget usage guide with examples

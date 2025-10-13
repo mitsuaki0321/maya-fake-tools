@@ -273,7 +273,7 @@ class PieMenu(QWidget):
             self.close()
 
 
-class PieMenuButton(QWidget):
+class PieMenuButton:
     """
     Mixin class to add pie menu support to any QWidget.
 
@@ -285,11 +285,17 @@ class PieMenuButton(QWidget):
                     items=[...],
                     trigger_button=Qt.MouseButton.MiddleButton
                 )
+
+    Note:
+        This is a mixin class and should not inherit from QWidget.
+        It should be used as the first base class in multiple inheritance.
     """
 
     def setup_pie_menu(self, items, trigger_button=Qt.MouseButton.MiddleButton, outer_radius=130, inner_radius=35):
         """
         Setup pie menu for this widget.
+
+        Can be called multiple times with different trigger buttons to set up multiple pie menus.
 
         Args:
             items (list): List of menu items (see PieMenu for format)
@@ -297,32 +303,42 @@ class PieMenuButton(QWidget):
             outer_radius (int): Outer radius of the pie menu
             inner_radius (int): Inner radius of the pie menu
         """
-        self._pie_menu = None
-        self._pie_menu_items = items
-        self._pie_menu_trigger_button = trigger_button
-        self._pie_menu_outer_radius = outer_radius
-        self._pie_menu_inner_radius = inner_radius
+        # Initialize pie menu configurations dict if not exists
+        if not hasattr(self, "_pie_menu_configs"):
+            self._pie_menu_configs = {}
+
+        # Store configuration for this trigger button
+        self._pie_menu_configs[trigger_button] = {
+            "items": items,
+            "outer_radius": outer_radius,
+            "inner_radius": inner_radius,
+        }
 
     def mousePressEvent(self, event):
         """Handle mouse press to show pie menu."""
-        if hasattr(self, "_pie_menu_trigger_button") and event.button() == self._pie_menu_trigger_button:
-            self._show_pie_menu()
+        if hasattr(self, "_pie_menu_configs") and event.button() in self._pie_menu_configs:
+            self._show_pie_menu(event.button())
             event.accept()
         else:
             super().mousePressEvent(event)
 
-    def _show_pie_menu(self):
-        """Show the pie menu."""
-        if not hasattr(self, "_pie_menu_items"):
+    def _show_pie_menu(self, trigger_button):
+        """Show the pie menu for the specified trigger button.
+
+        Args:
+            trigger_button (Qt.MouseButton): The mouse button that triggered the menu
+        """
+        if not hasattr(self, "_pie_menu_configs") or trigger_button not in self._pie_menu_configs:
             return
 
-        self._pie_menu = PieMenu(
-            items=self._pie_menu_items,
+        config = self._pie_menu_configs[trigger_button]
+        pie_menu = PieMenu(
+            items=config["items"],
             parent=self,
-            outer_radius=self._pie_menu_outer_radius,
-            inner_radius=self._pie_menu_inner_radius,
+            outer_radius=config["outer_radius"],
+            inner_radius=config["inner_radius"],
         )
-        self._pie_menu.show_at_cursor()
+        pie_menu.show_at_cursor()
 
 
 __all__ = ["PieMenu", "PieMenuButton"]

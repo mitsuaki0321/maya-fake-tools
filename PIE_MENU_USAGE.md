@@ -135,6 +135,36 @@ self.setup_pie_menu(
 )
 ```
 
+### Multiple Mouse Buttons
+
+You can set up different pie menus for different mouse buttons by calling `setup_pie_menu` multiple times:
+
+```python
+class MyButton(PieMenuButton, QPushButton):
+    def __init__(self):
+        super().__init__("My Button")
+
+        # Middle-click: 2-way menu
+        self.setup_pie_menu(
+            items=[
+                {"label": "Register", "callback": self.on_register},
+                {"label": "Clear", "callback": self.on_clear},
+            ],
+            trigger_button=Qt.MouseButton.MiddleButton
+        )
+
+        # Right-click: 4-way menu
+        self.setup_pie_menu(
+            items=[
+                {"label": "Action 1", "callback": self.on_action1},
+                {"label": "Action 2", "callback": self.on_action2},
+                None,  # Empty
+                None,  # Empty
+            ],
+            trigger_button=Qt.MouseButton.RightButton
+        )
+```
+
 ## Customization
 
 ### Menu Size
@@ -309,6 +339,10 @@ setup_pie_menu(items, trigger_button=Qt.MouseButton.MiddleButton,
 - `trigger_button` (Qt.MouseButton): Mouse button to trigger menu
 - `outer_radius` (int): Outer radius in pixels
 - `inner_radius` (int): Inner circle radius in pixels
+
+**Important:**
+- `PieMenuButton` is a true mixin class (does not inherit from any base class)
+- Always use as the first base class in multiple inheritance: `class MyButton(PieMenuButton, QPushButton)`
 
 ## Integration with FakeTools
 

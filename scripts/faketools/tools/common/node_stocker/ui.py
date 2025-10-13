@@ -9,10 +9,10 @@ import maya.cmds as cmds
 from ....lib import lib_name
 from ....lib_ui import maya_decorator, maya_qt, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
-from ....lib_ui.qt_compat import QHBoxLayout, QLabel, QStatusBar, QStyle, Qt, QVBoxLayout
+from ....lib_ui.qt_compat import QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QStatusBar, QStyle, Qt, QTabWidget, QVBoxLayout, QWidget
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
-from . import nodeStock_view
+from .button import NodeStockPushButton
 from .command import NodeStockFile, NodeStorage
 from .widgets import NameReplaceField, NameSpaceBox, StockAreaSwitchButtons, ToolBar
 
@@ -33,18 +33,16 @@ class MainWindow(BaseMainWindow):
             parent (QWidget): The parent widget.
             object_name (str): The object name.
             window_title (str): The window title.
-            num_areas (int): The number of areas.
+            num_areas (int): The number of areas (tabs).
 
         Keyword Args:
-            rows (int): The number of button rows.
-            cols (int): The number of button columns.
             button_size (int): The size of the buttons.
         """
         super().__init__(parent=parent, object_name=object_name, window_title=window_title)
 
-        rows = kwargs.get("rows", 2)
-        cols = kwargs.get("cols", 7)
-        button_size = kwargs.get("button_size", 50)
+        self.button_size = kwargs.get("button_size", 20)
+        num_buttons = 10  # Fixed: 10 buttons per tab
+        self.button_grids = []  # Store button references for each tab
 
         tool_data_manager = tool_data.ToolDataManager("node_stocker", "common")
         tool_data_manager.ensure_data_dir()
@@ -67,12 +65,13 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addLayout(layout)
 
-        # Stock area
-        self.scenes = [nodeStock_view.NodeStockGraphicsScene() for _ in range(num_areas)]
-        self.view = nodeStock_view.NodeStockGraphicsView(self.scenes[0], self)
-        self.central_layout.addWidget(self.view, stretch=1)
+        # Tab Widget (hidden tabs)
+        self.tab_widget = QTabWidget()
+        self.tab_widget.tabBar().hide()  # Hide tab bar
+        self.central_layout.addWidget(self.tab_widget, stretch=1)
 
-        self._create_button_grid(rows=rows, cols=cols, button_size=button_size, spacing=5)
+        # Create tabs and buttons
+        self._create_tabs(num_areas=num_areas, num_buttons=num_buttons)
         self._load_scene_data(0)
 
         separator = extra_widgets.HorizontalSeparator()
@@ -115,9 +114,8 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addLayout(layout)
 
         # Signals & Slots
-        self.switch_buttons.button_selection_changed.connect(self._switch_scene)
+        self.switch_buttons.button_selection_changed.connect(self._switch_tab)
         self.tool_bar.refresh_button_clicked.connect(self._refresh_window)
-        self.view.rubber_band_selection.connect(self._select_nodes_rubber_band)
 
         # For updating the status bar
         style = self.status_bar.style()
@@ -128,6 +126,10 @@ class MainWindow(BaseMainWindow):
 
         # Restore settings
         self._restore_settings()
+
+        # Initial window size
+        minimum_size = self.minimumSizeHint()
+        self.resize(minimum_size.width(), minimum_size.height())
 
     def _collect_settings(self) -> dict:
         """Collect current UI settings (excluding window geometry).
@@ -162,61 +164,103 @@ class MainWindow(BaseMainWindow):
         if "name_replace_re" in settings_data:
             self.name_replace_field.set_re(settings_data["name_replace_re"])
 
-    def _switch_scene(self, index: int) -> None:
-        """Switch the scene in the graphic widget.
+    def _switch_tab(self, index: int) -> None:
+        """Switch to the specified tab.
 
         Args:
-            index (int): The index of the scene.
+            index (int): The index of the tab.
         """
-        if 0 <= index < len(self.scenes):
-            self.view.setScene(self.scenes[index])
-            self.view.setAlignment(Qt.AlignCenter)
+        if 0 <= index < self.tab_widget.count():
+            self.tab_widget.setCurrentIndex(index)
             self._load_scene_data(index)
 
-    def _create_button_grid(self, rows, cols, button_size, spacing) -> None:
-        """Create a grid of buttons in each scene.
+    def _create_tabs(self, num_areas: int, num_buttons: int) -> None:
+        """Create tabs with button grids.
 
         Args:
-            rows (int): The number of rows.
-            cols (int): The number of columns.
-            button_size (int): The size of the buttons.
-            spacing (int): The spacing between buttons.
+            num_areas (int): Number of tabs.
+            num_buttons (int): Number of buttons per tab (fixed at 10).
         """
-        margin = spacing
-        offset = spacing / 2
+        for area_index in range(num_areas):
+            # Create tab widget with background color
+            tab = QWidget()
+            tab.setStyleSheet("QWidget { background-color: #2b2b2b; }")
+            grid_layout = QGridLayout()
+            grid_layout.setSpacing(5)
+            grid_layout.setContentsMargins(5, 5, 5, 5)
+            tab.setLayout(grid_layout)
 
-        for scene in self.scenes:
-            total_width = cols * (button_size + spacing) - spacing + margin * 2
-            total_height = rows * (button_size + spacing) - spacing + margin * 2
-            scene.setSceneRect(0, 0, total_width, total_height)
+            # Create buttons for this tab (2x5 grid)
+            buttons = []
+            for i in range(num_buttons):
+                row = i // 5  # 5 columns
+                col = i % 5
+                key = str(i)
+                label = str(i)
 
-            for row in range(rows):
-                for col in range(cols):
-                    x = margin + col * (button_size + spacing) + offset
-                    y = margin + row * (button_size + spacing)
-                    button = nodeStock_view.NodeStockButton(f"{row}_{col}", x, y, button_size, label=str(row * cols + col))
-                    button.left_button_clicked.connect(self._select_nodes)
-                    button.middle_button_clicked.connect(self._add_nodes)
-                    button.right_button_clicked.connect(self._remove_nodes)
-                    button.hovered.connect(self.__update_status_bar)
-                    button.unhovered.connect(self._clear_status_bar)
-                    scene.addItem(button)
+                button = NodeStockPushButton(key, label, tab)
+                button.setMinimumSize(self.button_size, self.button_size)
+                button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-            self.view.setSceneRect(scene.sceneRect())
+                # Setup PieMenu for middle click (2-way: Register/Unregister)
+                button.setup_pie_menu(
+                    items=[
+                        {"label": "Register", "callback": lambda b=button: self._add_nodes(b)},
+                        {"label": "Unregister", "callback": lambda b=button: self._remove_nodes(b)},
+                    ],
+                    trigger_button=Qt.MouseButton.MiddleButton,
+                )
 
-        logger.debug(f"Created button grid: {rows}x{cols}")
+                # Setup PieMenu for right click (4-way: SetKeyframe and future commands)
+                button.setup_pie_menu(
+                    items=[
+                        {"label": "Set Keyframe", "callback": lambda b=button: self._set_keyframe(b)},
+                        None,  # Right - empty for future
+                        None,  # Down - empty for future
+                        None,  # Left - empty for future
+                    ],
+                    trigger_button=Qt.MouseButton.RightButton,
+                )
+
+                # Connect left click for selection
+                button.clicked.connect(lambda checked=False, b=button: self._select_nodes(b))
+
+                # Connect hover events
+                button.hovered.connect(self.__update_status_bar)
+                button.unhovered.connect(self._clear_status_bar)
+
+                grid_layout.addWidget(button, row, col)
+                buttons.append(button)
+
+            # Set stretch factors for rows and columns to make buttons expand
+            for row_idx in range(2):  # 2 rows
+                grid_layout.setRowStretch(row_idx, 1)
+            for col_idx in range(5):  # 5 columns
+                grid_layout.setColumnStretch(col_idx, 1)
+
+            # Add tab to widget
+            self.tab_widget.addTab(tab, f"Area {area_index}")
+
+            # Store buttons for data loading
+            self.button_grids.append(buttons)
+
+        logger.debug(f"Created {num_areas} tabs with {num_buttons} buttons each")
 
     def _load_scene_data(self, index: int) -> None:
-        """Load the data for the specified scene.
+        """Load the data for the specified tab.
 
         Args:
-            index (int): The index of the scene.
+            index (int): The index of the tab.
         """
+        if not (0 <= index < len(self.button_grids)):
+            return
+
         scene_file_name = self._get_file_prefix(index)
         storage_file = self.node_storage.get_file(scene_file_name)
         self._current_scene_data = storage_file.get_data()
-        scene = self.scenes[index]
-        for button in scene.list_buttons():
+
+        # Update button colors based on data
+        for button in self.button_grids[index]:
             if button.key in self._current_scene_data and self._current_scene_data[button.key]:
                 button.apply_stoked_color()
             else:
@@ -228,26 +272,28 @@ class MainWindow(BaseMainWindow):
         """Make the file prefix."""
         return f"{self._stock_file_name}_{index}"
 
-    def _get_node_stock_file(self, button: nodeStock_view.NodeStockButton) -> NodeStockFile:
+    def _get_node_stock_file(self, button: NodeStockPushButton) -> NodeStockFile:
         """Get the node stock file from the button.
 
         Args:
-            button (nodeStock_view.NodeStockButton): The button.
+            button (NodeStockPushButton): The button.
 
         Returns:
-            node_storage.NodeStockFile: The node stock file.
+            NodeStockFile: The node stock file.
         """
-        if not isinstance(button, nodeStock_view.NodeStockButton):
-            return TypeError("Button must be an instance of NodeStockButton.")
+        if not isinstance(button, NodeStockPushButton):
+            raise TypeError("Button must be an instance of NodeStockPushButton.")
 
-        scene_index = self.scenes.index(button.scene())
-        name = self._get_file_prefix(scene_index)
+        # Get current tab index
+        grid_index = self.tab_widget.currentIndex()
+        name = self._get_file_prefix(grid_index)
 
         return self.node_storage.get_file(name)
 
     def _refresh_window(self) -> None:
         """Refresh the window."""
-        self._load_scene_data(self.switch_buttons.button_group.checkedId())
+        current_index = self.tab_widget.currentIndex()
+        self._load_scene_data(current_index)
         self.name_space_box.refresh_name_spaces()
 
     @staticmethod
@@ -262,13 +308,12 @@ class MainWindow(BaseMainWindow):
         """
         return f"Nodes: {node_count}"
 
-    def __update_status_bar(self, button: nodeStock_view.NodeStockButton) -> None:
+    def __update_status_bar(self, button: NodeStockPushButton) -> None:
         """Update the status bar with the button's information.
 
         Args:
-            button (nodeStock_view.NodeStockButton): The button.
+            button (NodeStockPushButton): The button.
         """
-        self.current_button = button
         nodes = self._current_scene_data.get(button.key, [])
         if not nodes:
             self.node_length_label.setText(self._get_node_length_label(0))
@@ -374,8 +419,8 @@ class MainWindow(BaseMainWindow):
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Select Nodes")
-    def _select_nodes(self, button: nodeStock_view.NodeStockButton) -> None:
-        """Select the nodes when the left button is clicked."""
+    def _select_nodes(self, button: NodeStockPushButton) -> None:
+        """Select the nodes when the button is clicked."""
         nodes = self._current_scene_data.get(button.key, [])
         if not nodes:
             return
@@ -385,28 +430,8 @@ class MainWindow(BaseMainWindow):
         logger.debug(f"Selected nodes: {nodes}")
 
     @maya_decorator.error_handler
-    @maya_decorator.undo_chunk("Select Nodes by Rubber Band")
-    def _select_nodes_rubber_band(self, buttons: list[nodeStock_view.NodeStockButton]) -> None:
-        """Select the nodes when the rubber band selection is made."""
-        if not buttons:
-            logger.debug("No buttons to select.")
-            return
-
-        nodes = []
-        for button in buttons:
-            nodes.extend(self._current_scene_data.get(button.key, []))
-
-        if not nodes:
-            logger.debug("No nodes to select.")
-            return
-
-        self._select_nodes_with_modifier(nodes)
-
-        logger.debug(f"Selected nodes by rubber band: {nodes}")
-
-    @maya_decorator.error_handler
-    def _add_nodes(self, button: nodeStock_view.NodeStockButton) -> None:
-        """Add the nodes to nodeStorage when the middle button is clicked."""
+    def _add_nodes(self, button: NodeStockPushButton) -> None:
+        """Add the nodes to nodeStorage (called from PieMenu)."""
         sel_nodes = cmds.ls(sl=True)
         if not sel_nodes:
             cmds.warning("No nodes selected.")
@@ -425,8 +450,8 @@ class MainWindow(BaseMainWindow):
         logger.debug(f"Added nodes: {sel_nodes}")
 
     @maya_decorator.error_handler
-    def _remove_nodes(self, button: nodeStock_view.NodeStockButton) -> None:
-        """Remove the nodes from nodeStorage when the right button is clicked."""
+    def _remove_nodes(self, button: NodeStockPushButton) -> None:
+        """Remove the nodes from nodeStorage (called from PieMenu)."""
         # Remove the nodes from the storage file.
         node_stock_file = self._get_node_stock_file(button)
         nodes = node_stock_file.get_nodes(button.key)
@@ -443,6 +468,38 @@ class MainWindow(BaseMainWindow):
         button.reset_stoked_color()
 
         logger.debug(f"Removed nodes: {nodes}")
+
+    @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Set Keyframe")
+    def _set_keyframe(self, button: NodeStockPushButton) -> None:
+        """Set keyframe on registered nodes (called from PieMenu).
+
+        Args:
+            button (NodeStockPushButton): The button.
+        """
+        nodes = self._current_scene_data.get(button.key, [])
+        if not nodes:
+            cmds.warning("No nodes registered to this button.")
+            return
+
+        # Apply name replace and namespace processing
+        nodes = self._replace_node_names(nodes, echo_error=True)
+        nodes = self._name_space_with_nodes(nodes)
+
+        # Validate nodes exist
+        not_exists_nodes = [node for node in nodes if not cmds.objExists(node)]
+        if not_exists_nodes:
+            cmds.error(f"No existing nodes to set keyframe: {not_exists_nodes}")
+
+        # Set keyframe on all nodes
+        for node in nodes:
+            try:
+                cmds.setKeyframe(node)
+            except Exception as e:
+                logger.warning(f"Failed to set keyframe on {node}: {e}")
+
+        cmds.inViewMessage(amg=f"Set keyframe on <hl>{len(nodes)}</hl> nodes", pos="topCenter", fade=True)
+        logger.info(f"Set keyframe on nodes: {nodes}")
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
