@@ -140,10 +140,6 @@ class MainWindow(BaseMainWindow):
             """
         )
 
-        # Initialize the UI
-        # minimum_size = self.minimumSizeHint()
-        # self.resize(minimum_size.width() * 2.0, minimum_size.height())
-
     def _populate_file_list(self):
         """Populate the tree widget with files and directories."""
         self.tree_widget.clear()
