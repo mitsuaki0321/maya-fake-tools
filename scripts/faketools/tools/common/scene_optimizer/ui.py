@@ -9,8 +9,8 @@ from ....lib import lib_optimize
 from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QCheckBox, QHBoxLayout, QPushButton, QSizePolicy
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class MainWindow(BaseMainWindow):
         )
 
         # UI settings
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="scene_optimizer", category="common")
 
         # Optimizer instances and checkboxes
         self.optimize_cls_list = []
@@ -129,34 +129,44 @@ class MainWindow(BaseMainWindow):
             if checkbox.isChecked():
                 optimize_cls(echo=True)
 
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings.
+
+        Returns:
+            dict: Settings data
+        """
+        checkbox_states = {}
+        for checkbox in self.enable_checkboxes:
+            checkbox_states[checkbox.text()] = checkbox.isChecked()
+
+        return {"checkbox_states": checkbox_states}
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "checkbox_states" in settings_data:
+            checkbox_states = settings_data["checkbox_states"]
+            for checkbox in self.enable_checkboxes:
+                state = checkbox_states.get(checkbox.text(), True)
+                checkbox.setChecked(state)
+
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-        # Restore checkbox states
-        checkbox_states = self.settings.read("checkbox_states", {})
-        for checkbox in self.enable_checkboxes:
-            state = checkbox_states.get(checkbox.text(), True)
-            checkbox.setChecked(state)
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
+        else:
+            self._apply_settings({})
 
         logger.debug("UI settings restored")
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-        # Save checkbox states
-        checkbox_states = {}
-        for checkbox in self.enable_checkboxes:
-            checkbox_states[checkbox.text()] = checkbox.isChecked()
-
-        self.settings.write("checkbox_states", checkbox_states)
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
         logger.debug("UI settings saved")
 
     def closeEvent(self, event):

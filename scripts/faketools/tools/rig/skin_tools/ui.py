@@ -7,7 +7,8 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ....lib import lib_skinCluster
-from ....lib_ui import ToolOptionSettings, error_handler, repeatable, undo_chunk
+from ....lib_ui import error_handler, repeatable, undo_chunk
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QComboBox, QGroupBox, QStackedWidget, QVBoxLayout
@@ -35,7 +36,7 @@ class MainWindow(BaseMainWindow):
         """Constructor."""
         super().__init__(parent=parent, object_name="SkinToolsMainWindow", window_title="Skin Tools", central_layout="vertical")
 
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="skin_tools", category="rig")
         self.setup_ui()
         self._restore_settings()
 
@@ -47,7 +48,7 @@ class MainWindow(BaseMainWindow):
         self._add_menu()
 
         # Add skinWeights bar
-        self.skinWeightsBar = skinWeights_bar_ui.SkinWeightsBar()
+        self.skinWeightsBar = skinWeights_bar_ui.SkinWeightsBar(settings=self.settings)
         self.central_layout.addWidget(self.skinWeightsBar)
 
         separator = extra_widgets.HorizontalSeparator()
@@ -67,7 +68,7 @@ class MainWindow(BaseMainWindow):
         self.widgets_stack_widget = QStackedWidget()
 
         for widget in self.widgets_data().values():
-            self.widgets_stack_widget.addWidget(widget())
+            self.widgets_stack_widget.addWidget(widget(settings=self.settings))
 
         widgets_group_layout.addWidget(self.widgets_stack_widget)
         widgets_group.setLayout(widgets_group_layout)
@@ -214,35 +215,64 @@ class MainWindow(BaseMainWindow):
 
         return target_skinClusters
 
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        settings_data = {
+            "last_widget_index": self.widgets_box.currentIndex(),
+        }
+
+        # Collect settings from SkinWeightsBar
+        if hasattr(self.skinWeightsBar, "_collect_settings"):
+            settings_data["skinWeightsBar"] = self.skinWeightsBar._collect_settings()
+
+        # Collect settings from all stacked widgets
+        settings_data["widgets"] = {}
+        for i in range(self.widgets_stack_widget.count()):
+            widget = self.widgets_stack_widget.widget(i)
+            if hasattr(widget, "_collect_settings"):
+                widget_name = list(self.widgets_data().keys())[i]
+                settings_data["widgets"][widget_name] = widget._collect_settings()
+
+        return settings_data
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        # Restore last selected widget index
+        if "last_widget_index" in settings_data:
+            last_widget_index = settings_data["last_widget_index"]
+            if 0 <= last_widget_index < self.widgets_box.count():
+                self.widgets_box.setCurrentIndex(last_widget_index)
+
+        # Apply settings to SkinWeightsBar
+        if "skinWeightsBar" in settings_data and hasattr(self.skinWeightsBar, "_apply_settings"):
+            self.skinWeightsBar._apply_settings(settings_data["skinWeightsBar"])
+
+        # Apply settings to all stacked widgets
+        if "widgets" in settings_data:
+            for i in range(self.widgets_stack_widget.count()):
+                widget = self.widgets_stack_widget.widget(i)
+                widget_name = list(self.widgets_data().keys())[i]
+                if widget_name in settings_data["widgets"] and hasattr(widget, "_apply_settings"):
+                    widget._apply_settings(settings_data["widgets"][widget_name])
+
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-        # Restore last selected widget index
-        last_widget_index = self.settings.read("last_widget_index", 0)
-        if 0 <= last_widget_index < self.widgets_box.count():
-            self.widgets_box.setCurrentIndex(last_widget_index)
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-        # Save last selected widget index
-        self.settings.write("last_widget_index", self.widgets_box.currentIndex())
-
-        # Save settings for SkinWeightsBar
-        if hasattr(self.skinWeightsBar, "save_settings"):
-            self.skinWeightsBar.save_settings()
-
-        # Save settings for all widgets
-        for i in range(self.widgets_stack_widget.count()):
-            widget = self.widgets_stack_widget.widget(i)
-            if hasattr(widget, "save_settings"):
-                widget.save_settings()
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
     def closeEvent(self, event):
         """Handle window close event."""

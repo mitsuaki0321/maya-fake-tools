@@ -6,7 +6,8 @@ from functools import partial
 
 import maya.cmds as cmds
 
-from ....lib_ui import maya_qt, maya_ui, optionvar
+from ....lib_ui import maya_qt, maya_ui
+from ....lib_ui.tool_settings import ToolSettingsManager
 from . import command
 
 
@@ -23,7 +24,7 @@ class RemoteSliderWindow:
 
     def __init__(self):
         """RemoteSliderWindow class initializer."""
-        self.tool_options = optionvar.ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="remort_slider", category="rig")
 
         # UI Names
         self.title = "Remote Float Attr"
@@ -44,6 +45,17 @@ class RemoteSliderWindow:
         self.prev_value = 0.0
         self.validate_ok = False
         self.on_value_changed = False
+
+    def _save_setting(self, key: str, value):
+        """Save a single setting value.
+
+        Args:
+            key: Setting key
+            value: Setting value
+        """
+        settings_data = self.settings.load_settings("default")
+        settings_data[key] = value
+        self.settings.save_settings(settings_data, "default")
 
     def ui_name(self, name) -> str:
         """Get the UI name.
@@ -166,11 +178,15 @@ class RemoteSliderWindow:
 
     def initialize_ui(self):
         """Initialize the UI values from the option settings."""
-        # Get option settings
-        local_relative, local_absolute, world_relative = self.tool_options.read(self.mode, [True, False, False])
-        min_value = self.tool_options.read(self.min_field, -90.0)
-        max_value = self.tool_options.read(self.max_field, 90.0)
-        saved_nodes = self.tool_options.read(self.node_list, [])
+        # Load settings
+        settings_data = self.settings.load_settings("default")
+
+        # Get option settings with defaults
+        mode_settings = settings_data.get("mode", [True, False, False])
+        local_relative, local_absolute, world_relative = mode_settings
+        min_value = settings_data.get("min_value", -90.0)
+        max_value = settings_data.get("max_value", 90.0)
+        saved_nodes = settings_data.get("node_list", [])
 
         # Settings initial values
         cmds.menuItem(self.local_absolute_radio_btn, e=True, rb=local_relative)
@@ -216,8 +232,8 @@ class RemoteSliderWindow:
                 cmds.textScrollList(self.attr_list, e=True, si=selected_attrs)
 
         # Save the option settings
-        self.tool_options.write(
-            self.mode,
+        self._save_setting(
+            "mode",
             [
                 cmds.menuItem(self.local_absolute_radio_btn, q=True, rb=True),
                 cmds.menuItem(self.local_relative_radio_btn, q=True, rb=True),
@@ -244,7 +260,7 @@ class RemoteSliderWindow:
             self.node_values.add_node(node)
 
         # Save the option settings
-        self.tool_options.write(self.node_list, self._get_node_items(selected=False))
+        self._save_setting("node_list", self._get_node_items(selected=False))
 
     def remove_items(self, *args):
         """Remove items."""
@@ -261,7 +277,7 @@ class RemoteSliderWindow:
             self.node_values.remove_node(node)
 
         # Save the option settings
-        self.tool_options.write(self.node_list, self._get_node_items(selected=False))
+        self._save_setting("node_list", self._get_node_items(selected=False))
 
     def select_all_items(self, *args):
         """Select all node items."""
@@ -385,7 +401,7 @@ class RemoteSliderWindow:
         cmds.floatSliderGrp(self.ui_name("slider"), e=True, min=min_val)
 
         # Save the option settings
-        self.tool_options.write(self.min_field, min_val)
+        self._save_setting("min_value", min_val)
 
     def set_max_value(self, *args):
         """Set max value."""
@@ -399,7 +415,7 @@ class RemoteSliderWindow:
         cmds.floatSliderGrp(self.ui_name("slider"), e=True, max=max_val)
 
         # Save the option settings
-        self.tool_options.write(self.max_field, max_val)
+        self._save_setting("max_value", max_val)
 
     def reset_value(self, *args):
         """Reset value."""

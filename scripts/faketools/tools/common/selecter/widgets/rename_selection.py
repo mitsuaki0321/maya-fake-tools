@@ -2,8 +2,9 @@
 
 import maya.cmds as cmds
 
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLabel, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.ui_utils import get_text_width
 from .. import command
 from .constants import RENAME_COLOR
@@ -19,15 +20,15 @@ class RenameSelectionWidget(QWidget):
     - ~ : Original name placeholder
     """
 
-    def __init__(self, tool_settings: optionvar.ToolOptionSettings, parent=None):
+    def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
 
         Args:
-            tool_settings: Tool settings instance for storing preferences.
+            settings (ToolSettingsManager): Tool settings manager for storing preferences.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self.tool_settings = tool_settings
+        self.settings = settings
 
         main_layout = QHBoxLayout()
         main_layout.setSpacing(base_window.get_spacing(self, "horizontal") * 0.5)
@@ -68,11 +69,6 @@ class RenameSelectionWidget(QWidget):
 
         self.setLayout(main_layout)
 
-        # Restore settings
-        self.name_field.setText(self.tool_settings.read("rename_name_field", ""))
-        self.start_alpha_field.setText(self.tool_settings.read("rename_start_alpha_field", "A"))
-        self.start_number_field.setText(self.tool_settings.read("rename_start_number_field", "1"))
-
         # Connect signals
         rename_button.clicked.connect(self.rename_nodes)
 
@@ -95,14 +91,30 @@ class RenameSelectionWidget(QWidget):
 
         cmds.select(nodes, r=True)
 
-        # Save settings
-        self.save_tool_options()
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
 
-    def save_tool_options(self):
-        """Save the tool option settings."""
-        self.tool_settings.write("rename_name_field", self.name_field.text())
-        self.tool_settings.write("rename_start_alpha_field", self.start_alpha_field.text())
-        self.tool_settings.write("rename_start_number_field", self.start_number_field.text())
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "rename_name_field": self.name_field.text(),
+            "rename_start_alpha_field": self.start_alpha_field.text(),
+            "rename_start_number_field": self.start_number_field.text(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "rename_name_field" in settings_data:
+            self.name_field.setText(settings_data["rename_name_field"])
+        if "rename_start_alpha_field" in settings_data:
+            self.start_alpha_field.setText(settings_data["rename_start_alpha_field"])
+        if "rename_start_number_field" in settings_data:
+            self.start_number_field.setText(settings_data["rename_start_number_field"])
 
 
 __all__ = ["RenameSelectionWidget"]

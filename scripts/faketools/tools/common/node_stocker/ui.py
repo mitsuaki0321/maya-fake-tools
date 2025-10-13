@@ -9,8 +9,8 @@ import maya.cmds as cmds
 from ....lib import lib_name
 from ....lib_ui import maya_decorator, maya_qt, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
-from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QHBoxLayout, QLabel, QStatusBar, QStyle, Qt, QVBoxLayout
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from . import nodeStock_view
 from .command import NodeStockFile, NodeStorage
@@ -49,7 +49,7 @@ class MainWindow(BaseMainWindow):
         tool_data_manager = tool_data.ToolDataManager("node_stocker", "common")
         tool_data_manager.ensure_data_dir()
         self.node_storage = NodeStorage(tool_data_manager.get_data_dir())
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="node_stocker", category="common")
 
         self._current_scene_data = {}
 
@@ -128,6 +128,39 @@ class MainWindow(BaseMainWindow):
 
         # Restore settings
         self._restore_settings()
+
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "name_space_enabled": self.name_space_box.is_enabled(),
+            "name_replace_enabled": self.name_replace_field.is_enabled(),
+            "search_replace": self.name_replace_field.get_search_replace_text(),
+            "name_replace_switched": self.name_replace_field.is_switched(),
+            "name_replace_re": self.name_replace_field.is_re(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "name_space_enabled" in settings_data:
+            self.name_space_box.set_enabled(settings_data["name_space_enabled"])
+        if "name_replace_enabled" in settings_data:
+            self.name_replace_field.set_enabled(settings_data["name_replace_enabled"])
+        if "search_replace" in settings_data:
+            self.name_replace_field.set_search_replace_text(*settings_data["search_replace"])
+        else:
+            self.name_replace_field.set_search_replace_text("", "")
+        if "name_replace_switched" in settings_data:
+            self.name_replace_field.set_switched(settings_data["name_replace_switched"])
+        if "name_replace_re" in settings_data:
+            self.name_replace_field.set_re(settings_data["name_replace_re"])
 
     def _switch_scene(self, index: int) -> None:
         """Switch the scene in the graphic widget.
@@ -413,39 +446,19 @@ class MainWindow(BaseMainWindow):
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
         else:
-            # Default size if no saved geometry
-            minimum_size = self.minimumSizeHint()
-            width = minimum_size.width() * 1.1
-            height = minimum_size.height()
-            self.resize(width, height)
-
-        # Restore widget settings
-        self.name_space_box.set_enabled(self.settings.read("name_space_enabled", False))
-        self.name_replace_field.set_enabled(self.settings.read("name_replace_enabled", False))
-        self.name_replace_field.set_search_replace_text(*self.settings.read("search_replace", ("", "")))
-        self.name_replace_field.set_switched(self.settings.read("name_replace_switched", False))
-        self.name_replace_field.set_re(self.settings.read("name_replace_re", False))
+            # Apply default values
+            self._apply_settings({})
 
         logger.debug("UI settings restored")
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-        # Save widget settings
-        self.settings.write("name_space_enabled", self.name_space_box.is_enabled())
-        self.settings.write("name_replace_enabled", self.name_replace_field.is_enabled())
-        self.settings.write("search_replace", self.name_replace_field.get_search_replace_text())
-        self.settings.write("name_replace_switched", self.name_replace_field.is_switched())
-        self.settings.write("name_replace_re", self.name_replace_field.is_re())
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
         logger.debug("UI settings saved")
 

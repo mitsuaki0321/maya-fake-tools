@@ -10,6 +10,7 @@ import maya.cmds as cmds
 from .....lib import lib_skinCluster
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QGridLayout, QLabel, QLineEdit, QPushButton, Qt, QVBoxLayout, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 
 logger = getLogger(__name__)
 
@@ -17,9 +18,11 @@ logger = getLogger(__name__)
 class InfluenceExchangerWidgets(QWidget):
     """Influence Exchanger Widgets."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
+    def __init__(self, settings: ToolSettingsManager = None, parent=None, window_mode: bool = False):
         """Constructor."""
         super().__init__(parent=parent)
+
+        self.settings = settings
 
         self.main_layout = QVBoxLayout()
         spacing = base_window.get_spacing(self)

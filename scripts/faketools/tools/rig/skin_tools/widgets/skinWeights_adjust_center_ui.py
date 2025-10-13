@@ -9,6 +9,7 @@ import maya.cmds as cmds
 
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton, Qt, QVBoxLayout, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from ..command import combine_pair_skin_weights
 
@@ -21,9 +22,11 @@ ADJUST_CENTER_WEIGHT = ["(.*)(L$)", r"\g<1>R"]
 class AdjustCenterSkinWeightsWidgets(QWidget):
     """Adjust Center Skin Weights Widgets."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
+    def __init__(self, settings: ToolSettingsManager = None, parent=None, window_mode: bool = False):
         """Constructor."""
         super().__init__(parent=parent)
+
+        self.settings = settings
 
         self.main_layout = QVBoxLayout()
         spacing = base_window.get_spacing(self)

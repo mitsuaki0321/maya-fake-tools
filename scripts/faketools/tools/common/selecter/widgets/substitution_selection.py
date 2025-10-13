@@ -4,8 +4,9 @@ import maya.cmds as cmds
 
 from .....lib import lib_name, lib_transform
 from .....lib.lib_selection import get_top_nodes
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.ui_utils import get_line_height
 from .....lib_ui.widgets import extra_widgets
 from .....operations import mirror_transforms
@@ -24,15 +25,15 @@ class SubstitutionSelectionWidget(QWidget):
     - Rename, mirror, duplicate operations
     """
 
-    def __init__(self, tool_settings: optionvar.ToolOptionSettings, parent=None):
+    def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
 
         Args:
-            tool_settings: Tool settings instance for storing preferences.
+            settings (ToolSettingsManager): Tool settings manager for storing preferences.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self.tool_settings = tool_settings
+        self.settings = settings
 
         main_layout = QHBoxLayout()
         main_layout.setSpacing(base_window.get_spacing(self, "horizontal") * 0.5)
@@ -122,10 +123,6 @@ class SubstitutionSelectionWidget(QWidget):
         main_layout.addWidget(duplicate_orig_button)
 
         self.setLayout(main_layout)
-
-        # Restore settings
-        self.search_text_field.setText(self.tool_settings.read("sub_left_field", "L"))
-        self.replace_text_field.setText(self.tool_settings.read("sub_right_field", "R"))
 
         # Connect signals
         left_to_right_button.clicked.connect(self.select_left_to_right)
@@ -234,9 +231,6 @@ class SubstitutionSelectionWidget(QWidget):
             if name not in result_nodes:
                 result_nodes.append(name)
 
-        # Save settings
-        self.save_tool_options()
-
         if not result_nodes:
             cmds.warning("No matching nodes found.")
             return nodes
@@ -291,9 +285,6 @@ class SubstitutionSelectionWidget(QWidget):
             mirror_transforms(name, axis="x", mirror_position=mirror_pos, mirror_rotation=mirror_rot, space=mirror_space)
 
             result_nodes.append(name)
-
-        # Save settings
-        self.save_tool_options()
 
         cmds.select(result_nodes, r=True)
 
@@ -362,10 +353,27 @@ class SubstitutionSelectionWidget(QWidget):
 
         return search_text, replace_text
 
-    def save_tool_options(self):
-        """Save the tool option settings."""
-        self.tool_settings.write("sub_left_field", self.search_text_field.text())
-        self.tool_settings.write("sub_right_field", self.replace_text_field.text())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "sub_left_field": self.search_text_field.text(),
+            "sub_right_field": self.replace_text_field.text(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "sub_left_field" in settings_data:
+            self.search_text_field.setText(settings_data["sub_left_field"])
+        if "sub_right_field" in settings_data:
+            self.replace_text_field.setText(settings_data["sub_right_field"])
 
 
 __all__ = ["SubstitutionSelectionWidget"]

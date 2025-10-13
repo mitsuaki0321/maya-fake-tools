@@ -7,7 +7,7 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ....lib_ui import base_window, maya_decorator, optionvar
+from ....lib_ui import base_window, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
     QApplication,
@@ -46,8 +46,6 @@ class MainWindow(base_window.BaseMainWindow):
             window_title="Connection Lister",
             central_layout="vertical",
         )
-
-        self.settings = optionvar.ToolOptionSettings(__name__)
 
         # Load button
         load_button_layout = QHBoxLayout()
@@ -164,9 +162,6 @@ class MainWindow(base_window.BaseMainWindow):
         self.dest_filter_line_edit.textChanged.connect(self.dest_attr_list.attr_model.setFilterFixedString)
         copy_value_button.clicked.connect(self._copy_value)
         connect_button.clicked.connect(self._connect_attribute)
-
-        # Restore settings
-        self._restore_settings()
 
     def __switch_operation(self, index) -> None:
         """Switch operation stack widget.
@@ -485,26 +480,6 @@ class MainWindow(base_window.BaseMainWindow):
         single_command_cls(source_nodes, dest_nodes)
 
         logger.debug(f"Executed: {command_name}")
-
-    def _restore_settings(self) -> None:
-        """Restore UI settings from saved preferences."""
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-    def _save_settings(self) -> None:
-        """Save UI settings to preferences."""
-        self.settings.set_window_geometry(
-            size=[self.width(), self.height()],
-            position=[self.x(), self.y()],
-        )
-
-    def closeEvent(self, event) -> None:
-        """Handle window close event."""
-        self._save_settings()
-        super().closeEvent(event)
 
 
 def show_ui():

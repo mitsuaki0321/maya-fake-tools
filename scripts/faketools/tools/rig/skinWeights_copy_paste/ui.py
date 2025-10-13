@@ -7,7 +7,6 @@ import maya.cmds as cmds
 
 from ....lib_ui import BaseFramelessWindow, icons, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QIcon, QPushButton, QSlider, Qt, Signal
 from ....lib_ui.widgets import extra_widgets
 from .command import SkinWeightsCopyPaste
@@ -32,7 +31,6 @@ class MainWindow(BaseFramelessWindow):
             central_layout="horizontal",
         )
 
-        self.settings = ToolOptionSettings(__name__)
         self.skinWeights_copy_paste = SkinWeightsCopyPaste()
         self.is_value_changed = False
         self.is_use_select_pref = False  # Save the preference by user for trackSelectionOrder
@@ -92,9 +90,11 @@ class MainWindow(BaseFramelessWindow):
 
         self.paste_button.clicked.connect(self._paste_skinWeights)
 
-        # Initialize the UI.
+        # Initialize the UI - use minimum height
         self.adjustSize()
-        self._restore_settings()
+        width = self.sizeHint().width()
+        height = self.minimumSizeHint().height()
+        self.resize(width, height)
 
     def _on_slider_value_changed(self):
         """Slot for the slider value changed."""
@@ -175,18 +175,6 @@ class MainWindow(BaseFramelessWindow):
         self.blend_spin_box.blockSignals(False)
         self.blend_slider.blockSignals(False)
 
-    def _restore_settings(self):
-        """Restore UI settings from saved preferences."""
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-    def _save_settings(self):
-        """Save UI settings to preferences."""
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
     def showEvent(self, event):
         """Show event."""
         # Settings for trackSelectionOrder
@@ -198,8 +186,6 @@ class MainWindow(BaseFramelessWindow):
 
     def closeEvent(self, event):
         """Close event."""
-        self._save_settings()
-
         # Restore the settings for trackSelectionOrder
         if not self.is_use_select_pref:
             cmds.selectPref(trackSelectionOrder=False)

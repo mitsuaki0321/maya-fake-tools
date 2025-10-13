@@ -7,7 +7,8 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.qt_compat import (
     QCheckBox,
     QDoubleValidator,
@@ -29,11 +30,17 @@ logger = getLogger(__name__)
 class SkinWeightsCopyCustomWidgets(QWidget):
     """Skin Weights Copy Custom Widgets."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
-        """Constructor."""
+    def __init__(self, settings: ToolSettingsManager, parent=None, window_mode: bool = False):
+        """Constructor.
+
+        Args:
+            settings: ToolSettingsManager instance
+            parent: Parent widget
+            window_mode: Whether to use window mode layout
+        """
         super().__init__(parent=parent)
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = settings
 
         self.preview_mesh = None
         self.preview_mesh_node = None
@@ -84,13 +91,6 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         self.main_layout.addStretch()
 
         self.setLayout(self.main_layout)
-
-        # Option settings
-        self.blend_field.setText(str(self.settings.read("blend_value", "1.0")))
-        self.blend_slider.setValue(float(self.blend_field.text()) * 100)
-        self.only_unlock_inf_checkBox.setChecked(self.settings.read("only_unlock_inf", False))
-        self.reference_orig_checkBox.setChecked(self.settings.read("reference_orig", False))
-        self.add_missing_infs_checkBox.setChecked(self.settings.read("add_missing_infs", True))
 
         # Signal & Slot
         self.blend_field.textChanged.connect(self._blend_value_change)
@@ -144,9 +144,31 @@ class SkinWeightsCopyCustomWidgets(QWidget):
                 add_missing_influences=add_missing_infs,
             )
 
-    def save_settings(self):
-        """Save the option settings."""
-        self.settings.write("blend_value", self.blend_field.text())
-        self.settings.write("only_unlock_inf", self.only_unlock_inf_checkBox.isChecked())
-        self.settings.write("reference_orig", self.reference_orig_checkBox.isChecked())
-        self.settings.write("add_missing_infs", self.add_missing_infs_checkBox.isChecked())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "blend_value": self.blend_field.text(),
+            "only_unlock_inf": self.only_unlock_inf_checkBox.isChecked(),
+            "reference_orig": self.reference_orig_checkBox.isChecked(),
+            "add_missing_infs": self.add_missing_infs_checkBox.isChecked(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "blend_value" in settings_data:
+            self.blend_field.setText(str(settings_data["blend_value"]))
+            self.blend_slider.setValue(float(settings_data["blend_value"]) * 100)
+        if "only_unlock_inf" in settings_data:
+            self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])
+        if "reference_orig" in settings_data:
+            self.reference_orig_checkBox.setChecked(settings_data["reference_orig"])
+        if "add_missing_infs" in settings_data:
+            self.add_missing_infs_checkBox.setChecked(settings_data["add_missing_infs"])

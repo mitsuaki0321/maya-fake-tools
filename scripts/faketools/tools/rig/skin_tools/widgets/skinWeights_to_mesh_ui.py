@@ -8,8 +8,9 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QGridLayout, QIntValidator, QLabel, QLineEdit, QPushButton, QSizePolicy, QSlider, Qt, QVBoxLayout, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from .....operations.convert_weight import SkinClusterToMesh
 
@@ -19,11 +20,17 @@ logger = getLogger(__name__)
 class SkinWeightsMeshConverterWidgets(QWidget):
     """Skin Weights Mesh Converter Widgets."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
-        """Constructor."""
+    def __init__(self, settings: ToolSettingsManager, parent=None, window_mode: bool = False):
+        """Constructor.
+
+        Args:
+            settings (ToolSettingsManager): Settings manager instance
+            parent (QWidget, optional): Parent widget. Defaults to None.
+            window_mode (bool, optional): Window mode flag. Defaults to False.
+        """
         super().__init__(parent=parent)
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = settings
 
         self.preview_mesh = None
         self.preview_mesh_node = None
@@ -93,14 +100,6 @@ class SkinWeightsMeshConverterWidgets(QWidget):
         self.main_layout.addStretch()
 
         self.setLayout(self.main_layout)
-
-        # Option settings
-        self.mesh_div_field.setText(str(self.settings.read("mesh_divisions", "1")))
-        self.mesh_div_slider.setValue(int(self.mesh_div_field.text()))
-        self.u_div_field.setText(str(self.settings.read("u_divisions", "2")))
-        self.u_div_slider.setValue(int(self.u_div_field.text()))
-        self.v_div_field.setText(str(self.settings.read("v_divisions", "2")))
-        self.v_div_slider.setValue(int(self.v_div_field.text()))
 
         # Signal & Slot
         self.mesh_div_field.textChanged.connect(partial(self._update_preview_values, self.mesh_div_field))
@@ -215,8 +214,32 @@ class SkinWeightsMeshConverterWidgets(QWidget):
         if converted_meshes:
             cmds.select(converted_meshes, r=True)
 
-    def save_settings(self):
-        """Save the option settings."""
-        self.settings.write("mesh_divisions", self.mesh_div_field.text())
-        self.settings.write("u_divisions", self.u_div_field.text())
-        self.settings.write("v_divisions", self.v_div_field.text())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "mesh_divisions": self.mesh_div_field.text(),
+            "u_divisions": self.u_div_field.text(),
+            "v_divisions": self.v_div_field.text(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "mesh_divisions" in settings_data:
+            self.mesh_div_field.setText(str(settings_data["mesh_divisions"]))
+            self.mesh_div_slider.setValue(int(self.mesh_div_field.text()))
+
+        if "u_divisions" in settings_data:
+            self.u_div_field.setText(str(settings_data["u_divisions"]))
+            self.u_div_slider.setValue(int(self.u_div_field.text()))
+
+        if "v_divisions" in settings_data:
+            self.v_div_field.setText(str(settings_data["v_divisions"]))
+            self.v_div_slider.setValue(int(self.v_div_field.text()))

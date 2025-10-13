@@ -4,7 +4,7 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ....lib_ui import maya_decorator, optionvar
+from ....lib_ui import maya_decorator
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QButtonGroup, QGridLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, Qt
@@ -32,9 +32,7 @@ class MainWindow(BaseMainWindow):
             central_layout="vertical",
         )
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
         self.setup_ui()
-        self._restore_settings()
 
     def setup_ui(self):
         """Setup the user interface."""
@@ -318,39 +316,6 @@ class MainWindow(BaseMainWindow):
 
         return components
 
-    def _restore_settings(self):
-        """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-        # Restore UV radio button
-        if self.settings.read("uv", "u") == "u":
-            self.u_button.setChecked(True)
-        else:
-            self.v_button.setChecked(True)
-
-        # Restore spinbox values
-        self.min_param_spinbox.setValue(self.settings.read("min_param", 0))
-        self.max_param_spinbox.setValue(self.settings.read("max_param", 1))
-
-        logger.debug("UI settings restored")
-
-    def _save_settings(self):
-        """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-        # Save option settings
-        self.settings.write("uv", self.uv_button_group.checkedButton().text())
-        self.settings.write("min_param", self.min_param_spinbox.value())
-        self.settings.write("max_param", self.max_param_spinbox.value())
-
-        logger.debug("UI settings saved")
-
     def __update_uv_spinbox(self):
         """Update UV spinbox."""
         sender = self.sender()
@@ -367,15 +332,6 @@ class MainWindow(BaseMainWindow):
         elif sender == self.min_param_spinbox and min_value > max_value:
             cmds.warning("Min value is larger than max value.")
             self.min_param_spinbox.setValue(max_value)
-
-    def closeEvent(self, event):
-        """Handle window close event.
-
-        Args:
-            event: Close event
-        """
-        self._save_settings()
-        super().closeEvent(event)
 
 
 def show_ui():

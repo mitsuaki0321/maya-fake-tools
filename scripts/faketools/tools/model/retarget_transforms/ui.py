@@ -6,7 +6,7 @@ import os
 
 import maya.cmds as cmds
 
-from ....lib_ui import maya_decorator, optionvar, tool_data
+from ....lib_ui import maya_decorator, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
@@ -22,6 +22,7 @@ from ....lib_ui.qt_compat import (
     QStringListModel,
     Qt,
 )
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from . import command
 
@@ -46,7 +47,7 @@ class MainWindow(BaseMainWindow):
             central_layout="vertical",
         )
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="retarget_transforms", category="model")
         tool_data_manager = tool_data.ToolDataManager("retarget_transforms", "model")
         tool_data_manager.ensure_data_dir()
         self.output_directory = tool_data_manager.get_data_dir()
@@ -375,48 +376,60 @@ class MainWindow(BaseMainWindow):
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-        else:
-            # Default size if no saved geometry
-            minimum_size = self.minimumSizeHint()
-            width = minimum_size.width() * 1.1
-            height = minimum_size.height()
-            self.resize(width, height)
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
+            # Update UI state based on settings
+            self._update_method_options()
+            self._update_create_new_options()
 
-        # Restore option settings
-        self.method_box.setCurrentText(self.settings.read("method", self._method_list[0]))
-        self.rbf_radius_box.setValue(self.settings.read("rbf_radius", 1.5))
-        self.is_rotation_checkbox.setChecked(self.settings.read("is_rotation", False))
-        self.create_new_checkbox.setChecked(self.settings.read("create_new", False))
-        self.restore_hierarchy_checkbox.setChecked(self.settings.read("restore_hierarchy", False))
-        self.object_type_box.setCurrentText(self.settings.read("object_type", self._create_new_list[0]))
-        self.object_size_box.setValue(self.settings.read("object_size", 1.0))
-
-        # Update UI state based on settings
-        self._update_method_options()
-        self._update_create_new_options()
+        # Set minimum size
+        self.adjustSize()
+        width = self.minimumSizeHint().width()
+        height = self.minimumSizeHint().height()
+        self.resize(width, height)
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(
-            size=[self.width(), self.height()],
-            position=[self.x(), self.y()],
-        )
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
-        # Save option settings
-        self.settings.write("method", self.method_box.currentText())
-        self.settings.write("rbf_radius", self.rbf_radius_box.value())
-        self.settings.write("is_rotation", self.is_rotation_checkbox.isChecked())
-        self.settings.write("create_new", self.create_new_checkbox.isChecked())
-        self.settings.write("restore_hierarchy", self.restore_hierarchy_checkbox.isChecked())
-        self.settings.write("object_type", self.object_type_box.currentText())
-        self.settings.write("object_size", self.object_size_box.value())
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "method": self.method_box.currentText(),
+            "rbf_radius": self.rbf_radius_box.value(),
+            "is_rotation": self.is_rotation_checkbox.isChecked(),
+            "create_new": self.create_new_checkbox.isChecked(),
+            "restore_hierarchy": self.restore_hierarchy_checkbox.isChecked(),
+            "object_type": self.object_type_box.currentText(),
+            "object_size": self.object_size_box.value(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "method" in settings_data:
+            self.method_box.setCurrentText(settings_data["method"])
+        if "rbf_radius" in settings_data:
+            self.rbf_radius_box.setValue(settings_data["rbf_radius"])
+        if "is_rotation" in settings_data:
+            self.is_rotation_checkbox.setChecked(settings_data["is_rotation"])
+        if "create_new" in settings_data:
+            self.create_new_checkbox.setChecked(settings_data["create_new"])
+        if "restore_hierarchy" in settings_data:
+            self.restore_hierarchy_checkbox.setChecked(settings_data["restore_hierarchy"])
+        if "object_type" in settings_data:
+            self.object_type_box.setCurrentText(settings_data["object_type"])
+        if "object_size" in settings_data:
+            self.object_size_box.setValue(settings_data["object_size"])
 
     def closeEvent(self, event) -> None:
         """Handle window close event."""

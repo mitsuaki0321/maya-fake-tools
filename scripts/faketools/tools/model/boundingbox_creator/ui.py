@@ -4,7 +4,7 @@ Create a bounding box around the selected objects tool.
 
 from logging import getLogger
 
-from ....lib_ui import base_window, maya_decorator, optionvar
+from ....lib_ui import base_window, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
     QCheckBox,
@@ -22,6 +22,7 @@ from ....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from . import command
 
@@ -46,6 +47,24 @@ class BaseBoxWidget(QWidget):
         self.main_layout.setContentsMargins(*[margin * 0.5 for margin in margins])
 
         self.setLayout(self.main_layout)
+
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        # TODO: Implement this method based on tool-specific UI elements
+        return {}
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        # TODO: Implement this method based on tool-specific UI elements
+        pass
 
     def get_options(self) -> dict:
         """Get the options.
@@ -92,7 +111,7 @@ class AxisAlignedBoxWidget(BaseBoxWidget):
 
         Args:
             parent: Parent widget.
-            settings: ToolOptionSettings instance.
+            settings: ToolSettingsManager instance.
         """
         super().__init__(parent=parent)
 
@@ -134,15 +153,10 @@ class AxisAlignedBoxWidget(BaseBoxWidget):
 
         self.main_layout.addLayout(layout)
 
-        # Option settings - restore from settings if available
-        if self.settings:
-            self.set_axis_direction(self.settings.read("axis_direction", self._default_axis_direction))
-            self.set_axis(self.settings.read("axis", self._default_axis))
-            self.set_sampling(self.settings.read("sampling", self._default_sampling))
-        else:
-            self.set_axis_direction(self._default_axis_direction)
-            self.set_axis(self._default_axis)
-            self.set_sampling(self._default_sampling)
+        # Initialize with default values (restoration handled by MainWindow)
+        self.set_axis_direction(self._default_axis_direction)
+        self.set_axis(self._default_axis)
+        self.set_sampling(self._default_sampling)
 
     def get_options(self) -> dict:
         """Get the options.
@@ -230,7 +244,7 @@ class MainWindow(base_window.BaseMainWindow):
             central_layout="vertical",
         )
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="boundingbox_creator", category="model")
 
         bounding_type_layout = QVBoxLayout()
         bounding_type_layout.setSpacing(0)
@@ -287,47 +301,74 @@ class MainWindow(base_window.BaseMainWindow):
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            if "size" in geometry:
-                self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-        else:
-            # Default size based on size hint
-            size_hint = self.sizeHint()
-            self.resize(size_hint.width() * 0.5, size_hint.height())
-
-        # Restore tool settings
-        self.bounding_type_box.setCurrentText(self.settings.read("bounding_type", "World"))
-        self.box_type_box.setCurrentText(self.settings.read("box_type", "mesh"))
-        self.base_line_widget.set_base_line(self.settings.read("base_line", [0.0, 0.0, 0.0]))
-        self.include_scale_box.setChecked(self.settings.read("include_scale", True))
-        self.is_parent_box.setChecked(self.settings.read("is_parent", False))
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
 
         # Initialize the UI (set correct widget index)
         self.stock_widget.setCurrentIndex(self.bounding_type_box.currentIndex())
 
+        # Set minimum width
+        self.adjustSize()
+        width = self.minimumSizeHint().width()
+        height = self.sizeHint().height()
+        self.resize(width, height)
+
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
-        # Save tool settings
-        self.settings.write("bounding_type", self.bounding_type_box.currentText())
-        self.settings.write("box_type", self.box_type_box.currentText())
-        self.settings.write("base_line", self.base_line_widget.get_base_line())
-        self.settings.write("include_scale", self.include_scale_box.isChecked())
-        self.settings.write("is_parent", self.is_parent_box.isChecked())
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings.
+
+        Returns:
+            dict: Settings data
+        """
+        settings = {
+            "bounding_type": self.bounding_type_box.currentText(),
+            "box_type": self.box_type_box.currentText(),
+            "base_line": self.base_line_widget.get_base_line(),
+            "include_scale": self.include_scale_box.isChecked(),
+            "is_parent": self.is_parent_box.isChecked(),
+        }
 
         # Save AxisAligned widget options
         axis_aligned_widget = self.stock_widget.widget(2)  # AxisAligned is at index 2
         if isinstance(axis_aligned_widget, AxisAlignedBoxWidget):
             options = axis_aligned_widget.get_options()
-            self.settings.write("axis_direction", options["axis_direction"])
-            self.settings.write("axis", options["axis"])
-            self.settings.write("sampling", options["theta_samples"])
+            settings["axis_direction"] = options["axis_direction"]
+            settings["axis"] = options["axis"]
+            settings["sampling"] = options["theta_samples"]
+
+        return settings
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "bounding_type" in settings_data:
+            self.bounding_type_box.setCurrentText(settings_data["bounding_type"])
+        if "box_type" in settings_data:
+            self.box_type_box.setCurrentText(settings_data["box_type"])
+        if "base_line" in settings_data:
+            self.base_line_widget.set_base_line(settings_data["base_line"])
+        if "include_scale" in settings_data:
+            self.include_scale_box.setChecked(settings_data["include_scale"])
+        if "is_parent" in settings_data:
+            self.is_parent_box.setChecked(settings_data["is_parent"])
+
+        # Restore AxisAligned widget options
+        axis_aligned_widget = self.stock_widget.widget(2)  # AxisAligned is at index 2
+        if isinstance(axis_aligned_widget, AxisAlignedBoxWidget):
+            if "axis_direction" in settings_data:
+                axis_aligned_widget.set_axis_direction(settings_data["axis_direction"])
+            if "axis" in settings_data:
+                axis_aligned_widget.set_axis(settings_data["axis"])
+            if "sampling" in settings_data:
+                axis_aligned_widget.set_sampling(settings_data["sampling"])
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Create Bounding Box")

@@ -6,7 +6,8 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.qt_compat import QHBoxLayout, QPushButton, QSizePolicy, QWidget
 from .....lib_ui.widgets import extra_widgets
 from .....operations.copy_weights import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
@@ -20,11 +21,17 @@ logger = getLogger(__name__)
 class SkinWeightsBar(QWidget):
     """Skin Weights Bar."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
-        """Constructor."""
+    def __init__(self, settings: ToolSettingsManager, parent=None, window_mode: bool = False):
+        """Constructor.
+
+        Args:
+            settings: ToolSettingsManager instance
+            parent: Parent widget
+            window_mode: Whether to use window mode layout
+        """
         super().__init__(parent=parent)
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = settings
 
         self.main_layout = QHBoxLayout()
         spacing = base_window.get_spacing(self, direction="horizontal")
@@ -59,10 +66,6 @@ class SkinWeightsBar(QWidget):
         self.main_layout.addWidget(self.uv_button)
 
         self.setLayout(self.main_layout)
-
-        # Option settings
-        self.mir_dir_checkBox.setChecked(self.settings.read("mirror", False))
-        self.uv_button.setChecked(self.settings.read("uv", False))
 
         # Signal & Slot
         copy_button.clicked.connect(self.copy_skin_weights)
@@ -108,7 +111,24 @@ class SkinWeightsBar(QWidget):
                 node, left_right_names=LEFT_TO_RIGHT, right_left_names=RIGHT_TO_LEFT, mirror_inverse=self.mir_dir_checkBox.isChecked()
             )
 
-    def save_settings(self):
-        """Save the option settings."""
-        self.settings.write("mirror", self.mir_dir_checkBox.isChecked())
-        self.settings.write("uv", self.uv_button.isChecked())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "mirror": self.mir_dir_checkBox.isChecked(),
+            "uv": self.uv_button.isChecked(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "mirror" in settings_data:
+            self.mir_dir_checkBox.setChecked(settings_data["mirror"])
+        if "uv" in settings_data:
+            self.uv_button.setChecked(settings_data["uv"])

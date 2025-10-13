@@ -7,7 +7,7 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import (
     QCheckBox,
     QDoubleValidator,
@@ -22,6 +22,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from ..relax_weight import LaplacianSkinWeights
 
@@ -31,11 +32,17 @@ logger = getLogger(__name__)
 class SkinWeightsRelaxWidgets(QWidget):
     """Skin Weights Relax Widgets using Laplacian smoothing."""
 
-    def __init__(self, parent=None, window_mode: bool = False):
-        """Constructor."""
+    def __init__(self, settings: ToolSettingsManager, parent=None, window_mode: bool = False):
+        """Constructor.
+
+        Args:
+            settings (ToolSettingsManager): Settings manager instance
+            parent (QWidget, optional): Parent widget. Defaults to None.
+            window_mode (bool, optional): Window mode flag. Defaults to False.
+        """
         super().__init__(parent=parent)
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
+        self.settings = settings
 
         self.main_layout = QVBoxLayout()
         spacing = base_window.get_spacing(self)
@@ -97,13 +104,6 @@ class SkinWeightsRelaxWidgets(QWidget):
 
         self.setLayout(self.main_layout)
 
-        # Restore settings
-        self.iterations_field.setText(str(self.settings.read("iterations", 1)))
-        self.iterations_slider.setValue(int(self.iterations_field.text()))
-        self.after_blend_field.setText(str(self.settings.read("after_blend", 1.0)))
-        self.after_blend_slider.setValue(int(float(self.after_blend_field.text()) * 100))
-        self.only_unlock_inf_checkBox.setChecked(self.settings.read("only_unlock_inf", False))
-
         # Signal & Slot
         self.iterations_field.textChanged.connect(self._update_field_slider_value)
         self.iterations_slider.valueChanged.connect(self._update_field_slider_value)
@@ -162,8 +162,31 @@ class SkinWeightsRelaxWidgets(QWidget):
 
         logger.info(f"Relaxed skin weights: {len(vertices)} vertices")
 
-    def save_settings(self):
-        """Save the option settings."""
-        self.settings.write("iterations", int(self.iterations_field.text()))
-        self.settings.write("after_blend", float(self.after_blend_field.text()))
-        self.settings.write("only_unlock_inf", self.only_unlock_inf_checkBox.isChecked())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "iterations": int(self.iterations_field.text()),
+            "after_blend": float(self.after_blend_field.text()),
+            "only_unlock_inf": self.only_unlock_inf_checkBox.isChecked(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "iterations" in settings_data:
+            self.iterations_field.setText(str(settings_data["iterations"]))
+            self.iterations_slider.setValue(int(self.iterations_field.text()))
+
+        if "after_blend" in settings_data:
+            self.after_blend_field.setText(str(settings_data["after_blend"]))
+            self.after_blend_slider.setValue(int(float(self.after_blend_field.text()) * 100))
+
+        if "only_unlock_inf" in settings_data:
+            self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])

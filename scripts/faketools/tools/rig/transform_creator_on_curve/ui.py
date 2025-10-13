@@ -4,8 +4,9 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ....lib_ui import BaseMainWindow, ToolOptionSettings, error_handler, get_maya_main_window, undo_chunk
+from ....lib_ui import BaseMainWindow, error_handler, get_maya_main_window, undo_chunk
 from ....lib_ui.qt_compat import QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, Qt
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from ....operations import create_transforms
 
@@ -23,7 +24,7 @@ class MainWindow(BaseMainWindow):
             parent=parent, object_name="TransformCreatorOnCurveMainWindow", window_title="Transform Creator on Curve", central_layout="vertical"
         )
 
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="transform_creator_on_curve", category="rig")
 
         self.method_box = QComboBox()
         self.method_box.addItems(self.method_data().keys())
@@ -151,8 +152,7 @@ class MainWindow(BaseMainWindow):
         self._restore_settings()
         self.switch_method(self.method_box.currentIndex())
 
-    @staticmethod
-    def aim_vector_data() -> dict:
+    def aim_vector_data(self) -> dict:
         """Aim vector method list.
 
         Returns:
@@ -160,8 +160,7 @@ class MainWindow(BaseMainWindow):
         """
         return {"CurveTangent": "tangent", "NextPoint": "next_point", "PreviousPoint": "previous_point"}
 
-    @staticmethod
-    def up_vector_data() -> dict:
+    def up_vector_data(self) -> dict:
         """Up vector method list.
 
         Returns:
@@ -169,8 +168,7 @@ class MainWindow(BaseMainWindow):
         """
         return {"SceneUp": "scene_up", "CurveNormal": "normal", "SurfaceNormal": "surface_normal"}
 
-    @staticmethod
-    def surface_direction_data() -> dict:
+    def surface_direction_data(self) -> dict:
         """Surface direction method list.
 
         Returns:
@@ -178,8 +176,7 @@ class MainWindow(BaseMainWindow):
         """
         return {"U Direction": "u", "V Direction": "v"}
 
-    @staticmethod
-    def method_data() -> dict:
+    def method_data(self) -> dict:
         """Return label and function pairs.
 
         Returns:
@@ -247,49 +244,71 @@ class MainWindow(BaseMainWindow):
 
         logger.info(f"Created transform nodes: {result_nodes}")
 
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "method": self.method_box.currentIndex(),
+            "node_type": self.node_type_box.currentIndex(),
+            "size": self.size_field.value(),
+            "divisions": self.divisions_field.value(),
+            "include_rotation": self.include_rotation_cb.isChecked(),
+            "rotate_offsetX": self.rotate_offset_field_x.value(),
+            "rotate_offsetY": self.rotate_offset_field_y.value(),
+            "rotate_offsetZ": self.rotate_offset_field_z.value(),
+            "aim_vector": self.aim_vector_box.currentIndex(),
+            "up_vector": self.up_vector_box.currentIndex(),
+            "surface_direction": self.surface_direction_box.currentIndex(),
+            "reverse": self.reverse_cb.isChecked(),
+            "chain": self.chain_cb.isChecked(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "method" in settings_data:
+            self.method_box.setCurrentIndex(settings_data["method"])
+        if "node_type" in settings_data:
+            self.node_type_box.setCurrentIndex(settings_data["node_type"])
+        if "size" in settings_data:
+            self.size_field.setValue(settings_data["size"])
+        if "divisions" in settings_data:
+            self.divisions_field.setValue(settings_data["divisions"])
+        if "include_rotation" in settings_data:
+            self.include_rotation_cb.setChecked(settings_data["include_rotation"])
+        if "rotate_offsetX" in settings_data:
+            self.rotate_offset_field_x.setValue(settings_data["rotate_offsetX"])
+        if "rotate_offsetY" in settings_data:
+            self.rotate_offset_field_y.setValue(settings_data["rotate_offsetY"])
+        if "rotate_offsetZ" in settings_data:
+            self.rotate_offset_field_z.setValue(settings_data["rotate_offsetZ"])
+        if "aim_vector" in settings_data:
+            self.aim_vector_box.setCurrentIndex(settings_data["aim_vector"])
+        if "up_vector" in settings_data:
+            self.up_vector_box.setCurrentIndex(settings_data["up_vector"])
+        if "surface_direction" in settings_data:
+            self.surface_direction_box.setCurrentIndex(settings_data["surface_direction"])
+        if "reverse" in settings_data:
+            self.reverse_cb.setChecked(settings_data["reverse"])
+        if "chain" in settings_data:
+            self.chain_cb.setChecked(settings_data["chain"])
+
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore widget values
-        self.method_box.setCurrentIndex(self.settings.read("method", 0))
-        self.node_type_box.setCurrentIndex(self.settings.read("node_type", 0))
-        self.size_field.setValue(self.settings.read("size", 1.0))
-        self.divisions_field.setValue(self.settings.read("divisions", 3))
-        self.include_rotation_cb.setChecked(self.settings.read("include_rotation", False))
-        self.rotate_offset_field_x.setValue(self.settings.read("rotate_offsetX", 0.0))
-        self.rotate_offset_field_y.setValue(self.settings.read("rotate_offsetY", 0.0))
-        self.rotate_offset_field_z.setValue(self.settings.read("rotate_offsetZ", 0.0))
-        self.aim_vector_box.setCurrentIndex(self.settings.read("aim_vector", 0))
-        self.up_vector_box.setCurrentIndex(self.settings.read("up_vector", 0))
-        self.surface_direction_box.setCurrentIndex(self.settings.read("surface_direction", 0))
-        self.reverse_cb.setChecked(self.settings.read("reverse", False))
-        self.chain_cb.setChecked(self.settings.read("chain", False))
-
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save widget values
-        self.settings.write("method", self.method_box.currentIndex())
-        self.settings.write("node_type", self.node_type_box.currentIndex())
-        self.settings.write("size", self.size_field.value())
-        self.settings.write("divisions", self.divisions_field.value())
-        self.settings.write("include_rotation", self.include_rotation_cb.isChecked())
-        self.settings.write("rotate_offsetX", self.rotate_offset_field_x.value())
-        self.settings.write("rotate_offsetY", self.rotate_offset_field_y.value())
-        self.settings.write("rotate_offsetZ", self.rotate_offset_field_z.value())
-        self.settings.write("aim_vector", self.aim_vector_box.currentIndex())
-        self.settings.write("up_vector", self.up_vector_box.currentIndex())
-        self.settings.write("surface_direction", self.surface_direction_box.currentIndex())
-        self.settings.write("reverse", self.reverse_cb.isChecked())
-        self.settings.write("chain", self.chain_cb.isChecked())
-
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
     def closeEvent(self, event):
         """Handle window close event."""

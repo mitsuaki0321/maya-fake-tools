@@ -10,9 +10,9 @@ from ....lib import lib_keyframe
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QCheckBox, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QWidget
 from ....lib_ui.tool_data import ToolDataManager
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from . import command
 
@@ -46,7 +46,7 @@ class MainWindow(BaseMainWindow):
         )
 
         # UI settings
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="drivenkey_tools", category="rig")
 
         # Tool data manager for file operations
         tool_data_manager = ToolDataManager("drivenkey_tools", "rig")
@@ -304,47 +304,84 @@ class MainWindow(BaseMainWindow):
         self.value_rotate_check_box.set_enabled(state)
         self.value_scale_check_box.set_enabled(state)
 
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "regex": self.regex_line_edit.text(),
+            "replace_to": self.replace_to_line_edit.text(),
+            "mirror": self.mirror_check_box.isChecked(),
+            "replace_driver": self.replace_driver_check_box.isChecked(),
+            "force_delete": self.force_delete_check_box.isChecked(),
+            "time_translate": self.time_translate_check_box.get_values(),
+            "time_rotate": self.time_rotate_check_box.get_values(),
+            "time_scale": self.time_scale_check_box.get_values(),
+            "value_translate": self.value_translate_check_box.get_values(),
+            "value_rotate": self.value_rotate_check_box.get_values(),
+            "value_scale": self.value_scale_check_box.get_values(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "regex" in settings_data:
+            self.regex_line_edit.setText(settings_data["regex"])
+        else:
+            self.regex_line_edit.setText(REGEX[0])
+
+        if "replace_to" in settings_data:
+            self.replace_to_line_edit.setText(settings_data["replace_to"])
+        else:
+            self.replace_to_line_edit.setText(REGEX[1])
+
+        if "mirror" in settings_data:
+            self.mirror_check_box.setChecked(settings_data["mirror"])
+        if "replace_driver" in settings_data:
+            self.replace_driver_check_box.setChecked(settings_data["replace_driver"])
+        else:
+            self.replace_driver_check_box.setChecked(True)
+
+        if "force_delete" in settings_data:
+            self.force_delete_check_box.setChecked(settings_data["force_delete"])
+
+        if "time_translate" in settings_data:
+            self.time_translate_check_box.set_values(settings_data["time_translate"])
+        if "time_rotate" in settings_data:
+            self.time_rotate_check_box.set_values(settings_data["time_rotate"])
+        if "time_scale" in settings_data:
+            self.time_scale_check_box.set_values(settings_data["time_scale"])
+
+        if "value_translate" in settings_data:
+            self.value_translate_check_box.set_values(settings_data["value_translate"])
+        else:
+            self.value_translate_check_box.set_values(["translateX", "translateY", "translateZ"])
+
+        if "value_rotate" in settings_data:
+            self.value_rotate_check_box.set_values(settings_data["value_rotate"])
+        if "value_scale" in settings_data:
+            self.value_scale_check_box.set_values(settings_data["value_scale"])
+
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-        # Restore option settings
-        self.regex_line_edit.setText(self.settings.read("regex", REGEX[0]))
-        self.replace_to_line_edit.setText(self.settings.read("replace_to", REGEX[1]))
-        self.mirror_check_box.setChecked(self.settings.read("mirror", False))
-        self.replace_driver_check_box.setChecked(self.settings.read("replace_driver", True))
-        self.force_delete_check_box.setChecked(self.settings.read("force_delete", False))
-        self.time_translate_check_box.set_values(self.settings.read("time_translate", []))
-        self.time_rotate_check_box.set_values(self.settings.read("time_rotate", []))
-        self.time_scale_check_box.set_values(self.settings.read("time_scale", []))
-        self.value_translate_check_box.set_values(self.settings.read("value_translate", ["translateX", "translateY", "translateZ"]))
-        self.value_rotate_check_box.set_values(self.settings.read("value_rotate", []))
-        self.value_scale_check_box.set_values(self.settings.read("value_scale", []))
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
+        else:
+            # Apply default values if no saved settings
+            self._apply_settings({})
 
         logger.debug("UI settings restored")
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-        # Save option settings
-        self.settings.write("regex", self.regex_line_edit.text())
-        self.settings.write("replace_to", self.replace_to_line_edit.text())
-        self.settings.write("mirror", self.mirror_check_box.isChecked())
-        self.settings.write("replace_driver", self.replace_driver_check_box.isChecked())
-        self.settings.write("force_delete", self.force_delete_check_box.isChecked())
-        self.settings.write("time_translate", self.time_translate_check_box.get_values())
-        self.settings.write("time_rotate", self.time_rotate_check_box.get_values())
-        self.settings.write("time_scale", self.time_scale_check_box.get_values())
-        self.settings.write("value_translate", self.value_translate_check_box.get_values())
-        self.settings.write("value_rotate", self.value_rotate_check_box.get_values())
-        self.settings.write("value_scale", self.value_scale_check_box.get_values())
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
         logger.debug("UI settings saved")
 
@@ -388,6 +425,24 @@ class MirrorCheckBox(QWidget):
         layout.addWidget(self.z_check_box)
 
         self.setLayout(layout)
+
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        # TODO: Implement this method based on tool-specific UI elements
+        return {}
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        # TODO: Implement this method based on tool-specific UI elements
+        pass
 
     def get_values(self) -> list[str]:
         """Get the values.

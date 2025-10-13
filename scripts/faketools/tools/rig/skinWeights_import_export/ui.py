@@ -7,7 +7,7 @@ import tempfile
 
 import maya.cmds as cmds
 
-from ....lib_ui import maya_decorator, maya_ui, optionvar, tool_data
+from ....lib_ui import maya_decorator, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
@@ -47,7 +47,6 @@ class MainWindow(BaseMainWindow):
             window_title="Skin Weights Import/Export",
         )
 
-        self.settings = optionvar.ToolOptionSettings(__name__)
         tool_data_manager = tool_data.ToolDataManager("skinWeights_import_export", "rig")
         tool_data_manager.ensure_data_dir()
         self.root_path = str(tool_data_manager.get_data_dir())
@@ -118,10 +117,6 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addLayout(layout)
 
-        # Option settings
-        self.file_name_field.setText(self.settings.read("file_name", ""))
-        self.format_checkBox.setChecked(self.settings.read("format", True))
-
         # Signal & Slot
         self.quick_export_button.clicked.connect(self.export_weights_quick)
         self.quick_import_button.clicked.connect(self.import_weights_quick)
@@ -148,8 +143,6 @@ class MainWindow(BaseMainWindow):
         # Initialize the UI
         minimum_size = self.minimumSizeHint()
         self.resize(minimum_size.width() * 2.0, minimum_size.height())
-
-        self._restore_settings()
 
     def _populate_file_list(self):
         """Populate the tree widget with files and directories."""
@@ -586,28 +579,6 @@ class MainWindow(BaseMainWindow):
         cmds.select(result_geos, r=True)
 
         logger.debug("Completed import skinCluster weights.")
-
-    def _restore_settings(self):
-        """Restore UI settings from saved preferences."""
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
-
-    def _save_settings(self):
-        """Save UI settings to preferences."""
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
-
-    def closeEvent(self, event):
-        """Close event."""
-        self._save_settings()
-
-        # Save the option settings
-        self.settings.write("file_name", self.file_name_field.text())
-        self.settings.write("format", self.format_checkBox.isChecked())
-
-        super().closeEvent(event)
 
 
 def show_ui():

@@ -8,12 +8,15 @@ import maya.cmds as cmds
 from ....lib.lib_componentfilter import ComponentFilter
 from ....lib_ui import (
     BaseMainWindow,
-    ToolOptionSettings,
+    ToolSettingsManager,
     error_handler,
     get_maya_main_window,
     repeatable,
     undo_chunk,
 )
+from ....lib_ui.maya_dialog import confirm_dialog, show_info_dialog
+from ....lib_ui.preset_edit_dialog import PresetEditDialog
+from ....lib_ui.preset_save_dialog import PresetSaveDialog
 from ....lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
@@ -56,7 +59,7 @@ class MainWindow(BaseMainWindow):
             central_layout="vertical",
         )
 
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="curveSurface_creator", category="rig")
         self._add_menu()
         self.setup_ui()
         self._restore_settings()
@@ -249,77 +252,177 @@ class MainWindow(BaseMainWindow):
 
     def _add_menu(self):
         """Add the menu bar actions."""
-        menu = self.menuBar().addMenu("Edit")
+        # Preset menu
+        preset_menu = self.menuBar().addMenu("Preset")
 
-        action = menu.addAction("Move CVs Position")
+        action = preset_menu.addAction("Save Settings...")
+        action.triggered.connect(self._on_save_preset)
+
+        action = preset_menu.addAction("Edit Settings...")
+        action.triggered.connect(self._on_edit_presets)
+
+        action = preset_menu.addAction("Reset Settings...")
+        action.triggered.connect(self._on_reset_settings)
+
+        preset_menu.addSeparator()
+
+        # Preset list will be populated dynamically
+        self.preset_menu = preset_menu
+        self._update_preset_menu()
+
+        # Edit menu
+        edit_menu = self.menuBar().addMenu("Edit")
+
+        action = edit_menu.addAction("Move CVs Position")
         action.triggered.connect(self.move_cvs_position)
 
-        action = menu.addAction("Create Curve to Vertices")
+        action = edit_menu.addAction("Create Curve to Vertices")
         action.triggered.connect(self.create_curve_to_vertices)
 
-        menu.addSeparator()
+        edit_menu.addSeparator()
 
-        action = menu.addAction("Create Curve on Surface U")
+        action = edit_menu.addAction("Create Curve on Surface U")
         action.triggered.connect(partial(self.create_curve_on_surface, "u"))
 
-        action = menu.addAction("Create Curve on Surface V")
+        action = edit_menu.addAction("Create Curve on Surface V")
         action.triggered.connect(partial(self.create_curve_on_surface, "v"))
 
-    def _restore_settings(self):
-        """Restore UI settings from saved preferences."""
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
+    def _apply_settings(self, settings_data: dict):
+        """
+        Apply settings data to UI.
 
+        Args:
+            settings_data (dict): Settings data to apply
+        """
         # Restore option settings
-        self.select_type_combo.setCurrentIndex(self.settings.read("select_type_index", 0))
-        self.object_type_combo.setCurrentIndex(self.settings.read("object_type_index", 0))
+        self.select_type_combo.setCurrentIndex(settings_data.get("select_type_index", 0))
+        self.object_type_combo.setCurrentIndex(settings_data.get("object_type_index", 0))
 
         # Restore degree radio button
-        degree_id = self.settings.read("degree_id", 1)  # Default to degree 1
+        degree_id = settings_data.get("degree_id", 1)  # Default to degree 1
         button = self.degree_button_group.button(degree_id)
         if button:
             button.setChecked(True)
 
-        self.center_checkbox.setChecked(self.settings.read("center", False))
-        self.close_checkbox.setChecked(self.settings.read("close", False))
-        self.reverse_checkbox.setChecked(self.settings.read("reverse", False))
-        self.divisions_spin_box.setValue(self.settings.read("divisions", 0))
-        self.skip_spin_box.setValue(self.settings.read("skip", 0))
-        self.surface_axis_combo.setCurrentIndex(self.settings.read("surface_axis_index", 0))
-        self.surface_width_spin_box.setValue(self.settings.read("surface_width", 1.0))
-        self.surface_width_center_spin_box.setValue(self.settings.read("surface_width_center", 0.5))
-        self.is_bind_checkbox.setChecked(self.settings.read("is_bind", False))
-        self.bind_method_combo.setCurrentIndex(self.settings.read("bind_method_index", 0))
-        self.smooth_level_spin_box.setValue(self.settings.read("smooth_levels", 0))
-        self.to_skin_cage_checkbox.setChecked(self.settings.read("to_skin_cage", False))
-        self.to_skin_cage_spinBox.setValue(self.settings.read("skin_cage_division_levels", 1))
+        self.center_checkbox.setChecked(settings_data.get("center", False))
+        self.close_checkbox.setChecked(settings_data.get("close", False))
+        self.reverse_checkbox.setChecked(settings_data.get("reverse", False))
+        self.divisions_spin_box.setValue(settings_data.get("divisions", 0))
+        self.skip_spin_box.setValue(settings_data.get("skip", 0))
+        self.surface_axis_combo.setCurrentIndex(settings_data.get("surface_axis_index", 0))
+        self.surface_width_spin_box.setValue(settings_data.get("surface_width", 1.0))
+        self.surface_width_center_spin_box.setValue(settings_data.get("surface_width_center", 0.5))
+        self.is_bind_checkbox.setChecked(settings_data.get("is_bind", False))
+        self.bind_method_combo.setCurrentIndex(settings_data.get("bind_method_index", 0))
+        self.smooth_level_spin_box.setValue(settings_data.get("smooth_levels", 0))
+        self.to_skin_cage_checkbox.setChecked(settings_data.get("to_skin_cage", False))
+        self.to_skin_cage_spinBox.setValue(settings_data.get("skin_cage_division_levels", 1))
+
+    def _restore_settings(self):
+        """Restore UI settings from saved preferences."""
+        # Load default preset
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
+
+    def _collect_settings(self) -> dict:
+        """
+        Collect current UI settings into a dictionary.
+
+        Returns:
+            dict: Current UI settings
+        """
+        return {
+            "select_type_index": self.select_type_combo.currentIndex(),
+            "object_type_index": self.object_type_combo.currentIndex(),
+            "degree_id": self.degree_button_group.checkedId(),
+            "center": self.center_checkbox.isChecked(),
+            "close": self.close_checkbox.isChecked(),
+            "reverse": self.reverse_checkbox.isChecked(),
+            "divisions": self.divisions_spin_box.value(),
+            "skip": self.skip_spin_box.value(),
+            "surface_axis_index": self.surface_axis_combo.currentIndex(),
+            "surface_width": self.surface_width_spin_box.value(),
+            "surface_width_center": self.surface_width_center_spin_box.value(),
+            "is_bind": self.is_bind_checkbox.isChecked(),
+            "bind_method_index": self.bind_method_combo.currentIndex(),
+            "smooth_levels": self.smooth_level_spin_box.value(),
+            "to_skin_cage": self.to_skin_cage_checkbox.isChecked(),
+            "skin_cage_division_levels": self.to_skin_cage_spinBox.value(),
+        }
 
     def _save_settings(self):
-        """Save UI settings to preferences."""
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+        """Save UI settings to default preset."""
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
-        # Save option settings
-        self.settings.write("select_type_index", self.select_type_combo.currentIndex())
-        self.settings.write("object_type_index", self.object_type_combo.currentIndex())
-        self.settings.write("degree_id", self.degree_button_group.checkedId())
-        self.settings.write("center", self.center_checkbox.isChecked())
-        self.settings.write("close", self.close_checkbox.isChecked())
-        self.settings.write("reverse", self.reverse_checkbox.isChecked())
-        self.settings.write("divisions", self.divisions_spin_box.value())
-        self.settings.write("skip", self.skip_spin_box.value())
-        self.settings.write("surface_axis_index", self.surface_axis_combo.currentIndex())
-        self.settings.write("surface_width", self.surface_width_spin_box.value())
-        self.settings.write("surface_width_center", self.surface_width_center_spin_box.value())
-        self.settings.write("is_bind", self.is_bind_checkbox.isChecked())
-        self.settings.write("bind_method_index", self.bind_method_combo.currentIndex())
-        self.settings.write("smooth_levels", self.smooth_level_spin_box.value())
-        self.settings.write("to_skin_cage", self.to_skin_cage_checkbox.isChecked())
-        self.settings.write("skin_cage_division_levels", self.to_skin_cage_spinBox.value())
+    def _update_preset_menu(self):
+        """Update the preset menu with current presets."""
+        # Remove all actions after the separator
+        actions = self.preset_menu.actions()
+        separator_index = -1
+        for i, action in enumerate(actions):
+            if action.isSeparator():
+                separator_index = i
+                break
+
+        # Remove preset actions (everything after separator)
+        if separator_index >= 0:
+            for action in actions[separator_index + 1 :]:
+                self.preset_menu.removeAction(action)
+
+        # Add preset actions
+        presets = self.settings.list_presets()
+
+        # Ensure "default" is always first
+        if "default" in presets:
+            presets.remove("default")
+            presets.insert(0, "default")
+
+        for preset_name in presets:
+            action = self.preset_menu.addAction(preset_name)
+            action.triggered.connect(partial(self._on_load_preset, preset_name))
+
+        logger.debug(f"Updated preset menu with {len(presets)} presets")
+
+    def _on_save_preset(self):
+        """Handle Save Settings menu action."""
+        dialog = PresetSaveDialog(self.settings, parent=self)
+        if dialog.exec():
+            preset_name = dialog.get_preset_name()
+            if preset_name:
+                settings_data = self._collect_settings()
+                self.settings.save_settings(settings_data, preset_name)
+                self._update_preset_menu()
+                show_info_dialog("Preset Saved", f"Settings saved to preset '{preset_name}'")
+                logger.info(f"Saved preset: {preset_name}")
+
+    def _on_edit_presets(self):
+        """Handle Edit Settings menu action."""
+        dialog = PresetEditDialog(self.settings, parent=self)
+        dialog.exec()
+        self._update_preset_menu()
+
+    def _on_reset_settings(self):
+        """Handle Reset Settings menu action."""
+        result = confirm_dialog(title="Reset Settings", message="Reset all settings to default values?")
+
+        if result:
+            # Load empty settings to reset to defaults
+            self._apply_settings({})
+            logger.info("Settings reset to defaults")
+
+    def _on_load_preset(self, preset_name: str):
+        """
+        Handle preset menu action.
+
+        Args:
+            preset_name (str): Name of the preset to load
+        """
+        settings_data = self.settings.load_settings(preset_name)
+        if settings_data:
+            self._apply_settings(settings_data)
+            logger.info(f"Loaded preset: {preset_name}")
 
     def _change_bind_mode(self):
         """Update UI state based on bind checkbox state."""

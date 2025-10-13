@@ -4,8 +4,9 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ....lib_ui import BaseMainWindow, ToolOptionSettings, error_handler, get_maya_main_window, undo_chunk
+from ....lib_ui import BaseMainWindow, error_handler, get_maya_main_window, undo_chunk
 from ....lib_ui.qt_compat import QCheckBox, QComboBox, QDoubleSpinBox, QHBoxLayout, QLabel, QPushButton, QSpinBox, Qt
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from ....operations import create_transforms
 
@@ -21,7 +22,7 @@ class MainWindow(BaseMainWindow):
         """Constructor."""
         super().__init__(parent=parent, object_name="TransformCreatorMainWindow", window_title="Transform Creator", central_layout="vertical")
 
-        self.settings = ToolOptionSettings(__name__)
+        self.settings = ToolSettingsManager(tool_name="transform_creator", category="rig")
 
         self.method_box = QComboBox()
         self.method_box.addItems(self.method_data().keys())
@@ -119,8 +120,56 @@ class MainWindow(BaseMainWindow):
         self._restore_settings()
         self.switch_method(self.method_box.currentIndex())
 
-    @staticmethod
-    def method_data() -> dict:
+    def _collect_settings(self) -> dict:
+        """Collect current UI settings (excluding window geometry).
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "method": self.method_box.currentIndex(),
+            "node_type": self.node_type_box.currentIndex(),
+            "size": self.size_field.value(),
+            "divisions": self.divisions_field.value(),
+            "include_rotation": self.include_rotation_cb.isChecked(),
+            "rotate_offsetX": self.rotate_offset_field_x.value(),
+            "rotate_offsetY": self.rotate_offset_field_y.value(),
+            "rotate_offsetZ": self.rotate_offset_field_z.value(),
+            "tangent_from_component": self.tangent_from_component_cb.isChecked(),
+            "reverse": self.reverse_cb.isChecked(),
+            "chain": self.chain_cb.isChecked(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to UI (excluding window geometry).
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "method" in settings_data:
+            self.method_box.setCurrentIndex(settings_data["method"])
+        if "node_type" in settings_data:
+            self.node_type_box.setCurrentIndex(settings_data["node_type"])
+        if "size" in settings_data:
+            self.size_field.setValue(settings_data["size"])
+        if "divisions" in settings_data:
+            self.divisions_field.setValue(settings_data["divisions"])
+        if "include_rotation" in settings_data:
+            self.include_rotation_cb.setChecked(settings_data["include_rotation"])
+        if "rotate_offsetX" in settings_data:
+            self.rotate_offset_field_x.setValue(settings_data["rotate_offsetX"])
+        if "rotate_offsetY" in settings_data:
+            self.rotate_offset_field_y.setValue(settings_data["rotate_offsetY"])
+        if "rotate_offsetZ" in settings_data:
+            self.rotate_offset_field_z.setValue(settings_data["rotate_offsetZ"])
+        if "tangent_from_component" in settings_data:
+            self.tangent_from_component_cb.setChecked(settings_data["tangent_from_component"])
+        if "reverse" in settings_data:
+            self.reverse_cb.setChecked(settings_data["reverse"])
+        if "chain" in settings_data:
+            self.chain_cb.setChecked(settings_data["chain"])
+
+    def method_data(self) -> dict:
         """Return label and function pairs.
 
         Returns:
@@ -186,43 +235,14 @@ class MainWindow(BaseMainWindow):
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
-        # Restore widget values
-        self.method_box.setCurrentIndex(self.settings.read("method", 0))
-        self.node_type_box.setCurrentIndex(self.settings.read("node_type", 0))
-        self.size_field.setValue(self.settings.read("size", 1.0))
-        self.divisions_field.setValue(self.settings.read("divisions", 3))
-        self.include_rotation_cb.setChecked(self.settings.read("include_rotation", False))
-        self.rotate_offset_field_x.setValue(self.settings.read("rotate_offsetX", 0.0))
-        self.rotate_offset_field_y.setValue(self.settings.read("rotate_offsetY", 0.0))
-        self.rotate_offset_field_z.setValue(self.settings.read("rotate_offsetZ", 0.0))
-        self.tangent_from_component_cb.setChecked(self.settings.read("tangent_from_component", False))
-        self.reverse_cb.setChecked(self.settings.read("reverse", False))
-        self.chain_cb.setChecked(self.settings.read("chain", False))
-
-        # Restore window geometry
-        geometry = self.settings.get_window_geometry()
-        if geometry:
-            self.resize(*geometry["size"])
-            if "position" in geometry:
-                self.move(*geometry["position"])
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
 
     def _save_settings(self):
         """Save UI settings to preferences."""
-        # Save widget values
-        self.settings.write("method", self.method_box.currentIndex())
-        self.settings.write("node_type", self.node_type_box.currentIndex())
-        self.settings.write("size", self.size_field.value())
-        self.settings.write("divisions", self.divisions_field.value())
-        self.settings.write("include_rotation", self.include_rotation_cb.isChecked())
-        self.settings.write("rotate_offsetX", self.rotate_offset_field_x.value())
-        self.settings.write("rotate_offsetY", self.rotate_offset_field_y.value())
-        self.settings.write("rotate_offsetZ", self.rotate_offset_field_z.value())
-        self.settings.write("tangent_from_component", self.tangent_from_component_cb.isChecked())
-        self.settings.write("reverse", self.reverse_cb.isChecked())
-        self.settings.write("chain", self.chain_cb.isChecked())
-
-        # Save window geometry
-        self.settings.set_window_geometry(size=[self.width(), self.height()], position=[self.x(), self.y()])
+        settings_data = self._collect_settings()
+        self.settings.save_settings(settings_data, "default")
 
     def closeEvent(self, event):
         """Handle window close event."""

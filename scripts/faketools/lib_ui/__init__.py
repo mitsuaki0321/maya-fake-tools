@@ -5,6 +5,7 @@ This module provides convenient imports for common UI components:
 - BaseMainWindow: Standard QMainWindow base class for tools
 - BaseFramelessWindow: Frameless window base class for compact tools
 - ToolOptionSettings: Per-tool settings stored in Maya optionVar
+- ToolSettingsManager: JSON-based tool settings with preset support
 - ToolDataManager: Per-tool data directory management
 - Maya UI decorators: error_handler, undo_chunk, disable_undo, repeatable
 - Maya dialog helpers: show_error_dialog, show_warning_dialog, show_info_dialog, confirm_dialog
@@ -22,6 +23,7 @@ from .maya_ui import get_channels, get_modifiers
 from .optionvar import ToolOptionSettings
 from .qt_compat import QT_BINDING, QT_VERSION, QT_VERSION_MAJOR, get_open_file_name, get_save_file_name, is_pyside2, is_pyside6
 from .tool_data import ToolDataManager
+from .tool_settings import ToolSettingsManager
 from .ui_utils import get_default_button_size, get_line_height, get_relative_size, get_text_width, scale_by_dpi
 
 __all__ = [
@@ -30,6 +32,7 @@ __all__ = [
     "BaseFramelessWindow",
     # Settings and data management
     "ToolOptionSettings",
+    "ToolSettingsManager",
     "ToolDataManager",
     # Maya UI decorators
     "error_handler",

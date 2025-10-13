@@ -5,8 +5,9 @@ import re
 import maya.cmds as cmds
 
 from .....lib import lib_selection
-from .....lib_ui import base_window, maya_decorator, optionvar
+from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from .constants import FILTER_COLOR, selecter_handler
 from .selecter_button import SelecterButton
@@ -18,15 +19,15 @@ class FilterSelectionWidget(QWidget):
     Provides filtering functionality for nodes by name (regex) and type.
     """
 
-    def __init__(self, tool_settings: optionvar.ToolOptionSettings, parent=None):
+    def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
 
         Args:
-            tool_settings: Tool settings instance for storing preferences.
+            settings (ToolSettingsManager): Tool settings manager for storing preferences.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self.tool_settings = tool_settings
+        self.settings = settings
 
         main_layout = QHBoxLayout()
         main_layout.setSpacing(base_window.get_spacing(self, "horizontal") * 0.5)
@@ -63,11 +64,6 @@ class FilterSelectionWidget(QWidget):
 
         self.setLayout(main_layout)
 
-        # Restore settings
-        self.filter_name_field.setText(self.tool_settings.read("filter_name_field", ""))
-        self.filter_name_ignorecase_cb.setChecked(self.tool_settings.read("filter_name_ignorecase", False))
-        self.filter_type_field.setText(self.tool_settings.read("filter_type_field", "shape"))
-
         # Connect signals
         filter_name_button.clicked.connect(self.select_by_name)
         filter_type_button.clicked.connect(self.select_by_type)
@@ -84,9 +80,6 @@ class FilterSelectionWidget(QWidget):
         Returns:
             list[str]: Filtered node list.
         """
-        # Save settings
-        self.save_tool_options()
-
         # Get filter pattern
         filter_name = self.filter_name_field.text()
         if not filter_name:
@@ -119,9 +112,6 @@ class FilterSelectionWidget(QWidget):
         Returns:
             list[str]: Filtered node list.
         """
-        # Save settings
-        self.save_tool_options()
-
         # Get filter type
         filter_type = self.filter_type_field.text()
         if not filter_type:
@@ -136,11 +126,30 @@ class FilterSelectionWidget(QWidget):
 
         return result_nodes
 
-    def save_tool_options(self):
-        """Save the tool option settings."""
-        self.tool_settings.write("filter_name_field", self.filter_name_field.text())
-        self.tool_settings.write("filter_name_ignorecase", self.filter_name_ignorecase_cb.isChecked())
-        self.tool_settings.write("filter_type_field", self.filter_type_field.text())
+    def _collect_settings(self) -> dict:
+        """Collect current widget settings.
+
+        Returns:
+            dict: Settings data
+        """
+        return {
+            "filter_name_field": self.filter_name_field.text(),
+            "filter_name_ignorecase": self.filter_name_ignorecase_cb.isChecked(),
+            "filter_type_field": self.filter_type_field.text(),
+        }
+
+    def _apply_settings(self, settings_data: dict):
+        """Apply settings to widget.
+
+        Args:
+            settings_data (dict): Settings data to apply
+        """
+        if "filter_name_field" in settings_data:
+            self.filter_name_field.setText(settings_data["filter_name_field"])
+        if "filter_name_ignorecase" in settings_data:
+            self.filter_name_ignorecase_cb.setChecked(settings_data["filter_name_ignorecase"])
+        if "filter_type_field" in settings_data:
+            self.filter_type_field.setText(settings_data["filter_type_field"])
 
 
 __all__ = ["FilterSelectionWidget"]

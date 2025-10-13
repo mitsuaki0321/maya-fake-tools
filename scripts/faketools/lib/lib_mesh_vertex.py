@@ -195,6 +195,49 @@ class MeshVertex(MeshComponent):
         """
         return self.get_components_from_indices(indices, "vertex")
 
+    def set_vertex_positions(self, positions: list[tuple[float, float, float]] | list[om.MPoint], vtx_indices: list[int] | None = None) -> None:
+        """Set the vertex positions.
+
+        Args:
+            positions (list[tuple[float, float, float]] | list[om.MPoint]): The vertex positions.
+            vtx_indices (list[int] | None): The vertex indices. If None, set all vertex positions.
+
+        Raises:
+            ValueError: If the number of positions doesn't match the number of indices, or if indices are out of range.
+        """
+        # Convert positions to MPointArray
+        point_array = om.MPointArray()
+        for pos in positions:
+            if isinstance(pos, om.MPoint):
+                point_array.append(pos)
+            else:
+                point_array.append(om.MPoint(pos[0], pos[1], pos[2]))
+
+        if vtx_indices is None:
+            # Set all vertex positions
+            if len(positions) != self._mesh_fn.numVertices:
+                raise ValueError(f"Number of positions ({len(positions)}) doesn't match number of vertices ({self._mesh_fn.numVertices})")
+            self._mesh_fn.setPoints(point_array, om.MSpace.kWorld)
+        else:
+            # Set specific vertex positions
+            if len(positions) != len(vtx_indices):
+                raise ValueError(f"Number of positions ({len(positions)}) doesn't match number of indices ({len(vtx_indices)})")
+
+            num_vertices = self._mesh_fn.numVertices
+            for index in vtx_indices:
+                if index >= num_vertices:
+                    raise ValueError(f"Vertex index out of range: {index}")
+
+            # Get current points
+            current_points = self._mesh_fn.getPoints(om.MSpace.kWorld)
+
+            # Update specified vertices
+            for i, index in enumerate(vtx_indices):
+                current_points[index] = point_array[i]
+
+            # Set all points back
+            self._mesh_fn.setPoints(current_points, om.MSpace.kWorld)
+
     def num_vertices(self) -> int:
         """Get the number of vertices.
 
