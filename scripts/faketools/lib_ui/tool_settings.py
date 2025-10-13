@@ -14,8 +14,8 @@ Example:
 
 import json
 import logging
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 from .tool_data import ToolDataManager
@@ -140,7 +140,7 @@ class ToolSettingsManager:
             >>> settings.save_settings({"option1": True, "value": 10}, "my_preset")
         """
         self._validate_preset_name(preset_name)
-        settings_dir = self._ensure_settings_dir()
+        self._ensure_settings_dir()
         preset_path = self._get_preset_path(preset_name)
 
         try:
@@ -178,7 +178,7 @@ class ToolSettingsManager:
             return {}
 
         try:
-            with open(preset_path, "r", encoding="utf-8") as f:
+            with open(preset_path, encoding="utf-8") as f:
                 data = json.load(f)
             logger.info(f"Loaded settings from preset '{preset_name}': {preset_path}")
             return data
@@ -367,7 +367,7 @@ class ToolSettingsManager:
 
         # Validate JSON content before importing
         try:
-            with open(source_path, "r", encoding="utf-8") as f:
+            with open(source_path, encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON file '{source_path}': {e}")

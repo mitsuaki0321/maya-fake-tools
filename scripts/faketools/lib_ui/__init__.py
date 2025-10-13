@@ -7,6 +7,7 @@ This module provides convenient imports for common UI components:
 - ToolOptionSettings: Per-tool settings stored in Maya optionVar
 - ToolSettingsManager: JSON-based tool settings with preset support
 - ToolDataManager: Per-tool data directory management
+- PieMenu: Directional pie menu widget (2, 4, or 8 segments)
 - Maya UI decorators: error_handler, undo_chunk, disable_undo, repeatable
 - Maya dialog helpers: show_error_dialog, show_warning_dialog, show_info_dialog, confirm_dialog
 - Maya UI functions: get_channels, get_modifiers
@@ -21,6 +22,7 @@ from .maya_dialog import confirm_dialog, show_error_dialog, show_info_dialog, sh
 from .maya_qt import get_maya_main_window, maya_name_from_qt_widget, qt_widget_from_maya_control, qt_widget_from_maya_window
 from .maya_ui import get_channels, get_modifiers
 from .optionvar import ToolOptionSettings
+from .pie_menu import PieMenu, PieMenuButton
 from .qt_compat import QT_BINDING, QT_VERSION, QT_VERSION_MAJOR, get_open_file_name, get_save_file_name, is_pyside2, is_pyside6
 from .tool_data import ToolDataManager
 from .tool_settings import ToolSettingsManager
@@ -34,6 +36,9 @@ __all__ = [
     "ToolOptionSettings",
     "ToolSettingsManager",
     "ToolDataManager",
+    # Widgets
+    "PieMenu",
+    "PieMenuButton",
     # Maya UI decorators
     "error_handler",
     "undo_chunk",
