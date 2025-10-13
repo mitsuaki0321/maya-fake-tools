@@ -145,7 +145,7 @@ class MainWindow(BaseMainWindow):
         min_src_vertices = self.min_src_vertices_widget.get_value()
         max_iterations = self.max_iterations_widget.get_value()
 
-        command.retarget_mesh(
+        result_meshes = command.retarget_mesh(
             src_mesh,
             dst_meshes,
             trg_meshes,
@@ -155,6 +155,9 @@ class MainWindow(BaseMainWindow):
             min_src_vertices=min_src_vertices,
             max_iterations=max_iterations,
         )
+
+        if result_meshes:
+            cmds.select(result_meshes, r=True)
 
     def _add_preset_menu(self):
         """Add the preset menu."""

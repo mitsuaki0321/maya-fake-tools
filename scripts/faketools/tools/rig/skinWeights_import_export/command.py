@@ -39,6 +39,9 @@ class SkinClusterData:
 
         geometry_type = cmds.nodeType(geometry_name)
         skinCluster = lib_skinCluster.get_skinCluster(geometry_name)
+
+        logger.debug(f"Found skinCluster: {skinCluster} for geometry: {geometry_name}")
+
         if not skinCluster:
             cmds.error(f"SkinCluster not found: {geometry_name}")
 
@@ -164,3 +167,34 @@ class SkinClusterDataIO:
             num_components=input_data["num_components"],
             weights=input_data["weights"],
         )
+
+
+def validate_export_weights(shapes: list[str]) -> None:
+    """Validate the export weights command.
+
+    Args:
+        shapes (list[str]): The shapes.
+
+    Raises:
+        ValueError: If the shapes are invalid.
+    """
+    export_ok = True
+    for shape in shapes:
+        if not cmds.objExists(shape):
+            cmds.warning(f"Shape not found: {shape}")
+            export_ok = False
+            continue
+
+        if "deformableShape" not in cmds.nodeType(shape, inherited=True):
+            cmds.warning(f"Shape is not deformableShape: {shape}")
+            export_ok = False
+            continue
+
+        skinCluster = lib_skinCluster.get_skinCluster(shape)
+        if not skinCluster:
+            cmds.warning(f"SkinCluster not found: {shape}")
+            export_ok = False
+            continue
+
+    if not export_ok:
+        raise ValueError("Invalid shapes for export weights.Check details in the script editor.")

@@ -33,9 +33,19 @@ def get_skinCluster(shape: str) -> str | None:
     if "deformableShape" not in cmds.nodeType(shape, inherited=True):
         cmds.error(f"Failed to get skinCluster. Node is not deformableShape: {shape}")
 
-    skinClusters = cmds.ls(cmds.listHistory(shape), type="skinCluster")
+    if "|" not in shape and len(cmds.ls(shape)) > 1:
+        cmds.error(f"Multiple nodes found with the name: {shape}. Please specify the full path.")
+
+    shape = cmds.ls(shape)[0]
+    history = cmds.listHistory(shape, pruneDagObjects=True, interestLevel=2) or []
+    skinClusters = cmds.ls(history, type="skinCluster") or []
     if not skinClusters:
         return None
+
+    for sc in skinClusters:
+        geos = cmds.skinCluster(sc, q=True, geometry=True) or []
+        if shape in geos:
+            return sc
 
     return skinClusters[0]
 

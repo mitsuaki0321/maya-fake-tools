@@ -23,7 +23,7 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.ui_utils import scale_by_dpi
 from ....lib_ui.widgets import extra_widgets
-from .command import SkinClusterData, SkinClusterDataIO
+from .command import SkinClusterData, SkinClusterDataIO, validate_export_weights
 from .file_item_widget import FileItemWidget
 
 logger = getLogger(__name__)
@@ -141,8 +141,8 @@ class MainWindow(BaseMainWindow):
         )
 
         # Initialize the UI
-        minimum_size = self.minimumSizeHint()
-        self.resize(minimum_size.width() * 2.0, minimum_size.height())
+        # minimum_size = self.minimumSizeHint()
+        # self.resize(minimum_size.width() * 2.0, minimum_size.height())
 
     def _populate_file_list(self):
         """Populate the tree widget with files and directories."""
@@ -464,14 +464,16 @@ class MainWindow(BaseMainWindow):
     @maya_decorator.error_handler
     def export_weights(self):
         """Export the skinCluster weights."""
-        shapes = cmds.ls(sl=True, dag=True, ni=True, type="deformableShape")
-        if not shapes:
-            cmds.error("No geometry selected.")
-
         format = self.format_checkBox.isChecked() and "pickle" or "json"
         dir_name = self.file_name_field.text()
         if not dir_name:
             cmds.error("No directory name specified.")
+
+        shapes = cmds.ls(sl=True, dag=True, ni=True, type="deformableShape")
+        if not shapes:
+            cmds.error("No geometry selected.")
+
+        validate_export_weights(shapes)
 
         output_dir_path = os.path.join(self.root_path, dir_name)
         if not os.path.exists(output_dir_path):
@@ -533,6 +535,8 @@ class MainWindow(BaseMainWindow):
         shapes = cmds.ls(sl=True, dag=True, ni=True, type="deformableShape")
         if not shapes:
             cmds.error("No geometry selected.")
+
+        validate_export_weights(shapes)
 
         format = self.format_checkBox.isChecked() and "pickle" or "json"
         if os.path.exists(TEMP_DIR):

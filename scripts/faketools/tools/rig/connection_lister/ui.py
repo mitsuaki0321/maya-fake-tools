@@ -163,6 +163,11 @@ class MainWindow(base_window.BaseMainWindow):
         copy_value_button.clicked.connect(self._copy_value)
         connect_button.clicked.connect(self._connect_attribute)
 
+        # Adjust size
+        width = self.sizeHint().width()
+        height = self.minimumSizeHint().height()
+        self.resize(width * 0.8, height * 1.5)
+
     def __switch_operation(self, index) -> None:
         """Switch operation stack widget.
 
