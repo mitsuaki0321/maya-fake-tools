@@ -211,3 +211,4 @@ __marimo__/
 main.py
 .claude
 CLAUDE.md
+tests/*

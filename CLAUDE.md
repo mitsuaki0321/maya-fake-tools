@@ -96,10 +96,17 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - **Global Config** ([scripts/faketools/config.py](scripts/faketools/config.py)): FakeTools-wide settings stored in JSON at `~/Documents/maya/faketools/config.json`
      - **Requires `MAYA_APP_DIR` environment variable** - throws `RuntimeError` if not set
      - Data directory: `$MAYA_APP_DIR/faketools_workspace`
+   - **ToolSettingsManager** ([scripts/faketools/lib_ui/tool_settings.py](scripts/faketools/lib_ui/tool_settings.py)): **RECOMMENDED** - JSON-based per-tool settings with preset support
+     - Save/load/delete/rename presets
+     - Export/import presets to external files
+     - Settings stored in: `{data_root}/{category}/{tool_name}/settings/{preset_name}.json`
+     - Best for tools that need preset functionality or shareable configurations
    - **ToolOptionSettings** ([scripts/faketools/lib_ui/optionvar.py](scripts/faketools/lib_ui/optionvar.py)): Per-tool settings in Maya optionVar with JSON serialization
      - Includes convenience methods: `get_window_geometry()`, `set_window_geometry()`
-     - Use this for all tool UI preferences (window size, checkbox states, etc.)
-   - **Tool Data Manager** ([scripts/faketools/lib_ui/tool_data.py](scripts/faketools/lib_ui/tool_data.py)): Per-tool data directory management for files
+     - Best for simple tool UI preferences (window size, checkbox states, etc.)
+     - Stored in Maya's native optionVar system (not portable)
+   - **ToolDataManager** ([scripts/faketools/lib_ui/tool_data.py](scripts/faketools/lib_ui/tool_data.py)): Per-tool data directory management for files
+     - Use for managing tool-specific data files (not settings)
    - See [SETTINGS_USAGE.md](SETTINGS_USAGE.md) for detailed guide
 
 8. **Shared Utilities** ([scripts/faketools/lib/](scripts/faketools/lib/))
@@ -107,10 +114,6 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `is_modifiable(node, attribute)`: Check if attribute can be modified (not locked/connected)
      - `get_channelBox_attr(node)`: Get channel box visible attributes
      - `AttributeLockHandler`: Context manager for temporarily unlocking attributes
-   - **lib_singleCommand.py**: Command pattern base classes
-     - `SceneCommand`: Base class for scene-wide operations (auto-executes on init)
-     - `AllCommand`: Base class for operations on all selected nodes
-     - `PairCommand`: Base class for operations between source and target node pairs
    - **lib_name.py**: String and naming utilities
      - `num_to_alpha(num)`, `alpha_to_num(alpha)`: Convert between numbers and letters
      - `solve_names(names, regex_name)`: Generate names with @/#/~ placeholders
@@ -127,8 +130,23 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `DeformerMembership`: Manage deformer membership with component tags
      - `is_use_component_tag()`: Check if component tags are enabled in preferences
      - `remove_deformer_blank_indices(deformer)`: Clean up deformer indices
+   - **lib_cluster.py**: Clustering algorithms (K-means, DBSCAN) implemented with numpy only
+   - **lib_mesh*.py**: Mesh utilities (face, edge, point, vertex, conversion)
+   - **lib_nurbsCurve*.py**: NURBS curve utilities (positions, conversion)
+   - **lib_skinCluster.py**: Skin cluster utilities
+   - **lib_keyframe.py**: Animation keyframe utilities
+   - And more... (see [scripts/faketools/lib/](scripts/faketools/lib/) for complete list)
 
-9. **Operations** ([scripts/faketools/operations/](scripts/faketools/operations/))
+9. **Single Commands** ([scripts/faketools/single_commands/](scripts/faketools/single_commands/))
+   - Standalone command classes that can be executed directly without UI
+   - Automatically registered in "Single Commands" submenu under FakeTools menu
+   - **Base Classes** ([single_commands/base_commands.py](scripts/faketools/single_commands/base_commands.py)):
+     - `SceneCommand`: Base class for scene-wide operations (auto-executes on init)
+     - `AllCommand`: Base class for operations on all selected nodes
+     - `PairCommand`: Base class for operations between source and target node pairs
+   - See "Command Pattern Architecture" section below for usage examples
+
+10. **Operations** ([scripts/faketools/operations/](scripts/faketools/operations/))
    - High-level operations that combine multiple `lib` utilities
    - **IMPORTANT RULES**:
      - Operations **CAN** depend on `lib` modules
@@ -138,12 +156,16 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
    - **Architecture Hierarchy**:
      - `lib/` → Basic utilities (no dependencies within lib)
      - `operations/` → High-level operations (can use lib)
-     - `tools/*/command.py` → Tool-specific commands (can use both lib and operations)
+     - `single_commands/` → Standalone commands (can use lib and operations)
+     - `tools/*/command.py` → Tool-specific commands (can use lib, operations, and single_commands)
    - **Current Operations**:
      - **mirror.py**: Transform mirroring operations
        - `mirror_transforms(node, axis, mirror_position, mirror_rotation, space)`: Mirror node transform across axis
          - `space="world"`: Mirror in world space
          - `space="local"`: Mirror in local space (relative to parent)
+     - **component_selection.py**: Component selection utilities
+     - **convert_weight.py**: Weight conversion utilities
+     - **create_transforms/**: Transform creation operations with multiple position strategies
 
 ## Tool Structure
 
@@ -163,13 +185,19 @@ tools/{category}/{tool_name}/
 
 ### Command Pattern Architecture
 
-The framework provides base command classes in `lib_singleCommand.py` for implementing reusable Maya operations:
+The framework provides base command classes in `single_commands/base_commands.py` for implementing reusable Maya operations. These commands can be used in two ways:
+
+1. **In Single Commands menu**: Create command classes in `single_commands/{scene,all,pair}_commands.py` for direct menu access
+2. **In tool command layer**: Import and use command patterns in tool `command.py` files
 
 **SceneCommand Pattern:**
 ```python
-from faketools.lib.lib_singleCommand import SceneCommand
+from faketools.single_commands import SceneCommand
 
 class OptimizeScene(SceneCommand):
+    _name = "Optimize Scene"  # Display name in menu
+    _description = "Optimize scene for faster performance"
+
     def execute(self):
         """Executes automatically on instantiation."""
         # Scene-wide operations here
@@ -180,12 +208,15 @@ class OptimizeScene(SceneCommand):
 
 **AllCommand Pattern** (operates on all selected nodes):
 ```python
-from faketools.lib.lib_singleCommand import AllCommand
+from faketools.single_commands import AllCommand
 
 class LockAndHide(AllCommand):
-    def execute(self, nodes: list[str]):
+    _name = "Lock and Hide"
+    _description = "Lock and hide selected nodes"
+
+    def execute(self, target_nodes: list[str]):
         """Process all nodes."""
-        for node in nodes:
+        for node in target_nodes:
             # Process each node
             pass
 
@@ -194,10 +225,13 @@ class LockAndHide(AllCommand):
 
 **PairCommand Pattern** (operates on source→target pairs):
 ```python
-from faketools.lib.lib_singleCommand import PairCommand
+from faketools.single_commands import PairCommand
 
 class SnapPosition(PairCommand):
-    def execute(self, source_node: str, target_node: str):
+    _name = "Snap Position"
+    _description = "Snap target positions to source"
+
+    def execute_pair(self, source_node: str, target_node: str):
         """Process source-target pair."""
         # Snap target to source
         pass
@@ -207,9 +241,11 @@ class SnapPosition(PairCommand):
 ```
 
 **Key Behaviors:**
-- All command classes auto-validate node existence via `validate_nodes()`
+- All command classes auto-validate input on instantiation
 - Commands execute immediately on instantiation (no separate `.run()` call)
-- Use these classes for reusable operations exposed through tool UIs
+- Commands in `single_commands/` modules are automatically added to "Single Commands" menu
+- Commands must define `_name` and `_description` class attributes for menu display
+- Use these classes for reusable operations that work standalone or within tool UIs
 
 ### Layer Separation Pattern
 
@@ -458,20 +494,24 @@ These cases are acceptable:
   - `core/`: Framework core (registry, base classes)
   - `lib/`: Shared Maya utilities (basic, no inter-dependencies)
   - `operations/`: High-level operations (combines lib utilities)
+  - `single_commands/`: Standalone commands (menu-accessible, no UI required)
   - `lib_ui/`: UI-specific utilities
     - `base_window.py`: BaseMainWindow and resolution utilities
     - `maya_decorator.py`: UI decorators (@error_handler, @undo_chunk, @disable_undo)
     - `maya_dialog.py`: Dialog helpers
     - `maya_qt.py`: Qt-Maya conversion utilities
     - `maya_ui.py`: Maya UI functions (get_channels, get_modifiers)
-    - `optionvar.py`: Tool settings management
-    - `qt_compat.py`: PySide2/6 compatibility layer
+    - `tool_settings.py`: JSON-based tool settings with preset support (recommended)
+    - `optionvar.py`: Maya optionVar-based tool settings (simple)
     - `tool_data.py`: Tool data directory management
+    - `qt_compat.py`: PySide2/6 compatibility layer
     - `ui_utils.py`: Resolution-independent UI calculations
   - `tools/`: Category-organized tools (rig/model/anim/common)
   - `menu.py`: Menu system
+  - `single_commands_menu.py`: Single commands menu system
   - `config.py`: Global configuration
   - `logging_config.py`: Logging system
+  - `module_cleaner.py`: Development utility for module reloading
 
 ## Development Commands
 
@@ -603,7 +643,8 @@ from .ui import MainWindow         # Same tool's ui.py
 # From tools/{category}/{tool_name}/ui.py
 from ....lib_ui import (
     BaseMainWindow,
-    ToolOptionSettings,
+    ToolSettingsManager,  # For preset support (recommended)
+    ToolOptionSettings,   # For simple settings (alternative)
     error_handler,
     get_maya_main_window,
     undo_chunk,
@@ -623,14 +664,16 @@ from ....lib_ui.optionvar import ToolOptionSettings
 from ....lib_ui.qt_compat import QWidget, QPushButton
 ```
 
-### Operations Imports (from tool command.py)
+### Operations and Commands Imports (from tool command.py)
 ```python
 # From tools/{category}/{tool_name}/command.py
 from ...operations import mirror_transforms
 from ...lib.lib_selection import DagHierarchy
+from ...single_commands import SceneCommand, AllCommand, PairCommand
 
 # Use operations for high-level reusable operations
 # Use lib for basic utilities
+# Use single_commands for reusable command patterns
 def execute():
     # Mirror in world space
     mirror_transforms("pCube1", axis="x", space="world")
@@ -657,6 +700,34 @@ When creating a new tool:
 3. Create `ui.py` with `MainWindow` class and `show_ui()` function
 4. Create `command.py` with pure Maya operations (no decorators)
 5. Test in Maya with: `import faketools.menu; faketools.menu.reload_menu()`
+
+## Creating New Single Commands
+
+When creating a standalone command (no UI required):
+
+1. Choose the appropriate module:
+   - `single_commands/scene_commands.py` for scene-wide operations
+   - `single_commands/all_commands.py` for operations on all selected nodes
+   - `single_commands/pair_commands.py` for source→target operations
+
+2. Create a command class:
+```python
+from .base_commands import AllCommand
+import maya.cmds as cmds
+
+class LockTransforms(AllCommand):
+    _name = "Lock Transforms"
+    _description = "Lock translate, rotate, scale on selected nodes"
+
+    def execute(self, target_nodes: list[str]):
+        for node in target_nodes:
+            for attr in ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'sx', 'sy', 'sz']:
+                cmds.setAttr(f"{node}.{attr}", lock=True)
+```
+
+3. Add to module's `__all__` list
+4. Reload menu: `import faketools.menu; faketools.menu.reload_menu()`
+5. Command appears in FakeTools → Single Commands submenu
 
 ## Workflow
 
@@ -723,9 +794,35 @@ config.set_log_level("DEBUG")
 config.save()  # Must call save() to persist changes
 ```
 
+### Tool Settings with Presets - Use ToolSettingsManager (RECOMMENDED)
+```python
+from faketools.lib_ui import ToolSettingsManager
+
+# Initialize for your tool
+settings = ToolSettingsManager("skin_weights", "rig")
+
+# Save settings to a preset
+data = {"smooth_iterations": 5, "normalize": True}
+settings.save_settings(data, "my_preset")
+
+# Load settings from a preset
+loaded_data = settings.load_settings("my_preset")
+
+# List available presets
+presets = settings.list_presets()
+
+# Delete/rename presets
+settings.delete_preset("old_preset")
+settings.rename_preset("old_name", "new_name")
+
+# Export/import presets
+settings.export_preset("my_preset", "D:/backup.json")
+settings.import_preset("D:/shared_preset.json", "imported_preset")
+```
+
 ### Tool Settings (Maya optionVar) - Use ToolOptionSettings
 ```python
-from faketools.lib_ui.optionvar import ToolOptionSettings
+from faketools.lib_ui import ToolOptionSettings
 
 settings = ToolOptionSettings(__name__)
 settings.write("window_size", [800, 600])
@@ -738,7 +835,7 @@ geometry = settings.get_window_geometry()
 
 ### Tool Data Files (filesystem)
 ```python
-from faketools.lib_ui.tool_data import ToolDataManager
+from faketools.lib_ui import ToolDataManager
 
 data_manager = ToolDataManager("skin_weights", "rig")
 data_manager.ensure_data_dir()
