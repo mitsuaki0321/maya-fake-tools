@@ -491,8 +491,21 @@ class TimeAnimCurve:
         Returns:
             list[str]: The animation curve node.
         """
-        # TODO: Consider connections with pairBlend node when necessary.
-        return cmds.listConnections(self.plug, s=True, d=False, type="animCurve") or []
+        anim_curves = cmds.listConnections(self.plug, s=True, d=False, type="animCurve") or []
+        if anim_curves:
+            return anim_curves
+
+        pair_blends = cmds.listConnections(self.plug, s=True, d=False, type="pairBlend") or []
+        if not pair_blends:
+            return []
+
+        anim_curve_set: dict[str, None] = {}
+        for pair_blend in pair_blends:
+            connected = cmds.listConnections(pair_blend, s=True, d=False, type="animCurve") or []
+            for anim_curve in connected:
+                anim_curve_set.setdefault(anim_curve, None)
+
+        return list(anim_curve_set.keys())
 
     def get_keyframes(self) -> AnimCurveData:
         """Get the keyframe data.
