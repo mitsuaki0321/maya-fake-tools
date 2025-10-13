@@ -1,5 +1,7 @@
 """
 Mesh vertex clustering functions.
+
+All clustering algorithms are implemented using numpy only (no sklearn dependency).
 """
 
 from abc import ABC, abstractmethod
@@ -9,7 +11,6 @@ import random
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
 import numpy as np
-from sklearn.cluster import DBSCAN, KMeans
 
 logger = getLogger(__name__)
 
@@ -97,18 +98,21 @@ class SplitAxisClustering(Clustering):
 
 
 class KMeansClustering(Clustering):
-    """K-means clustering for mesh vertices."""
+    """K-means clustering for mesh vertices (numpy-only implementation)."""
 
-    def get_clusters(self, n_clusters: int) -> list[list[int]]:
+    def get_clusters(self, n_clusters: int, max_iter: int = 100, tol: float = 1e-4) -> list[list[int]]:
         """Apply K-means clustering to classify vertices.
 
         Features:
             - Calculate the centroid (mean) of each cluster and classify the vertices closest to that position into the cluster.
             - The number of clusters must be specified.
             - Classify all vertices into clusters.
+            - Implemented using numpy only (no sklearn dependency).
 
         Args:
             n_clusters (int): The number of clusters.
+            max_iter (int, optional): Maximum number of iterations. Defaults to 100.
+            tol (float, optional): Convergence tolerance. Defaults to 1e-4.
 
         Returns:
             list[list[int]]: The list of vertex indices for each cluster.
@@ -120,11 +124,27 @@ class KMeansClustering(Clustering):
         points = self.mesh_fn.getPoints(om.MSpace.kWorld)
         vertex_positions = np.array([[p.x, p.y, p.z] for p in points])
 
-        # Perform K-means clustering
-        kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
-        labels = kmeans.fit_predict(vertex_positions)
+        # K-means implementation using numpy only
+        np.random.seed(42)
+        indices = np.random.choice(len(vertex_positions), n_clusters, replace=False)
+        centroids = vertex_positions[indices].copy()
 
-        # Group vertex indices by cluster using numpy (faster than loop)
+        for iteration in range(max_iter):
+            # Assign points to nearest centroid
+            distances = np.sqrt(((vertex_positions[:, np.newaxis] - centroids) ** 2).sum(axis=2))
+            labels = np.argmin(distances, axis=1)
+
+            # Update centroids
+            new_centroids = np.array([vertex_positions[labels == i].mean(axis=0) if np.any(labels == i) else centroids[i] for i in range(n_clusters)])
+
+            # Check convergence
+            if np.allclose(centroids, new_centroids, atol=tol):
+                logger.debug(f"K-means converged after {iteration + 1} iterations.")
+                break
+
+            centroids = new_centroids
+
+        # Group vertex indices by cluster
         clusters = [np.where(labels == i)[0].tolist() for i in range(n_clusters)]
 
         logger.debug(f"Clustered {len(vertex_positions)} vertices into {n_clusters} clusters.")
@@ -133,7 +153,7 @@ class KMeansClustering(Clustering):
 
 
 class DBSCANClustering(Clustering):
-    """DBSCAN clustering for mesh vertices."""
+    """DBSCAN clustering for mesh vertices (numpy-only implementation)."""
 
     def get_clusters(self, eps: float = 0.5, min_samples: int = 5) -> list[list[int]]:
         """Classify vertices using DBSCAN clustering and create a list for each cluster.
@@ -141,28 +161,66 @@ class DBSCANClustering(Clustering):
         Features:
             - Create clusters based on the distance defined by eps.
             - A cluster is formed by points with at least min_samples.
-            - Not all vertices are classified into clusters.
+            - Not all vertices are classified into clusters (noise points are excluded).
+            - Implemented using numpy only (no sklearn dependency).
 
         Args:
             eps (float): The maximum distance between points to be considered as a cluster (clustering range).
             min_samples (int): The minimum number of points to be considered as a cluster.
 
         Returns:
-            list[list[int]]: The list of vertices for each cluster.
+            list[list[int]]: The list of vertices for each cluster (noise points excluded).
         """
         # Convert MPointArray to numpy array efficiently
         points = self.mesh_fn.getPoints(om.MSpace.kWorld)
         vertex_positions = np.array([[p.x, p.y, p.z] for p in points])
 
-        # Perform DBSCAN clustering
-        dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-        labels = dbscan.fit_predict(vertex_positions)
+        # DBSCAN implementation using numpy only
+        n_points = len(vertex_positions)
+        labels = np.full(n_points, -1, dtype=int)  # -1 = unvisited/noise
+        cluster_id = 0
+
+        # Compute distance matrix
+        distances = np.sqrt(((vertex_positions[:, np.newaxis] - vertex_positions) ** 2).sum(axis=2))
+
+        for i in range(n_points):
+            if labels[i] != -1:  # Already processed
+                continue
+
+            # Find neighbors within eps
+            neighbors = np.where(distances[i] <= eps)[0]
+
+            if len(neighbors) < min_samples:
+                continue  # Mark as noise (stays -1)
+
+            # Start new cluster
+            labels[i] = cluster_id
+            seed_set = set(neighbors) - {i}
+
+            while seed_set:
+                current = seed_set.pop()
+
+                if labels[current] == -1:  # Noise point becomes border point
+                    labels[current] = cluster_id
+
+                if labels[current] != -1:  # Already processed
+                    continue
+
+                labels[current] = cluster_id
+
+                # Find current point's neighbors
+                current_neighbors = np.where(distances[current] <= eps)[0]
+
+                if len(current_neighbors) >= min_samples:
+                    seed_set.update(current_neighbors)
+
+            cluster_id += 1
 
         # Get unique labels (excluding noise label -1)
         unique_labels = np.unique(labels)
         unique_labels = unique_labels[unique_labels != -1]
 
-        # Group vertex indices by cluster using numpy (faster than loop)
+        # Group vertex indices by cluster
         clusters = [np.where(labels == label)[0].tolist() for label in unique_labels]
 
         logger.debug(f"Clustered {len(vertex_positions)} vertices into {len(unique_labels)} clusters.")

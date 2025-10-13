@@ -24,3 +24,46 @@ ignore = ["E203", "E501", "E701", "SIM108"]
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "numpy>=2.3.3",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.2",
+]
+
+[tool.mypy]
+python_version = "3.11"
+exclude = ["plug-ins/"]
+# Import validation only (type checking disabled)
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+warn_return_any = false
+warn_unused_ignores = false
+# Disable all type errors (only detect import errors)
+disable_error_code = [
+    "var-annotated", "arg-type", "return-value", "assignment",
+    "operator", "attr-defined", "union-attr", "list-item",
+    "dict-item", "type-var", "valid-type", "misc", "return",
+    "index", "call-overload", "override", "no-untyped-def",
+    "truthy-bool", "name-defined", "has-type",
+    "func-returns-value", "abstract", "type-arg", "annotation-unchecked"
+]
+
+# Ignore Maya-specific modules and external dependencies
+[[tool.mypy.overrides]]
+module = [
+    "maya.*",
+    "PySide2.*",
+    "PySide6.*",
+    "shiboken2",
+    "shiboken6",
+    "numpy",
+    "numpy.*",
+    "scipy",
+    "scipy.*"
+]
+ignore_missing_imports = true

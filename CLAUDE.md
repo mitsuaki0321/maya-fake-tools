@@ -6,6 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Maya tools package that extends Autodesk Maya through plugins and scripts using a plugin-based architecture with automatic tool discovery and registration. The project uses Maya's module system (`.mod` file) for integration.
 
+## External Dependencies
+
+### Allowed Libraries (Runtime)
+
+**Python Standard Library:**
+- All built-in modules are allowed (e.g., `os`, `sys`, `json`, `math`, `re`, `logging`, etc.)
+
+**Maya-Provided Libraries:**
+- **Maya Python API** (`maya.cmds`, `maya.api.OpenMaya`) - Required, provided by Maya
+- **PySide2** (Maya 2022 and earlier) - Qt bindings for UI
+- **PySide6** (Maya 2023+) - Qt bindings for UI
+- **numpy** - Numerical operations (included in Maya 2022+)
+- **scipy** - Scientific computing (included in Maya 2022+)
+
+**CRITICAL RULES:**
+- ✅ **ONLY use libraries listed above**
+- ❌ **DO NOT add external dependencies** (e.g., scikit-learn, pandas, requests, etc.)
+- ❌ **DO NOT use `pip install` or similar** for runtime dependencies
+- 💡 **Implement algorithms manually** using numpy/scipy if needed (see `lib_cluster.py` for K-means/DBSCAN examples)
+
+### Development Dependencies
+
+**Development-Only Libraries (not used in runtime code):**
+- **ruff** - Code formatting and linting
+- **mypy** - Import validation (type checking disabled)
+- **numpy, scipy, scikit-learn** - Used only for testing/benchmarking
+
+**Important Notes:**
+- **NO scikit-learn dependency**: All clustering algorithms (`lib_cluster.py`) are implemented using numpy only
+- **Maya 2022+** includes numpy and scipy by default
+- External Python packages cannot be easily added to Maya's Python environment
+- When implementing new features, check if required algorithms can be implemented with allowed libraries first
+
 ## Core Architecture
 
 ### FakeTools Framework Components
@@ -466,16 +499,42 @@ This will:
 4. Force garbage collection
 
 ### Linting and Formatting
+
+**Best Practice: Check only changed files during development**
+
 ```bash
-# Format code
+# Format specific file or directory
+uv run ruff format path/to/file.py
+uv run ruff format path/to/directory/
+
+# Lint specific file or directory
+uv run ruff check path/to/file.py
+uv run ruff check path/to/directory/ --fix
+
+# Format/lint entire project (use before commits)
 uv run ruff format .
-
-# Lint code
-uv run ruff check .
-
-# Auto-fix issues
 uv run ruff check . --fix
 ```
+
+### Import Validation
+
+**Best Practice: Check only changed files during development**
+
+```bash
+# Check specific file
+uv run mypy scripts/faketools/lib/lib_cluster.py
+
+# Check specific directory
+uv run mypy scripts/faketools/tools/rig/skin_tools/
+
+# Check entire project (use before commits)
+uv run mypy scripts/faketools
+
+# Check for import errors only
+uv run mypy scripts/faketools 2>&1 | grep -E "(import-not-found|import-untyped)"
+```
+
+**Note**: mypy is configured to only check import existence. Type checking is disabled to avoid errors in legacy code. External dependencies (maya, numpy, scipy, PySide2/6) are ignored in the configuration.
 
 ## Code Standards
 
@@ -601,10 +660,28 @@ When creating a new tool:
 
 ## Workflow
 
-**Always run Ruff at the end of any code changes:**
+### During Development
+
+**Recommended: Check only changed files for faster feedback**
+
 ```bash
+# After editing a file
+uv run ruff format path/to/changed_file.py
+uv run ruff check path/to/changed_file.py --fix
+uv run mypy path/to/changed_file.py
+```
+
+### Before Committing
+
+**Required: Run checks on entire project**
+
+```bash
+# Format and lint entire project
 uv run ruff format .
 uv run ruff check . --fix
+
+# Validate all imports
+uv run mypy scripts/faketools
 ```
 
 ## Logging Management
