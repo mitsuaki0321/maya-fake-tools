@@ -8,6 +8,7 @@ A directional pie menu widget for Maya tools with support for 2, 4, or 8 segment
 - **Fixed directions**: Cardinal (Up, Down, Left, Right) and diagonal (UpRight, UpLeft, DownRight, DownLeft)
 - **Empty segments**: Use `None` for segments without actions (no text displayed)
 - **Customizable trigger**: Left-click, middle-click, or right-click
+- **Flexible sizing**: Size presets, scale factors, or custom radius values
 - **Muscle memory friendly**: Consistent directional layout for fast operation
 - **Clean design**: Professional look with anti-aliased graphics
 
@@ -16,7 +17,7 @@ A directional pie menu widget for Maya tools with support for 2, 4, or 8 segment
 ### Basic Usage with PieMenuButton
 
 ```python
-from faketools.lib_ui import PieMenuButton
+from faketools.lib_ui import PieMenu, PieMenuButton
 from faketools.lib_ui.qt_compat import QPushButton, Qt
 
 class MyButton(PieMenuButton, QPushButton):
@@ -31,7 +32,8 @@ class MyButton(PieMenuButton, QPushButton):
                 {"label": "Clear", "callback": self.on_clear},
                 None,  # Empty segment (Left direction)
             ],
-            trigger_button=Qt.MouseButton.MiddleButton
+            trigger_button=Qt.MouseButton.MiddleButton,
+            size_preset=PieMenu.SIZE_MEDIUM  # Optional: control menu size
         )
 
     def on_register(self):
@@ -169,13 +171,81 @@ class MyButton(PieMenuButton, QPushButton):
 
 ### Menu Size
 
+There are three ways to control pie menu size:
+
+#### 1. Direct Radius Values (Pixel-Based)
+
 ```python
 self.setup_pie_menu(
     items=[...],
-    outer_radius=150,  # Default: 130
-    inner_radius=40    # Default: 35
+    outer_radius=150,  # Outer circle radius in pixels
+    inner_radius=40    # Inner circle radius in pixels
 )
 ```
+
+#### 2. Size Presets (Recommended)
+
+Use predefined size presets for consistent sizing across tools:
+
+```python
+from faketools.lib_ui import PieMenu
+
+# Small size
+self.setup_pie_menu(
+    items=[...],
+    size_preset=PieMenu.SIZE_SMALL  # outer: 100px, inner: 25px
+)
+
+# Medium size (default)
+self.setup_pie_menu(
+    items=[...],
+    size_preset=PieMenu.SIZE_MEDIUM  # outer: 130px, inner: 35px
+)
+
+# Large size
+self.setup_pie_menu(
+    items=[...],
+    size_preset=PieMenu.SIZE_LARGE  # outer: 170px, inner: 45px
+)
+
+# Extra large size
+self.setup_pie_menu(
+    items=[...],
+    size_preset=PieMenu.SIZE_XLARGE  # outer: 210px, inner: 55px
+)
+```
+
+#### 3. Scale Factor (Relative Sizing)
+
+Scale the menu relative to default or preset sizes:
+
+```python
+# 1.5x larger than default
+self.setup_pie_menu(
+    items=[...],
+    scale=1.5
+)
+
+# Combine preset with scale
+self.setup_pie_menu(
+    items=[...],
+    size_preset=PieMenu.SIZE_SMALL,
+    scale=1.2  # Small preset scaled up by 20%
+)
+
+# Scale custom radius values
+self.setup_pie_menu(
+    items=[...],
+    outer_radius=100,
+    inner_radius=30,
+    scale=1.5  # Custom values scaled by 1.5x
+)
+```
+
+**Priority Order:**
+1. If `outer_radius` and `inner_radius` are both specified → Use those values (with scale applied)
+2. Else if `size_preset` is specified → Use preset values (with scale applied)
+3. Else → Use default SIZE_MEDIUM (with scale applied)
 
 ### Item Format
 
@@ -208,7 +278,7 @@ items = [
 ## Complete Example
 
 ```python
-from faketools.lib_ui import PieMenuButton
+from faketools.lib_ui import PieMenu, PieMenuButton
 from faketools.lib_ui.qt_compat import QPushButton, Qt
 import maya.cmds as cmds
 
@@ -219,7 +289,7 @@ class NodeStockerButton(PieMenuButton, QPushButton):
         super().__init__("Node Slot", parent)
         self.node_data = node_data
 
-        # Setup 4-segment pie menu
+        # Setup 4-segment pie menu with large size
         self.setup_pie_menu(
             items=[
                 {"label": "Register", "callback": self.register_nodes},
@@ -228,8 +298,7 @@ class NodeStockerButton(PieMenuButton, QPushButton):
                 None,  # Empty segment (Left)
             ],
             trigger_button=Qt.MouseButton.MiddleButton,
-            outer_radius=130,
-            inner_radius=35
+            size_preset=PieMenu.SIZE_LARGE  # Use large preset
         )
 
     def register_nodes(self):
@@ -312,14 +381,23 @@ The test window demonstrates:
 ### PieMenu Class
 
 ```python
-PieMenu(items, parent=None, outer_radius=130, inner_radius=35)
+PieMenu(items, parent=None, outer_radius=None, inner_radius=None,
+        size_preset=None, scale=1.0)
 ```
 
 **Parameters:**
 - `items` (list): Menu items (str, dict, or None)
 - `parent` (QWidget): Parent widget
-- `outer_radius` (int): Outer radius in pixels
-- `inner_radius` (int): Inner circle radius in pixels
+- `outer_radius` (int, optional): Outer radius in pixels. If None, uses size_preset or default
+- `inner_radius` (int, optional): Inner circle radius in pixels. If None, uses size_preset or default
+- `size_preset` (tuple, optional): Size preset tuple (outer_radius, inner_radius). Use SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE, or SIZE_XLARGE
+- `scale` (float): Scale factor to apply to radius values (default: 1.0)
+
+**Class Attributes (Size Presets):**
+- `SIZE_SMALL = (100, 25)`: Small size
+- `SIZE_MEDIUM = (130, 35)`: Medium size (default)
+- `SIZE_LARGE = (170, 45)`: Large size
+- `SIZE_XLARGE = (210, 55)`: Extra large size
 
 **Methods:**
 - `show_at_cursor()`: Show menu at current cursor position
@@ -331,14 +409,17 @@ PieMenu(items, parent=None, outer_radius=130, inner_radius=35)
 
 ```python
 setup_pie_menu(items, trigger_button=Qt.MouseButton.MiddleButton,
-               outer_radius=130, inner_radius=35)
+               outer_radius=None, inner_radius=None,
+               size_preset=None, scale=1.0)
 ```
 
 **Parameters:**
 - `items` (list): Menu items
 - `trigger_button` (Qt.MouseButton): Mouse button to trigger menu
-- `outer_radius` (int): Outer radius in pixels
-- `inner_radius` (int): Inner circle radius in pixels
+- `outer_radius` (int, optional): Outer radius in pixels
+- `inner_radius` (int, optional): Inner circle radius in pixels
+- `size_preset` (tuple, optional): Size preset tuple. Use PieMenu.SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE, or SIZE_XLARGE
+- `scale` (float): Scale factor to apply to radius values (default: 1.0)
 
 **Important:**
 - `PieMenuButton` is a true mixin class (does not inherit from any base class)

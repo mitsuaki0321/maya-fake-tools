@@ -209,6 +209,7 @@ class MainWindow(BaseMainWindow):
                         {"label": "Unregister", "callback": lambda b=button: self._remove_nodes(b)},
                     ],
                     trigger_button=Qt.MouseButton.MiddleButton,
+                    scale=0.8,
                 )
 
                 # Setup PieMenu for right click (4-way: SetKeyframe and future commands)
@@ -220,6 +221,7 @@ class MainWindow(BaseMainWindow):
                         None,  # Left - empty for future
                     ],
                     trigger_button=Qt.MouseButton.RightButton,
+                    scale=0.8,
                 )
 
                 # Connect left click for selection

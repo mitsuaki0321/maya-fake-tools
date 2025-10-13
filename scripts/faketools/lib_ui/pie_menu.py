@@ -33,7 +33,13 @@ class PieMenu(QWidget):
         8: ["Up", "UpRight", "Right", "DownRight", "Down", "DownLeft", "Left", "UpLeft"],
     }
 
-    def __init__(self, items, parent=None, outer_radius=130, inner_radius=35):
+    # Size presets (outer_radius, inner_radius)
+    SIZE_SMALL = (100, 25)
+    SIZE_MEDIUM = (130, 35)
+    SIZE_LARGE = (170, 45)
+    SIZE_XLARGE = (210, 55)
+
+    def __init__(self, items, parent=None, outer_radius=None, inner_radius=None, size_preset=None, scale=1.0):
         """
         Initialize pie menu.
 
@@ -46,8 +52,15 @@ class PieMenu(QWidget):
                          - 8 items: [Up, UpRight, Right, DownRight, Down, DownLeft, Left, UpLeft]
                          None items show empty segment (no text)
             parent (QWidget): Parent widget
-            outer_radius (int): Outer radius of the pie menu in pixels
-            inner_radius (int): Inner radius (center circle) in pixels
+            outer_radius (int, optional): Outer radius of the pie menu in pixels
+                                         If None, uses size_preset or default
+            inner_radius (int, optional): Inner radius (center circle) in pixels
+                                         If None, uses size_preset or default
+            size_preset (tuple, optional): Size preset tuple (outer_radius, inner_radius)
+                                          Use SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE, or SIZE_XLARGE
+                                          Ignored if outer_radius and inner_radius are specified
+            scale (float): Scale factor to apply to radius values (default: 1.0)
+                          Applied after size_preset or default values
         """
         super().__init__(
             parent,
@@ -65,8 +78,21 @@ class PieMenu(QWidget):
         self.segment_count = len(items)
         self.directions = self.DIRECTION_NAMES[self.segment_count]
         self.hovered_item = -1
-        self.outer_radius = outer_radius
-        self.inner_radius = inner_radius
+
+        # Determine radius values
+        if outer_radius is not None and inner_radius is not None:
+            # Explicit radius values provided
+            self.outer_radius = int(outer_radius * scale)
+            self.inner_radius = int(inner_radius * scale)
+        elif size_preset is not None:
+            # Use preset
+            preset_outer, preset_inner = size_preset
+            self.outer_radius = int(preset_outer * scale)
+            self.inner_radius = int(preset_inner * scale)
+        else:
+            # Use default (MEDIUM)
+            self.outer_radius = int(self.SIZE_MEDIUM[0] * scale)
+            self.inner_radius = int(self.SIZE_MEDIUM[1] * scale)
 
         # Calculate angle step based on segment count
         self.angle_step = 360.0 / self.segment_count
@@ -291,7 +317,7 @@ class PieMenuButton:
         It should be used as the first base class in multiple inheritance.
     """
 
-    def setup_pie_menu(self, items, trigger_button=Qt.MouseButton.MiddleButton, outer_radius=130, inner_radius=35):
+    def setup_pie_menu(self, items, trigger_button=Qt.MouseButton.MiddleButton, outer_radius=None, inner_radius=None, size_preset=None, scale=1.0):
         """
         Setup pie menu for this widget.
 
@@ -300,8 +326,13 @@ class PieMenuButton:
         Args:
             items (list): List of menu items (see PieMenu for format)
             trigger_button (Qt.MouseButton): Mouse button to trigger menu (MiddleButton, LeftButton, RightButton)
-            outer_radius (int): Outer radius of the pie menu
-            inner_radius (int): Inner radius of the pie menu
+            outer_radius (int, optional): Outer radius of the pie menu
+                                         If None, uses size_preset or default
+            inner_radius (int, optional): Inner radius of the pie menu
+                                         If None, uses size_preset or default
+            size_preset (tuple, optional): Size preset tuple (outer_radius, inner_radius)
+                                          Use PieMenu.SIZE_SMALL, SIZE_MEDIUM, SIZE_LARGE, or SIZE_XLARGE
+            scale (float): Scale factor to apply to radius values (default: 1.0)
         """
         # Initialize pie menu configurations dict if not exists
         if not hasattr(self, "_pie_menu_configs"):
@@ -312,6 +343,8 @@ class PieMenuButton:
             "items": items,
             "outer_radius": outer_radius,
             "inner_radius": inner_radius,
+            "size_preset": size_preset,
+            "scale": scale,
         }
 
     def mousePressEvent(self, event):
@@ -335,8 +368,10 @@ class PieMenuButton:
         pie_menu = PieMenu(
             items=config["items"],
             parent=self,
-            outer_radius=config["outer_radius"],
-            inner_radius=config["inner_radius"],
+            outer_radius=config.get("outer_radius"),
+            inner_radius=config.get("inner_radius"),
+            size_preset=config.get("size_preset"),
+            scale=config.get("scale", 1.0),
         )
         pie_menu.show_at_cursor()
 
