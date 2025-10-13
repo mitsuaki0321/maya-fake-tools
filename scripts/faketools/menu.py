@@ -10,6 +10,7 @@ import maya.cmds as cmds
 
 from . import single_commands_menu
 from .core.registry import get_registry
+from .logging_config import get_log_level, set_log_level
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,9 @@ def add_menu():
     # Reload menu item
     cmds.menuItem(label="Reload Menu", command=lambda *args: reload_menu(), parent=menu)
 
+    # Log level submenu
+    _add_log_level_menu(menu)
+
     logger.info(f"FakeTools menu created with {len(menu_structure)} categories")
 
 
@@ -105,6 +109,57 @@ def reload_menu():
     """Reload the FakeTools menu."""
     logger.info("Reloading FakeTools menu...")
     add_menu()
+
+
+def _add_log_level_menu(parent_menu: str):
+    """
+    Add log level submenu to the parent menu.
+
+    Args:
+        parent_menu (str): Parent menu to add the log level submenu to.
+    """
+    # Log level options
+    log_levels = [
+        ("DEBUG", logging.DEBUG),
+        ("INFO", logging.INFO),
+        ("WARNING", logging.WARNING),
+        ("ERROR", logging.ERROR),
+        ("CRITICAL", logging.CRITICAL),
+    ]
+
+    # Create submenu
+    log_menu = cmds.menuItem(label="Log Level", subMenu=True, parent=parent_menu, tearOff=False)
+
+    # Create radio button group
+    cmds.radioMenuItemCollection(parent=log_menu)
+
+    # Get current log level
+    current_level = get_log_level()
+
+    # Add menu items for each log level
+    for label, level in log_levels:
+        is_current = current_level == level
+        cmds.menuItem(
+            label=label,
+            radioButton=is_current,
+            command=lambda *args, lvl=level, lbl=label: _set_log_level_with_feedback(lvl, lbl),
+            parent=log_menu,
+        )
+
+    logger.debug(f"Log level submenu added with current level: {logging.getLevelName(current_level)}")
+
+
+def _set_log_level_with_feedback(level: int, level_name: str):
+    """
+    Set log level and provide user feedback.
+
+    Args:
+        level (int): Logging level to set
+        level_name (str): Human-readable name of the log level
+    """
+    set_log_level(level)
+    logger.info(f"Log level changed to {level_name}")
+    cmds.inViewMessage(amg=f"Log level changed to <hl>{level_name}</hl>", pos="topCenter", fade=True, fst=1000, ft=0.5)
 
 
 __all__ = ["add_menu", "remove_menu", "reload_menu"]
