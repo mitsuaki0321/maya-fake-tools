@@ -26,7 +26,7 @@ class MainWindow(BaseMainWindow):
 
     _stock_file_name = "node"
 
-    def __init__(self, parent=None, object_name="MainWindow", window_title="Main Window", num_areas=7, **kwargs):
+    def __init__(self, parent=None, object_name="NodeStockerMainWindow", window_title="Node Stocker", num_areas=7, **kwargs):
         """Constructor.
 
         Args:
