@@ -54,22 +54,31 @@ class NodeStockPushButton(PieMenuButton, QPushButton):
         return self._key
 
     def _setup_style(self):
-        """Setup button style with white border and transparent background."""
+        """Setup button style with monochrome gradient design."""
         self.setStyleSheet(
             """
             QPushButton {
-                border: 2px solid white;
-                background-color: transparent;
-                color: lightgray;
+                background-color: #434343;
+                border: 2px solid #565656;
+                border-radius: 4px;
+                color: #D6D6D6;
                 font-weight: bold;
+                font-size: 1.2em;
+                padding: 4px;
             }
             QPushButton:hover {
-                background-color: rgba(82, 133, 166, 100);
-                border: 2px solid white;
+                background-color: #565656;
+                border: 2px solid #A5A5A5;
+                color: #FFFFFF;
             }
             QPushButton:pressed {
-                background-color: rgba(82, 133, 166, 180);
-                border: 2px solid darkgray;
+                background-color: #565656;
+                border: 2px solid #747474;
+            }
+            QPushButton:focus {
+                background-color: #565656;
+                border: 2px solid #A5A5A5;
+                color: #FFFFFF;
             }
         """
         )
@@ -90,18 +99,27 @@ class NodeStockPushButton(PieMenuButton, QPushButton):
             self.setStyleSheet(
                 """
                 QPushButton {
-                    border: 2px solid white;
-                    background-color: rgba(128, 128, 128, 100);
-                    color: white;
+                    background-color: #A5A5A5;
+                    border: 2px solid #D6D6D6;
+                    border-radius: 4px;
+                    color: #FFFFFF;
                     font-weight: bold;
+                    font-size: 1.2em;
+                    padding: 4px;
                 }
                 QPushButton:hover {
-                    background-color: rgba(82, 133, 166, 150);
-                    border: 2px solid white;
+                    background-color: #C0C0C0;
+                    border: 2px solid #E8E8E8;
+                    color: #FFFFFF;
                 }
                 QPushButton:pressed {
-                    background-color: rgba(82, 133, 166, 200);
-                    border: 2px solid darkgray;
+                    background-color: #A5A5A5;
+                    border: 2px solid #A5A5A5;
+                }
+                QPushButton:focus {
+                    background-color: #C0C0C0;
+                    border: 2px solid #E8E8E8;
+                    color: #FFFFFF;
                 }
             """
             )
