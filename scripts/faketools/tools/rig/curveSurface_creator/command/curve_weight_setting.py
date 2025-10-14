@@ -63,19 +63,25 @@ class CurveWeightSetting:
         self.total_length = self.nurbs_curve.get_length()
         self.skin_cluster = skin_cluster
 
-    def execute(self, method: str = METHOD_LINEAR, smooth_iterations: int = 10) -> None:
+    def execute(self, method: str = METHOD_LINEAR, smooth_iterations: int = 10, parent_influence_ratio: float = 0.0) -> None:
         """Calculate and apply weights to the curve.
 
         Args:
             method (str): Weight calculation method. One of: 'linear', 'ease', 'step'.
             smooth_iterations (int): Number of smoothing iterations.
+            parent_influence_ratio (float): Ratio of influence from parent node (0.0 to 1.0).
+                0.0 = no parent influence (default), 0.2 = 20% parent + 80% self, etc.
 
         Raises:
-            ValueError: If method is invalid.
+            ValueError: If method is invalid or parent_influence_ratio is out of range.
         """
         # Validate method
         if method not in VALID_WEIGHT_METHODS:
             raise ValueError(f"Invalid method '{method}'. Valid options are: {VALID_WEIGHT_METHODS}")
+
+        # Validate parent_influence_ratio
+        if not 0.0 <= parent_influence_ratio <= 1.0:
+            raise ValueError(f"Invalid parent_influence_ratio '{parent_influence_ratio}'. Must be between 0.0 and 1.0.")
 
         # Get influences
         infs = cmds.skinCluster(self.skin_cluster, q=True, inf=True)
@@ -93,7 +99,7 @@ class CurveWeightSetting:
         sorted_infs, sorted_lengths = zip(*sorted(zip(infs, inf_lengths, strict=False), key=lambda x: x[1]), strict=False)
 
         # Calculate weights
-        cv_weights = self._calculate_weights(cv_lengths, sorted_lengths, method)
+        cv_weights = self._calculate_weights(cv_lengths, sorted_lengths, method, parent_influence_ratio)
 
         # Apply smoothing if requested
         if smooth_iterations > 0:
@@ -107,13 +113,16 @@ class CurveWeightSetting:
 
         logger.debug(f"Applied weights to curve: {self.curve} using method '{method}'")
 
-    def _calculate_weights(self, cv_lengths: list[float], inf_lengths: list[float], method: str) -> list[list[float]]:
+    def _calculate_weights(
+        self, cv_lengths: list[float], inf_lengths: list[float], method: str, parent_influence_ratio: float = 0.0
+    ) -> list[list[float]]:
         """Calculate weights for each CV based on influence positions along the curve.
 
         Args:
             cv_lengths (list[float]): Length values of CVs along the curve.
             inf_lengths (list[float]): Length values of influences along the curve.
             method (str): Weight calculation method ('linear', 'ease', or 'step').
+            parent_influence_ratio (float): Ratio of influence from parent node (0.0 to 1.0).
 
         Returns:
             list[list[float]]: Weights for each CV (one list of weights per CV).
@@ -130,16 +139,19 @@ class CurveWeightSetting:
         for cv_length in cv_lengths:
             weights = [0.0] * num_infs
             weight_assigned = False
+            primary_influence_indices = []  # Track which influences received weight
 
             # Check if CV is between two influences
             for j in range(num_infs - 1):
                 # CV exactly at influence position
                 if cv_length == inf_lengths[j]:
                     weights[j] = 1.0
+                    primary_influence_indices.append(j)
                     weight_assigned = True
                     break
                 elif cv_length == inf_lengths[j + 1]:
                     weights[j + 1] = 1.0
+                    primary_influence_indices.append(j + 1)
                     weight_assigned = True
                     break
                 # CV between two influences
@@ -147,17 +159,9 @@ class CurveWeightSetting:
                     # Calculate interpolation factor (0 to 1)
                     t = (cv_length - inf_lengths[j]) / (inf_lengths[j + 1] - inf_lengths[j])
 
-                    # Apply weight calculation method
-                    if method == METHOD_LINEAR:
-                        weights[j] = 1.0 - t
-                        weights[j + 1] = t
-                    elif method == METHOD_EASE:
-                        eased_t = self._ease_weight(t, ease_type=EASE_INOUT)
-                        weights[j] = 1.0 - eased_t
-                        weights[j + 1] = eased_t
-                    elif method == METHOD_STEP:
-                        weights[j] = 1.0
-
+                    # Calculate interpolated weights using helper method
+                    weights[j], weights[j + 1] = self._interpolate_weight(t, method)
+                    primary_influence_indices.extend([j, j + 1])
                     weight_assigned = True
                     break
 
@@ -177,27 +181,25 @@ class CurveWeightSetting:
 
                     t = numerator / denominator
 
-                    # Apply weight calculation method
-                    if method == METHOD_LINEAR:
-                        weights[-1] = 1.0 - t
-                        weights[0] = t
-                    elif method == METHOD_EASE:
-                        eased_t = self._ease_weight(t, ease_type=EASE_INOUT)
-                        weights[-1] = 1.0 - eased_t
-                        weights[0] = eased_t
-                    elif method == METHOD_STEP:
-                        weights[-1] = 1.0
+                    # Calculate interpolated weights using helper method
+                    weights[-1], weights[0] = self._interpolate_weight(t, method)
+                    primary_influence_indices.extend([num_infs - 1, 0])
                 else:
                     # For open curves, clamp to nearest influence
                     if cv_length < inf_lengths[0]:
                         weights[0] = 1.0
+                        primary_influence_indices.append(0)
                     elif cv_length > inf_lengths[-1]:
                         weights[-1] = 1.0
+                        primary_influence_indices.append(num_infs - 1)
 
-            # Normalize weights
-            total_weight = sum(weights)
-            if total_weight > 0:
-                weights = [w / total_weight for w in weights]
+            # Apply parent influence to all primary influences that received weight
+            if parent_influence_ratio > 0.0:
+                for inf_index in primary_influence_indices:
+                    weights = self._apply_parent_influence(weights, inf_index, parent_influence_ratio, num_infs)
+
+            # Normalize weights using helper method
+            weights = self._normalize_weights(weights)
 
             cv_weights.append(weights)
 
@@ -289,6 +291,91 @@ class CurveWeightSetting:
         logger.debug(f"Smoothed weights over {iterations} iterations")
 
         return smooth_weights
+
+    def _get_parent_influence_index(self, inf_index: int, num_infs: int) -> int:
+        """Get the parent influence index for a given influence.
+
+        Args:
+            inf_index (int): Current influence index.
+            num_infs (int): Total number of influences.
+
+        Returns:
+            int: Parent influence index. For closed curves, wraps around to last index.
+                For open curves, returns -1 if no parent exists (first influence).
+        """
+        if inf_index == 0:
+            # First influence
+            if self.is_closed:
+                return num_infs - 1  # Wrap to last influence
+            else:
+                return -1  # No parent for open curve
+        else:
+            return inf_index - 1
+
+    @staticmethod
+    def _interpolate_weight(t: float, method: str) -> tuple[float, float]:
+        """Calculate interpolated weights for two influences.
+
+        Args:
+            t (float): Interpolation factor (0.0 to 1.0).
+            method (str): Weight calculation method ('linear', 'ease', or 'step').
+
+        Returns:
+            tuple[float, float]: (weight_for_first_influence, weight_for_second_influence).
+        """
+        if method == METHOD_LINEAR:
+            return (1.0 - t, t)
+        elif method == METHOD_EASE:
+            eased_t = CurveWeightSetting._ease_weight(t, ease_type=EASE_INOUT)
+            return (1.0 - eased_t, eased_t)
+        elif method == METHOD_STEP:
+            return (1.0, 0.0)
+        else:
+            return (1.0 - t, t)  # Fallback to linear
+
+    def _apply_parent_influence(self, weights: list[float], primary_inf_index: int, parent_ratio: float, num_infs: int) -> list[float]:
+        """Apply parent influence to weights.
+
+        Args:
+            weights (list[float]): Current weights (will be modified).
+            primary_inf_index (int): Index of the primary influence (the one receiving weight).
+            parent_ratio (float): Ratio of influence from parent (0.0 to 1.0).
+            num_infs (int): Total number of influences.
+
+        Returns:
+            list[float]: Modified weights with parent influence applied.
+        """
+        if parent_ratio <= 0.0:
+            return weights
+
+        parent_index = self._get_parent_influence_index(primary_inf_index, num_infs)
+        if parent_index < 0:
+            # No parent exists (first influence in open curve)
+            return weights
+
+        # Get the current weight for primary influence
+        primary_weight = weights[primary_inf_index]
+
+        # Redistribute weight between primary and parent
+        weights[primary_inf_index] = primary_weight * (1.0 - parent_ratio)
+        weights[parent_index] += primary_weight * parent_ratio
+
+        return weights
+
+    @staticmethod
+    def _normalize_weights(weights: list[float]) -> list[float]:
+        """Normalize weights to sum to 1.0.
+
+        Args:
+            weights (list[float]): Weights to normalize.
+
+        Returns:
+            list[float]: Normalized weights.
+        """
+        total_weight = sum(weights)
+        if total_weight > 0:
+            return [w / total_weight for w in weights]
+        return weights
 
     @staticmethod
     def _ease_weight(t: float, ease_type: str = EASE_IN) -> float:

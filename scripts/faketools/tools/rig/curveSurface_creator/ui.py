@@ -222,6 +222,17 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(self.smooth_level_spin_box, row, 1)
         row += 1
 
+        # Parent influence ratio
+        self.parent_influence_label = QLabel("Parent Influence:", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(self.parent_influence_label, row, 0)
+
+        self.parent_influence_spin_box = QDoubleSpinBox()
+        self.parent_influence_spin_box.setRange(0.0, 1.0)
+        self.parent_influence_spin_box.setSingleStep(0.1)
+        self.parent_influence_spin_box.setValue(0.0)
+        layout.addWidget(self.parent_influence_spin_box, row, 1)
+        row += 1
+
         # To skin cage
         self.to_skin_cage_label = QLabel("To Skin Cage:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(self.to_skin_cage_label, row, 0)
@@ -328,6 +339,7 @@ class MainWindow(BaseMainWindow):
         self.is_bind_checkbox.setChecked(settings_data.get("is_bind", False))
         self.bind_method_combo.setCurrentIndex(settings_data.get("bind_method_index", 0))
         self.smooth_level_spin_box.setValue(settings_data.get("smooth_levels", 0))
+        self.parent_influence_spin_box.setValue(settings_data.get("parent_influence_ratio", 0.0))
         self.to_skin_cage_checkbox.setChecked(settings_data.get("to_skin_cage", False))
         self.to_skin_cage_spinBox.setValue(settings_data.get("skin_cage_division_levels", 1))
 
@@ -361,6 +373,7 @@ class MainWindow(BaseMainWindow):
             "is_bind": self.is_bind_checkbox.isChecked(),
             "bind_method_index": self.bind_method_combo.currentIndex(),
             "smooth_levels": self.smooth_level_spin_box.value(),
+            "parent_influence_ratio": self.parent_influence_spin_box.value(),
             "to_skin_cage": self.to_skin_cage_checkbox.isChecked(),
             "skin_cage_division_levels": self.to_skin_cage_spinBox.value(),
         }
@@ -447,6 +460,9 @@ class MainWindow(BaseMainWindow):
 
         self.smooth_level_label.setEnabled(is_bind)
         self.smooth_level_spin_box.setEnabled(is_bind)
+
+        self.parent_influence_label.setEnabled(is_bind)
+        self.parent_influence_spin_box.setEnabled(is_bind)
 
         is_surface = self.object_type_combo.currentIndex() == 1  # Surface is index 1
         self.to_skin_cage_label.setEnabled(is_bind and is_surface)
@@ -586,8 +602,9 @@ class MainWindow(BaseMainWindow):
         # Bind Options
         method = self.bind_method_combo.currentText().lower()
         smooth_levels = self.smooth_level_spin_box.value()
+        parent_influence_ratio = self.parent_influence_spin_box.value()
 
-        bind_options = {"method": method, "smooth_iterations": smooth_levels}
+        bind_options = {"method": method, "smooth_iterations": smooth_levels, "parent_influence_ratio": parent_influence_ratio}
 
         # Create the curve surface
         result_objs = command.main(
