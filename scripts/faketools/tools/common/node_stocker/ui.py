@@ -7,7 +7,7 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ....lib import lib_name
-from ....lib_ui import maya_decorator, maya_qt, maya_ui, tool_data
+from ....lib_ui import maya_decorator, maya_dialog, maya_qt, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.qt_compat import QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QStatusBar, QStyle, Qt, QTabWidget, QVBoxLayout, QWidget
 from ....lib_ui.tool_settings import ToolSettingsManager
@@ -115,6 +115,7 @@ class MainWindow(BaseMainWindow):
 
         # Signals & Slots
         self.switch_buttons.button_selection_changed.connect(self._switch_tab)
+        self.tool_bar.clear_button_clicked.connect(self._clear_current_area)
         self.tool_bar.refresh_button_clicked.connect(self._refresh_window)
 
         # For updating the status bar
@@ -297,6 +298,41 @@ class MainWindow(BaseMainWindow):
         current_index = self.tab_widget.currentIndex()
         self._load_scene_data(current_index)
         self.name_space_box.refresh_name_spaces()
+
+    @maya_decorator.error_handler
+    def _clear_current_area(self) -> None:
+        """Clear all data in the current area with confirmation dialog."""
+        current_index = self.tab_widget.currentIndex()
+
+        # Show confirmation dialog
+        confirmed = maya_dialog.confirm_dialog(
+            title="Clear Area Data", message=f"Are you sure you want to clear all data in Area {current_index}?\nThis action cannot be undone."
+        )
+
+        if not confirmed:
+            logger.debug("Clear operation cancelled by user")
+            return
+
+        # Get the storage file for current area
+        scene_file_name = self._get_file_prefix(current_index)
+        storage_file = self.node_storage.get_file(scene_file_name)
+
+        # Get all keys from current data
+        keys_to_remove = list(self._current_scene_data.keys())
+
+        # Remove all nodes from storage
+        for key in keys_to_remove:
+            storage_file.remove_nodes(key)
+
+        # Clear current scene data
+        self._current_scene_data.clear()
+
+        # Reset all button colors in current tab
+        for button in self.button_grids[current_index]:
+            button.reset_stoked_color()
+
+        logger.info(f"Cleared all data in Area {current_index}")
+        cmds.inViewMessage(amg=f"Cleared all data in <hl>Area {current_index}</hl>", pos="topCenter", fade=True)
 
     @staticmethod
     def _get_node_length_label(node_count: int) -> str:

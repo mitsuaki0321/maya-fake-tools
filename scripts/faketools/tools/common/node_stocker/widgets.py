@@ -27,6 +27,7 @@ class ToolBar(QWidget):
     """Tool bar for the node stocker."""
 
     refresh_button_clicked = Signal()
+    clear_button_clicked = Signal()
 
     def __init__(self, parent=None):
         """Constructor."""
@@ -37,6 +38,19 @@ class ToolBar(QWidget):
 
         spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.main_layout.addItem(spacer)
+
+        self.clear_button = QPushButton()
+        icon = QIcon(icons.get_path("node_stocker_008"))
+        self.clear_button.setIcon(icon)
+        self.clear_button.setStyleSheet("""
+            QPushButton {
+                border: none;
+            }
+            QPushButton:pressed {
+                background-color: #5285a6;
+            }
+        """)
+        self.main_layout.addWidget(self.clear_button)
 
         self.refresh_button = QPushButton()
         icon = QIcon(icons.get_path("node_stocker_003"))
@@ -54,6 +68,7 @@ class ToolBar(QWidget):
         self.setLayout(self.main_layout)
 
         # Signals & Slots
+        self.clear_button.clicked.connect(self.clear_button_clicked.emit)
         self.refresh_button.clicked.connect(self.refresh_button_clicked.emit)
 
 
