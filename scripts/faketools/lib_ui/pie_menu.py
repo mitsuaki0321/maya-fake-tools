@@ -145,12 +145,12 @@ class PieMenu(QWidget):
             is_hovered = i == self.hovered_item
             if is_hovered:
                 fill_color = QColor(80, 120, 160, 220)
-                border_color = QColor(100, 140, 180)
-                text_color = QColor(Qt.GlobalColor.white)
+                border_color = QColor(255, 255, 255)  # White border for hover
+                text_color = QColor(255, 255, 255)  # White text for hover
             else:
                 fill_color = QColor(70, 70, 70, 180)
-                border_color = QColor(100, 100, 100)
-                text_color = QColor(200, 200, 200)
+                border_color = QColor(180, 180, 180)  # Medium-light gray for border
+                text_color = QColor(230, 230, 230)  # Very light gray for text
 
             # Create pie segment path
             path = QPainterPath()
@@ -222,7 +222,7 @@ class PieMenu(QWidget):
                     painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, label)
 
         # Draw radial lines between segments
-        painter.setPen(QPen(QColor(100, 100, 100), 2))
+        painter.setPen(QPen(QColor(180, 180, 180), 2))
         line_start_radius = self.inner_radius + 2  # Start outside center circle
         for i in range(self.segment_count):
             # Calculate boundary angle for each segment
@@ -238,7 +238,7 @@ class PieMenu(QWidget):
             painter.drawLine(QPointF(inner_x, inner_y), QPointF(outer_x, outer_y))
 
         # Draw center circle
-        painter.setPen(QPen(QColor(100, 100, 100), 2))
+        painter.setPen(QPen(QColor(180, 180, 180), 2))
         painter.setBrush(QBrush(QColor(60, 60, 60, 220)))
         painter.drawEllipse(center, self.inner_radius, self.inner_radius)
 
