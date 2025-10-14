@@ -65,8 +65,6 @@ class MainWindow(BaseMainWindow):
         self.tool_bar = ToolBar()
         # Disable vertical stretch - keep minimum height
         self.tool_bar.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        # Set maximum height to half of sizeHint for compact appearance
-        self.tool_bar.setMaximumHeight(int(self.tool_bar.sizeHint().height() * 0.5))
         layout.addWidget(self.tool_bar)
 
         self.central_layout.addLayout(layout)
