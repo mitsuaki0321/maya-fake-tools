@@ -53,6 +53,7 @@ class MainWindow(BaseMainWindow):
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)  # Remove spacing between widgets
 
         # Stock area switch buttons
         self.switch_buttons = StockAreaSwitchButtons(num_buttons=num_areas)
@@ -67,7 +68,7 @@ class MainWindow(BaseMainWindow):
         self.tool_bar.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout.addWidget(self.tool_bar)
 
-        self.central_layout.addLayout(layout)
+        self.central_layout.addLayout(layout, stretch=0)  # No vertical stretch for toolbar area
 
         # Tab Widget (hidden tabs)
         self.tab_widget = QTabWidget()
