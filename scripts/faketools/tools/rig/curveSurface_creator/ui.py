@@ -233,6 +233,14 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(self.parent_influence_spin_box, row, 1)
         row += 1
 
+        # Remove end influence
+        self.remove_end_label = QLabel("Remove End:", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(self.remove_end_label, row, 0)
+
+        self.remove_end_checkbox = QCheckBox()
+        layout.addWidget(self.remove_end_checkbox, row, 1)
+        row += 1
+
         # To skin cage
         self.to_skin_cage_label = QLabel("To Skin Cage:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(self.to_skin_cage_label, row, 0)
@@ -340,6 +348,7 @@ class MainWindow(BaseMainWindow):
         self.bind_method_combo.setCurrentIndex(settings_data.get("bind_method_index", 0))
         self.smooth_level_spin_box.setValue(settings_data.get("smooth_levels", 0))
         self.parent_influence_spin_box.setValue(settings_data.get("parent_influence_ratio", 0.0))
+        self.remove_end_checkbox.setChecked(settings_data.get("remove_end", False))
         self.to_skin_cage_checkbox.setChecked(settings_data.get("to_skin_cage", False))
         self.to_skin_cage_spinBox.setValue(settings_data.get("skin_cage_division_levels", 1))
 
@@ -374,6 +383,7 @@ class MainWindow(BaseMainWindow):
             "bind_method_index": self.bind_method_combo.currentIndex(),
             "smooth_levels": self.smooth_level_spin_box.value(),
             "parent_influence_ratio": self.parent_influence_spin_box.value(),
+            "remove_end": self.remove_end_checkbox.isChecked(),
             "to_skin_cage": self.to_skin_cage_checkbox.isChecked(),
             "skin_cage_division_levels": self.to_skin_cage_spinBox.value(),
         }
@@ -463,6 +473,9 @@ class MainWindow(BaseMainWindow):
 
         self.parent_influence_label.setEnabled(is_bind)
         self.parent_influence_spin_box.setEnabled(is_bind)
+
+        self.remove_end_label.setEnabled(is_bind)
+        self.remove_end_checkbox.setEnabled(is_bind)
 
         is_surface = self.object_type_combo.currentIndex() == 1  # Surface is index 1
         self.to_skin_cage_label.setEnabled(is_bind and is_surface)
@@ -603,8 +616,14 @@ class MainWindow(BaseMainWindow):
         method = self.bind_method_combo.currentText().lower()
         smooth_levels = self.smooth_level_spin_box.value()
         parent_influence_ratio = self.parent_influence_spin_box.value()
+        remove_end = self.remove_end_checkbox.isChecked()
 
-        bind_options = {"method": method, "smooth_iterations": smooth_levels, "parent_influence_ratio": parent_influence_ratio}
+        bind_options = {
+            "method": method,
+            "smooth_iterations": smooth_levels,
+            "parent_influence_ratio": parent_influence_ratio,
+            "remove_end": remove_end,
+        }
 
         # Create the curve surface
         result_objs = command.main(

@@ -69,8 +69,23 @@ def main(
             _bind_curve_surface(nodes, bind_curve)
             CurveWeightSetting(bind_curve).execute(**bind_options)
 
+            # Get influences from bind_curve after weight setting (may have removed end influence)
+            bind_curve_shape = validate_geometry(bind_curve, [OBJECT_TYPE_CURVE])
+            bind_curve_skin = lib_skinCluster.get_skinCluster(bind_curve_shape)
+            bind_curve_infs = set(cmds.skinCluster(bind_curve_skin, q=True, inf=True))
+
             _bind_curve_surface(nodes, obj)
             _transfer_curve_weights(bind_curve, obj)
+
+            # Remove influences from obj that are not in bind_curve (e.g., removed end influence)
+            obj_shape = validate_geometry(obj, [OBJECT_TYPE_SURFACE, OBJECT_TYPE_MESH])
+            obj_skin_cluster = lib_skinCluster.get_skinCluster(obj_shape)
+            obj_infs = cmds.skinCluster(obj_skin_cluster, q=True, inf=True)
+            for inf in obj_infs:
+                if inf not in bind_curve_infs:
+                    cmds.skinCluster(obj_skin_cluster, e=True, removeInfluence=inf)
+                    logger.debug(f"Removed influence from {obj}: {inf}")
+
             cmds.delete(bind_curve)
 
             if object_type == OBJECT_TYPE_SURFACE and to_skin_cage:

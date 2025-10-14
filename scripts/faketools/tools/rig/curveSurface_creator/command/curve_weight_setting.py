@@ -63,7 +63,9 @@ class CurveWeightSetting:
         self.total_length = self.nurbs_curve.get_length()
         self.skin_cluster = skin_cluster
 
-    def execute(self, method: str = METHOD_LINEAR, smooth_iterations: int = 10, parent_influence_ratio: float = 0.0) -> None:
+    def execute(
+        self, method: str = METHOD_LINEAR, smooth_iterations: int = 10, parent_influence_ratio: float = 0.0, remove_end: bool = False
+    ) -> None:
         """Calculate and apply weights to the curve.
 
         Args:
@@ -71,6 +73,8 @@ class CurveWeightSetting:
             smooth_iterations (int): Number of smoothing iterations.
             parent_influence_ratio (float): Ratio of influence from parent node (0.0 to 1.0).
                 0.0 = no parent influence (default), 0.2 = 20% parent + 80% self, etc.
+            remove_end (bool): For open curves, merge end influence weights to parent influence.
+                Only applies when curve is open (close=False). Default is False.
 
         Raises:
             ValueError: If method is invalid or parent_influence_ratio is out of range.
@@ -105,11 +109,21 @@ class CurveWeightSetting:
         if smooth_iterations > 0:
             cv_weights = self._smooth_weights(cv_weights, smooth_iterations)
 
+        # Merge end influence weights for open curves if requested
+        if remove_end:
+            cv_weights = self._merge_end_influence_weights(cv_weights)
+
         # Apply weights to curve
         cmds.skinCluster(self.skin_cluster, e=True, normalizeWeights=0)
         for i in range(len(cv_lengths)):
             cmds.skinPercent(self.skin_cluster, f"{self.curve}.cv[{i}]", transformValue=list(zip(sorted_infs, cv_weights[i], strict=False)))
         cmds.skinCluster(self.skin_cluster, e=True, normalizeWeights=1)
+
+        # Remove end influence from skinCluster if weights were merged
+        if remove_end and not self.is_closed:
+            end_influence = sorted_infs[-1]
+            cmds.skinCluster(self.skin_cluster, e=True, removeInfluence=end_influence)
+            logger.debug(f"Removed end influence from skinCluster: {end_influence}")
 
         logger.debug(f"Applied weights to curve: {self.curve} using method '{method}'")
 
@@ -291,6 +305,50 @@ class CurveWeightSetting:
         logger.debug(f"Smoothed weights over {iterations} iterations")
 
         return smooth_weights
+
+    def _merge_end_influence_weights(self, current_weights: list[list[float]]) -> list[list[float]]:
+        """Merge end influence weights to parent influence for open curves.
+
+        For open curves (FK joint chains), the end joint usually doesn't need weights.
+        This method transfers all weights from the last influence to the second-to-last influence.
+
+        Args:
+            current_weights (list[list[float]]): CV weights before merging.
+
+        Returns:
+            list[list[float]]: CV weights after merging end influence.
+        """
+        # Only process for open curves
+        if self.is_closed:
+            logger.debug("Skipping end influence merge (closed curve)")
+            return current_weights
+
+        num_infs = len(current_weights[0])
+
+        # Need at least 2 influences to merge
+        if num_infs < 2:
+            logger.debug("Skipping end influence merge (less than 2 influences)")
+            return current_weights
+
+        # Merge weights from last influence to second-to-last
+        merged_weights = []
+        for weights in current_weights:
+            new_weights = weights[:]  # Copy weights
+
+            # Add last influence's weight to second-to-last
+            new_weights[-2] += new_weights[-1]
+
+            # Zero out last influence
+            new_weights[-1] = 0.0
+
+            # Re-normalize (should be unnecessary if weights were normalized, but safe)
+            new_weights = self._normalize_weights(new_weights)
+
+            merged_weights.append(new_weights)
+
+        logger.debug("Merged end influence weights to parent influence")
+
+        return merged_weights
 
     def _get_parent_influence_index(self, inf_index: int, num_infs: int) -> int:
         """Get the parent influence index for a given influence.
