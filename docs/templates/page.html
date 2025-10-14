@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="$lang$">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$if(title)$$title$ - $endif$FakeTools Help</title>
+    <link rel="stylesheet" href="$root_path$css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    $if(description)$
+    <meta name="description" content="$description$">
+    $endif$
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="$root_path$index.html">$project_name$</a>
+            </div>
+            <nav class="language-switcher">
+                $if(lang_link)$
+                <a href="$lang_link$" class="lang-switch-btn">$lang_link_text$</a>
+                $endif$
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        $if(breadcrumb)$
+        <nav class="breadcrumb" aria-label="breadcrumb">
+            <ol>
+                <li><a href="$root_path$index.html">$home_text$</a></li>
+                $for(breadcrumb)$
+                <li$if(breadcrumb.active)$ class="active"$endif$>
+                    $if(breadcrumb.url)$
+                    <a href="$breadcrumb.url$">$breadcrumb.text$</a>
+                    $else$
+                    $breadcrumb.text$
+                    $endif$
+                </li>
+                $endfor$
+            </ol>
+        </nav>
+        $endif$
+
+        <div class="content-wrapper">
+            $if(toc)$
+            <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>$toc_title$</h2>
+                    $toc$
+                </div>
+            </aside>
+            $endif$
+
+            <main class="main-content">
+                $if(title)$
+                <h1 class="page-title">$title$</h1>
+                $endif$
+
+                $body$
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="$root_path$js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

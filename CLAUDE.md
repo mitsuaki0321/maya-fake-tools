@@ -969,6 +969,116 @@ def move_cvs_position(self):
 
 **Decision:** Defer until more tools are migrated and patterns are established
 
+## Documentation System
+
+The project includes a Pandoc-based multilingual documentation system in the `docs/` directory.
+
+### Overview
+
+- **Location**: `docs/` directory
+- **Build Tool**: `docs/build.py` - Python script using Pandoc for Markdown to HTML conversion
+- **Languages**: Japanese (ja) and English (en)
+- **Output**: Static HTML files in `docs/output/`
+- **Syntax Highlighting**: highlight.js (atom-one-dark theme) for Python, MEL, and JavaScript
+- **Design**: Dark theme with sticky header, responsive layout, and compact cards
+
+### Key Features
+
+- **Automatic Tool Discovery**: Integrates with ToolRegistry to discover available tools
+- **Multilingual Support**: Separate pages for Japanese and English with language switcher
+- **TOC Generation**: Automatic table of contents for each page
+- **Responsive Design**: Works across different screen resolutions
+- **Syntax Highlighting**: Code blocks are automatically highlighted using highlight.js
+
+### Project Structure
+
+```
+docs/
+├── build.py                 # Build script (Python)
+├── README.md               # Build and usage instructions
+├── css/
+│   └── style.css           # Main stylesheet (dark theme)
+├── js/
+│   └── main.js             # Client-side JavaScript
+├── templates/
+│   ├── index.html          # Template for index pages
+│   └── page.html           # Template for tool pages
+├── ja/                     # Japanese markdown sources
+│   ├── index.yaml          # Japanese index page metadata
+│   ├── rig/
+│   ├── model/
+│   ├── anim/
+│   └── common/
+├── en/                     # English markdown sources
+│   ├── index.yaml          # English index page metadata
+│   ├── rig/
+│   ├── model/
+│   ├── anim/
+│   └── common/
+└── output/                 # Generated HTML files
+    ├── index.html          # Japanese index
+    ├── index_en.html       # English index
+    ├── ja/                 # Japanese pages
+    └── en/                 # English pages
+```
+
+### Building Documentation
+
+```bash
+# From docs directory
+cd docs
+python build.py
+```
+
+**Note**: During build, you may see a warning: `"Warning: Could not load ToolRegistry: No module named 'maya'"`. This is expected when building outside of Maya environment and does not affect the build process. The system falls back to scanning markdown files directly.
+
+### Adding New Pages
+
+1. **Create markdown file**: `docs/{lang}/{category}/{tool_name}.md`
+2. **Add YAML front matter**:
+   ```yaml
+   ---
+   title: Tool Name
+   description: Brief description
+   lang: ja  # or "en"
+   category: rig  # or model/anim/common
+   ---
+   ```
+3. **Write content**: Use standard Markdown with code blocks
+4. **Build**: Run `python build.py` from docs directory
+
+### Design Specifications
+
+**Color Scheme (Dark Theme)**:
+- Background primary: `#1a1a1a`
+- Background secondary: `#242424`
+- Text primary: `#e8e8e8`
+- Text secondary: `#a0a0a0`
+- Accent primary: `#4a9eff`
+- Border color: `#3a3a3a`
+
+**Key Design Elements**:
+- Sticky header (fixed on scroll)
+- Compact tool cards (280px minimum width)
+- TOC sidebar (250px width, sticky positioning)
+- Code blocks with syntax highlighting
+- Responsive breakpoints: 1024px, 768px, 480px
+
+### Technologies Used
+
+- **Pandoc**: Markdown to HTML conversion with templates
+- **Python 3.11+**: Build script
+- **highlight.js 11.9.0**: Syntax highlighting (atom-one-dark theme)
+- **CSS Variables**: Theme customization
+- **YAML Front Matter**: Page metadata
+
+### Files Modified for Documentation System
+
+- `docs/build.py`: Build script with tool discovery and Pandoc integration
+- `docs/css/style.css`: Dark theme stylesheet with responsive design
+- `docs/templates/page.html`: Page template with highlight.js integration
+- `docs/README.md`: Simplified documentation focused on usage
+
 ## Additional Documentation
 
 - **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
