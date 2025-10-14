@@ -57,10 +57,14 @@ class MainWindow(BaseMainWindow):
         # Stock area switch buttons
         self.switch_buttons = StockAreaSwitchButtons(num_buttons=num_areas)
         self.switch_buttons.set_index(0)
+        # Disable vertical stretch - keep minimum height
+        self.switch_buttons.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout.addWidget(self.switch_buttons)
 
         # Tool bar
         self.tool_bar = ToolBar()
+        # Disable vertical stretch - keep minimum height
+        self.tool_bar.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout.addWidget(self.tool_bar)
 
         self.central_layout.addLayout(layout)
