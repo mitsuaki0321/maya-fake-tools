@@ -96,7 +96,7 @@ class StockAreaSwitchButtons(QWidget):
             self.button_group.addButton(radio_button, i)
             self.main_layout.addWidget(radio_button)
 
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.main_layout.addItem(spacer)
 
         self.setLayout(self.main_layout)
