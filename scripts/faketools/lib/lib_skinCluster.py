@@ -359,14 +359,17 @@ def get_skin_weights_custom(skinCluster: str, components: Sequence[str] | None =
     load_skinWeights_plugin()
 
     if all_components:
-        weights = cmds.skinWeightExport(skinCluster, allComponents=True)
+        bound_shapes = cmds.skinCluster(skinCluster, query=True, geometry=True) or []
+        if not bound_shapes:
+            cmds.error(f"No bound shapes found: {skinCluster}")
+        components = cmds.ls(f"{bound_shapes[0]}.cp[*]", fl=True)
     else:
         if not components:
             cmds.error("No components specified")
-        if not is_bound_to_skinCluster(skinCluster, components):
+        if not is_bound_to_skinCluster(skinCluster, components=components):
             cmds.error(f"Components are not bound to the skinCluster: {components}")
 
-        weights = cmds.skinWeightExport(skinCluster, components=components)
+    weights = cmds.skinWeightExport(skinCluster, components=components)
 
     return weights
 

@@ -17,10 +17,8 @@ SkinWeightExport
 Export skinCluster weights.
 
 -components (-cps): Specify the components to export.
--allComponents (-all): Export all components.
 
 cmds.skinWeightExport('skinCluster1', components=['pCube1.vtx[0:3]'])
-cmds.skinWeightExport('skinCluster1', all=True)
 
 
 SkinWeightImport
@@ -58,15 +56,7 @@ def maya_useNewAPI():
 
 
 class SkinWeightExport(OpenMaya.MPxCommand):
-    """Command for skinCluster export weights.
-
-    Notes:
-        - Specify the skinCluster node name as the first argument.
-        - If the components flag is specified, the weights of those components will be retrieved.
-        - The components specified by the components flag must be components of the geometry associated with the skinCluster.
-        - If the all flag is specified, the weights of all components of the geometry associated with the skinCluster will be retrieved. # noqa
-        - In this case, the components flag is ignored.
-    """
+    """Command for skinCluster export weights."""
 
     # Command name
     plugin_cmd_name = "skinWeightExport"
@@ -74,15 +64,12 @@ class SkinWeightExport(OpenMaya.MPxCommand):
     # Flags
     components_flag = "-cps"
     components_flag_long = "-components"
-    component_all_flag = "-all"
-    component_all_flag_long = "-allComponents"
 
     def __init__(self):
         OpenMaya.MPxCommand.__init__(self)
 
         self.skinCluster_name = None
         self.components = None
-        self.component_all = False
 
     @staticmethod
     def cmdCreator():
@@ -101,9 +88,6 @@ class SkinWeightExport(OpenMaya.MPxCommand):
         syntax.addFlag(cls.components_flag, cls.components_flag_long, OpenMaya.MSyntax.kString)
         syntax.makeFlagMultiUse(cls.components_flag)
 
-        # all components
-        syntax.addFlag(cls.component_all_flag, cls.component_all_flag_long, OpenMaya.MSyntax.kBoolean)
-
         syntax.enableQuery = False
         syntax.enableEdit = False
 
@@ -120,22 +104,30 @@ class SkinWeightExport(OpenMaya.MPxCommand):
         """
         arg_data = OpenMaya.MArgParser(self.syntax(), args)
 
+        # Get skinCluster name from arguments
         self.skinCluster_name = arg_data.commandArgumentString(0)
+        if not self.skinCluster_name:
+            OpenMaya.MGlobal.displayError("SkinCluster name is required.")
+            return False
 
-        if arg_data.isFlagSet(self.component_all_flag):
-            self.component_all = True
+        if not cmds.objExists(self.skinCluster_name):
+            OpenMaya.MGlobal.displayError(f"SkinCluster not found: {self.skinCluster_name}")
+            return False
+
+        if cmds.nodeType(self.skinCluster_name) != "skinCluster":
+            OpenMaya.MGlobal.displayError(f"Node is not a skinCluster: {self.skinCluster_name}")
+            return False
+
+        # Get components from arguments
+        if arg_data.isFlagSet(self.components_flag):
+            self.components = []
+            components_flag_num = arg_data.numberOfFlagUses(self.components_flag)
+            for i in range(components_flag_num):
+                arg_list = arg_data.getFlagArgumentList(self.components_flag, i).asString(0)
+                self.components.append(arg_list)
         else:
-            self.component_all = False
-
-            if arg_data.isFlagSet(self.components_flag):
-                self.components = []
-                components_flag_num = arg_data.numberOfFlagUses(self.components_flag)
-                for i in range(components_flag_num):
-                    arg_list = arg_data.getFlagArgumentList(self.components_flag, i).asString(0)
-                    self.components.append(arg_list)
-            else:
-                OpenMaya.MGlobal.displayError("-all or -components flag must be set.")
-                return False
+            OpenMaya.MGlobal.displayError("Components flag is required.")
+            return False
 
         return True
 
@@ -159,24 +151,35 @@ class SkinWeightExport(OpenMaya.MPxCommand):
 
         # Get weights
         # Get component
-        geometry_path = skinCluster_fn.getPathAtIndex(0)
+        component_data = get_components_from_name(self.components)
+        if not component_data:
+            OpenMaya.MGlobal.displayError("Failed to get components.")
+            return
 
-        if self.component_all:
-            components_obj = get_geometry_components(geometry_path)
-            if components_obj.isNull():
-                return
-        else:
-            component_data = get_components_from_name(self.components)
-            if not component_data:
-                return
+        components_path, components_obj = component_data
 
-            components_path, components_obj = component_data
+        # Check if components_path is included in the skinCluster
+        output_objs = skinCluster_fn.getOutputGeometry()
+        if not output_objs:
+            OpenMaya.MGlobal.displayError("No output geometry found in the skinCluster.")
+            return
 
-            if components_path != geometry_path:
-                OpenMaya.MGlobal.displayError("Component does not belong to the geometry.")
-                return
+        include_geometry = False
+        for output_obj in output_objs:
+            if not output_obj.hasFn(OpenMaya.MFn.kDagNode):
+                continue
 
-        weights, _ = skinCluster_fn.getWeights(geometry_path, components_obj)
+            output_path = OpenMaya.MFnDagNode(output_obj).getPath()
+            if components_path == output_path:
+                include_geometry = True
+                break
+
+        if not include_geometry:
+            OpenMaya.MGlobal.displayError("Components do not belong to the skinCluster geometry.")
+            return
+
+        # Get skinCluster weights
+        weights, _ = skinCluster_fn.getWeights(components_path, components_obj)
         self.setResult(weights)
 
     def redoIt(self):
