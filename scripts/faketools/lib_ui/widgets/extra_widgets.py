@@ -1,7 +1,21 @@
 """Extra widgets for the UI."""
 
 from .. import icons
-from ..qt_compat import QApplication, QColor, QDoubleSpinBox, QFrame, QIcon, QPixmap, QPushButton, QSizePolicy, Qt
+from ..qt_compat import (
+    QApplication,
+    QColor,
+    QDoubleSpinBox,
+    QFrame,
+    QHBoxLayout,
+    QIcon,
+    QLineEdit,
+    QPixmap,
+    QPushButton,
+    QSizePolicy,
+    Qt,
+    QWidget,
+    Signal,
+)
 
 
 class HorizontalSeparator(QFrame):
@@ -230,3 +244,73 @@ class ModifierSpinBox(QDoubleSpinBox):
             multiplier = self._shift_multiplier
 
         self.setValue(self.value() + self.singleStep() * steps * multiplier)
+
+
+class QLineEditWithButton(QWidget):
+    """Line edit widget with a button on the right side."""
+
+    button_clicked = Signal()
+
+    def __init__(self, parent=None):
+        """Initialize the line edit with button widget.
+
+        Args:
+            parent (QWidget | None): Parent widget. Defaults to None.
+        """
+        super().__init__(parent=parent)
+
+        # Create layout
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        # Create line edit
+        self._line_edit = QLineEdit()
+        layout.addWidget(self._line_edit)
+
+        # Create button
+        self._button = QPushButton()
+        self._button.clicked.connect(self.button_clicked.emit)
+        layout.addWidget(self._button)
+
+        self.setLayout(layout)
+
+    def set_button_text(self, text: str) -> None:
+        """Set the button text.
+
+        Args:
+            text (str): The button text.
+        """
+        self._button.setText(text)
+
+    def text(self) -> str:
+        """Get the line edit text.
+
+        Returns:
+            str: The line edit text.
+        """
+        return self._line_edit.text()
+
+    def setText(self, text: str) -> None:
+        """Set the line edit text.
+
+        Args:
+            text (str): The line edit text.
+        """
+        self._line_edit.setText(text)
+
+    def setPlaceholderText(self, text: str) -> None:
+        """Set the line edit placeholder text.
+
+        Args:
+            text (str): The placeholder text.
+        """
+        self._line_edit.setPlaceholderText(text)
+
+    def setReadOnly(self, read_only: bool) -> None:
+        """Set the line edit read-only state.
+
+        Args:
+            read_only (bool): Whether the line edit is read-only.
+        """
+        self._line_edit.setReadOnly(read_only)

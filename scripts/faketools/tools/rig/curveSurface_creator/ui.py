@@ -159,8 +159,17 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(self.surface_axis_label, row, 0)
 
         self.surface_axis_combo = QComboBox()
-        self.surface_axis_combo.addItems(["X", "Y", "Z", "Normal", "Binormal"])
+        self.surface_axis_combo.addItems(["X", "Y", "Z", "Normal", "Binormal", "Surface Normal", "Surface Binormal", "Mesh Normal", "Mesh Binormal"])
         layout.addWidget(self.surface_axis_combo, row, 1, 1, 2)
+        row += 1
+
+        # Reference Object (for Surface/Mesh Normal/Binormal)
+        self.reference_object_label = QLabel("Reference:", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        layout.addWidget(self.reference_object_label, row, 0)
+
+        self.reference_object_line_edit = extra_widgets.QLineEditWithButton()
+        self.reference_object_line_edit.set_button_text("<<")
+        layout.addWidget(self.reference_object_line_edit, row, 1, 1, 3)
         row += 1
 
         # Width and Width Center - Horizontal layout
@@ -241,14 +250,17 @@ class MainWindow(BaseMainWindow):
         # Signal & Slot
         self.is_bind_checkbox.stateChanged.connect(self._change_bind_mode)
         self.object_type_combo.currentIndexChanged.connect(self._change_surface_mode)
+        self.surface_axis_combo.currentIndexChanged.connect(self._change_reference_object_mode)
         self.to_skin_cage_checkbox.stateChanged.connect(self.to_skin_cage_div_label.setEnabled)
         self.to_skin_cage_checkbox.stateChanged.connect(self.to_skin_cage_spinBox.setEnabled)
+        self.reference_object_line_edit.button_clicked.connect(self._set_reference_object_from_selection)
 
         create_button.clicked.connect(self.create_curve_surface)
 
         # Initialize UI state
         self._change_bind_mode()
         self._change_surface_mode()
+        self._change_reference_object_mode()
 
     def _add_menu(self):
         """Add the menu bar actions."""
@@ -312,6 +324,7 @@ class MainWindow(BaseMainWindow):
         self.surface_axis_combo.setCurrentIndex(settings_data.get("surface_axis_index", 0))
         self.surface_width_spin_box.setValue(settings_data.get("surface_width", 1.0))
         self.surface_width_center_spin_box.setValue(settings_data.get("surface_width_center", 0.5))
+        self.reference_object_line_edit.setText(settings_data.get("reference_object", ""))
         self.is_bind_checkbox.setChecked(settings_data.get("is_bind", False))
         self.bind_method_combo.setCurrentIndex(settings_data.get("bind_method_index", 0))
         self.smooth_level_spin_box.setValue(settings_data.get("smooth_levels", 0))
@@ -344,6 +357,7 @@ class MainWindow(BaseMainWindow):
             "surface_axis_index": self.surface_axis_combo.currentIndex(),
             "surface_width": self.surface_width_spin_box.value(),
             "surface_width_center": self.surface_width_center_spin_box.value(),
+            "reference_object": self.reference_object_line_edit.text(),
             "is_bind": self.is_bind_checkbox.isChecked(),
             "bind_method_index": self.bind_method_combo.currentIndex(),
             "smooth_levels": self.smooth_level_spin_box.value(),
@@ -463,6 +477,52 @@ class MainWindow(BaseMainWindow):
         self.to_skin_cage_div_label.setEnabled(is_surface and is_bind and is_to_skin_cage)
         self.to_skin_cage_spinBox.setEnabled(is_surface and is_bind and is_to_skin_cage)
 
+    def _change_reference_object_mode(self):
+        """Update UI state based on surface axis selection."""
+        axis_index = self.surface_axis_combo.currentIndex()
+        # Surface Normal=5, Surface Binormal=6, Mesh Normal=7, Mesh Binormal=8
+        needs_reference = axis_index >= 5
+
+        self.reference_object_label.setEnabled(needs_reference)
+        self.reference_object_line_edit.setEnabled(needs_reference)
+
+    def _set_reference_object_from_selection(self):
+        """Set reference object from current Maya selection with node type validation."""
+        selection = cmds.ls(selection=True, transforms=True)
+        if not selection:
+            cmds.warning("Select a single transform to set as reference.")
+            return
+
+        selected_node = selection[0]
+
+        # Get current axis type index
+        axis_index = self.surface_axis_combo.currentIndex()
+
+        # Determine required node type based on axis
+        # Surface Normal=5, Surface Binormal=6, Mesh Normal=7, Mesh Binormal=8
+        required_type = None
+        if axis_index in [5, 6]:  # Surface Normal/Binormal
+            required_type = "nurbsSurface"
+        elif axis_index in [7, 8]:  # Mesh Normal/Binormal
+            required_type = "mesh"
+
+        if required_type:
+            # Get shape node
+            shapes = cmds.listRelatives(selected_node, shapes=True, noIntermediate=True)
+            if not shapes:
+                cmds.warning("Invalid Node", f"Selected node '{selected_node}' has no shape node.")
+                return
+
+            # Check if shape is the required type
+            shape_type = cmds.nodeType(shapes[0])
+            if shape_type != required_type:
+                cmds.warning(f"Invalid node type: '{selected_node}' is '{shape_type}', expected '{required_type}'")
+                return
+
+        # Valid node - set in line edit
+        self.reference_object_line_edit.setText(shapes[0])
+        logger.debug(f"Set reference object: {shapes[0]}")
+
     @error_handler
     @undo_chunk("Create Curve Surface")
     def create_curve_surface(self):
@@ -495,7 +555,22 @@ class MainWindow(BaseMainWindow):
         if surface_width == 0.0:
             surface_width = 1e-3
 
-        surface_axis = self.surface_axis_combo.currentText().lower()
+        # Convert UI text to axis constant
+        axis_map = {
+            "x": "x",
+            "y": "y",
+            "z": "z",
+            "normal": "normal",
+            "binormal": "binormal",
+            "surface normal": "surfaceNormal",
+            "surface binormal": "surfaceBinormal",
+            "mesh normal": "meshNormal",
+            "mesh binormal": "meshBinormal",
+        }
+        surface_axis = axis_map[self.surface_axis_combo.currentText().lower()]
+
+        # Get reference object
+        reference_object = self.reference_object_line_edit.text().strip() or None
 
         create_options = {
             "degree": degree,
@@ -505,6 +580,7 @@ class MainWindow(BaseMainWindow):
             "surface_width": surface_width,
             "surface_width_center": surface_width_center,
             "surface_axis": surface_axis,
+            "reference_object": reference_object,
         }
 
         # Bind Options

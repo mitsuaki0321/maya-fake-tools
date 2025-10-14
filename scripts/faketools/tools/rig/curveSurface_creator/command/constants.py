@@ -19,7 +19,21 @@ AXIS_Y = "y"
 AXIS_Z = "z"
 AXIS_NORMAL = "normal"
 AXIS_BINORMAL = "binormal"
-VALID_SURFACE_AXES = [AXIS_X, AXIS_Y, AXIS_Z, AXIS_NORMAL, AXIS_BINORMAL]
+AXIS_SURFACE_NORMAL = "surfaceNormal"
+AXIS_SURFACE_BINORMAL = "surfaceBinormal"
+AXIS_MESH_NORMAL = "meshNormal"
+AXIS_MESH_BINORMAL = "meshBinormal"
+VALID_SURFACE_AXES = [
+    AXIS_X,
+    AXIS_Y,
+    AXIS_Z,
+    AXIS_NORMAL,
+    AXIS_BINORMAL,
+    AXIS_SURFACE_NORMAL,
+    AXIS_SURFACE_BINORMAL,
+    AXIS_MESH_NORMAL,
+    AXIS_MESH_BINORMAL,
+]
 
 # Weight calculation methods
 METHOD_LINEAR = "linear"
