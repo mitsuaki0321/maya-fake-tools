@@ -7,7 +7,7 @@ import maya.cmds as cmds
 
 from ....lib_ui import BaseFramelessWindow, icons, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.qt_compat import QIcon, QPushButton, QSlider, Qt, Signal
+from ....lib_ui.qt_compat import QCursor, QEvent, QIcon, QPushButton, QSizePolicy, QSlider, Qt, Signal
 from ....lib_ui.widgets import extra_widgets
 from .command import SkinWeightsCopyPaste
 
@@ -30,6 +30,9 @@ class MainWindow(BaseFramelessWindow):
             window_title="Skin Weights Copy/Paste",
             central_layout="horizontal",
         )
+
+        # Enable window resizing for frameless window
+        self._enable_window_resize()
 
         self.skinWeights_copy_paste = SkinWeightsCopyPaste()
         self.is_value_changed = False
@@ -96,6 +99,220 @@ class MainWindow(BaseFramelessWindow):
         height = self.minimumSizeHint().height()
         self.resize(width, height)
 
+        # Variables for resize handling
+        self._resize_margin = 6  # Pixels from edge to trigger resize
+        self._resize_direction = None
+        self._resize_start_pos = None
+        self._resize_start_geometry = None
+
+        # Enable mouse tracking for all widgets to detect cursor position
+        self._enable_mouse_tracking_for_children()
+
+    def _enable_window_resize(self):
+        """Enable window resizing for frameless window."""
+        # Set size policy to allow resizing
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.setMouseTracking(True)
+
+    def _enable_mouse_tracking_for_children(self):
+        """Enable mouse tracking for all child widgets."""
+        # Enable for main window
+        self.setMouseTracking(True)
+
+        # Enable for all child widgets recursively and install event filter
+        for widget in self.findChildren(object):
+            if hasattr(widget, 'setMouseTracking'):
+                widget.setMouseTracking(True)
+                widget.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        """Filter events from child widgets to update cursor on window edges.
+
+        Args:
+            obj: The object that generated the event
+            event: The event
+
+        Returns:
+            bool: True if event was handled, False otherwise
+        """
+        # Get move event type constant (compatible with PySide2/6)
+        try:
+            # PySide6
+            mouse_move = QEvent.Type.MouseMove
+        except AttributeError:
+            # PySide2
+            mouse_move = QEvent.MouseMove
+
+        if event.type() == mouse_move:
+            # Convert child widget position to window coordinates
+            window_pos = self.mapFromGlobal(obj.mapToGlobal(event.pos()))
+
+            # Check if near window edge
+            resize_dir = self._get_resize_direction(window_pos)
+            if resize_dir:
+                cursor_shape = self._get_cursor_shape(resize_dir)
+                self.setCursor(QCursor(cursor_shape))
+            else:
+                self.unsetCursor()
+
+        return super().eventFilter(obj, event)
+
+    def _get_resize_direction(self, pos):
+        """Get resize direction based on mouse position.
+
+        Args:
+            pos: Mouse position
+
+        Returns:
+            str or None: Resize direction ('left', 'right', 'top', 'bottom', 'topleft', 'topright', 'bottomleft', 'bottomright')
+        """
+        rect = self.rect()
+        margin = self._resize_margin
+
+        on_left = pos.x() <= margin
+        on_right = pos.x() >= rect.width() - margin
+        on_top = pos.y() <= margin
+        on_bottom = pos.y() >= rect.height() - margin
+
+        # Corners have priority
+        if on_top and on_left:
+            return "topleft"
+        if on_top and on_right:
+            return "topright"
+        if on_bottom and on_left:
+            return "bottomleft"
+        if on_bottom and on_right:
+            return "bottomright"
+
+        # Edges
+        if on_left:
+            return "left"
+        if on_right:
+            return "right"
+        if on_top:
+            return "top"
+        if on_bottom:
+            return "bottom"
+
+        return None
+
+    def mousePressEvent(self, event):
+        """Handle mouse press for dragging and resizing."""
+        # Get global position (compatible with PySide2/6)
+        try:
+            # PySide6
+            global_pos = event.globalPosition().toPoint()
+        except AttributeError:
+            # PySide2
+            global_pos = event.globalPos()
+
+        # Get left button constant (compatible with PySide2/6)
+        left_button = getattr(Qt, "LeftButton", None) or Qt.MouseButton.LeftButton
+
+        if event.button() == left_button:
+            # Check for resize
+            resize_dir = self._get_resize_direction(event.pos())
+            if resize_dir:
+                self._resize_direction = resize_dir
+                self._resize_start_pos = global_pos
+                self._resize_start_geometry = self.geometry()
+                event.accept()
+                return
+
+        # Call parent implementation for window dragging
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Handle mouse move for dragging, resizing, and cursor changes."""
+        # Get global position (compatible with PySide2/6)
+        try:
+            # PySide6
+            global_pos = event.globalPosition().toPoint()
+        except AttributeError:
+            # PySide2
+            global_pos = event.globalPos()
+
+        # Get left button constant (compatible with PySide2/6)
+        left_button = getattr(Qt, "LeftButton", None) or Qt.MouseButton.LeftButton
+
+        # Handle active resize
+        if event.buttons() == left_button and self._resize_direction and self._resize_start_pos:
+            delta = global_pos - self._resize_start_pos
+            new_geometry = self._resize_start_geometry
+
+            # Calculate new geometry based on resize direction
+            if "left" in self._resize_direction:
+                new_x = new_geometry.x() + delta.x()
+                new_width = new_geometry.width() - delta.x()
+                if new_width >= self.minimumWidth():
+                    self.setGeometry(new_x, new_geometry.y(), new_width, new_geometry.height())
+                    if "top" not in self._resize_direction and "bottom" not in self._resize_direction:
+                        return
+
+            if "right" in self._resize_direction:
+                new_width = new_geometry.width() + delta.x()
+                self.resize(new_width, self.height())
+                if "top" not in self._resize_direction and "bottom" not in self._resize_direction:
+                    return
+
+            if "top" in self._resize_direction:
+                new_y = new_geometry.y() + delta.y()
+                new_height = new_geometry.height() - delta.y()
+                if new_height >= self.minimumHeight():
+                    self.setGeometry(self.x(), new_y, self.width(), new_height)
+                    return
+
+            if "bottom" in self._resize_direction:
+                new_height = new_geometry.height() + delta.y()
+                self.resize(self.width(), new_height)
+                return
+
+            event.accept()
+            return
+
+        # Update cursor based on position (when not dragging)
+        if not event.buttons():
+            resize_dir = self._get_resize_direction(event.pos())
+            if resize_dir:
+                # Set appropriate cursor
+                cursor_shape = self._get_cursor_shape(resize_dir)
+                self.setCursor(QCursor(cursor_shape))
+                event.accept()
+                return
+            else:
+                self.unsetCursor()
+
+        # Call parent implementation for window dragging
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Handle mouse release to end dragging or resizing."""
+        self._resize_direction = None
+        self._resize_start_pos = None
+        self._resize_start_geometry = None
+        super().mouseReleaseEvent(event)
+
+    def _get_cursor_shape(self, direction):
+        """Get cursor shape for resize direction.
+
+        Args:
+            direction (str): Resize direction
+
+        Returns:
+            Qt.CursorShape: Cursor shape
+        """
+        # Handle both PySide2 and PySide6 cursor constants
+        if direction == "left" or direction == "right":
+            return getattr(Qt, "SizeHorCursor", None) or Qt.CursorShape.SizeHorCursor
+        elif direction == "top" or direction == "bottom":
+            return getattr(Qt, "SizeVerCursor", None) or Qt.CursorShape.SizeVerCursor
+        elif direction == "topleft" or direction == "bottomright":
+            return getattr(Qt, "SizeFDiagCursor", None) or Qt.CursorShape.SizeFDiagCursor
+        elif direction == "topright" or direction == "bottomleft":
+            return getattr(Qt, "SizeBDiagCursor", None) or Qt.CursorShape.SizeBDiagCursor
+        else:
+            return getattr(Qt, "ArrowCursor", None) or Qt.CursorShape.ArrowCursor
+
     def _on_slider_value_changed(self):
         """Slot for the slider value changed."""
         if not self.is_value_changed:
@@ -117,8 +334,12 @@ class MainWindow(BaseFramelessWindow):
 
     @maya_decorator.undo_chunk("Skin Weights Copy Paste")
     @maya_decorator.error_handler
-    def _change_spin_box_value(self):
-        """Change the spin box value."""
+    def _change_spin_box_value(self, value):
+        """Change the spin box value.
+
+        Args:
+            value (float): The new spin box value (not used, provided by valueChanged signal).
+        """
         self.__paste_skinWeights_blend()
 
     def __paste_skinWeights_blend(self):
@@ -134,15 +355,21 @@ class MainWindow(BaseFramelessWindow):
         self.blend_slider.setValue(100)
 
     def _update_field_slider(self, value):
-        """Update the field and slider."""
+        """Update the field and slider.
+
+        Args:
+            value: The new value from the sender (0.0-1.0 from spin box, 0-100 from slider).
+        """
         sender = self.sender()
         if sender == self.blend_spin_box:
+            # Spin box sends 0.0-1.0, convert to 0-100 for slider
             self.blend_slider.blockSignals(True)
-            self.blend_slider.setValue(value * 100)
+            self.blend_slider.setValue(int(value * 100))
             self.blend_slider.blockSignals(False)
         else:
+            # Slider sends 0-100, convert to 0.0-1.0 for spin box
             self.blend_spin_box.blockSignals(True)
-            self.blend_spin_box.setValue(value)
+            self.blend_spin_box.setValue(value / 100.0)
             self.blend_spin_box.blockSignals(False)
 
     def _clear_destination_clipboard(self):
