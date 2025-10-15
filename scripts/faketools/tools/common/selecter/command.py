@@ -4,6 +4,7 @@ Duplicate and rename the node.
 
 from logging import getLogger
 
+import maya.api.OpenMaya as om
 import maya.cmds as cmds
 
 from ....lib import lib_name, lib_shape
@@ -137,25 +138,49 @@ def _rename_dag_nodes(node_names: list[str], new_names: list[str]) -> list[str]:
     """Rename the dag nodes.
 
     Args:
-        nodes (list[str]): The target node list.
+        node_names (list[str]): The target node list.
         new_names (list[str]): The new name list.
 
     Returns:
         list[str]: The renamed node list.
+
+    Notes:
+        - Uses Maya API to maintain object references during hierarchy changes.
+        - Uses cmds.rename() for undo support.
+        - Retrieves current path before each rename to handle parent path changes.
     """
-    node_names = cmds.ls(node_names, long=True)
+    # Get MObjects for all nodes first (to handle hierarchy changes)
+    sel = om.MSelectionList()
+    for node_name in node_names:
+        sel.add(node_name)
+
+    # Store MObjects
+    mobjects = []
+    for i in range(sel.length()):
+        dag_path = sel.getDagPath(i)
+        mobjects.append(dag_path.node())
 
     result_nodes = []
-    for node_name, new_name in zip(node_names, new_names, strict=False):
-        result_name = cmds.rename(node_name, new_name)
+    for mobject, new_name in zip(mobjects, new_names, strict=False):
+        # Get current path from MObject (updates even if parent renamed)
+        dag_path = om.MDagPath.getAPathTo(mobject)
+        current_path = dag_path.fullPathName()
+        dag_node_fn = om.MFnDagNode(dag_path)
+
+        # Get old name for logging
+        old_local_name = dag_node_fn.name()
+
+        # Rename using cmds (for undo support)
+        result_name = cmds.rename(current_path, new_name)
         result_nodes.append(result_name)
 
-        local_node_name = node_name.split("|")[-1]
-        local_new_name = result_name.split("|")[-1]
-        if local_node_name == local_new_name:
-            logger.debug(f"The name has not changed before and after: {local_node_name} -> {local_new_name}")
+        # Get new name for logging
+        new_local_name = result_name.split("|")[-1]
+
+        if old_local_name == new_local_name:
+            logger.debug(f"The name has not changed before and after: {old_local_name} -> {new_local_name}")
         else:
-            logger.debug(f"Renamed: {local_node_name} -> {local_new_name}")
+            logger.debug(f"Renamed: {old_local_name} -> {new_local_name}")
 
     return result_nodes
 
