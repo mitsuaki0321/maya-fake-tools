@@ -8,21 +8,9 @@ import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.qt_compat import (
-    QCheckBox,
-    QDoubleValidator,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSizePolicy,
-    QSlider,
-    Qt,
-    QVBoxLayout,
-    QWidget,
-)
+from .....lib_ui.qt_compat import QCheckBox, QHBoxLayout, QLabel, QPushButton, Qt, QVBoxLayout, QWidget
 from .....lib_ui.tool_settings import ToolSettingsManager
-from .....lib_ui.widgets import extra_widgets
+from .....lib_ui.widgets import FieldSliderWidget, extra_widgets
 
 logger = getLogger(__name__)
 
@@ -58,15 +46,8 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         label = QLabel("Blend:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(label)
 
-        self.blend_field = QLineEdit()
-        self.blend_field.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        self.blend_field.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.blend_field.setFixedWidth(self.blend_field.sizeHint().width() / 2.0)
-        layout.addWidget(self.blend_field)
-
-        self.blend_slider = QSlider(Qt.Horizontal)
-        self.blend_slider.setRange(0, 100)
-        layout.addWidget(self.blend_slider)
+        self.blend_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
+        layout.addWidget(self.blend_widget)
 
         self.main_layout.addLayout(layout)
 
@@ -93,38 +74,7 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         self.setLayout(self.main_layout)
 
         # Signal & Slot
-        self.blend_field.editingFinished.connect(self._on_blend_field_finished)
-        self.blend_slider.valueChanged.connect(self._on_blend_slider_changed)
         execute_button.clicked.connect(self.copy_skin_weights)
-
-    def _on_blend_field_finished(self):
-        """Handle blend field editing finished (Enter key or focus out)."""
-        text = self.blend_field.text()
-        if text:
-            try:
-                value = float(text)
-                # Clamp value to valid range
-                value = max(0.0, min(1.0, value))
-                # Block signals to prevent circular updates
-                self.blend_slider.blockSignals(True)
-                self.blend_slider.setValue(int(value * 100))
-                self.blend_slider.blockSignals(False)
-                # Update field with clamped value
-                self.blend_field.setText(str(value))
-            except ValueError:
-                # Reset to slider's current value if invalid
-                self.blend_field.setText(str(self.blend_slider.value() / 100))
-
-    def _on_blend_slider_changed(self, value):
-        """Handle blend slider value changed.
-
-        Args:
-            value (int): Slider value (0-100)
-        """
-        # Block signals to prevent circular updates
-        self.blend_field.blockSignals(True)
-        self.blend_field.setText(str(value / 100))
-        self.blend_field.blockSignals(False)
 
     @maya_decorator.undo_chunk("Copy Skin Weights Custom")
     @maya_decorator.error_handler
@@ -141,7 +91,7 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         if not src_skinCluster:
             cmds.error(f"No skinCluster found: {src_shape}")
 
-        blend_value = float(self.blend_field.text())
+        blend_value = self.blend_widget.value()
 
         only_unlock_inf = self.only_unlock_inf_checkBox.isChecked()
         reference_orig = self.reference_orig_checkBox.isChecked()
@@ -169,7 +119,7 @@ class SkinWeightsCopyCustomWidgets(QWidget):
             dict: Settings data
         """
         return {
-            "blend_value": self.blend_field.text(),
+            "blend_value": self.blend_widget.value(),
             "only_unlock_inf": self.only_unlock_inf_checkBox.isChecked(),
             "reference_orig": self.reference_orig_checkBox.isChecked(),
             "add_missing_infs": self.add_missing_infs_checkBox.isChecked(),
@@ -185,14 +135,12 @@ class SkinWeightsCopyCustomWidgets(QWidget):
             blend_value = settings_data["blend_value"]
             # Handle empty string or invalid values with default of 1.0
             if blend_value == "" or blend_value is None:
-                blend_value = "1.0"
+                blend_value = 1.0
             try:
-                self.blend_field.setText(str(blend_value))
-                self.blend_slider.setValue(float(blend_value) * 100)
+                self.blend_widget.setValue(float(blend_value))
             except (ValueError, TypeError):
                 # If conversion fails, use default value
-                self.blend_field.setText("1.0")
-                self.blend_slider.setValue(100)
+                self.blend_widget.setValue(1.0)
         if "only_unlock_inf" in settings_data:
             self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])
         if "reference_orig" in settings_data:

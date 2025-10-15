@@ -8,22 +8,9 @@ import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.qt_compat import (
-    QCheckBox,
-    QDoubleValidator,
-    QGridLayout,
-    QIntValidator,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSizePolicy,
-    QSlider,
-    Qt,
-    QVBoxLayout,
-    QWidget,
-)
+from .....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QPushButton, Qt, QVBoxLayout, QWidget
 from .....lib_ui.tool_settings import ToolSettingsManager
-from .....lib_ui.widgets import extra_widgets
+from .....lib_ui.widgets import FieldSliderWidget, extra_widgets
 from ..relax_weight import LaplacianSkinWeights
 
 logger = getLogger(__name__)
@@ -59,33 +46,17 @@ class SkinWeightsRelaxWidgets(QWidget):
         label = QLabel("Iterations:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(label, 0, 0)
 
-        self.iterations_field = QLineEdit("1")
-        self.iterations_field.setValidator(QIntValidator(0, 50))
-        self.iterations_field.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.iterations_field.setFixedWidth(self.iterations_field.sizeHint().width() / 2.0)
-        layout.addWidget(self.iterations_field, 0, 1)
-
-        self.iterations_slider = QSlider(Qt.Horizontal)
-        self.iterations_slider.setRange(0, 50)
-        self.iterations_slider.setValue(1)
-        layout.addWidget(self.iterations_slider, 0, 2)
+        self.iterations_widget = FieldSliderWidget(min_value=0, max_value=50, default_value=1, value_type="int")
+        layout.addWidget(self.iterations_widget, 0, 1)
 
         # After Blend
         label = QLabel("After Blend:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(label, 1, 0)
 
-        self.after_blend_field = QLineEdit("1.0")
-        self.after_blend_field.setValidator(QDoubleValidator(0.0, 1.0, 2))
-        self.after_blend_field.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.after_blend_field.setFixedWidth(self.after_blend_field.sizeHint().width() / 2.0)
-        layout.addWidget(self.after_blend_field, 1, 1)
+        self.after_blend_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
+        layout.addWidget(self.after_blend_widget, 1, 1)
 
-        self.after_blend_slider = QSlider(Qt.Horizontal)
-        self.after_blend_slider.setRange(0, 100)
-        self.after_blend_slider.setValue(100)
-        layout.addWidget(self.after_blend_slider, 1, 2)
-
-        layout.setColumnStretch(2, 1)
+        layout.setColumnStretch(1, 1)
 
         self.main_layout.addLayout(layout)
 
@@ -105,70 +76,7 @@ class SkinWeightsRelaxWidgets(QWidget):
         self.setLayout(self.main_layout)
 
         # Signal & Slot
-        self.iterations_field.editingFinished.connect(self._on_iterations_field_finished)
-        self.iterations_slider.valueChanged.connect(self._on_iterations_slider_changed)
-        self.after_blend_field.editingFinished.connect(self._on_after_blend_field_finished)
-        self.after_blend_slider.valueChanged.connect(self._on_after_blend_slider_changed)
-
         execute_button.clicked.connect(self.relax_weights)
-
-    def _on_iterations_field_finished(self):
-        """Handle iterations field editing finished (Enter key or focus out)."""
-        text = self.iterations_field.text()
-        if text:
-            try:
-                value = int(text)
-                # Clamp value to valid range
-                value = max(0, min(50, value))
-                # Block signals to prevent circular updates
-                self.iterations_slider.blockSignals(True)
-                self.iterations_slider.setValue(value)
-                self.iterations_slider.blockSignals(False)
-                # Update field with clamped value
-                self.iterations_field.setText(str(value))
-            except ValueError:
-                # Reset to slider's current value if invalid
-                self.iterations_field.setText(str(self.iterations_slider.value()))
-
-    def _on_iterations_slider_changed(self, value):
-        """Handle iterations slider value changed.
-
-        Args:
-            value (int): Slider value (0-50)
-        """
-        # Block signals to prevent circular updates
-        self.iterations_field.blockSignals(True)
-        self.iterations_field.setText(str(value))
-        self.iterations_field.blockSignals(False)
-
-    def _on_after_blend_field_finished(self):
-        """Handle after blend field editing finished (Enter key or focus out)."""
-        text = self.after_blend_field.text()
-        if text:
-            try:
-                value = float(text)
-                # Clamp value to valid range
-                value = max(0.0, min(1.0, value))
-                # Block signals to prevent circular updates
-                self.after_blend_slider.blockSignals(True)
-                self.after_blend_slider.setValue(int(value * 100))
-                self.after_blend_slider.blockSignals(False)
-                # Update field with clamped value
-                self.after_blend_field.setText(str(value))
-            except ValueError:
-                # Reset to slider's current value if invalid
-                self.after_blend_field.setText(str(self.after_blend_slider.value() / 100))
-
-    def _on_after_blend_slider_changed(self, value):
-        """Handle after blend slider value changed.
-
-        Args:
-            value (int): Slider value (0-100)
-        """
-        # Block signals to prevent circular updates
-        self.after_blend_field.blockSignals(True)
-        self.after_blend_field.setText(str(value / 100))
-        self.after_blend_field.blockSignals(False)
 
     @maya_decorator.undo_chunk("Relax Skin Weights")
     @maya_decorator.error_handler
@@ -186,8 +94,8 @@ class SkinWeightsRelaxWidgets(QWidget):
         if not skinCluster:
             cmds.error(f"Object is not bound to a skinCluster: {shapes[0]}")
 
-        iterations = int(self.iterations_field.text())
-        after_blend = float(self.after_blend_field.text())
+        iterations = int(self.iterations_widget.value())
+        after_blend = float(self.after_blend_widget.value())
         only_unlock_inf = self.only_unlock_inf_checkBox.isChecked()
 
         logger.debug(f"Relax options: iterations={iterations}, blend={after_blend}, only_unlock={only_unlock_inf}")
@@ -203,8 +111,8 @@ class SkinWeightsRelaxWidgets(QWidget):
             dict: Settings data
         """
         return {
-            "iterations": int(self.iterations_field.text()),
-            "after_blend": float(self.after_blend_field.text()),
+            "iterations": int(self.iterations_widget.value()),
+            "after_blend": float(self.after_blend_widget.value()),
             "only_unlock_inf": self.only_unlock_inf_checkBox.isChecked(),
         }
 
@@ -220,23 +128,19 @@ class SkinWeightsRelaxWidgets(QWidget):
             if iterations == "" or iterations is None:
                 iterations = 1
             try:
-                self.iterations_field.setText(str(iterations))
-                self.iterations_slider.setValue(int(iterations))
+                self.iterations_widget.setValue(int(iterations))
             except (ValueError, TypeError):
-                self.iterations_field.setText("1")
-                self.iterations_slider.setValue(1)
+                self.iterations_widget.setValue(1)
 
         if "after_blend" in settings_data:
             after_blend = settings_data["after_blend"]
             # Handle empty or invalid values with default of 1.0
             if after_blend == "" or after_blend is None:
-                after_blend = "1.0"
+                after_blend = 1.0
             try:
-                self.after_blend_field.setText(str(after_blend))
-                self.after_blend_slider.setValue(int(float(after_blend) * 100))
+                self.after_blend_widget.setValue(float(after_blend))
             except (ValueError, TypeError):
-                self.after_blend_field.setText("1.0")
-                self.after_blend_slider.setValue(100)
+                self.after_blend_widget.setValue(1.0)
 
         if "only_unlock_inf" in settings_data:
             self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])
