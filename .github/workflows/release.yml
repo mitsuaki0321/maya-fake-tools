@@ -1,0 +1,82 @@
+name: Release by Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create release package
+        run: |
+          # Create a temporary directory for release files
+          mkdir -p release_package
+
+          # Copy necessary files and directories
+          cp -r docs/output release_package/docs
+          cp -r plug-ins release_package/
+          cp -r scripts release_package/
+          cp faketools.mod release_package/
+          cp LICENSE release_package/
+          cp README.md release_package/
+
+          # Create ZIP archive with version in filename
+          cd release_package
+          zip -r ../maya-fake-tools_${{ github.ref_name }}.zip .
+          cd ..
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Extract version from tag (v1.2.3 -> 1.2.3)
+          VERSION=${GITHUB_REF_NAME#v}
+
+          # Create release notes
+          cat << EOF > release_notes.md
+          ## Maya Fake Tools ${VERSION}
+
+          ### Installation
+          1. Download \`maya-fake-tools_${GITHUB_REF_NAME}.zip\`
+          2. Extract to a directory (e.g., \`C:/maya_tools/\`)
+          3. Add the extracted directory to Maya's \`MAYA_MODULE_PATH\` environment variable
+          4. Restart Maya
+          5. Find "FakeTools" menu in Maya's main menu bar
+
+          ### Package Contents
+          - \`docs/\` - HTML documentation (open \`docs/index.html\` in browser)
+          - \`plug-ins/\` - Maya plugins
+          - \`scripts/\` - Python tools and utilities
+          - \`faketools.mod\` - Maya module descriptor
+          - \`LICENSE\` - MIT License
+          - \`README.md\` - Basic information
+
+          ### Documentation
+          Open \`docs/index.html\` in your web browser for detailed documentation.
+
+          ### Requirements
+          - Autodesk Maya 2022 or later
+          - Python 3.11.4 (included in Maya)
+
+          ---
+
+          For full changelog and source code, visit the [repository](https://github.com/${{ github.repository }}).
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: maya-fake-tools_${{ github.ref_name }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
