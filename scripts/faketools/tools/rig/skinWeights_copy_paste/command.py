@@ -17,12 +17,14 @@ class SkinWeightsCopyPaste:
         *,
         method: str = "oneToAll",
         blend_weights: float = 1.0,
+        only_unlock_influences: bool = False,
     ):
         """Initialize the skin weights copy and paste.
 
         Args:
             method (str, optional): The method. Defaults to 'oneToAll'. 'oneToAll' or 'oneToOne'.
             blend_weights (float, optional): The blend weights. Defaults to 1.0.
+            only_unlock_influences (bool, optional): Only apply weights to unlocked influences. Defaults to False.
         """
         if method not in ["oneToAll", "oneToOne"]:
             raise ValueError(f"Invalid method: {method}")
@@ -33,6 +35,7 @@ class SkinWeightsCopyPaste:
             raise ValueError(f"Invalid blend weights: {blend_weights}")
 
         self._blend_weights = blend_weights
+        self._only_unlock_influences = only_unlock_influences
 
         self._src_components = []
         self._src_weights = []
@@ -94,6 +97,28 @@ class SkinWeightsCopyPaste:
         self._blend_weights = blend_weights
 
         logger.debug(f"Set blend weights: {blend_weights}")
+
+    @property
+    def only_unlock_influences(self) -> bool:
+        """Get the only unlock influences flag.
+
+        Returns:
+            bool: The only unlock influences flag.
+        """
+        return self._only_unlock_influences
+
+    def set_only_unlock_influences(self, only_unlock_influences: bool) -> None:
+        """Set the only unlock influences flag.
+
+        Args:
+            only_unlock_influences (bool): The only unlock influences flag.
+        """
+        if not isinstance(only_unlock_influences, bool):
+            raise ValueError(f"Invalid only_unlock_influences: {only_unlock_influences}")
+
+        self._only_unlock_influences = only_unlock_influences
+
+        logger.debug(f"Set only_unlock_influences: {only_unlock_influences}")
 
     def set_src_components(self, components: list[str]) -> None:
         """Set the source components.
@@ -262,19 +287,90 @@ class SkinWeightsCopyPaste:
 
         return True
 
+    def _adjust_unlock_weights(self, new_weight: list[float], original_weight: list[float], unlocked_status: list[bool]) -> list[float]:
+        """Adjust weights to only modify unlocked influences.
+
+        This method ensures that locked influences remain unchanged while
+        unlocked influences are adjusted to maintain proper weight normalization.
+
+        Args:
+            new_weight (list[float]): The new weights after blending.
+            original_weight (list[float]): The original weights before blending.
+            unlocked_status (list[bool]): Boolean list indicating which influences are unlocked.
+
+        Returns:
+            list[float]: The adjusted weights with locked influences preserved.
+        """
+        num_infs = len(new_weight)
+        adjusted_weight = list(original_weight)  # Start with original weights
+
+        # Extract unlocked weights
+        unlock_before_weights = []
+        unlock_new_weights = []
+        for j in range(num_infs):
+            if unlocked_status[j]:
+                unlock_before_weights.append(original_weight[j])
+                unlock_new_weights.append(new_weight[j])
+
+        unlock_before_total = sum(unlock_before_weights)
+        unlock_new_total = sum(unlock_new_weights)
+
+        # If either total is very small, keep original weights
+        if unlock_before_total < 1e-5 or unlock_new_total < 1e-5:
+            return adjusted_weight
+
+        # Adjust weights based on totals
+        if unlock_before_total < unlock_new_total:
+            # Scale down new weights to fit within available space
+            for j in range(num_infs):
+                if unlocked_status[j]:
+                    adjusted_weight[j] = unlock_before_total * new_weight[j] / unlock_new_total
+                else:
+                    adjusted_weight[j] = original_weight[j]
+        else:
+            # Distribute difference proportionally
+            unlock_dif_total = unlock_before_total - unlock_new_total
+
+            for j in range(num_infs):
+                if unlocked_status[j]:
+                    adjusted_weight[j] = unlock_dif_total * (original_weight[j] / unlock_before_total) + new_weight[j]
+                else:
+                    adjusted_weight[j] = original_weight[j]
+
+        return adjusted_weight
+
     def paste_skinWeights(self) -> None:
         """Paste the skin weights."""
         if not self.is_pastable():
             cmds.error("Copy and paste is not ready.")
 
-        new_weights = []
+        # Calculate blended weights
+        blended_weights = []
         for src_weight, dst_weight in zip(self._src_weights, self._dst_weights, strict=False):
             new_weight = []
             for src_w, dst_w in zip(src_weight, dst_weight, strict=False):
                 new_weight.append(src_w * self._blend_weights + dst_w * (1.0 - self._blend_weights))
 
-            new_weights.append(new_weight)
+            blended_weights.append(new_weight)
 
-        lib_skinCluster.set_skin_weights(self._dst_skinCluster, new_weights, self._dst_components)
+        # Apply only_unlock_influences constraint if enabled
+        if self._only_unlock_influences:
+            dst_infs = cmds.skinCluster(self._dst_skinCluster, q=True, inf=True)
+            unlocked_infs = lib_skinCluster.get_lock_influences(self._dst_skinCluster, lock=False)
+
+            if not unlocked_infs:
+                cmds.error("No unlocked influences found in destination skinCluster.")
+
+            unlocked_status = [inf in unlocked_infs for inf in dst_infs]
+
+            # Adjust weights for each component
+            final_weights = []
+            for new_weight, original_weight in zip(blended_weights, self._dst_weights, strict=False):
+                adjusted_weight = self._adjust_unlock_weights(new_weight, original_weight, unlocked_status)
+                final_weights.append(adjusted_weight)
+        else:
+            final_weights = blended_weights
+
+        lib_skinCluster.set_skin_weights(self._dst_skinCluster, final_weights, self._dst_components)
 
         logger.debug(f"Copy and paste skin weights: {self._src_skinCluster} -> {self._dst_skinCluster}")

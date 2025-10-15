@@ -8,10 +8,10 @@ import maya.cmds as cmds
 
 from ....lib import lib_skinCluster
 from ....lib_ui import error_handler, repeatable, undo_chunk
-from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QComboBox, QGroupBox, QStackedWidget, QVBoxLayout
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from .command import average_skin_weights, average_skin_weights_shell, get_influences_from_objects, prune_small_weights
 from .widgets import (

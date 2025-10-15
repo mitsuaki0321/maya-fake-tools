@@ -7,8 +7,8 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.qt_compat import QHBoxLayout, QPushButton, QSizePolicy, QWidget
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from .....operations.copy_weights import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
 

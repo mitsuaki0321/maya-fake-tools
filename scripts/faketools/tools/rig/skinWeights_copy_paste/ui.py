@@ -75,6 +75,10 @@ class MainWindow(BaseFramelessWindow):
         self.blend_slider.setEnabled(False)
         self.central_layout.addWidget(self.blend_slider, stretch=1)
 
+        # Only unlock influences button
+        self.only_unlock_infs_button = OnlyUnlockInfluencesButton(self.skinWeights_copy_paste)
+        self.central_layout.addWidget(self.only_unlock_infs_button)
+
         # Rearrange the method button
         self.method_toggle_button.setMinimumHeight(self.blend_spin_box.sizeHint().height())
 
@@ -121,7 +125,7 @@ class MainWindow(BaseFramelessWindow):
 
         # Enable for all child widgets recursively and install event filter
         for widget in self.findChildren(object):
-            if hasattr(widget, 'setMouseTracking'):
+            if hasattr(widget, "setMouseTracking"):
                 widget.setMouseTracking(True)
                 widget.installEventFilter(self)
 
@@ -577,6 +581,46 @@ class DestinationClipboardButton(extra_widgets.ToolIconButton):
         self.clear_clipboard_signal.emit()
 
         logger.debug("Clear the destination components.")
+
+
+class OnlyUnlockInfluencesButton(extra_widgets.ToolIconButton):
+    """This button is used to toggle only_unlock_influences mode for SkinWeightsCopyPaste."""
+
+    def __init__(self, skinWeights_copy_paste: SkinWeightsCopyPaste, parent=None):
+        """Initializer.
+
+        Args:
+            skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
+            parent (QWidget, optional): The parent widget. Defaults to None.
+        """
+        super().__init__(parent=parent, icon_name="lock-open")
+
+        if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
+            raise ValueError("Invalid skinWeights_copy_paste.")
+
+        self._skinWeights_copy_paste = skinWeights_copy_paste
+        self._unlocked_icon = QIcon(icons.get_path("lock-open"))
+        self._locked_icon = QIcon(icons.get_path("lock"))
+
+        self.setCheckable(True)  # Make it a toggle button
+        self.setChecked(False)  # Start with unlocked (all influences)
+        self.setIcon(self._unlocked_icon)
+
+        self.clicked.connect(self._toggle_mode)
+
+    @maya_decorator.error_handler
+    def _toggle_mode(self):
+        """Toggle the only_unlock_influences mode."""
+        is_only_unlock = self.isChecked()
+        self._skinWeights_copy_paste.set_only_unlock_influences(is_only_unlock)
+
+        # Update icon based on state
+        if is_only_unlock:
+            self.setIcon(self._locked_icon)
+            logger.debug("Only unlock influences mode: ON")
+        else:
+            self.setIcon(self._unlocked_icon)
+            logger.debug("Only unlock influences mode: OFF")
 
 
 def show_ui():
