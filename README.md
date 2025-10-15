@@ -48,6 +48,10 @@ Available in:
 
 - Autodesk Maya 2022 or later
 - Python 3.11+ (included in Maya)
+- numpy (included in Maya 2022+)
+- scipy (included in Maya 2022+)
+
+**Note**: numpy and scipy are included by default in Maya 2022 and later versions.
 
 ## License
 
