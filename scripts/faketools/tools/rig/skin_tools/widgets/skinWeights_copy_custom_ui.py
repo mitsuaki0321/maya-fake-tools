@@ -93,25 +93,38 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         self.setLayout(self.main_layout)
 
         # Signal & Slot
-        self.blend_field.textChanged.connect(self._blend_value_change)
-        self.blend_slider.valueChanged.connect(self._blend_value_change)
+        self.blend_field.editingFinished.connect(self._on_blend_field_finished)
+        self.blend_slider.valueChanged.connect(self._on_blend_slider_changed)
         execute_button.clicked.connect(self.copy_skin_weights)
 
-    def _blend_value_change(self):
-        """Change the blend value."""
-        sender = self.sender()
+    def _on_blend_field_finished(self):
+        """Handle blend field editing finished (Enter key or focus out)."""
+        text = self.blend_field.text()
+        if text:
+            try:
+                value = float(text)
+                # Clamp value to valid range
+                value = max(0.0, min(1.0, value))
+                # Block signals to prevent circular updates
+                self.blend_slider.blockSignals(True)
+                self.blend_slider.setValue(int(value * 100))
+                self.blend_slider.blockSignals(False)
+                # Update field with clamped value
+                self.blend_field.setText(str(value))
+            except ValueError:
+                # Reset to slider's current value if invalid
+                self.blend_field.setText(str(self.blend_slider.value() / 100))
 
-        if sender == self.blend_field:
-            text = sender.text()
-            if text:  # Only update if text is not empty
-                try:
-                    value = float(text)
-                    self.blend_slider.setValue(value * 100)
-                except ValueError:
-                    pass  # Ignore invalid values during typing
-        elif sender == self.blend_slider:
-            value = sender.value() / 100
-            self.blend_field.setText(str(value))
+    def _on_blend_slider_changed(self, value):
+        """Handle blend slider value changed.
+
+        Args:
+            value (int): Slider value (0-100)
+        """
+        # Block signals to prevent circular updates
+        self.blend_field.blockSignals(True)
+        self.blend_field.setText(str(value / 100))
+        self.blend_field.blockSignals(False)
 
     @maya_decorator.undo_chunk("Copy Skin Weights Custom")
     @maya_decorator.error_handler

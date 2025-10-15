@@ -105,36 +105,70 @@ class SkinWeightsRelaxWidgets(QWidget):
         self.setLayout(self.main_layout)
 
         # Signal & Slot
-        self.iterations_field.textChanged.connect(self._update_field_slider_value)
-        self.iterations_slider.valueChanged.connect(self._update_field_slider_value)
-        self.after_blend_field.textChanged.connect(self._update_field_slider_value)
-        self.after_blend_slider.valueChanged.connect(self._update_field_slider_value)
+        self.iterations_field.editingFinished.connect(self._on_iterations_field_finished)
+        self.iterations_slider.valueChanged.connect(self._on_iterations_slider_changed)
+        self.after_blend_field.editingFinished.connect(self._on_after_blend_field_finished)
+        self.after_blend_slider.valueChanged.connect(self._on_after_blend_slider_changed)
 
         execute_button.clicked.connect(self.relax_weights)
 
-    def _update_field_slider_value(self):
-        """Update the field and slider value."""
-        sender = self.sender()
-
-        if sender == self.iterations_field:
+    def _on_iterations_field_finished(self):
+        """Handle iterations field editing finished (Enter key or focus out)."""
+        text = self.iterations_field.text()
+        if text:
             try:
-                value = int(self.iterations_field.text())
+                value = int(text)
+                # Clamp value to valid range
+                value = max(0, min(50, value))
+                # Block signals to prevent circular updates
+                self.iterations_slider.blockSignals(True)
                 self.iterations_slider.setValue(value)
+                self.iterations_slider.blockSignals(False)
+                # Update field with clamped value
+                self.iterations_field.setText(str(value))
             except ValueError:
-                pass
-        elif sender == self.iterations_slider:
-            value = self.iterations_slider.value()
-            self.iterations_field.setText(str(value))
+                # Reset to slider's current value if invalid
+                self.iterations_field.setText(str(self.iterations_slider.value()))
 
-        if sender == self.after_blend_field:
+    def _on_iterations_slider_changed(self, value):
+        """Handle iterations slider value changed.
+
+        Args:
+            value (int): Slider value (0-50)
+        """
+        # Block signals to prevent circular updates
+        self.iterations_field.blockSignals(True)
+        self.iterations_field.setText(str(value))
+        self.iterations_field.blockSignals(False)
+
+    def _on_after_blend_field_finished(self):
+        """Handle after blend field editing finished (Enter key or focus out)."""
+        text = self.after_blend_field.text()
+        if text:
             try:
-                value = float(self.after_blend_field.text())
+                value = float(text)
+                # Clamp value to valid range
+                value = max(0.0, min(1.0, value))
+                # Block signals to prevent circular updates
+                self.after_blend_slider.blockSignals(True)
                 self.after_blend_slider.setValue(int(value * 100))
+                self.after_blend_slider.blockSignals(False)
+                # Update field with clamped value
+                self.after_blend_field.setText(str(value))
             except ValueError:
-                pass
-        elif sender == self.after_blend_slider:
-            value = self.after_blend_slider.value() / 100
-            self.after_blend_field.setText(str(value))
+                # Reset to slider's current value if invalid
+                self.after_blend_field.setText(str(self.after_blend_slider.value() / 100))
+
+    def _on_after_blend_slider_changed(self, value):
+        """Handle after blend slider value changed.
+
+        Args:
+            value (int): Slider value (0-100)
+        """
+        # Block signals to prevent circular updates
+        self.after_blend_field.blockSignals(True)
+        self.after_blend_field.setText(str(value / 100))
+        self.after_blend_field.blockSignals(False)
 
     @maya_decorator.undo_chunk("Relax Skin Weights")
     @maya_decorator.error_handler
