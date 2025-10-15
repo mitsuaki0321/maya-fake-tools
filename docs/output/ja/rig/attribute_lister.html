@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attribute Lister - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Mayaノードのアトリビュートのリスト化、フィルタリング、管理ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/attribute_lister.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#値を変更できる状態について"
+                    id="toc-値を変更できる状態について">値を変更できる状態について</a>
+                    <ul>
+                    <li><a href="#ロックされていないアトリビュート"
+                    id="toc-ロックされていないアトリビュート">ロックされていないアトリビュート</a></li>
+                    <li><a href="#接続がないアトリビュート"
+                    id="toc-接続がないアトリビュート">接続がないアトリビュート</a></li>
+                    <li><a href="#同じ型のアトリビュートどおし"
+                    id="toc-同じ型のアトリビュートどおし">同じ型のアトリビュートどおし</a></li>
+                    </ul></li>
+                    <li><a href="#ノードの状態を変更する"
+                    id="toc-ノードの状態を変更する">ノードの状態を変更する</a></li>
+                    <li><a href="#ノードリストの操作"
+                    id="toc-ノードリストの操作">ノードリストの操作</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Attribute Lister</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>ノードのアトリビュートの状態を変更するツールです。
+                主に、アトリビュートのロック、ノードの表示状態、アトリビュートの値を変更することができます。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.attribute_lister_ui
+faketools.tools.rig.attribute_lister_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/attribute_lister/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li>ノードを選択します ( 複数選択可能 )。</li>
+                <li><code>Load</code>
+                ボタンを押して、選択したノードを上のリストにロードします。この時、<code>Shift</code>
+                キーを押しながら選択すると、リストに追加されます。</li>
+                <li>リストにロードされたノードを選択します (
+                複数選択可能
+                )。選択したノードのアトリビュートが下のリストに表示されます。</li>
+                <li>状態を変更したいアトリビュートを選択します (
+                複数選択可能 )。</li>
+                <li>一番下のフィールドに値を入力し、<code>Enter</code>
+                キーを押すと、選択したアトリビュートの値が変更されます。</li>
+                </ol>
+                <h2
+                id="値を変更できる状態について">値を変更できる状態について</h2>
+                <p>値を変更できる状態は以下の通りです。<br />
+                値を変更できる場合は、フィールドが以下のように表示されます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image002.png"
+                alt="image002" /></p>
+                <h3
+                id="ロックされていないアトリビュート">ロックされていないアトリビュート</h3>
+                <p>ロックされていないアトリビュート。選択したノードとアトリビュートがひとつでもロックされている場合、値を変更できません。
+                ロック状態の場合は、フィールドがグレーアウトされます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image003.png"
+                alt="image003" /></p>
+                <h3
+                id="接続がないアトリビュート">接続がないアトリビュート</h3>
+                <p>接続がないアトリビュート。選択したノードとアトリビュートがひとつでも接続がある場合、値を変更できません。<br />
+                接続がある場合は、フィールドが黄色く表示されます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image004.png"
+                alt="image004" /></p>
+                <h3
+                id="同じ型のアトリビュートどおし">同じ型のアトリビュートどおし</h3>
+                <p>同じ型のアトリビュート同士。選択したノードとアトリビュートがひとつでも異なる型のアトリビュートがある場合、値を変更できません。
+                異なる型のアトリビュートがある場合は、フィールドが赤く表示されます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image005.png"
+                alt="image005" /></p>
+                <h2
+                id="ノードの状態を変更する">ノードの状態を変更する</h2>
+                <p>アトリビュートのリスト上で右クリックすると、ノードの状態を変更するメニューが表示されます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image006.png"
+                alt="image006" /></p>
+                <p>それぞれ選択しているノードのアトリビュートに対して、以下の操作が可能です。</p>
+                <ul>
+                <li><strong>Lock</strong>
+                <ul>
+                <li>選択したアトリビュートをロックします。</li>
+                </ul></li>
+                <li><strong>Unlock</strong>
+                <ul>
+                <li>選択したアトリビュートのロックを解除します。</li>
+                </ul></li>
+                <li><strong>Keyable</strong>
+                <ul>
+                <li>選択したアトリビュートをチャンネルボックスに表示します。</li>
+                </ul></li>
+                <li><strong>Unkeyable</strong>
+                <ul>
+                <li>選択したアトリビュートをチャンネルボックスから非表示にします。</li>
+                </ul></li>
+                </ul>
+                <h2 id="ノードリストの操作">ノードリストの操作</h2>
+                <p>ノードのリスト上で右クリックすると、ノードリストの操作メニューが表示されます。</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image007.png"
+                alt="image007" /></p>
+                <ul>
+                <li><strong>Select All Nodes</strong>
+                <ul>
+                <li>リストにロードされたノードをリスト内ですべて選択します。</li>
+                </ul></li>
+                <li><strong>Select Scene Nodes</strong>
+                <ul>
+                <li>リストで選択されているノードをシーン内で選択します。</li>
+                </ul></li>
+                <li><strong>Select All Scene Nodes</strong>
+                <ul>
+                <li>リストにロードされているノードをシーン内ですべて選択します。</li>
+                </ul></li>
+                <li><strong>Remove Nodes</strong>
+                <ul>
+                <li>リストで選択されているノードをリストから削除します。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

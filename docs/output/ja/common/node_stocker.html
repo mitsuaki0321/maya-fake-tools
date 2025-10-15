@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Stocker - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="頻繁に使用するノードを保存し素早くアクセス">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/node_stocker.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#ノードを保存する"
+                    id="toc-ノードを保存する">ノードを保存する</a></li>
+                    <li><a href="#ノードを選択する"
+                    id="toc-ノードを選択する">ノードを選択する</a></li>
+                    <li><a href="#保存したノードをクリアする"
+                    id="toc-保存したノードをクリアする">保存したノードをクリアする</a></li>
+                    </ul></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#ネームスペースを含めて選択する"
+                    id="toc-ネームスペースを含めて選択する">ネームスペースを含めて選択する</a></li>
+                    <li><a href="#ノード名を置換して選択する"
+                    id="toc-ノード名を置換して選択する">ノード名を置換して選択する</a></li>
+                    <li><a href="#ツールをリフレッシュする"
+                    id="toc-ツールをリフレッシュする">ツールをリフレッシュする</a></li>
+                    <li><a
+                    href="#アクティブなタブの登録をすべてクリアする"
+                    id="toc-アクティブなタブの登録をすべてクリアする">アクティブなタブの登録をすべてクリアする</a></li>
+                    </ul></li>
+                    <li><a
+                    href="#登録されているノードに対しての特殊操作"
+                    id="toc-登録されているノードに対しての特殊操作">登録されているノードに対しての特殊操作</a>
+                    <ul>
+                    <li><a href="#set-keyframe"
+                    id="toc-set-keyframe">Set Keyframe</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Node Stocker</h1>
+                
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.node_stocker.ui
+faketools.tools.common.node_stocker.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/node_stocker/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>ノードを保存、選択、クリアする方法を説明します。</p>
+                <h3 id="ノードを保存する">ノードを保存する</h3>
+                <ol type="1">
+                <li><p>保存したいノードを選択します。</p></li>
+                <li><p>保存するエリアを選択します。エリアは上部のラジオボタンで決定します。</p></li>
+                <li><p>数字が書かれているボタンを中クリックすることで、パイメニューが表示されます。<br />
+                <code>register</code>
+                を選択することで、選択されているノードがそのボタンに保存されます。</p>
+                <p><img
+                src="../../images/common/node_stocker/image002.png"
+                alt="image002" /></p>
+                <p>ボタンにノードが登録されると、ボタンの背景色が変わります。</p></li>
+                </ol>
+                <h3 id="ノードを選択する">ノードを選択する</h3>
+                <ol type="1">
+                <li><p>選択したいエリアを選択します。</p></li>
+                <li><p>背景色が変わっているボタンをクリックすることで、そのボタンに登録されたノードを選択します。</p>
+                <p><strong>モディファイヤキーを使用しての選択</strong>
+                も可能です。選択のルールは Maya の View
+                上での選択と同じです。<br />
+                また、エリア上で <strong>短形選択</strong>
+                を行うことで、複数のボタンのノードを一度に呼び出すことができます。</p></li>
+                </ol>
+                <h3
+                id="保存したノードをクリアする">保存したノードをクリアする</h3>
+                <p>保存したノードをクリアするには、ボタンを中クリックし、パイメニューから
+                <code>unregister</code> を選択します。</p>
+                <p><img
+                src="../../images/common/node_stocker/image003.png"
+                alt="image003" /></p>
+                <h2 id="オプション">オプション</h2>
+                <h3
+                id="ネームスペースを含めて選択する">ネームスペースを含めて選択する</h3>
+                <p>ノードを呼び出す際に、ネームスペースを含めて選択するかどうかを設定できます。</p>
+                <p>ネームスペースを含めて選択するには、チェックボックスをオンにし、下部のドロップダウンメニューから目的のネームスペースを選択します。</p>
+                <p><img
+                src="../../images/common/node_stocker/image004.png"
+                alt="image004" /></p>
+                <p>※
+                登録されているノードにネームスペースが存在しない場合は、そのノードにネームスペースを付与した形のノードを選択します。<br />
+                ※
+                ノードがフルパスも含めて登録されている場合、そのノードの親のネームスペースも置換する仕様になっています。</p>
+                <h3
+                id="ノード名を置換して選択する">ノード名を置換して選択する</h3>
+                <p>ノードを呼び出す際に、ノード名を置換して選択することができます。</p>
+                <p>ノード名を置換して選択するには、チェックボックスをオンにし、下部のテキストボックスに置換前のノード名と置換後のノード名を入力します。</p>
+                <p><strong>例：登録されているノードの surface を curve
+                に置換する場合</strong></p>
+                <p><img
+                src="../../images/common/node_stocker/image005.png"
+                alt="image005" /></p>
+                <p>置換を逆転させるには、真ん中の矢印ボタンをクリックします。</p>
+                <p><img
+                src="../../images/common/node_stocker/image006.png"
+                alt="image006" /></p>
+                <p>また、一番左のボタンをチェックすると、置換を正規表現で行います。</p>
+                <p><strong>例: 登録されているノードの先頭に curve
+                を追加する場合</strong></p>
+                <p><img
+                src="../../images/common/node_stocker/image007.png"
+                alt="image007" /></p>
+                <p>※
+                正規表現モードではない場合、置換前となるテキストが必要です。</p>
+                <h3
+                id="ツールをリフレッシュする">ツールをリフレッシュする</h3>
+                <p><img
+                src="../../images/common/node_stocker/image008.png"
+                alt="image008" /></p>
+                <p>ツールをリフレッシュするには、上部右端の
+                <strong>リフレッシュボタン</strong> をクリックします。
+                登録されたノードがファイルから再ロードされ、また
+                ネームスペースのリストも更新されます。</p>
+                <h3
+                id="アクティブなタブの登録をすべてクリアする">アクティブなタブの登録をすべてクリアする</h3>
+                <p><img
+                src="../../images/common/node_stocker/image009.png"
+                alt="image009" /></p>
+                <p>アクティブなタブの登録をすべてクリアするには、上部右端の
+                <strong>クリアボタン</strong> をクリックします。</p>
+                <h2
+                id="登録されているノードに対しての特殊操作">登録されているノードに対しての特殊操作</h2>
+                <p>ボタン上で右クリックすることで、登録されているノードに対しての特殊操作が可能なパイメニューが表示されます。</p>
+                <p><img
+                src="../../images/common/node_stocker/image010.png"
+                alt="image010" /></p>
+                <h3 id="set-keyframe">Set Keyframe</h3>
+                <p>登録されているノードに対して、キーフレームを設定します。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Tools - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="スキンウェイト管理のための包括的なツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/skin_tools.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#注意点"
+                    id="toc-注意点">注意点</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#edit-メニュー"
+                    id="toc-edit-メニュー">Edit メニュー</a></li>
+                    <li><a href="#skin-tools-bar"
+                    id="toc-skin-tools-bar">Skin Tools Bar</a>
+                    <ul>
+                    <li><a href="#copy" id="toc-copy">Copy</a></li>
+                    <li><a href="#mirror-self"
+                    id="toc-mirror-self">Mirror Self</a></li>
+                    <li><a href="#mirror-sub" id="toc-mirror-sub">Mirror
+                    Sub</a></li>
+                    </ul></li>
+                    <li><a href="#copy-skin-weights-custom"
+                    id="toc-copy-skin-weights-custom">Copy Skin Weights
+                    Custom</a>
+                    <ul>
+                    <li><a href="#使用方法-1"
+                    id="toc-使用方法-1">使用方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a></li>
+                    </ul></li>
+                    <li><a href="#skin-weights-to-mesh"
+                    id="toc-skin-weights-to-mesh">Skin Weights to
+                    Mesh</a>
+                    <ul>
+                    <li><a href="#使用方法-2"
+                    id="toc-使用方法-2">使用方法</a></li>
+                    </ul></li>
+                    <li><a href="#adjust-center-skin-weights"
+                    id="toc-adjust-center-skin-weights">Adjust Center
+                    Skin Weights</a>
+                    <ul>
+                    <li><a href="#使用方法-3"
+                    id="toc-使用方法-3">使用方法</a></li>
+                    </ul></li>
+                    <li><a href="#combine-skin-weights"
+                    id="toc-combine-skin-weights">Combine Skin
+                    Weights</a>
+                    <ul>
+                    <li><a href="#使用方法-4"
+                    id="toc-使用方法-4">使用方法</a></li>
+                    </ul></li>
+                    <li><a href="#relax-skin-weights"
+                    id="toc-relax-skin-weights">Relax Skin Weights</a>
+                    <ul>
+                    <li><a href="#使用方法-5"
+                    id="toc-使用方法-5">使用方法</a></li>
+                    <li><a href="#オプション-1"
+                    id="toc-オプション-1">オプション</a></li>
+                    </ul></li>
+                    <li><a href="#influence-exchange"
+                    id="toc-influence-exchange">Influence Exchange</a>
+                    <ul>
+                    <li><a href="#使用方法-6"
+                    id="toc-使用方法-6">使用方法</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Tools</h1>
+                
+                <h2 id="注意点">注意点</h2>
+                <p>このツールでの skinCluster
+                の操作は、いくつかの前提条件に基づいています。 -
+                skinCluster の method が Classic Linear
+                であることを想定しており他の method
+                には対応していません。 - maya2024 以降で導入された複数の
+                skinCluster のサポートには対応していません。</p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.skin_tools.ui
+faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
+                <p><img src="../../images/rig/skin_tools/image001.png"
+                alt="image001" /></p>
+                <h2 id="edit-メニュー">Edit メニュー</h2>
+                <p><img src="../../images/rig/skin_tools/image002.png"
+                alt="image002" /></p>
+                <ul>
+                <li><strong>Select Influences</strong>
+                <ul>
+                <li>ジオメトリ及び頂点（複数オブジェクト選択可）を選択し実行すると、それに設定されている
+                skinCluster のインフルエンスを選択します。</li>
+                <li>頂点を選択した場合は、その頂点でウエイトが 0
+                以上のインフルエンスのみを選択します。</li>
+                </ul></li>
+                <li><strong>Rebind SkinCluster</strong>
+                <ul>
+                <li>ジオメトリ及び頂点（複数オブジェクト選択可）を選択し実行すると、それに設定されている
+                skinCluster
+                をそのインフルエンスの位置で再バインドします。</li>
+                </ul></li>
+                <li><strong>Prune Small Weights</strong>
+                <ul>
+                <li>ジオメトリを選択し実行すると、ウエイトが 0.005
+                未満のインフルエンスのウエイトを 0 に設定します。Maya
+                の標準機能と違い、ロックされているインフルエンスを無視します。</li>
+                </ul></li>
+                <li><strong>Remove Unused Influences</strong>
+                <ul>
+                <li>ジオメトリ（複数選択可）を選択し実行すると、ウエイトがすべて
+                0 のインフルエンスをその skinCluster
+                から除外します。</li>
+                </ul></li>
+                <li><strong>Average Skin Weights</strong>
+                <ul>
+                <li>頂点を選択し実行すると、選択された頂点のウエイトを平均化します。</li>
+                </ul></li>
+                <li><strong>Average Skin Weights Shell</strong>
+                <ul>
+                <li>ジオメトリを選択し実行すると、選択されたジオメトリのウエイトをシェルごとに平均化します。</li>
+                </ul></li>
+                </ul>
+                <h2 id="skin-tools-bar">Skin Tools Bar</h2>
+                <p>ウエイトのコピーとミラーリングを行います。<br />
+                適用先がバインドされていない場合、自動的に skinCluster
+                を作成します。</p>
+                <p><img
+                src="../../images/rig/skinWeights_bar/image001.png"
+                alt="skinWeights_bar001" /></p>
+                <h3 id="copy">Copy</h3>
+                <p>ウエイトのコピーとミラーリングを行います。</p>
+                <p>ウエイトコピーを行います。</p>
+                <ol type="1">
+                <li>コピー元のジオメトリを選択します。</li>
+                <li>コピー先のジオメトリ（複数選択可）を選択します。</li>
+                <li><code>COPY</code>
+                ボタンを押して、コピー元のウエイトをコピー先にコピーします。この時
+                UV を参照する際は、<code>UV</code>
+                チェックボックスをオンにしてください。</li>
+                </ol>
+                <p>このツールは、コピー元のジオメトリに設定されているインフルエンスを強制的にコピー先ジオメトリの
+                skinCluster に追加します。</p>
+                <h3 id="mirror-self">Mirror Self</h3>
+                <p>ウエイトのミラーリングを行います。</p>
+                <ol type="1">
+                <li>ジオメトリを選択します。</li>
+                <li><code>MIR SELF</code>
+                ボタンを押して、選択したジオメトリのウエイトをミラーリングします。この時、ミラーリングする方向を矢印ボタンで選択してください。<code>&lt;-</code>
+                の場合は、X から -X に、<code>-&gt;</code> の場合は -X
+                から X にミラーリングします。</li>
+                </ol>
+                <p>このツールは、選択したジオメトリに設定されている左右のインフルエンスを検索し、見つかったインフルエンスと反対側のインフルエンスが存在する場合、そのインフルエンスを強制的に
+                skinCluster に追加します。</p>
+                <h3 id="mirror-sub">Mirror Sub</h3>
+                <p>ウエイトのミラーリングを別ジオメトリに対して行います。</p>
+                <p>使用例：例えば、靴を履いているキャラクターの左右の靴のウエイトをミラーリングする場合などに使用します。</p>
+                <ol type="1">
+                <li>左側の靴のジオメトリを選択します。</li>
+                <li><code>MIR SUB</code>
+                ボタンを押します。この時の実行される手順は以下の通りです。
+                <ol type="1">
+                <li>左側の靴のジオメトリ名から右側の靴のジオメトリ名を生成します。</li>
+                <li>右側の靴のジオメトリが見つかった場合、左側の靴のジオメトリに設定されているインフルエンス名を左から右の名前に変換します。</li>
+                <li>右側の靴のジオメトリに変換されたインフルエンス名が存在する場合、そのインフルエンスを強制的に
+                skinCluster に追加するか、新たに skinCluster
+                を作成して追加します。</li>
+                <li>左側の靴のジオメトリに設定されているウエイトを右側の靴のジオメトリにコピーします。</li>
+                </ol></li>
+                </ol>
+                <p>※
+                反対側のジオメトリやインフルエンスを検索する方法は、Mirror
+                Self と同様です。</p>
+                <h2 id="copy-skin-weights-custom">Copy Skin Weights
+                Custom</h2>
+                <p>メッシュから別のシェイプへウエイトをコピーします。</p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_custom/image001.png"
+                alt="skinWeights_copy001" /></p>
+                <h3 id="使用方法-1">使用方法</h3>
+                <p>ウエイトをコピーするには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>コピー元となるジオメトリを選択します。</li>
+                <li>コピー先となるジオメトリ（複数選択可）を選択します。</li>
+                <li>ウエイトのコピー方法を選択し、<code>Copy Skin Weights</code>
+                ボタンを押します。</li>
+                </ol>
+                <h3 id="オプション">オプション</h3>
+                <ul>
+                <li><strong>Blend</strong>
+                <ul>
+                <li>指定した値の割合でウエイトをコピーします。</li>
+                </ul></li>
+                <li><strong>Use Only Unlocked Influences</strong>
+                <ul>
+                <li>ロックされていないインフルエンスのみを使用してコピーします。</li>
+                </ul></li>
+                <li><strong>Reference Original Shape</strong>
+                <ul>
+                <li>オリジナルシェイプ ( Intermediate Object )
+                を参照してコピーします。</li>
+                </ul></li>
+                <li><strong>Add Missing Influence</strong>
+                <ul>
+                <li>コピー先に存在しないインフルエンスをコピー時に自動的に追加します。</li>
+                </ul></li>
+                </ul>
+                <h2 id="skin-weights-to-mesh">Skin Weights to Mesh</h2>
+                <p>skinCluster
+                が適用されたジオメトリを、ウエイト情報を保持した状態で別のメッシュに複製します。<br />
+                複製元のジオメトリは、メッシュまたは NURBS
+                サーフェースである必要があります。</p>
+                <p><img
+                src="../../images/rig/skinWeights_to_mesh/image001.png"
+                alt="skinWeights_to_mesh001" /></p>
+                <p><img
+                src="../../images/rig/skinWeights_to_mesh/image002.png"
+                alt="skinWeights_to_mesh002" /><img
+                src="../../images/rig/skinWeights_to_mesh/image003.png"
+                alt="skinWeights_to_mesh003" /></p>
+                <h3 id="使用方法-2">使用方法</h3>
+                <p>複製するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>skinCluster
+                が設定されたジオメトリを選択（複数選択可）します。</li>
+                <li>選択しているジオメトリがメッシュの場合は、<code>Mesh Division</code>
+                を NURBS サーフェースの場合は、<code>U Division</code>
+                と <code>V Division</code> を設定します。</li>
+                <li><code>Convert Skin Weights to Mesh</code>
+                ボタンを押します。</li>
+                </ol>
+                <p><code>Create Template Mesh</code>
+                ボタンを押すことにより、複製後のメッシュのプレビューとなるジオメトリが作成されます。プレビュー状態では、各ディビジョンの値をUI上から変更することができます。</p>
+                <h2 id="adjust-center-skin-weights">Adjust Center Skin
+                Weights</h2>
+                <p>ウエイトが適用されている頂点のウエイトを調整します。</p>
+                <p><img
+                src="../../images/rig/skinWeights_adjust_center/image001.png"
+                alt="skinWeights_adjust_center001" /></p>
+                <p>主に中央位置にある頂点のウエイトを調整します。ここで「中央位置」とは、ジオメトリの左右対称軸上に位置する頂点を指します。</p>
+                <p>「調整」とは、中心位置に対して左右の意味合いを持つインフルエンスのウエイト値を同じ値にすることを指します。例えば、spine
+                と shoulder
+                の左右のインフルエンスの三つのインフルエンスが中心の頂点に対してそれぞれ
+                0.4, 0.2, 0.4
+                のウエイトを持っている場合、このツールを使用することで、それぞれ
+                0.4, 0.3, 0.3 に調整されます。</p>
+                <h3 id="使用方法-3">使用方法</h3>
+                <h4 id="auto-search-が有効な場合">Auto Search
+                が有効な場合</h4>
+                <p><code>Auto Search</code>
+                が有効な場合、選択されている頂点のスキンクラスターから、ペアとなるインフルエンスを自動的に検索します。<br />
+                自動的な検索は、<code>settings.json</code> に記述された
+                <code>ADJUST_CENTER_WEIGHT</code>
+                より正規表現にて検索されます。</p>
+                <h4 id="auto-search-が無効な場合">Auto Search
+                が無効な場合</h4>
+                <p><img
+                src="../../images/rig/skinWeights_adjust_center/image002.png"
+                alt="skinWeights_adjust_center002" /></p>
+                <ol type="1">
+                <li><code>Source Influences</code>
+                に左右どちらかのインフルエンス（複数可）を選択し
+                <code>SET</code> ボタンを押します。</li>
+                <li><code>Target Influences</code> に
+                <code>Source Influences</code>
+                とペアになるインフルエンスを選択し <code>SET</code>
+                ボタンを押します。</li>
+                <li><code>Adjust Center Weights</code>
+                ボタンを押します。</li>
+                </ol>
+                <p><code>Static Influence</code>
+                にインフルエンスが登録されていない場合、ソースインフルエンスとターゲットインフルエンスのペアの平均値が設定されます。</p>
+                <p>一方、<code>Static Influence</code>
+                にインフルエンスが登録されている場合は、ソースインフルエンスのウエイト値がターゲットインフルエンスに適用されます。この結果、すべてのインフルエンスのウエイト値の合計が
+                1.0 を超える場合は、その差分が Static Influence
+                から差し引かれます。</p>
+                <h2 id="combine-skin-weights">Combine Skin Weights</h2>
+                <p>ウエイトを複数のインフルエンスから一つのインフルエンスに統合します。</p>
+                <p><img
+                src="../../images/rig/skinWeights_combine/image001.png"
+                alt="skinWeights_combine001" /></p>
+                <h3 id="使用方法-4">使用方法</h3>
+                <p>ウエイトを統合するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li><code>Source Influences</code>
+                に統合元となるインフルエンス（複数可）を選択し
+                <code>SET</code> ボタンを押します。</li>
+                <li><code>Target Influence</code>
+                に統合先のインフルエンスを選択し <code>SET</code>
+                ボタンを押します。</li>
+                <li><code>Combine Skin Weights</code>
+                ボタンを押します。</li>
+                </ol>
+                <h2 id="relax-skin-weights">Relax Skin Weights</h2>
+                <p>ウエイトをスムース、リラックスさせます。</p>
+                <p><img
+                src="../../images/rig/skinWeights_relax/image001.png"
+                alt="skinWeights_relax001" /></p>
+                <h3 id="使用方法-5">使用方法</h3>
+                <p>ウエイトをスムース、リラックスさせるには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>コンポーネントを選択します。</li>
+                <li>上部のメニューからスムースの種類を選択します。</li>
+                <li>オプションを設定します。</li>
+                <li><code>Relax Skin Weights</code>
+                ボタンを押します。</li>
+                </ol>
+                <h3 id="オプション-1">オプション</h3>
+                <ul>
+                <li><strong>Iterations</strong>
+                <ul>
+                <li>スムースの反復回数を設定します。反復回数が多いほど、ウエイトがスムースされます。</li>
+                </ul></li>
+                <li><strong>After Blend</strong>
+                <ul>
+                <li>スムース後に、元のウエイトとスムース後のウエイトをブレンドする割合を設定します。0.0
+                で元のウエイト、1.0
+                でスムース後のウエイトになります。</li>
+                </ul></li>
+                <li><strong>Use Only Unlocked Influences</strong>
+                <ul>
+                <li>ロックされていないインフルエンスのみを使用してスムースします。すこし実験的な機能です。</li>
+                </ul></li>
+                </ul>
+                <h2 id="influence-exchange">Influence Exchange</h2>
+                <p>既にバインドされているインフルエンスをバインドされていないインフルエンスに交換します。</p>
+                <p><img
+                src="../../images/rig/influence_exchange/image001.png"
+                alt="skinWeights_influence_exchange001" /></p>
+                <h3 id="使用方法-6">使用方法</h3>
+                <p>インフルエンスを交換するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li><code>Target SkinClusters</code>
+                に交換対象のスキンクラスタを選択し、<code>SET</code>
+                ボタンを押します。</li>
+                <li><code>Binding Influences</code>
+                に交換元のインフルエンスを選択し、<code>SET</code>
+                ボタンを押します。ここに設定されるインフルエンスはすべて、<code>Target SkinClusters</code>
+                に設定されたスキンクラスタにバインドされている必要があります。</li>
+                <li><code>Exchange Influences</code>
+                に交換先のインフルエンスを選択し、<code>SET</code>
+                ボタンを押します。ここに設定されるインフルエンスはすべて、<code>Target SkinClusters</code>
+                に設定されたスキンクラスタにバインドされていない必要があります。</li>
+                <li><code>Exchange Influences</code>
+                ボタンを押します。</li>
+                </ol>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

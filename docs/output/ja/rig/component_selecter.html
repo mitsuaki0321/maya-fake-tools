@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Selecter - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="メッシュ/カーブ/サーフェスのコンポーネント選択とフィルタリングツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/component_selecter.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#unique-selection"
+                    id="toc-unique-selection">Unique Selection</a>
+                    <ul>
+                    <li><a href="#unique"
+                    id="toc-unique">Unique</a></li>
+                    <li><a href="#reverse"
+                    id="toc-reverse">Reverse</a></li>
+                    <li><a href="#same" id="toc-same">Same</a></li>
+                    <li><a href="#area-selection"
+                    id="toc-area-selection">Area Selection</a></li>
+                    <li><a href="#cv-area-selection"
+                    id="toc-cv-area-selection">CV Area
+                    Selection</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Component Selecter</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Vertex、NurbsCurveCV、NurbsSurfaceCV、LatticePoint
+                の選択を補助するツールです。
+                主に以下の機能を提供します。</p>
+                <ul>
+                <li>SoftSelection、SymmetrySelection
+                状態のコンポーネントを再選択</li>
+                <li>選択の反転</li>
+                <li>メッシュと同位置のコンポーネントを選択</li>
+                <li>コンポーネントのエリア選択</li>
+                <li>CV のエリア選択</li>
+                </ul>
+                <p>各コンポーネントはそのジオメトリをまたがり複数選択可能です。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.component_selecter_ui
+faketools.tools.rig.component_selecter_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/component_selecter/image001.png"
+                alt="image001" /></p>
+                <h2 id="unique-selection">Unique Selection</h2>
+                <p>コンポーネントをいろいろな方法で選択しなおします。</p>
+                <p><img
+                src="../../images/rig/component_selecter/image002.png"
+                alt="image002" /></p>
+                <h3 id="unique">Unique</h3>
+                <p>選択したコンポーネントを
+                SoftSelection、SymmetrySelection
+                状態から再選択します。</p>
+                <p>選択するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>SoftSelection、SymmetrySelection
+                モードでコンポーネントを選択します。</li>
+                <li><code>Unique</code> ボタンを押します。</li>
+                </ol>
+                <p>※ Edit メニューの <code>Toggle Soft Selection</code>
+                と <code>Toggle Symmetry Selection</code>
+                で各モードを切り替えることができます。</p>
+                <p><img
+                src="../../images/rig/component_selecter/image005.png"
+                alt="image005" /></p>
+                <h3 id="reverse">Reverse</h3>
+                <p>選択したコンポーネントを反転します。</p>
+                <h3 id="same">Same</h3>
+                <p>メッシュと同位置のコンポーネントを選択します。</p>
+                <p>選択するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>メッシュを選択します。</li>
+                <li>コンポーネントを追加選択します。</li>
+                <li><code>Same</code> ボタンを押します。</li>
+                </ol>
+                <h3 id="area-selection">Area Selection</h3>
+                <p><img
+                src="../../images/rig/component_selecter/image003.png"
+                alt="image003" /></p>
+                <p>コンポーネントのエリア選択を行います。YZ
+                平面を軸としてそれぞれ
+                右、左、真ん中のエリア選択が可能です。</p>
+                <p>選択するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>geometryShape
+                の派生ノードかそのトランスフォームノードを選択します (
+                複数選択可 )。</li>
+                <li>選択したいエリアのボタン ( <code>Right</code>,
+                <code>Center</code>, <code>Left</code> )
+                を押します。</li>
+                </ol>
+                <h3 id="cv-area-selection">CV Area Selection</h3>
+                <p><img
+                src="../../images/rig/component_selecter/image004.png"
+                alt="image004" /></p>
+                <p>CV のエリア選択を行います。</p>
+                <p>選択するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>nurbsCurve、nurbsSurface
+                の派生ノードかそのトランスフォームノードを選択します (
+                複数選択可 )。</li>
+                <li>nurbsSurface の場合は、<code>u</code> または
+                <code>v</code> の方向を選択します。</li>
+                <li><strong>max</strong> と <strong>min</strong>
+                スピンボックスで選択範囲を指定します。</li>
+                <li><code>Select</code> ボタンを押します。</li>
+                </ol>
+                <p>例えば、nurbsCurve を選択し、<strong>max</strong> に
+                2、<strong>min</strong> に 0 を入力して
+                <code>Select</code> ボタンを押すと、CV の 0 から 2
+                までが選択されます。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

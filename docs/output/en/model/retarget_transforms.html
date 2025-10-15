@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retarget Transforms - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Transfer transform hierarchy between objects with identical topology">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/model/retarget_transforms.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a>
+                    <ul>
+                    <li><a href="#default"
+                    id="toc-default">Default</a></li>
+                    <li><a href="#barycentric"
+                    id="toc-barycentric">Barycentric</a></li>
+                    <li><a href="#rbf" id="toc-rbf">Rbf</a></li>
+                    </ul></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#export"
+                    id="toc-export">Export</a></li>
+                    <li><a href="#import"
+                    id="toc-import">Import</a></li>
+                    </ul></li>
+                    <li><a href="#import-options"
+                    id="toc-import-options">Import Options</a></li>
+                    <li><a href="#context-menu"
+                    id="toc-context-menu">Context Menu</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Retarget Transforms</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>This tool allows you to export and import position
+                and rotation information of selected transform nodes
+                to/from files. There are several methods to obtain and
+                set position information. The methods are as
+                follows:</p>
+                <h3 id="default">Default</h3>
+                <p>Obtains transform node position information in world
+                position and reproduces it in world position.</p>
+                <h3 id="barycentric">Barycentric</h3>
+                <p>Obtains transform node position information as
+                barycentric coordinates of the nearest triangle polygon
+                from that node, and reproduces it using mesh barycentric
+                coordinates. During reproduction, you need to select a
+                mesh with the same topology.</p>
+                <p>This method is effective when the transform node is
+                on the surface of the mesh.</p>
+                <p><img
+                src="../../images/model//retarget_transform/image002.png"
+                alt="image002" /></p>
+                <h3 id="rbf">Rbf</h3>
+                <p>Obtains transform node position information from
+                surrounding Vertex positions and reproduces it on a mesh
+                with the same topology. During reproduction, you need to
+                select a mesh with the same topology.</p>
+                <p>This method is effective when the transform node is
+                inside the mesh.</p>
+                <p><img
+                src="../../images/model//retarget_transform/image003.png"
+                alt="image003" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.model.retarget_transforms.ui
+faketools.tools.model.retarget_transforms.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model//retarget_transform/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <h3 id="export">Export</h3>
+                <p>To export position information, follow these
+                steps:</p>
+                <ol type="1">
+                <li><p>Select an export method from <code>Method</code>.
+                <img
+                src="../../images/model//retarget_transform/image004.png"
+                alt="image004" /></p></li>
+                <li><p>Select target nodes for exporting position
+                information according to the method.</p>
+                <ul>
+                <li><code>Default</code>
+                <ul>
+                <li>Select transform nodes to export (multiple selection
+                allowed).</li>
+                </ul></li>
+                <li><code>Barycentric</code>
+                <ul>
+                <li>Select mesh (mesh transform node) to export.</li>
+                <li>Additionally select nodes to export (multiple
+                selection allowed).</li>
+                </ul></li>
+                <li><code>Rbf</code>
+                <ul>
+                <li>Select mesh (mesh transform node) to export.</li>
+                <li>Additionally select nodes to export (multiple
+                selection allowed).</li>
+                </ul></li>
+                </ul></li>
+                <li><p>Enter file name to export in
+                <code>File Name</code>. <img
+                src="../../images/model//retarget_transform/image005.png"
+                alt="image005" /></p></li>
+                <li><p>Press <code>Export</code> button. When export is
+                complete, the exported file name will be displayed in
+                the list. <img
+                src="../../images/model//retarget_transform/image006.png"
+                alt="image006" /></p></li>
+                </ol>
+                <p>※ When <code>Rbf</code> method is selected, you can
+                set the export radius with the <code>Rbf Radius</code>
+                value. If the behavior when reproducing position differs
+                from expectations, increasing this value may provide the
+                expected behavior.</p>
+                <h3 id="import">Import</h3>
+                <p>To import position information, follow these
+                steps:</p>
+                <ol type="1">
+                <li><p>Select a file name to import from the list. <img
+                src="../../images/model//retarget_transform/image006.png"
+                alt="image006" /></p></li>
+                <li><p>Select target nodes for importing according to
+                the export method.</p>
+                <ul>
+                <li><code>Default</code>
+                <ul>
+                <li>No selection needed.</li>
+                </ul></li>
+                <li><code>Barycentric</code>
+                <ul>
+                <li>Select mesh with the same topology as when
+                exported.</li>
+                </ul></li>
+                <li><code>Rbf</code>
+                <ul>
+                <li>Select mesh with the same topology as when
+                exported.</li>
+                </ul></li>
+                </ul></li>
+                <li><p>Set options and press <code>Import</code> button.
+                With default settings, position information is applied
+                to nodes selected during export. <img
+                src="../../images/model//retarget_transform/image007.png"
+                alt="image007" /></p></li>
+                </ol>
+                <h2 id="import-options">Import Options</h2>
+                <p>Options that can be set during import.</p>
+                <ul>
+                <li><code>Is Rotation</code>
+                <ul>
+                <li>Sets whether to apply rotation information to
+                transform nodes.</li>
+                </ul></li>
+                <li><code>Create New</code>
+                <ul>
+                <li>When checkbox is on, creates new transform nodes
+                with the node type selected in <code>Object Type</code>.
+                When off, applies position information to nodes selected
+                during export.</li>
+                <li>If even one selected node doesn’t exist, an error
+                message is displayed.</li>
+                </ul></li>
+                <li><code>Object Type</code>
+                <ul>
+                <li>Selects the type of transform node to create when
+                <code>Create New</code> is on.</li>
+                </ul></li>
+                <li><code>Size</code>
+                <ul>
+                <li>Sets the size of transform nodes created when
+                <code>Create New</code> is on.</li>
+                </ul></li>
+                </ul>
+                <h2 id="context-menu">Context Menu</h2>
+                <p>Right-clicking on the list displays a context
+                menu.</p>
+                <p><img
+                src="../../images/model//retarget_transform/image008.png"
+                alt="image008" /></p>
+                <ul>
+                <li><code>Select Nodes</code>
+                <ul>
+                <li>Selects nodes recorded in the file selected in the
+                list.</li>
+                </ul></li>
+                <li><code>Remove File</code>
+                <ul>
+                <li>Deletes the file selected in the list. (The actual
+                file is also deleted.)</li>
+                </ul></li>
+                <li><code>Refresh</code>
+                <ul>
+                <li>Updates the list.</li>
+                </ul></li>
+                <li><code>Open Directory</code>
+                <ul>
+                <li>Opens the folder where exported files are
+                saved.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform Creator on Curve - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="カーブ上にトランスフォームノードを作成">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/transform_creator_on_curve.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a></li>
+                    <li><a href="#作成方法"
+                    id="toc-作成方法">作成方法</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Transform Creator on Curve</h1>
+                
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.transform_creator_on_curve_ui
+faketools.tools.rig.transform_creator_on_curve_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/transform_creator_on_curve/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li>上部のドロップダウンメニューから、トランスフォームの作成方法を選択します。</li>
+                <li>シーン上の NURBS
+                サーフェース及びカーブを選択します。そのノード自体かトランスフォームノードを選択します。</li>
+                <li>それ以外のオプションを設定します。グレーアウトされていないオプションを設定可能です。</li>
+                <li><strong>[ Create ]</strong>
+                ボタンを押すことでトランスフォームノードが作成されます。</li>
+                </ol>
+                <h3 id="オプション">オプション</h3>
+                <ul>
+                <li><strong>ノードタイプ</strong>
+                <ul>
+                <li>locator か transform のどちらかを選択します。</li>
+                </ul></li>
+                <li><strong>Divisions</strong>
+                <ul>
+                <li>作成方法が innerDivide
+                の時のみ有効です。選択したノード間を何分割するかを設定します。</li>
+                </ul></li>
+                <li><strong>IncludeRotation</strong>
+                <ul>
+                <li>作成するトランスフォームノードに回転属性を含めるかを設定します。</li>
+                </ul></li>
+                <li><strong>回転をオフセットする値</strong>
+                <ul>
+                <li>作成されたトランスフォームノードに対して、回転をオフセットする値を設定します。</li>
+                </ul></li>
+                <li><strong>AimVector</strong>
+                <ul>
+                <li>作成されるトランスフォームノードのエイムベクトルを取得する方法を設定します。
+                <ul>
+                <li><strong>CurveTangent</strong>
+                <ul>
+                <li>カーブの接線ベクトルを取得します。</li>
+                </ul></li>
+                <li><strong>NextPoint</strong>
+                <ul>
+                <li>作成されるトランスフォームノードの次の順番のノードのポジションへのベクトルを取得します。</li>
+                </ul></li>
+                <li><strong>PreviousPoint</strong>
+                <ul>
+                <li>作成されるトランスフォームノードの前の順番のノードのポジションへのベクトルを取得します。</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>UpVector</strong>
+                <ul>
+                <li>作成されるトランスフォームノードのアップベクトルを取得する方法を設定します。
+                <ul>
+                <li><strong>SceneUp</strong>
+                <ul>
+                <li>シーンのアップベクトルを取得します。[0, 1, 0]
+                です。</li>
+                </ul></li>
+                <li><strong>CurveNormal</strong>
+                <ul>
+                <li>カーブの法線ベクトルを取得します。</li>
+                </ul></li>
+                <li><strong>SurfaceNormal</strong>
+                <ul>
+                <li>カーブが属するサーフェスの法線ベクトルを取得します。この時のカーブは
+                duplicateCurve
+                コマンドで作成されたものである必要があります。そうでない場合、強制的に
+                CurveNormal が適用されます。</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>SurfaceDir</strong>
+                <ul>
+                <li>NURBS
+                サーフェースを選択している場合、サーフェースのどの方向をカーブの法線ベクトルとして使用するかを設定します。
+                <ul>
+                <li><strong>U Direction</strong>
+                <ul>
+                <li>サーフェースの U 方向を使用します。</li>
+                <li><strong>V Direction</strong></li>
+                <li>サーフェースの V 方向を使用します。</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Reverse</strong>
+                <ul>
+                <li>トランスフォームノードが複製作成された場合、その順番を逆にするかを設定します。</li>
+                </ul></li>
+                <li><strong>Chain</strong>
+                <ul>
+                <li>トランスフォームノードが複製作成された場合、それらをチェーン状の階層構造にするかを設定します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="作成方法">作成方法</h3>
+                <ul>
+                <li><strong>CVPositions</strong>
+                <ul>
+                <li>カーブの CV
+                の位置にトランスフォームノードを作成します。</li>
+                </ul></li>
+                <li><strong>EPPositions</strong>
+                <ul>
+                <li>カーブの エディットポイント
+                の位置にトランスフォームノードを作成します。</li>
+                </ul></li>
+                <li><strong>CVClosestPositions</strong>
+                <ul>
+                <li>カーブの CV
+                に最も近いカーブ上の位置にトランスフォームノードを作成します。</li>
+                </ul></li>
+                <li><strong>ParameterPositions</strong>
+                <ul>
+                <li>カーブのパラメーター値から等間隔にトランスフォームノードを作成します。作成されるノードの個数は
+                Divisions で設定します。</li>
+                </ul></li>
+                <li><strong>LengthPositions</strong>
+                <ul>
+                <li>カーブの長さから等間隔にトランスフォームノードを作成します。作成されるノードの個数は
+                Divisions で設定します。</li>
+                </ul></li>
+                <li><strong>CloudPositions</strong>
+                <ul>
+                <li>カーブの弦長を等間隔にするようにトランスフォームノードを作成します。作成されるノードの個数は
+                Divisions で設定します。</li>
+                <li>閉じられたカーブの場合、失敗する可能性があります。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

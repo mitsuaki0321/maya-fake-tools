@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecter - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Tool providing advanced selection features">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/selecter.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#filter-selection-by-name"
+                    id="toc-filter-selection-by-name">Filter Selection
+                    by Name</a></li>
+                    <li><a href="#filter-selection-by-node-type"
+                    id="toc-filter-selection-by-node-type">Filter
+                    Selection by Node Type</a></li>
+                    <li><a
+                    href="#select-parents-children-siblings-of-selected-nodes"
+                    id="toc-select-parents-children-siblings-of-selected-nodes">Select
+                    Parents, Children, Siblings of Selected
+                    Nodes</a></li>
+                    <li><a
+                    href="#select-with-name-replacement-leftright"
+                    id="toc-select-with-name-replacement-leftright">Select
+                    with Name Replacement (Left/Right)</a></li>
+                    <li><a
+                    href="#select-rename-duplicate-duplicate-original-shape-with-name-replacement"
+                    id="toc-select-rename-duplicate-duplicate-original-shape-with-name-replacement">Select,
+                    Rename, Duplicate, Duplicate Original Shape with
+                    Name Replacement</a></li>
+                    <li><a href="#rename-selected-nodes"
+                    id="toc-rename-selected-nodes">Rename Selected
+                    Nodes</a></li>
+                    <li><a href="#special-features"
+                    id="toc-special-features">Special Features</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Selecter</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to assist in selecting nodes in the scene and
+                replacing names.</p>
+                <p>Main features include:</p>
+                <ul>
+                <li>Filter selected nodes by name or node type</li>
+                <li>Select parents, children, etc. of selected transform
+                nodes</li>
+                <li>Select, rename, duplicate, or duplicate original
+                shapes with replaced node names</li>
+                <li>Rename selected nodes</li>
+                </ul>
+                <p><img src="../../images/common/selecter/image001.png"
+                alt="image001" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch from the dedicated menu or with the following
+                command. The launched tool will dock at the bottom of
+                the shelf.</p>
+                <pre class="python"><code>import faketools.tools.common.selecter.ui
+faketools.tools.common.selecter.ui.show_ui()</code></pre>
+                <h2 id="usage">Usage</h2>
+                <h3 id="filter-selection-by-name">Filter Selection by
+                Name</h3>
+                <p>Filters selected nodes by text. Holding
+                <code>Ctrl</code> while selecting will deselect matching
+                nodes.</p>
+                <p><strong>Example: Select nodes containing the text
+                “Group”</strong> <img
+                src="../../images/common/selecter/image002.png"
+                alt="image002" /></p>
+                <p>When using regular expression strings, filtering is
+                done as regular expressions.</p>
+                <p><strong>Example: Select nodes containing “Group” at
+                the end of the node name</strong> <img
+                src="../../images/common/selecter/image012.png"
+                alt="image012" /></p>
+                <p>Pressing the <code>Aa</code> button performs
+                case-insensitive filtering.</p>
+                <p><img src="../../images/common/selecter/image013.png"
+                alt="image013" /></p>
+                <h3 id="filter-selection-by-node-type">Filter Selection
+                by Node Type</h3>
+                <p>Filters selected nodes by node type. Holding
+                <code>Ctrl</code> while selecting will deselect matching
+                nodes.</p>
+                <p><img src="../../images/common/selecter/image003.png"
+                alt="image003" /></p>
+                <h3
+                id="select-parents-children-siblings-of-selected-nodes">Select
+                Parents, Children, Siblings of Selected Nodes</h3>
+                <p>Selects parents, children, siblings of selected
+                nodes.</p>
+                <p><img src="../../images/common/selecter/image004.png"
+                alt="image004" /></p>
+                <ul>
+                <li><strong>PAR</strong>
+                <ul>
+                <li>Selects parents of selected nodes.</li>
+                </ul></li>
+                <li><strong>CHI</strong>
+                <ul>
+                <li>Selects children of selected nodes.</li>
+                </ul></li>
+                <li><strong>SIB</strong>
+                <ul>
+                <li>Selects siblings of selected nodes.</li>
+                </ul></li>
+                <li><strong>ALL</strong>
+                <ul>
+                <li>Selects all parents, children, and siblings of
+                selected nodes.</li>
+                </ul></li>
+                <li><strong>BTM</strong>
+                <ul>
+                <li>Selects the bottommost nodes in the selected node
+                hierarchy.</li>
+                </ul></li>
+                <li><strong>HIE</strong>
+                <ul>
+                <li>Selects all nodes including shape nodes of selected
+                nodes.</li>
+                </ul></li>
+                </ul>
+                <p>All can use modifier keys just like selection in
+                Maya’s view.</p>
+                <h3 id="select-with-name-replacement-leftright">Select
+                with Name Replacement (Left/Right)</h3>
+                <p>Selects nodes with replaced names between left and
+                right selected nodes.</p>
+                <p><img src="../../images/common/selecter/image009.png"
+                alt="image009" /></p>
+                <p>All can use modifier keys just like selection in
+                Maya’s view.</p>
+                <p>※ This feature can change the replacement method
+                according to the <code>LEFT_TO_RIGHT</code> and
+                <code>RIGHT_TO_LEFT</code> settings in
+                settings.json.</p>
+                <h3
+                id="select-rename-duplicate-duplicate-original-shape-with-name-replacement">Select,
+                Rename, Duplicate, Duplicate Original Shape with Name
+                Replacement</h3>
+                <p>Selects, renames, duplicates, or duplicates original
+                shapes with replaced names of selected nodes.</p>
+                <p><img src="../../images/common/selecter/image005.png"
+                alt="image005" /></p>
+                <p>Commands are executed by replacing names with strings
+                entered in each text box. Press the <strong>→</strong>
+                button to reverse the replacement direction.</p>
+                <p><img src="../../images/common/selecter/image011.png"
+                alt="image0011" /></p>
+                <ul>
+                <li><strong>SEL</strong>
+                <ul>
+                <li>Selects with replaced names of selected nodes.</li>
+                </ul></li>
+                <li><strong>REN</strong>
+                <ul>
+                <li>Renames with replaced names of selected nodes.</li>
+                </ul></li>
+                <li><strong>DUP</strong>
+                <ul>
+                <li>Duplicates with replaced names of selected nodes.
+                Press <strong>MIR</strong> button to mirror. At that
+                time, <strong>POS</strong> and <strong>ROT</strong>
+                determine whether to mirror position and rotation
+                respectively. If <strong>FRZ</strong> button is pressed,
+                transforms and pivots are frozen after mirroring. For
+                Mesh nodes, components are also frozen.</li>
+                </ul></li>
+                <li><strong>ORG</strong>
+                <ul>
+                <li>Duplicates original shapes with replaced names of
+                selected nodes.</li>
+                </ul></li>
+                </ul>
+                <h3 id="rename-selected-nodes">Rename Selected
+                Nodes</h3>
+                <p>Renames selected nodes.</p>
+                <p><img src="../../images/common/selecter/image006.png"
+                alt="image006" /></p>
+                <ul>
+                <li>Strings starting with <code>@</code> are converted
+                to alphabets. Assigned from A in selection order. To
+                change the first character, change the string in the @
+                field.</li>
+                <li>Strings starting with <code>#</code> are converted
+                to numbers. Assigned from 1 in selection order. To
+                change the first number, change the string in the #
+                field.</li>
+                <li>Strings starting with <code>~</code> are replaced
+                with the names of selected nodes.</li>
+                </ul>
+                <p><strong>Examples:</strong></p>
+                <table>
+                <thead>
+                <tr>
+                <th style="text-align: left;">Selected Node</th>
+                <th style="text-align: left;">Field</th>
+                <th style="text-align: left;">Rename Result</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">fake@</td>
+                <td style="text-align: left;">fakeA, fakeB, fakeC,
+                …</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">fake#</td>
+                <td style="text-align: left;">fake1, fake2, fake3,
+                …</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">~_fake</td>
+                <td style="text-align: left;">Any_fake</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="special-features">Special Features</h3>
+                <p>You can use special features by pressing each
+                button.</p>
+                <p><img src="../../images/common/selecter/image007.png"
+                alt="image007" /></p>
+                <ul>
+                <li><strong>L2F</strong>
+                <ul>
+                <li>Changes the last selected node to the first selected
+                node.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

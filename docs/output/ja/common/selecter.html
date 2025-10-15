@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selecter - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="高度な選択機能を提供するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/selecter.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#選択を名前でフィルタリング"
+                    id="toc-選択を名前でフィルタリング">選択を名前でフィルタリング</a></li>
+                    <li><a href="#選択をノードタイプでフィルタリング"
+                    id="toc-選択をノードタイプでフィルタリング">選択をノードタイプでフィルタリング</a></li>
+                    <li><a href="#選択したノードの親子兄弟を選択"
+                    id="toc-選択したノードの親子兄弟を選択">選択したノードの親、子、兄弟を選択</a></li>
+                    <li><a href="#名前を置換して選択-左右"
+                    id="toc-名前を置換して選択-左右">名前を置換して選択
+                    ( 左右 )</a></li>
+                    <li><a
+                    href="#名前を置換しての選択リネーム複製オリジナルシェイプを複製"
+                    id="toc-名前を置換しての選択リネーム複製オリジナルシェイプを複製">名前を置換しての選択、リネーム、複製、オリジナルシェイプを複製</a></li>
+                    <li><a href="#選択したノードの名前を変更"
+                    id="toc-選択したノードの名前を変更">選択したノードの名前を変更</a></li>
+                    <li><a href="#特殊な機能"
+                    id="toc-特殊な機能">特殊な機能</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Selecter</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>シーン上のノードを選択したり、名前を置換するなどの操作を補助するツールです。</p>
+                <p>主な機能は以下の通りです。</p>
+                <ul>
+                <li>選択したノードを名前やノードタイプでフィルタリング</li>
+                <li>選択したトランスフォームノードの親や子などを選択</li>
+                <li>選択したノードの名前を置換して選択、リネーム、複製、オリジナルシェイプを複製</li>
+                <li>選択したノードの名前を変更</li>
+                </ul>
+                <p><img src="../../images/common/selecter/image001.png"
+                alt="image001" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか以下のコマンドで起動します。
+                起動したツールは、シェフルの下部にドッキングされます。</p>
+                <pre class="python"><code>import faketools.tools.common.selecter.ui
+faketools.tools.common.selecter.ui.show_ui()</code></pre>
+                <h2 id="使用方法">使用方法</h2>
+                <h3
+                id="選択を名前でフィルタリング">選択を名前でフィルタリング</h3>
+                <p>選択したノードをテキストでフィルタリングします。<br />
+                <code>Ctrl</code>
+                キーを押しながら選択すると、該当したノードを選択から外します。</p>
+                <p><strong>例: Group
+                というテキストが含まれているノードを選択</strong><br />
+                <img src="../../images/common/selecter/image002.png"
+                alt="image002" /></p>
+                <p>正規表現文字列を使用した場合は、正規表現としてフィルタリングされます。</p>
+                <p><strong>例: Group
+                というテキストがノードの後方に含まれているノードを選択</strong><br />
+                <img src="../../images/common/selecter/image012.png"
+                alt="image012" /></p>
+                <p><code>Aa</code>
+                ボタンを押すと、大文字と小文字を区別しないフィルタリングを行います。</p>
+                <p><img src="../../images/common/selecter/image013.png"
+                alt="image013" /></p>
+                <h3
+                id="選択をノードタイプでフィルタリング">選択をノードタイプでフィルタリング</h3>
+                <p>選択したノードをノードタイプでフィルタリングします。<br />
+                <code>Ctrl</code>
+                キーを押しながら選択すると、該当したノードを選択から外します。</p>
+                <p><img src="../../images/common/selecter/image003.png"
+                alt="image003" /></p>
+                <h3
+                id="選択したノードの親子兄弟を選択">選択したノードの親、子、兄弟を選択</h3>
+                <p>選択したノードの親、子、兄弟を選択します。</p>
+                <p><img src="../../images/common/selecter/image004.png"
+                alt="image004" /></p>
+                <ul>
+                <li><strong>PAR</strong>
+                <ul>
+                <li>選択したノードの親を選択します。</li>
+                </ul></li>
+                <li><strong>CHI</strong>
+                <ul>
+                <li>選択したノードの子を選択します。</li>
+                </ul></li>
+                <li><strong>SIB</strong>
+                <ul>
+                <li>選択したノードの兄弟を選択します。</li>
+                </ul></li>
+                <li><strong>ALL</strong>
+                <ul>
+                <li>選択したノードの親、子、兄弟を全て選択します。</li>
+                </ul></li>
+                <li><strong>BTM</strong>
+                <ul>
+                <li>選択したノード階層の最下層のノードを選択します。</li>
+                </ul></li>
+                <li><strong>HIE</strong>
+                <ul>
+                <li>選択したノードのシェイプノードも含めた全てのノードを選択します。</li>
+                </ul></li>
+                </ul>
+                <p>すべて Maya
+                のビュー上での選択と同じようにモディファイヤキーを使用することができます。</p>
+                <h3 id="名前を置換して選択-左右">名前を置換して選択 (
+                左右 )</h3>
+                <p>左と右側で選択したノードの名前を置換したノードを選択します。</p>
+                <p><img src="../../images/common/selecter/image009.png"
+                alt="image009" /></p>
+                <p>すべて Maya
+                のビュー上での選択と同じようにモディファイヤキーを使用することができます。</p>
+                <p>※ この機能は、settings.json の
+                <code>LEFT_TO_RIGHT</code> 及び
+                <code>RIGHT_TO_LEFT</code>
+                の設定によって置換方法を変更することができます。</p>
+                <h3
+                id="名前を置換しての選択リネーム複製オリジナルシェイプを複製">名前を置換しての選択、リネーム、複製、オリジナルシェイプを複製</h3>
+                <p>選択したノードの名前を置換して選択、リネーム、複製、オリジナルシェイプを複製します。</p>
+                <p><img src="../../images/common/selecter/image005.png"
+                alt="image005" /></p>
+                <p>それぞれのテキストボックスに入力した文字列で名前を置換してコマンドが実行されます。<strong>→</strong>
+                ボタンを押すと置換の方向を入れ替えます。</p>
+                <p><img src="../../images/common/selecter/image011.png"
+                alt="image0011" /></p>
+                <ul>
+                <li><strong>SEL</strong>
+                <ul>
+                <li>選択したノードの名前を置換して選択します。</li>
+                </ul></li>
+                <li><strong>REN</strong>
+                <ul>
+                <li>選択したノードの名前を置換してリネームします。</li>
+                </ul></li>
+                <li><strong>DUP</strong>
+                <ul>
+                <li>選択したノードの名前を置換して複製します。<strong>MIR</strong>
+                ボタンを押すとミラーリングします。その時
+                <strong>POS</strong> と <strong>ROT</strong>
+                でそれぞれ位置と回転をミラーリングするかを決定します。<strong>FRZ</strong>
+                ボタンが押されている場合は、ミラーリング後にトランスフォームとピボットをフリーズします。Mesh
+                ノードの場合は、コンポーネントもフリーズします。</li>
+                </ul></li>
+                <li><strong>ORG</strong>
+                <ul>
+                <li>選択したノードの名前を置換してオリジナルシェイプを複製します。</li>
+                </ul></li>
+                </ul>
+                <h3
+                id="選択したノードの名前を変更">選択したノードの名前を変更</h3>
+                <p>選択したノードの名前を変更します。</p>
+                <p><img src="../../images/common/selecter/image006.png"
+                alt="image006" /></p>
+                <ul>
+                <li><code>@</code>
+                で始まる文字列はアルファベットに変換されます。選択順に A
+                から順番に割り当てられます。最初の文字列を変更したい場合は、@
+                フィールドの文字列を変更します。</li>
+                <li><code>#</code>
+                で始まる文字列は数字に変換されます。選択順に 1
+                から順番に割り当てられます。最初の数字を変更したい場合は、#
+                フィールドの文字列を変更します。</li>
+                <li><code>~</code>
+                で始まる文字列は選択したノードの名前に置換されます。</li>
+                </ul>
+                <p><strong>例:</strong></p>
+                <table>
+                <thead>
+                <tr>
+                <th style="text-align: left;">選択ノード</th>
+                <th style="text-align: left;">フィールド</th>
+                <th style="text-align: left;">名前変更結果</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">fake@</td>
+                <td style="text-align: left;">fakeA, fakeB, fakeC,
+                …</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">fake#</td>
+                <td style="text-align: left;">fake1, fake2, fake3,
+                …</td>
+                </tr>
+                <tr>
+                <td style="text-align: left;">Any</td>
+                <td style="text-align: left;">~_fake</td>
+                <td style="text-align: left;">Any_fake</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="特殊な機能">特殊な機能</h3>
+                <p>それぞれのボタンを押すことで、特殊な機能を使用することができます。</p>
+                <p><img src="../../images/common/selecter/image007.png"
+                alt="image007" /></p>
+                <ul>
+                <li><strong>L2F</strong>
+                <ul>
+                <li>最後に選択したのノードを最初に選択したノードに変更します。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

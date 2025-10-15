@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounding Box Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="選択オブジェクト周囲のバウンディングボックスジオメトリを作成">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/model/boundingbox_creator.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a>
+                    <ul>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Bounding Box Creator</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>選択したジオメトリに対してバウンディングボックス用のジオメトリを作成するツールです。
+                それぞれ、ワールド座標系、最小体積、軸に沿った最小体積のバウンディングボックスを作成することができます。</p>
+                <p>また、作成されたバウンディングボックスは、Translate、Rotate、Scale
+                の値を保持します。</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image002.png"
+                alt="image002" /> <img
+                src="../../images/model/boundingbox_creator/image003.png"
+                alt="image003" /> <img
+                src="../../images/model/boundingbox_creator/image004.png"
+                alt="image004" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.model.boundingbox_creator.ui
+faketools.tools.model.boundingbox_creator.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/boundingbox_creator/image001.png"
+                alt="image001" /></p>
+                <h3 id="使用方法">使用方法</h3>
+                <ol type="1">
+                <li><p>バウンディングボックスを作成したいジオメトリを選択します
+                ( 複数選択可 )。また、グループノード ( transform )
+                を選択すると、その子も含めたバウンディングボックスを作成します。</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image005.png"
+                alt="image005" /></p></li>
+                <li><p>作成するバウンディングボックスのタイプを選択します。</p>
+                <ul>
+                <li><code>World</code>:
+                ワールド座標系でバウンディングボックスを作成します。</li>
+                <li><code>Minimum</code>:
+                最小体積のバウンディングボックスを作成します。</li>
+                <li><code>AxisAligned</code>:
+                指定した軸を基準として最小体積のバウンディングボックスを作成します。
+                <ul>
+                <li><code>Axis Direction</code>:
+                軸の方向を指定します。</li>
+                <li><code>Axis</code>: <code>Axis Direction</code>
+                で指定した軸を最終的にどの軸に変換するかを指定します。</li>
+                <li><code>Sampling</code>:
+                バウンディングボックスのサンプリング数を指定します。値が大きいほど精度は上がりますが、計算量が増えます。</li>
+                </ul></li>
+                </ul>
+                <p><img
+                src="../../images/model/boundingbox_creator/image007.png"
+                alt="image007" /></p></li>
+                <li><p>作成されるバウンディングボックスジオメトリのタイプを選択します。</p>
+                <ul>
+                <li><code>mesh</code>: Cube
+                メッシュをバウンディングボックスとして作成します。</li>
+                <li><code>curve</code>: Cube
+                型のカーブをバウンディングボックスとして作成します。</li>
+                <li><code>locator</code>:
+                ロケーターをバウンディングボックスの位置に作成します。</li>
+                </ul>
+                <p><img
+                src="../../images/model/boundingbox_creator/image008.png"
+                alt="image008" /></p></li>
+                <li><p>オプションを設定します。</p></li>
+                <li><p><code>Create</code>
+                ボタンを押してバウンディングボックスを作成します。</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image006.png"
+                alt="image006" /></p></li>
+                </ol>
+                <h3 id="オプション">オプション</h3>
+                <ul>
+                <li><code>Base Line</code>:
+                作成されるバウンディングボックスのピボット位置を指定します。</li>
+                <li><code>Include Scale</code>:
+                ジオメトリのスケールをバウンディングボックスに反映します。オフの場合は、スケール値を無視します。</li>
+                <li><code>Parent</code>:
+                作成されるバウンディングボックスを選択したノードの親として作成します。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

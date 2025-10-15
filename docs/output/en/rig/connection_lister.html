@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Lister - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Attribute connection and copying between source and target objects">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/connection_lister.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#connect-mode"
+                    id="toc-connect-mode">Connect Mode</a></li>
+                    <li><a href="#command-mode"
+                    id="toc-command-mode">Command Mode</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Connection Lister</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>This tool is for making connections and copying
+                values between nodes. Also, by using provided commands,
+                you can perform specific operations between nodes.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.connection_lister_ui
+faketools.tools.rig.connection_lister_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/connection_lister/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>The method for loading nodes and attributes is the
+                same as <strong>Attribute Lister</strong>. Select nodes
+                and press load button to display that node’s attributes
+                in the list.</p>
+                <p>For displayed nodes, you can connect and copy values
+                in <code>Connect</code> mode. Also, you can use provided
+                commands in <code>Command</code> mode.</p>
+                <h2 id="connect-mode">Connect Mode</h2>
+                <p>To copy values, press <code>Copy Value</code> button
+                to copy that attribute’s value. To connect attributes,
+                press <code>Connect</code> button to connect that
+                attribute.</p>
+                <h4 id="how-to-select-nodes-and-attributes">How to
+                Select Nodes and Attributes</h4>
+                <p>Select the same number of lists from left and right
+                for nodes and attributes displayed in the list,</p>
+                <p><img
+                src="../../images/rig/connection_lister/image003.png"
+                alt="image003" /></p>
+                <p>or as shown in the image, one source node/attribute
+                and multiple target nodes/attributes.</p>
+                <p><img
+                src="../../images/rig/connection_lister/image004.png"
+                alt="image004" /></p>
+                <h2 id="command-mode">Command Mode</h2>
+                <p>You can use provided commands in <code>Command</code>
+                mode.</p>
+                <p>Commands have the same functionality as <strong>Pair
+                Command</strong> in <strong>Single Command</strong>.
+                Refer to <strong><a href="./single_commands.html">Single
+                Command</a></strong> documentation.</p>
+                <p><img
+                src="../../images/rig/connection_lister/image002.png"
+                alt="image002" /></p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

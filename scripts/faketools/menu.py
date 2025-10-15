@@ -5,6 +5,8 @@ Automatically creates Maya menu based on registered tools.
 """
 
 import logging
+from pathlib import Path
+import webbrowser
 
 import maya.cmds as cmds
 
@@ -89,6 +91,12 @@ def add_menu():
     # Add separator and utility items
     cmds.menuItem(divider=True, parent=menu)
 
+    # Help/Documentation
+    cmds.menuItem(label="Help", command=lambda *args: open_documentation(), parent=menu)
+
+    # Separator before Reload Menu
+    cmds.menuItem(divider=True, parent=menu)
+
     # Reload menu item
     cmds.menuItem(label="Reload Menu", command=lambda *args: reload_menu(), parent=menu)
 
@@ -109,6 +117,21 @@ def reload_menu():
     """Reload the FakeTools menu."""
     logger.info("Reloading FakeTools menu...")
     add_menu()
+
+
+def open_documentation():
+    """Open documentation in default browser."""
+    # Calculate path to documentation
+    current_file = Path(__file__)
+    project_root = current_file.parent.parent.parent
+    docs_index = project_root / "docs" / "output" / "index.html"
+
+    if docs_index.exists():
+        webbrowser.open(f"file:///{docs_index.as_posix()}")
+        logger.info(f"Opening documentation: {docs_index}")
+    else:
+        logger.error(f"Documentation not found: {docs_index}")
+        cmds.warning("Documentation not found. Please build documentation first.")
 
 
 def _add_log_level_menu(parent_menu: str):

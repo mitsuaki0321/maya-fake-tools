@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Copy/Paste - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Skin weight copy & paste tool">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/skinWeights_copy_paste.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#optional-features"
+                    id="toc-optional-features">Optional
+                    Features</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Copy/Paste</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.skinWeights_copy_paste_ui
+faketools.tools.rig.skinWeights_copy_paste_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>To copy and paste weights, follow these steps:</p>
+                <p><strong>When copying from single component to
+                multiple components</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image002.png"
+                alt="image002" /></p>
+                <ol type="1">
+                <li>Set first button to <code>1:N</code>.</li>
+                <li>Select source component and select second button.
+                When selected, source component is remembered. Multiple
+                are remembered but first selected one is used as
+                source.</li>
+                <li>Select destination components and select third
+                button. When selected, destination components are
+                remembered.</li>
+                <li>Adjust weights from source to destination using
+                spinbox or slider for blending. Also, the rightmost
+                button pastes source weights to destination as is.</li>
+                </ol>
+                <p><strong>When copying between selected components
+                one-to-one</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image003.png"
+                alt="image003" /></p>
+                <ol type="1">
+                <li>Set first button to <code>1:1</code>.</li>
+                <li>Select source component and select second button.
+                When selected, source component is remembered.</li>
+                <li>Select same number of components as source and
+                select third button. When selected, destination
+                components are remembered.</li>
+                <li>Adjust weights from source to destination using
+                spinbox or slider for blending. Also, the rightmost
+                button pastes source weights to destination as is.</li>
+                </ol>
+                <p>※ Selecting too many components may cause heavy
+                processing.</p>
+                <h2 id="optional-features">Optional Features</h2>
+                <p>Spinbox up/down arrows can change in 0.01 increments
+                when clicked while holding Ctrl key. Also, can change in
+                0.5 increments when clicked while holding Shift key.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driven Key Tools - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="ドリブンキーの作成、転送、管理ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/drivenkey_tools.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#セットドリブンキーの保存と読み込み"
+                    id="toc-セットドリブンキーの保存と読み込み">セットドリブンキーの保存と読み込み</a></li>
+                    <li><a href="#セットドリブンキーのコピーとペースト"
+                    id="toc-セットドリブンキーのコピーとペースト">セットドリブンキーのコピーとペースト</a>
+                    <ul>
+                    <li><a href="#one-to-all-一つから全てへ"
+                    id="toc-one-to-all-一つから全てへ">One to All (
+                    一つから全てへ )</a></li>
+                    <li><a href="#one-to-replace-置換後のノードへ"
+                    id="toc-one-to-replace-置換後のノードへ">One to
+                    Replace ( 置換後のノードへ )</a></li>
+                    </ul></li>
+                    <li><a href="#アニメーションカーブのミラー"
+                    id="toc-アニメーションカーブのミラー">アニメーションカーブのミラー</a></li>
+                    <li><a href="#オプションメニュー"
+                    id="toc-オプションメニュー">オプションメニュー</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Driven Key Tools</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>セットドリブンキーの編集を補助するツールです。</p>
+                <p>セットドリブンキーに対して主に以下の機能を提供します。</p>
+                <ul>
+                <li>保存と読み込み</li>
+                <li>コピーとペースト</li>
+                <li>アニメーションカーブのミラー</li>
+                <li>いくつかのユーティリティー機能</li>
+                </ul>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.drivenkey_tools_ui
+faketools.tools.rig.drivenkey_tools_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image001.png"
+                alt="image001" /></p>
+                <h2
+                id="セットドリブンキーの保存と読み込み">セットドリブンキーの保存と読み込み</h2>
+                <p>セットドリブンキーのファイルへの保存、また、保存したファイルからの再現を行います。</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image002.png"
+                alt="image002" /></p>
+                <p>セットドリブンキーのファイルへの保存を行うには、以下の手順を行います。</p>
+                <ol type="1">
+                <li><p>セットドリブンキーが設定されたノードを選択します
+                ( 複数選択可 )。</p></li>
+                <li><p><code>Export/Import</code> メニューの
+                <code>Export</code> か <code>Export File</code>
+                を選択します。</p>
+                <ul>
+                <li><code>Export</code> は、TEMP
+                フォルダに保存します。</li>
+                <li><code>Export File</code>
+                は、保存先を選択します。</li>
+                </ul></li>
+                </ol>
+                <p>セットドリブンキーのファイルを読み込むには、以下の手順を行います。</p>
+                <ol type="1">
+                <li><code>Export/Import</code> メニューの
+                <code>Import</code> か <code>Import File</code>
+                を選択します。
+                <ul>
+                <li><code>Import</code> は、TEMP
+                フォルダから読み込みます。</li>
+                <li><code>Import File</code>
+                は、読み込むファイルを選択します。</li>
+                </ul></li>
+                <li>ファイルに保存されたセットドリブンキーが再現され、適応先のノードが選択されます。</li>
+                </ol>
+                <h2
+                id="セットドリブンキーのコピーとペースト">セットドリブンキーのコピーとペースト</h2>
+                <p>セットドリブンキーのコピーとペーストを行います。<br />
+                <strong>One to All</strong> と <strong>One to
+                Replace</strong> の二つの方法があります。</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image003.png"
+                alt="image003" /></p>
+                <h3 id="one-to-all-一つから全てへ">One to All (
+                一つから全てへ )</h3>
+                <p>一つのノードのセットドリブンキーを、複数のノードにコピーします。</p>
+                <p>コピーするには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>コピー元のノードを選択します。</li>
+                <li>コピー先のノードを追加選択します ( 複数選択可
+                )。</li>
+                <li><code>One to All</code> ボタンを押します。</li>
+                </ol>
+                <h3 id="one-to-replace-置換後のノードへ">One to Replace
+                ( 置換後のノードへ )</h3>
+                <p>一つのノードのセットドリブンキーを、そのノード名を置換したノードをシーンから検索してコピーします。<br />
+                ノード名の置換には、<code>One to Replace</code>
+                ボタン下のフィールドを使用します。 ( python
+                の正規表現で置換されます。 )</p>
+                <p>コピーするには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>コピー元のノードを選択します ( 複数選択可 )。</li>
+                <li><code>One to Replace</code>
+                ボタンを押します。置換後のノードがシーンから検索され、コピーされます。</li>
+                </ol>
+                <ul>
+                <li><strong>Replace Driver</strong>
+                <ul>
+                <li>ドライバーのノード名も置換したものを使用します。</li>
+                </ul></li>
+                <li><strong>Force Delete Driven Key</strong>
+                <ul>
+                <li>置換後のノードに既にセットドリブンキーが設定されている場合、適応するドリブンキー以外もすべて削除し、コピーします。</li>
+                </ul></li>
+                <li><strong>Mirror</strong>
+                <ul>
+                <li>置換後のノードに対して、T ( Translate ) R ( Rotate )
+                S ( Scale ) のアニメーションカーブを
+                <strong>Time</strong> か <strong>Value</strong>
+                方向にミラーします。</li>
+                </ul></li>
+                </ul>
+                <h2
+                id="アニメーションカーブのミラー">アニメーションカーブのミラー</h2>
+                <p>アニメーションカーブのミラーを行います。</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image004.png"
+                alt="image004" /></p>
+                <p>ミラーを行うには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>ミラーを行いたいドリブンキーアニメーションカーブを選択します
+                ( 複数選択可 )。</li>
+                <li><code>Time</code> か <code>Value</code>
+                ボタンを押します。
+                <ul>
+                <li><code>Time</code>
+                ボタンを押すと、アニメーションカーブの時間方向にミラーします。</li>
+                <li><code>Value</code>
+                ボタンを押すと、アニメーションカーブの値方向にミラーします。</li>
+                </ul></li>
+                </ol>
+                <h2 id="オプションメニュー">オプションメニュー</h2>
+                <p>いくつかの追加機能があります。</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image005.png"
+                alt="image005" /></p>
+                <ul>
+                <li><strong>Select Driven Key Nodes</strong>
+                <ul>
+                <li>セットドリブンキーが設定されたノードを選択します。
+                <ul>
+                <li>既にノードがシーン上で選択されている場合、そのノード内のセットドリブンキーが設定されたノードを選択します。</li>
+                <li>何も選択されていない場合、シーン上のすべてのノード内のセットドリブンキーが設定されたノードを選択します。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Cleanup Driven Key</strong>
+                <ul>
+                <li>セットドリブンキーが設定されているノードをクリーンアップします。以下の状況を整理します。
+                <ul>
+                <li>ドライバーが存在しないドリブンキーを削除します。</li>
+                <li>値がすべて同じであり、またタンジェントの値がすべて
+                0.0 であるドリブンキーを削除します。</li>
+                <li>以上の条件を満たし、削除した後に blendWeighted
+                ノードに animCurve
+                が接続されていないかひとつだけ接続されている場合は、その
+                blendWeighted ノードを削除します。</li>
+                <li>とにかくきれいにします。</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

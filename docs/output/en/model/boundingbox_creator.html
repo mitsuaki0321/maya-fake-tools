@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bounding Box Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Create bounding box geometry around selected objects">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/model/boundingbox_creator.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a>
+                    <ul>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#options"
+                    id="toc-options">Options</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Bounding Box Creator</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to create bounding box geometry for selected
+                geometry. You can create bounding boxes in world
+                coordinate system, minimum volume, and minimum volume
+                aligned to axis.</p>
+                <p>Also, the created bounding box preserves Translate,
+                Rotate, and Scale values.</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image002.png"
+                alt="image002" /> <img
+                src="../../images/model/boundingbox_creator/image003.png"
+                alt="image003" /> <img
+                src="../../images/model/boundingbox_creator/image004.png"
+                alt="image004" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.model.boundingbox_creator.ui
+faketools.tools.model.boundingbox_creator.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/boundingbox_creator/image001.png"
+                alt="image001" /></p>
+                <h3 id="usage">Usage</h3>
+                <ol type="1">
+                <li><p>Select geometry for which you want to create a
+                bounding box (multiple selection allowed). If you select
+                a group node (transform), it will create a bounding box
+                including its children.</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image005.png"
+                alt="image005" /></p></li>
+                <li><p>Select the type of bounding box to create.</p>
+                <ul>
+                <li><code>World</code>: Creates a bounding box in world
+                coordinate system.</li>
+                <li><code>Minimum</code>: Creates a minimum volume
+                bounding box.</li>
+                <li><code>AxisAligned</code>: Creates a minimum volume
+                bounding box based on a specified axis.
+                <ul>
+                <li><code>Axis Direction</code>: Specifies the axis
+                direction.</li>
+                <li><code>Axis</code>: Specifies which axis the
+                specified <code>Axis Direction</code> should be
+                converted to.</li>
+                <li><code>Sampling</code>: Specifies the sampling count
+                for the bounding box. Higher values increase accuracy
+                but also computation.</li>
+                </ul></li>
+                </ul>
+                <p><img
+                src="../../images/model/boundingbox_creator/image007.png"
+                alt="image007" /></p></li>
+                <li><p>Select the type of bounding box geometry to
+                create.</p>
+                <ul>
+                <li><code>mesh</code>: Creates a Cube mesh as bounding
+                box.</li>
+                <li><code>curve</code>: Creates a Cube-shaped curve as
+                bounding box.</li>
+                <li><code>locator</code>: Creates a locator at the
+                bounding box position.</li>
+                </ul>
+                <p><img
+                src="../../images/model/boundingbox_creator/image008.png"
+                alt="image008" /></p></li>
+                <li><p>Set options.</p></li>
+                <li><p>Press the <code>Create</code> button to create
+                the bounding box.</p>
+                <p><img
+                src="../../images/model/boundingbox_creator/image006.png"
+                alt="image006" /></p></li>
+                </ol>
+                <h3 id="options">Options</h3>
+                <ul>
+                <li><code>Base Line</code>: Specifies the pivot position
+                of the created bounding box.</li>
+                <li><code>Include Scale</code>: Reflects geometry scale
+                in the bounding box. When off, scale values are
+                ignored.</li>
+                <li><code>Parent</code>: Creates the bounding box as
+                parent of the selected node.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

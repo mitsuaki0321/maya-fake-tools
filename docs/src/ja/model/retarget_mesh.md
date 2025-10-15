@@ -15,7 +15,7 @@ import faketools.tools.model.retarget_mesh.ui
 faketools.tools.model.retarget_mesh.ui.show_ui()
 ```
 
-![image001](../images/model/retarget_mesh/image002.png) 
+![image001](../../images/model/retarget_mesh/image002.png) 
 
 
 ## 使用方法
@@ -28,7 +28,7 @@ faketools.tools.model.retarget_mesh.ui.show_ui()
 4. 新しいジオメトリを作成する場合は、`Create New Mesh` チェックボックスをオンにします。
 5. `Retarget Mesh` ボタンを押します。
 
-![image001](../images/model/retarget_mesh/image001.gif) 
+![image001](../../images/model/retarget_mesh/image001.gif) 
 
 
 ## Advanced Parameters

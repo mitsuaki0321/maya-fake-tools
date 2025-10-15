@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curve/Surface Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="NURBSカーブとサーフェスの作成と操作ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/curveSurface_creator.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#基本オプション"
+                    id="toc-基本オプション">基本オプション</a></li>
+                    <li><a href="#カーブオプション"
+                    id="toc-カーブオプション">カーブオプション</a></li>
+                    <li><a href="#ロフトサーフェースオプション"
+                    id="toc-ロフトサーフェースオプション">ロフトサーフェースオプション</a></li>
+                    <li><a href="#バインドオプション"
+                    id="toc-バインドオプション">バインドオプション</a></li>
+                    </ul></li>
+                    <li><a href="#edit-メニュー"
+                    id="toc-edit-メニュー">Edit メニュー</a>
+                    <ul>
+                    <li><a href="#move-cvs-positions"
+                    id="toc-move-cvs-positions">Move CVs
+                    Positions</a></li>
+                    <li><a href="#create-curve-to-vertices"
+                    id="toc-create-curve-to-vertices">Create Curve to
+                    Vertices</a></li>
+                    <li><a href="#create-curve-on-surfaceu-v"
+                    id="toc-create-curve-on-surfaceu-v">Create Curve on
+                    SurfaceU V</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Curve/Surface Creator</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>選択したトランスフォームノードに対して、NURBS カーブ
+                ( 以下、カーブ ) を作成し、そのカーブを基準に
+                ロフトされた NURBS サーフェス ( サーフェース )
+                やメッシュを作成します。</p>
+                <p>また、ジョイントノードを選択していた場合は、オプションにより作成されたオブジェクトをスムースバインドすることができます。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.curveSurface_creator_ui
+faketools.tools.rig.curveSurface_creator_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li>トランスフォームノードを選択します ( 複数選択可能
+                )。</li>
+                <li><code>Select Type</code> を <code>Selected</code> (
+                選択したノード間に作成 ) か <code>Hierarchy</code> (
+                選択したノードの階層構造毎に作成 )
+                のどちらかを選択します。</li>
+                <li><code>Object Type</code>
+                から作成するオブジェクトの種類を選択します。</li>
+                <li>グレーアウトされていないオプションを設定します。</li>
+                <li><code>Create</code>
+                ボタンを押すことでカーブやサーフェスが作成されます。</li>
+                </ol>
+                <h2 id="オプション">オプション</h2>
+                <p>主なオプションは、以下四つの項目に分かれます。</p>
+                <ul>
+                <li>基本オプション</li>
+                <li>カーブオプション</li>
+                <li>ロフトサーフェースオプション</li>
+                <li>バインドオプション</li>
+                </ul>
+                <h3 id="基本オプション">基本オプション</h3>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image002.png"
+                alt="image002" /></p>
+                <ul>
+                <li><strong>Select Type</strong>
+                <ul>
+                <li>カーブを作成するトランスフォームノードの選択方法を指定します。
+                <ul>
+                <li><code>Selected</code> :
+                選択したノード間に作成します。</li>
+                <li><code>Hierarchy</code> :
+                選択したノードの階層構造毎に作成します。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Object Type</strong>
+                <ul>
+                <li>作成するオブジェクトの種類を指定します。
+                <ul>
+                <li><code>Curve</code> : カーブを作成します。</li>
+                <li><code>Surface</code> :
+                カーブを基準にロフトされたサーフェスを作成します。</li>
+                <li><code>Mesh</code> :
+                カーブを基準にロフトされたメッシュを作成します。</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+                <h3 id="カーブオプション">カーブオプション</h3>
+                <p>カーブの作成時に設定するオプションです。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image003.png"
+                alt="image003" /></p>
+                <ul>
+                <li><strong>Degree</strong>
+                <ul>
+                <li>作成するカーブの次数を指定します。</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>カーブが選択したノードの中心に作成されるようにします。</li>
+                </ul></li>
+                <li><strong>Close</strong>
+                <ul>
+                <li>カーブが閉じた形状になるようにします。</li>
+                </ul></li>
+                <li><strong>Reverse</strong>
+                <ul>
+                <li>カーブの作成方向を逆にします。</li>
+                </ul></li>
+                <li><strong>Divisions</strong>
+                <ul>
+                <li>カーブの分割数を指定します。</li>
+                </ul></li>
+                <li><strong>Skip</strong>
+                <ul>
+                <li>選択したノードをこの値分スキップしてカーブを作成します。</li>
+                </ul></li>
+                </ul>
+                <h3
+                id="ロフトサーフェースオプション">ロフトサーフェースオプション</h3>
+                <p>サーフェース及びメッシュの作成時に設定するオプションです。objectType
+                が <code>Surface</code> か <code>Mesh</code>
+                の場合のみ有効です。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image004.png"
+                alt="image004" /></p>
+                <ul>
+                <li><strong>Axis</strong>
+                <ul>
+                <li>サーフェースの作成方向を指定します。
+                <ul>
+                <li><code>X</code> : 選択したノードの X
+                軸方向にサーフェースを作成します。</li>
+                <li><code>Y</code> : 選択したノードの Y
+                軸方向にサーフェースを作成します。</li>
+                <li><code>Z</code> : 選択したノードの Z
+                軸方向にサーフェースを作成します。</li>
+                <li><code>Normal</code> :
+                作成されるカーブの法線方向にサーフェースを作成します。</li>
+                <li><code>Binormal</code> :
+                作成されるカーブの従法線方向にサーフェースを作成します。</li>
+                <li><code>Surface Normal</code> :
+                参照サーフェスの法線方向にサーフェースを作成します（参照オブジェクトに
+                NURBS サーフェスを指定する必要があります）。</li>
+                <li><code>Surface Binormal</code> :
+                参照サーフェスの従法線方向にサーフェースを作成します（参照オブジェクトに
+                NURBS サーフェスを指定する必要があります）。</li>
+                <li><code>Mesh Normal</code> :
+                参照メッシュの法線方向にサーフェースを作成します（参照オブジェクトにメッシュを指定する必要があります）。</li>
+                <li><code>Mesh Binormal</code> :
+                参照メッシュの従法線方向にサーフェースを作成します（参照オブジェクトにメッシュを指定する必要があります）。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Reference Object</strong>
+                <ul>
+                <li><code>Surface Normal</code>,
+                <code>Surface Binormal</code>, <code>Mesh Normal</code>,
+                <code>Mesh Binormal</code>
+                を選択した場合に使用する参照オブジェクトを指定します。</li>
+                <li>参照オブジェクトを選択し、<code>&lt;&lt;</code>
+                ボタンを押すことで設定できます。</li>
+                <li><code>Surface Normal</code> /
+                <code>Surface Binormal</code> の場合は、NURBS
+                サーフェスを指定してください。</li>
+                <li><code>Mesh Normal</code> /
+                <code>Mesh Binormal</code>
+                の場合は、メッシュを指定してください。</li>
+                <li>サーフェースを作成する各ノードの位置から、参照オブジェクト上の最も近い点を探し、その位置の法線方向を使用します。</li>
+                </ul></li>
+                <li><strong>Width</strong>
+                <ul>
+                <li>サーフェースの幅を指定します。</li>
+                </ul></li>
+                <li><strong>Width Center</strong>
+                <ul>
+                <li>サーフェースの作成方向に対して、この値を中心にサーフェースを作成します。0.5
+                でサーフェースはプラスマイナス同じ幅になります。</li>
+                <li>例えば、Width が 10.0 で Width Center が 0.5
+                の場合、サーフェースは -5.0 から 5.0
+                までの幅になります。</li>
+                </ul></li>
+                </ul>
+                <h3 id="バインドオプション">バインドオプション</h3>
+                <p>オブジェクトを作成後、そのオブジェクトを選択したノードでスムースバインドする際のオプションです。<br />
+                選択したノードがジョイントノードである場合のみ有効です。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image005.png"
+                alt="image005" /></p>
+                <ul>
+                <li><strong>Is Bind</strong>
+                <ul>
+                <li>このチェックボックスがオンの時、作成されたオブジェクトを選択したノードでスムースバインドします。</li>
+                </ul></li>
+                <li><strong>Bind Method</strong>
+                <ul>
+                <li>スムースバインドのメソッドを指定します。
+                <ul>
+                <li><p><code>Linear</code> :
+                リニアウェイトでバインドします。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image006.png"
+                alt="image006" /></p></li>
+                <li><p><code>Ease</code> :
+                イーズインアウトウェイトでバインドします。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image007.png"
+                alt="image007" /></p></li>
+                <li><p><code>Step</code> :
+                ステップウェイトでバインドします。</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image008.png"
+                alt="image008" /></p></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Smooth Levels</strong>
+                <ul>
+                <li><code>Bind Method</code>
+                でのウエイト設定後、ウエイトをスムースにするレベルを指定します。</li>
+                </ul></li>
+                <li><strong>Parent Influences</strong>
+                <ul>
+                <li>この値が 0
+                の時は、選択したノードを基準にバインドします。</li>
+                <li>1
+                以上の値を指定した場合、選択したノードの親ノードをこの値分遡り、そのノードを基準にバインドします。</li>
+                </ul></li>
+                <li><strong>Remove End</strong>
+                <ul>
+                <li><code>close</code>
+                オプションがオフかつこのオプションがオンの時、選択したノードの最後のノードをバインドから除外します。</li>
+                </ul></li>
+                <li><strong>To Skin Cage</strong>
+                <ul>
+                <li><strong>Skin Weights to Mesh</strong>
+                ツールと同様に、スムースバインド後のオブジェクトをスキンケージに変換します。<code>objectType</code>
+                が <code>Surface</code> の時のみ有効です。</li>
+                </ul></li>
+                <li><strong>Division Levels</strong>
+                <ul>
+                <li><code>To Skin Cage</code>
+                がオンの時、スキンケージの分割数を指定します。</li>
+                </ul></li>
+                </ul>
+                <h2 id="edit-メニュー">Edit メニュー</h2>
+                <p>カーブを作成/編集する際に使用するコマンドが格納されています。</p>
+                <h3 id="move-cvs-positions">Move CVs Positions</h3>
+                <ul>
+                <li>閉じられたカーブの CV
+                をカーブに対して１つ選択して実行します。</li>
+                <li>CV 番号が 0 の位置を選択した CV
+                の位置に移動します。</li>
+                </ul>
+                <p><img
+                src="../../images/curveSurface_creator/image009.png"
+                alt="image009" /> <img
+                src="../../images/rig/curveSurface_creator/image010.png"
+                alt="image010" /></p>
+                <h3 id="create-curve-to-vertices">Create Curve to
+                Vertices</h3>
+                <ul>
+                <li>Vertex ( メッシュの頂点 ) を選択し ( 複数選択可 )
+                実行します。</li>
+                <li>選択した Vertex を基準にカーブを作成します。</li>
+                </ul>
+                <p><img
+                src="../../images/curveSurface_creator/image011.png"
+                alt="image011" /> <img
+                src="../../images/rig/curveSurface_creator/image012.png"
+                alt="image012" /></p>
+                <h3 id="create-curve-on-surfaceu-v">Create Curve on
+                SurfaceU V</h3>
+                <ul>
+                <li>サーフェースを選択し ( 複数選択可 )
+                実行します。</li>
+                <li>選択したサーフェース上の各 UV
+                値の中心にカーブを作成します。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Attr Slider - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Control object transform attributes with floating slider">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/remort_slider.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#about-each-mode"
+                    id="toc-about-each-mode">About Each Mode</a></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#marking-menu"
+                    id="toc-marking-menu"><strong>Marking
+                    Menu</strong></a></li>
+                    <li><a href="#step-buttons"
+                    id="toc-step-buttons"><strong>Step
+                    Buttons</strong></a></li>
+                    <li><a href="#each-numeric-field"
+                    id="toc-each-numeric-field">Each Numeric
+                    Field</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Remote Attr Slider</h1>
+                
+                <p><img
+                src="../../images/rig/remote_slider/image001.gif"
+                alt="image001" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch from the dedicated menu or with the following
+                command.</p>
+                <pre class="python"><code>import faketools.tools.rig.remote_slider_ui
+faketools.tools.rig.remote_slider_ui.show_ui()</code></pre>
+                <h2 id="usage">Usage</h2>
+                <p><img
+                src="../../images/rig/remote_slider/image002.gif"
+                alt="image001" /></p>
+                <ol type="1">
+                <li>Select nodes you want to control with the tool. Only
+                transform type nodes are valid.</li>
+                <li>Move cursor to the node list at the top of the tool,
+                right-click <strong>[ Set Items ]</strong> to register
+                nodes to the list.</li>
+                <li>Select registered node name and target attribute
+                from the attribute list at the bottom, and manipulate
+                slider to control values.</li>
+                </ol>
+                <h2 id="about-each-mode">About Each Mode</h2>
+                <p><img src="../../images/rig/remote_slider/image001.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p>You can select how to control values with slider from
+                <strong>[ Edit ]</strong> menu. The following modes are
+                available:</p>
+                <ul>
+                <li><strong>Local Absolute Mode</strong>
+                <ul>
+                <li>In the node’s local space, the slider value is
+                directly assigned to that value.</li>
+                <li>At this time, <strong>[ Reset ]</strong> button sets
+                the value to 0 for translate and rotate, or 1 for
+                scale.</li>
+                </ul></li>
+                <li><strong>Local Relative Mode</strong>
+                <ul>
+                <li>In the node’s local space, the slider value is added
+                to the current value.</li>
+                <li>The current value at this time is recorded in the
+                tool when the node is registered to the list (not
+                accessible by user). This value is also used when
+                <strong>[ Reset ]</strong> button is executed.</li>
+                </ul></li>
+                <li><strong>World Relative Mode</strong>
+                <ul>
+                <li>In the node’s world space, the slider value is added
+                to the current value.</li>
+                <li>In this mode, only one attribute can be selected,
+                and scale attribute cannot be selected.</li>
+                <li>At this time, <strong>[ Reset ]</strong> button also
+                resets the other three values for that attribute to
+                their original position. For example, when translateX is
+                selected and <strong>[ Reset ]</strong> is executed,
+                translateY and Z values are also reset to the state when
+                the node was registered.</li>
+                </ul></li>
+                </ul>
+                <p><strong>Values</strong> used for slider behavior and
+                [ Reset ] in Local Relative mode and World Relative mode
+                can be updated with <strong>[ Update Reset Values
+                ]</strong>.</p>
+                <h2 id="options">Options</h2>
+                <h3 id="marking-menu"><strong>Marking Menu</strong></h3>
+                <p><img src="../../images/rig/remote_slider/image002.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p>Menu that appears when right-clicking the node list.
+                Each has the following functions:</p>
+                <ul>
+                <li><strong>Set Items</strong>
+                <ul>
+                <li>Registers transform nodes selected in scene to the
+                list.</li>
+                </ul></li>
+                <li><strong>Remove Items</strong>
+                <ul>
+                <li>Removes nodes selected in node list from the
+                list.</li>
+                </ul></li>
+                <li><strong>Select All Items</strong>
+                <ul>
+                <li>Selects all nodes in the node list.</li>
+                </ul></li>
+                <li><strong>Select Nodes</strong>
+                <ul>
+                <li>Actually selects nodes selected in node list in the
+                scene.</li>
+                </ul></li>
+                </ul>
+                <h3 id="step-buttons"><strong>Step Buttons</strong></h3>
+                <p>The <code>+</code> and <code>-</code> <strong>[ Step
+                ]</strong> buttons increase/decrease slider value by a
+                fixed value. The value changes depending on how the
+                button is clicked.</p>
+                <ul>
+                <li>When clicked without pressing anything
+                <ul>
+                <li>Uses value of 1.0.</li>
+                </ul></li>
+                <li>When clicked while holding Shift key
+                <ul>
+                <li>Uses value of 10.0.</li>
+                </ul></li>
+                <li>When clicked while holding Ctrl key
+                <ul>
+                <li>Uses value of 0.1.</li>
+                </ul></li>
+                </ul>
+                <h3 id="each-numeric-field">Each Numeric Field</h3>
+                <p>Numeric fields aligned at the bottom of slider show
+                slider’s minimum value, current value, and maximum value
+                from left. You can directly enter values in each
+                field.</p>
+                <p><img src="../../images/rig/remote_slider/image003.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p>Also, right-clicking minimum and maximum value fields
+                allows you to select commonly used values.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

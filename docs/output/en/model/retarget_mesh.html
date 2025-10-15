@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retarget Mesh - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Transfer vertex positions between meshes with identical topology">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/model/retarget_mesh.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#advanced-parameters"
+                    id="toc-advanced-parameters">Advanced Parameters</a>
+                    <ul>
+                    <li><a href="#radius-multiplier"
+                    id="toc-radius-multiplier">Radius
+                    Multiplier</a></li>
+                    <li><a href="#max-vertices"
+                    id="toc-max-vertices">Max Vertices</a></li>
+                    <li><a href="#min-source-vertices"
+                    id="toc-min-source-vertices">Min Source
+                    Vertices</a></li>
+                    <li><a href="#max-iterations"
+                    id="toc-max-iterations">Max Iterations</a></li>
+                    </ul></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Retarget Mesh</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.model.retarget_mesh.ui
+faketools.tools.model.retarget_mesh.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/retarget_mesh/image002.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>To use the tool, follow these steps:</p>
+                <ol type="1">
+                <li>Select the source geometry for deformation and press
+                <code>Set Source Mesh</code> button.</li>
+                <li>Select the destination geometry for deformation and
+                press <code>Set Destination Mesh</code> button (multiple
+                selection allowed).</li>
+                <li>Select the target geometry to deform and press
+                <code>Set Target Mesh</code> button.</li>
+                <li>If creating new geometry, check the
+                <code>Create New Mesh</code> checkbox.</li>
+                <li>Press <code>Retarget Mesh</code> button.</li>
+                </ol>
+                <p><img
+                src="../../images/model/retarget_mesh/image001.gif"
+                alt="image001" /></p>
+                <h2 id="advanced-parameters">Advanced Parameters</h2>
+                <p>You can obtain more accurate transfer results by
+                adjusting advanced setting parameters.</p>
+                <h3 id="radius-multiplier">Radius Multiplier</h3>
+                <ul>
+                <li><strong>Default Value</strong>: 1.0</li>
+                <li><strong>Range</strong>: 0.5 ~ 10.0</li>
+                <li><strong>Description</strong>: Radius multiplier for
+                searching source mesh vertices.</li>
+                <li><strong>How to use</strong>:
+                <ul>
+                <li>When meshes are small or far apart,
+                <strong>increase</strong> the value (e.g., 2.0 ~
+                5.0)</li>
+                <li>If deformation isn’t working well, adjusting this
+                value may improve results</li>
+                <li>If the value is too large, the influence range may
+                be too wide, causing unintended deformation</li>
+                </ul></li>
+                </ul>
+                <h3 id="max-vertices">Max Vertices</h3>
+                <ul>
+                <li><strong>Default Value</strong>: 1000</li>
+                <li><strong>Range</strong>: 100 ~ 10000</li>
+                <li><strong>Description</strong>: Maximum number of
+                vertices per group when processing target mesh.</li>
+                <li><strong>How to use</strong>:
+                <ul>
+                <li>When target mesh vertex count exceeds this value,
+                it’s automatically divided into multiple groups for
+                processing</li>
+                <li><strong>Reducing</strong> the value divides large
+                meshes into finer groups (processing becomes slower but
+                accuracy may improve)</li>
+                <li><strong>Increasing</strong> the value speeds up
+                processing but increases memory usage</li>
+                </ul></li>
+                </ul>
+                <h3 id="min-source-vertices">Min Source Vertices</h3>
+                <ul>
+                <li><strong>Default Value</strong>: 10</li>
+                <li><strong>Range</strong>: 4 ~ 100</li>
+                <li><strong>Description</strong>: Minimum number of
+                source mesh vertices used for deformation
+                calculation.</li>
+                <li><strong>How to use</strong>:
+                <ul>
+                <li><strong>Increasing</strong> the value improves
+                deformation accuracy but increases processing time
+                (e.g., 20 ~ 50)</li>
+                <li><strong>Reducing</strong> the value speeds up
+                processing but may reduce accuracy</li>
+                <li>At least 4 vertices are required (cannot calculate
+                correctly with fewer than 4 vertices)</li>
+                </ul></li>
+                </ul>
+                <h3 id="max-iterations">Max Iterations</h3>
+                <ul>
+                <li><strong>Default Value</strong>: 10</li>
+                <li><strong>Range</strong>: 1 ~ 20</li>
+                <li><strong>Description</strong>: Maximum number of
+                attempts to automatically adjust search radius when
+                insufficient source vertices are found.</li>
+                <li><strong>How to use</strong>:
+                <ul>
+                <li>The default value (10) is usually fine</li>
+                <li><strong>Increasing</strong> the value attempts more
+                tries to find appropriate vertices</li>
+                <li>If errors occur, we recommend adjusting Radius
+                Multiplier rather than increasing this value</li>
+                </ul></li>
+                </ul>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Source mesh and destination mesh must have the same
+                topology.</li>
+                <li>When <code>Create New Mesh</code> is off and there
+                are multiple destination meshes, nothing is
+                created.</li>
+                <li>Processing may take time when target mesh has many
+                vertices.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

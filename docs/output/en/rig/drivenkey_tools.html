@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driven Key Tools - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Create, transfer, and manage driven keys">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/drivenkey_tools.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#save-and-load-set-driven-keys"
+                    id="toc-save-and-load-set-driven-keys">Save and Load
+                    Set Driven Keys</a></li>
+                    <li><a href="#copy-and-paste-set-driven-keys"
+                    id="toc-copy-and-paste-set-driven-keys">Copy and
+                    Paste Set Driven Keys</a>
+                    <ul>
+                    <li><a href="#one-to-all-from-one-to-all"
+                    id="toc-one-to-all-from-one-to-all">One to All (From
+                    One to All)</a></li>
+                    <li><a href="#one-to-replace-to-replaced-node"
+                    id="toc-one-to-replace-to-replaced-node">One to
+                    Replace (To Replaced Node)</a></li>
+                    </ul></li>
+                    <li><a href="#mirror-animation-curves"
+                    id="toc-mirror-animation-curves">Mirror Animation
+                    Curves</a></li>
+                    <li><a href="#option-menu"
+                    id="toc-option-menu">Option Menu</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Driven Key Tools</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to assist in editing set driven keys.</p>
+                <p>Mainly provides the following features for set driven
+                keys:</p>
+                <ul>
+                <li>Save and load</li>
+                <li>Copy and paste</li>
+                <li>Mirror animation curves</li>
+                <li>Several utility features</li>
+                </ul>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.drivenkey_tools_ui
+faketools.tools.rig.drivenkey_tools_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image001.png"
+                alt="image001" /></p>
+                <h2 id="save-and-load-set-driven-keys">Save and Load Set
+                Driven Keys</h2>
+                <p>Saves set driven keys to file and reproduces from
+                saved file.</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image002.png"
+                alt="image002" /></p>
+                <p>To save set driven keys to file, follow these
+                steps:</p>
+                <ol type="1">
+                <li><p>Select nodes with set driven keys (multiple
+                selection allowed).</p></li>
+                <li><p>Select <code>Export</code> or
+                <code>Export File</code> from <code>Export/Import</code>
+                menu.</p>
+                <ul>
+                <li><code>Export</code> saves to TEMP folder.</li>
+                <li><code>Export File</code> lets you choose save
+                destination.</li>
+                </ul></li>
+                </ol>
+                <p>To load set driven keys from file, follow these
+                steps:</p>
+                <ol type="1">
+                <li>Select <code>Import</code> or
+                <code>Import File</code> from <code>Export/Import</code>
+                menu.
+                <ul>
+                <li><code>Import</code> loads from TEMP folder.</li>
+                <li><code>Import File</code> lets you choose file to
+                load.</li>
+                </ul></li>
+                <li>Set driven keys saved in file are reproduced, and
+                target nodes are selected.</li>
+                </ol>
+                <h2 id="copy-and-paste-set-driven-keys">Copy and Paste
+                Set Driven Keys</h2>
+                <p>Copies and pastes set driven keys. There are two
+                methods: <strong>One to All</strong> and <strong>One to
+                Replace</strong>.</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image003.png"
+                alt="image003" /></p>
+                <h3 id="one-to-all-from-one-to-all">One to All (From One
+                to All)</h3>
+                <p>Copies set driven keys from one node to multiple
+                nodes.</p>
+                <p>To copy, follow these steps:</p>
+                <ol type="1">
+                <li>Select source node.</li>
+                <li>Add select destination nodes (multiple selection
+                allowed).</li>
+                <li>Press <code>One to All</code> button.</li>
+                </ol>
+                <h3 id="one-to-replace-to-replaced-node">One to Replace
+                (To Replaced Node)</h3>
+                <p>Copies set driven keys from one node to nodes found
+                in scene by replacing that node’s name. For node name
+                replacement, uses field below
+                <code>One to Replace</code> button. (Replaced by Python
+                regular expression.)</p>
+                <p>To copy, follow these steps:</p>
+                <ol type="1">
+                <li>Select source node (multiple selection
+                allowed).</li>
+                <li>Press <code>One to Replace</code> button. Replaced
+                nodes are searched from scene and copied.</li>
+                </ol>
+                <ul>
+                <li><strong>Replace Driver</strong>
+                <ul>
+                <li>Also uses replaced driver node name.</li>
+                </ul></li>
+                <li><strong>Force Delete Driven Key</strong>
+                <ul>
+                <li>If replaced node already has set driven keys,
+                deletes all except the driven keys to apply and
+                copies.</li>
+                </ul></li>
+                <li><strong>Mirror</strong>
+                <ul>
+                <li>Mirrors T (Translate) R (Rotate) S (Scale) animation
+                curves in <strong>Time</strong> or
+                <strong>Value</strong> direction for replaced
+                nodes.</li>
+                </ul></li>
+                </ul>
+                <h2 id="mirror-animation-curves">Mirror Animation
+                Curves</h2>
+                <p>Mirrors animation curves.</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image004.png"
+                alt="image004" /></p>
+                <p>To mirror, follow these steps:</p>
+                <ol type="1">
+                <li>Select driven key animation curves to mirror
+                (multiple selection allowed).</li>
+                <li>Press <code>Time</code> or <code>Value</code>
+                button.
+                <ul>
+                <li>Pressing <code>Time</code> button mirrors animation
+                curve in time direction.</li>
+                <li>Pressing <code>Value</code> button mirrors animation
+                curve in value direction.</li>
+                </ul></li>
+                </ol>
+                <h2 id="option-menu">Option Menu</h2>
+                <p>There are several additional features.</p>
+                <p><img
+                src="../../images/rig/drivenkey_tools/image005.png"
+                alt="image005" /></p>
+                <ul>
+                <li><strong>Select Driven Key Nodes</strong>
+                <ul>
+                <li>Selects nodes with set driven keys.
+                <ul>
+                <li>If nodes are already selected in scene, selects
+                nodes with set driven keys within those nodes.</li>
+                <li>If nothing is selected, selects nodes with set
+                driven keys within all nodes in scene.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Cleanup Driven Key</strong>
+                <ul>
+                <li>Cleans up nodes with set driven keys. Organizes the
+                following situations:
+                <ul>
+                <li>Deletes driven keys where driver doesn’t exist.</li>
+                <li>Deletes driven keys where all values are the same
+                and all tangent values are 0.0.</li>
+                <li>If after deletion satisfying above conditions,
+                blendWeighted node has no animCurve connected or only
+                one connected, deletes that blendWeighted node.</li>
+                <li>Just cleans everything up.</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

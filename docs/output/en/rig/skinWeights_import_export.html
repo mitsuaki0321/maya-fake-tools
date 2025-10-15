@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Import/Export - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Skin weight import/export tool">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/skinWeights_import_export.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#export"
+                    id="toc-export">Export</a></li>
+                    <li><a href="#import"
+                    id="toc-import">Import</a></li>
+                    <li><a href="#select-weight-data-elements"
+                    id="toc-select-weight-data-elements">Select Weight
+                    Data Elements</a></li>
+                    </ul></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#context-menu"
+                    id="toc-context-menu">Context Menu</a></li>
+                    </ul></li>
+                    <li><a href="#file-format" id="toc-file-format">File
+                    Format</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Import/Export</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Can save skin weights to file and import to other
+                geometry. However, cannot import to already bound
+                geometry.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.skinWeights_import_export_ui
+faketools.tools.rig.skinWeights_import_export_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>There are <strong>Quick Mode</strong> for temporarily
+                saving skin weights and <strong>Advanced Mode</strong>
+                for saving to file.</p>
+                <h3 id="export">Export</h3>
+                <ol type="1">
+                <li>Select geometry bound with skinCluster (multiple
+                selection allowed).</li>
+                </ol>
+                <ul>
+                <li><strong>Quick Mode</strong>: Press
+                <code>Export</code> button to save skin weights.</li>
+                <li><strong>Advanced Mode</strong>: Select file format,
+                enter export group name (folder name), and press
+                <code>Export</code> button to save skin weights.</li>
+                </ul>
+                <h3 id="import">Import</h3>
+                <ul>
+                <li><strong>Quick Mode</strong>: Press
+                <code>Import</code> button to load saved skin
+                weights.</li>
+                <li><strong>Advanced Mode</strong>: Select group or file
+                to import from list and press <code>Import</code> button
+                to load saved skin weights.</li>
+                </ul>
+                <p>Import is not performed in the following cases:</p>
+                <ul>
+                <li>When geometry to import doesn’t exist.</li>
+                <li>When influences to import don’t exist.</li>
+                <li>When influences to import are bound.</li>
+                </ul>
+                <p><strong>How to Select Geometry During
+                Import</strong></p>
+                <ul>
+                <li>To import to geometry selected during export,
+                deselect everything before importing. Searches for that
+                name from scene as target geometry.</li>
+                <li>To import to geometry with different name from
+                geometry selected during export, select geometry to
+                import before importing.</li>
+                </ul>
+                <h3 id="select-weight-data-elements">Select Weight Data
+                Elements</h3>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image005.png"
+                alt="image005" /></p>
+                <p>In <code>Advanced Mode</code> weight data list,
+                clicking icon on right side of each data allows you to
+                select that data’s elements.</p>
+                <p><strong>Select Influences</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image007.png"
+                alt="image007" /></p>
+                <p><strong>Select Geometry</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image006.png"
+                alt="image006" /></p>
+                <h2 id="options">Options</h2>
+                <h3 id="context-menu">Context Menu</h3>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image004.png"
+                alt="image004" /></p>
+                <p>Right-clicking on each button in
+                <code>Quick Mode</code> or on tree view in
+                <code>Advanced Mode</code> displays context menu.</p>
+                <ul>
+                <li>Delete
+                <ul>
+                <li>Deletes selected data.</li>
+                </ul></li>
+                <li>Open Directory
+                <ul>
+                <li>Opens directory where data is saved in
+                Explorer.</li>
+                </ul></li>
+                </ul>
+                <h2 id="file-format">File Format</h2>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image002.png"
+                alt="image002" /> <img
+                src="../../images/rig/skinWeights_import_export/image003.png"
+                alt="image003" /></p>
+                <p>Selects file format when exporting in
+                <code>Advanced Mode</code>. Clicking button switches
+                format.<br />
+                Select whether to save file in binary format
+                (<code>pickle</code>) (left) or text format
+                (<code>json</code>) (right).</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Handler - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Deformer component tag membership management tool">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/membership_handler.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a>
+                    <ul>
+                    <li><a href="#launch-requirements"
+                    id="toc-launch-requirements">Launch
+                    Requirements</a></li>
+                    </ul></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Membership Handler</h1>
+                
+                <h1 id="overview">Overview</h1>
+                <p>Edits deformer membership. Available only when
+                component tag settings are enabled.</p>
+                <p>Only WeightGeometryFilter type deformers are
+                supported.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.membership_handler_ui
+faketools.tools.rig.membership_handler_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/membership_handler/image001.png"
+                alt="image001" /></p>
+                <h3 id="launch-requirements">Launch Requirements</h3>
+                <p>This tool is only available when component tags are
+                enabled.</p>
+                <p>Enable component tags with the following
+                settings:</p>
+                <ol type="1">
+                <li>Navigate to <code>Preferences</code> &gt;
+                <code>Settings</code> &gt; <code>Animation</code>.</li>
+                <li>Configure the following three settings in the
+                <code>Rigging</code> section:
+                <ul>
+                <li>Check
+                <code>Use component tags for deformation component subsets</code>.</li>
+                <li>Check
+                <code>Create component tags on deformer creation</code>.</li>
+                <li>Uncheck
+                <code>Add tweak nodes on deformer creation</code>.</li>
+                </ul></li>
+                </ol>
+                <h2 id="usage">Usage</h2>
+                <ol type="1">
+                <li><p>Select the deformer to edit and press <img
+                src="../../images/rig/membership_handler/image002.png"
+                alt="image002" /> button. <img
+                src="../../images/rig/membership_handler/image006.png"
+                alt="image006" /> ※ In the image, a cluster deformer
+                handle is selected, but please select the deformer
+                itself when pressing the button.</p></li>
+                <li><p>The selected deformer’s name is displayed in the
+                middle field. <img
+                src="../../images/rig/membership_handler/image005.png"
+                alt="image005" /></p></li>
+                <li><p>Press <img
+                src="../../images/rig/membership_handler/image004.png"
+                alt="image004" /> button to select membership registered
+                to that deformer. <img
+                src="../../images/rig/membership_handler/image007.png"
+                alt="image007" /></p></li>
+                <li><p>Select components to update and press <img
+                src="../../images/rig/membership_handler/image003.png"
+                alt="image001" /> button to update membership. <img
+                src="../../images/rig/membership_handler/image008.png"
+                alt="image008" /></p></li>
+                </ol>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

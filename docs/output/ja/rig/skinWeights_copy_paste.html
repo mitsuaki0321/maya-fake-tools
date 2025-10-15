@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Copy/Paste - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="スキンウェイトのコピー&ペーストツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/skinWeights_copy_paste.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#オプションの機能"
+                    id="toc-オプションの機能">オプションの機能</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Copy/Paste</h1>
+                
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.skinWeights_copy_paste_ui
+faketools.tools.rig.skinWeights_copy_paste_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>ウエイトをコピーしてペーストするには、以下の手順を行います。</p>
+                <p><strong>単一のコンポーネントから複数のコンポーネントにコピーする場合</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image002.png"
+                alt="image002" /></p>
+                <ol type="1">
+                <li>一番目のボタンを <code>1:N</code>
+                に設定します。</li>
+                <li>コピー元のコンポーネントを選択し、二番目のボタンを選択します。選択するとコピー元のコンポーネントが記憶されます。複数記憶されますが、最初に選択したものがコピー元として使用されます。</li>
+                <li>コピー先のコンポーネントを選択し、三番目のボタンを選択します。選択するとコピー先のコンポーネントが記憶されます。</li>
+                <li>スピンボックスかスライダーでコピー元からコピー先へのウエイトをブレンドして調整します。また、一番右のボタンでコピー元のウエイトをコピー先にそのままペーストします。</li>
+                </ol>
+                <p><strong>選択したコンポーネント間を一対一でコピーする場合</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_paste/image003.png"
+                alt="image003" /></p>
+                <ol type="1">
+                <li>一番目のボタンを <code>1:1</code>
+                に設定します。</li>
+                <li>コピー元のコンポーネントを選択し、二番目のボタンを選択します。選択するとコピー元のコンポーネントが記憶されます。</li>
+                <li>コピー元のコンポーネントと同じ数のコンポーネントを選択し、三番目のボタンを選択します。選択するとコピー先のコンポーネントが記憶されます。</li>
+                <li>スピンボックスかスライダーでコピー元からコピー先へのウエイトをブレンドして調整します。また、一番右のボタンでコピー元のウエイトをコピー先にそのままペーストします。</li>
+                </ol>
+                <p>※
+                あまりにも多くのコンポーネントを選択すると、処理が重くなる場合があります。</p>
+                <h2 id="オプションの機能">オプションの機能</h2>
+                <p>スピンボックスの上下の矢印は、Ctrl
+                キーを押しながらクリックすることで、0.01
+                単位での変更が可能です。 また、Shift
+                キーを押しながらクリックすることで、0.5
+                単位での変更が可能です。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

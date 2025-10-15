@@ -1,0 +1,33 @@
+project:
+  name: "FakeTools ヘルプ"
+  name_en: "FakeTools Help"
+  description: "Maya FakeTools documentation"
+  version: "1.0.0"
+
+languages:
+  - code: ja
+    name: 日本語
+  - code: en
+    name: English
+
+categories:
+  - id: rig
+    name_ja: リグ
+    name_en: Rig
+    description_ja: リギング用ツール
+    description_en: Rigging tools
+  - id: model
+    name_ja: モデル
+    name_en: Model
+    description_ja: モデリング用ツール
+    description_en: Modeling tools
+  - id: anim
+    name_ja: アニメーション
+    name_en: Animation
+    description_ja: アニメーション用ツール
+    description_en: Animation tools
+  - id: common
+    name_ja: 共通
+    name_en: Common
+    description_ja: 共通ツール
+    description_en: Common utilities

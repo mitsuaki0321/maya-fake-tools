@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Attr Slider - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="フローティングスライダーでオブジェクトのトランスフォーム属性を制御">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/remort_slider.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#各モードについて"
+                    id="toc-各モードについて">各モードについて</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#マーキングメニュー"
+                    id="toc-マーキングメニュー"><strong>マーキングメニュー</strong></a></li>
+                    <li><a href="#step-ボタン"
+                    id="toc-step-ボタン"><strong>Step
+                    ボタン</strong></a></li>
+                    <li><a href="#各数値フィールド"
+                    id="toc-各数値フィールド">各数値フィールド</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Remote Attr Slider</h1>
+                
+                <p><img
+                src="../../images/rig/remote_slider/image001.gif"
+                alt="image001" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用メニューか以下のコマンドで起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.remote_slider_ui
+faketools.tools.rig.remote_slider_ui.show_ui()</code></pre>
+                <h2 id="使用方法">使用方法</h2>
+                <p><img
+                src="../../images/rig/remote_slider/image002.gif"
+                alt="image001" /></p>
+                <ol type="1">
+                <li>ツールで動かしたいノードを選択します。トランスフォームタイプのノードのみが有効です。</li>
+                <li>ツール上部のノードリストへカーソルを移動し、右クリックの
+                <strong>[ Set Items ]</strong>
+                よりノードをリストに登録します。</li>
+                <li>登録したノード名と下部のアトリビュートリストから対象のアトリビュートを選択しスライダーを操作し値を操作します。</li>
+                </ol>
+                <h2 id="各モードについて">各モードについて</h2>
+                <p><img src="../../images/rig/remote_slider/image001.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p><strong>[ Edit ]</strong>
+                メニューより値をスライダーでどのように操作するかを選択できます。以下のモードがあります。</p>
+                <ul>
+                <li><strong>Local Absolute モード</strong>
+                <ul>
+                <li>ノードをそのローカル空間において、スライダーの値が直接その値に代入されます。</li>
+                <li>この時 <strong>[ Reset ]</strong>
+                ボタンは、translate、rotate であれば 0 を scale であれば
+                1 の値をその値に設定します。</li>
+                </ul></li>
+                <li><strong>Local Relative モード</strong>
+                <ul>
+                <li>ノードをそのローカル空間において、スライダーの値を現在の値に追加するように動かします。</li>
+                <li>この時の現在の値は、ノードをリストに登録した時にツール内に記録されます（ユーザーが参照することはできません）。この値は、<strong>[
+                Reset ]</strong> ボタンを実行した時も使用されます。</li>
+                </ul></li>
+                <li><strong>World Relative モード</strong>
+                <ul>
+                <li>ノードをそのワールド空間において、スライダーの値を現在の値に追加するように動かします。</li>
+                <li>このモードでは、選択可能なアトリビュートは一つとなり、また、scale
+                属性を選択することはできません。</li>
+                <li>この時 <strong>[ Reset ]</strong>
+                ボタンは、その属性における他の三つの値も同時に元の位置に戻します。例えば
+                translateX を選択して <strong>[ Reset ]</strong>
+                を実行した時は、translateY と Z
+                の値もノード登録時の状態にリセットします。</li>
+                </ul></li>
+                </ul>
+                <p>Local Relative モードと World Relative
+                モードでスライダーの動作や [ Reset ] 時に使用される
+                <strong>値</strong> は <strong>[ Update Reset Values
+                ]</strong> で更新可能です。</p>
+                <h2 id="オプション">オプション</h2>
+                <h3
+                id="マーキングメニュー"><strong>マーキングメニュー</strong></h3>
+                <p><img src="../../images/rig/remote_slider/image002.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p>ノードリストを右クリックすることで出現するメニューです。それぞれ以下の機能を持っています。</p>
+                <ul>
+                <li><strong>Set Items</strong>
+                <ul>
+                <li>シーン上で選択した transform
+                ノードをリストに登録します。</li>
+                </ul></li>
+                <li><strong>Remove Items</strong>
+                <ul>
+                <li>ノードリストで選択されたノードをリストから除外します。</li>
+                </ul></li>
+                <li><strong>Select All Items</strong>
+                <ul>
+                <li>ノードリスト上ですべてのノードを選択します。</li>
+                </ul></li>
+                <li><strong>Select Nodes</strong>
+                <ul>
+                <li>ノードリスト上で選択されたノードを実際にシーン上で選択します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="step-ボタン"><strong>Step ボタン</strong></h3>
+                <p><code>+</code> と <code>-</code> の各 <strong>[ Step
+                ]</strong>
+                ボタンは、スライダーの値を決まった値で増減します。ボタンのクリック方法によりその値は変化します。</p>
+                <ul>
+                <li>何も押さずにクリックした場合
+                <ul>
+                <li>1.0 の値を使用します。</li>
+                </ul></li>
+                <li>Shirt キーを押しながらクリックした場合
+                <ul>
+                <li>10.0 の値を使用します。</li>
+                </ul></li>
+                <li>Ctrl キーを押しながらクリックした場合
+                <ul>
+                <li>0.1 の値を使用します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="各数値フィールド">各数値フィールド</h3>
+                <p>スライダーの下部に整列している数値フィールドは、左から
+                スライダーの最小値、現在の値、最大値を示します。各フィールドには直接値を入力できます。</p>
+                <p><img src="../../images/rig/remote_slider/image003.png" alt="image001" style="display: block; margin: 10px 0;"></p>
+                <p>また、最小値、最大値フィールドを右クリックすることによりよく使用しそうな値を選択することができます。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Import/Export - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="スキンウェイトのインポート/エクスポートツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/skinWeights_import_export.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#エクスポート"
+                    id="toc-エクスポート">エクスポート</a></li>
+                    <li><a href="#インポート"
+                    id="toc-インポート">インポート</a></li>
+                    <li><a href="#ウエイトデータの要素を選択する"
+                    id="toc-ウエイトデータの要素を選択する">ウエイトデータの要素を選択する</a></li>
+                    </ul></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#コンテキストメニュー"
+                    id="toc-コンテキストメニュー">コンテキストメニュー</a></li>
+                    </ul></li>
+                    <li><a href="#ファイルフォーマット"
+                    id="toc-ファイルフォーマット">ファイルフォーマット</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Import/Export</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>スキンウェイトをファイルに保存し、別のジオメトリにインポートすることができます。
+                ただし、すでにバインドされているジオメトリにはインポートできません。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.skinWeights_import_export_ui
+faketools.tools.rig.skinWeights_import_export_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>一時的にスキンウエイトを保存する場合の <strong>Quick
+                Mode</strong> と、ファイルに保存する場合の
+                <strong>Advanced Mode</strong> があります。</p>
+                <h3 id="エクスポート">エクスポート</h3>
+                <ol type="1">
+                <li>skinCluster でバインドされたジオメトリを選択します (
+                複数選択可 )。</li>
+                </ol>
+                <ul>
+                <li><strong>Quick Mode</strong> : <code>Export</code>
+                ボタンを押して、スキンウエイトを保存します。</li>
+                <li><strong>Advanced Mode</strong> :
+                ファイルフォーマットを選択し、エクスポートするグループ名（フォルダ名）を入力して、<code>Export</code>
+                ボタンを押して、スキンウエイトを保存します。</li>
+                </ul>
+                <h3 id="インポート">インポート</h3>
+                <ul>
+                <li><strong>Quick Mode</strong> : <code>Import</code>
+                ボタンを押して、保存したスキンウエイトを読み込みます。</li>
+                <li><strong>Advanced Mode</strong> :
+                リストからインポートするグループかファイルを選択し、<code>Import</code>
+                ボタンを押して、保存したスキンウエイトを読み込みます。</li>
+                </ul>
+                <p>以下の場合は、インポートされません。</p>
+                <ul>
+                <li>インポートするジオメトリが存在しない場合。</li>
+                <li>インポートするインフルエンスが存在しない場合。</li>
+                <li>インポートするインフルエンスがバインドされている場合。</li>
+                </ul>
+                <p><strong>インポート時のジオメトリの選択方法</strong></p>
+                <ul>
+                <li>エクスポート時に選択されていたジオメトリにインポートする場合は、すべての選択を解除してからインポートしてください。シーン上からその名前を検索して対象のジオメトリとします。</li>
+                <li>エクスポート時に選択されていたジオメトリ名とは別のジオメトリにインポートする場合は、インポートするジオメトリを選択してからインポートしてください。</li>
+                </ul>
+                <h3
+                id="ウエイトデータの要素を選択する">ウエイトデータの要素を選択する</h3>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image005.png"
+                alt="image005" /></p>
+                <p><code>Advanced Mode</code>
+                のウエイトデータのリスト上で、各データの右側のアイコンをクリックするとそのデータの要素を選択できます。</p>
+                <p><strong>インフルエンスを選択</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image007.png"
+                alt="image007" /></p>
+                <p><strong>ジオメトリを選択</strong></p>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image006.png"
+                alt="image006" /></p>
+                <h2 id="オプション">オプション</h2>
+                <h3 id="コンテキストメニュー">コンテキストメニュー</h3>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image004.png"
+                alt="image004" /></p>
+                <p><code>Quick Mode</code>
+                の各ボタン上と、<code>Advanced Mode</code> の
+                ツリービュー上で右クリックすると、コンテキストメニューが表示されます。</p>
+                <ul>
+                <li>Delete
+                <ul>
+                <li>選択したデータを削除します。</li>
+                </ul></li>
+                <li>Open Directory
+                <ul>
+                <li>データが保存されているディレクトリをエクスプローラーで開きます。</li>
+                </ul></li>
+                </ul>
+                <h2 id="ファイルフォーマット">ファイルフォーマット</h2>
+                <p><img
+                src="../../images/rig/skinWeights_import_export/image002.png"
+                alt="image002" /> <img
+                src="../../images/rig/skinWeights_import_export/image003.png"
+                alt="image003" /></p>
+                <p><code>Advanced Mode</code>
+                でエクスポートする際のファイルフォーマットを選択します。ボタンを選択すると、フォーマットが切り替わります。<br />
+                ファイルを バイナリ形式 (<code>pickle</code>) ( 左 )
+                で保存するか、テキスト形式 (<code>json</code>) ( 右 )
+                で保存するかを選択します。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

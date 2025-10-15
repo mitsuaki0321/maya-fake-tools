@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform Creator on Curve - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Create transform nodes on curve">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/transform_creator_on_curve.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#options"
+                    id="toc-options">Options</a></li>
+                    <li><a href="#creation-methods"
+                    id="toc-creation-methods">Creation Methods</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Transform Creator on Curve</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.transform_creator_on_curve_ui
+faketools.tools.rig.transform_creator_on_curve_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/transform_creator_on_curve/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <ol type="1">
+                <li>Select transform creation method from dropdown menu
+                at top.</li>
+                <li>Select NURBS surfaces and curves in scene. Select
+                the nodes themselves or transform nodes.</li>
+                <li>Set other options. Options that are not grayed out
+                can be set.</li>
+                <li>Press <strong>[ Create ]</strong> button to create
+                transform nodes.</li>
+                </ol>
+                <h3 id="options">Options</h3>
+                <ul>
+                <li><strong>Node Type</strong>
+                <ul>
+                <li>Select either locator or transform.</li>
+                </ul></li>
+                <li><strong>Divisions</strong>
+                <ul>
+                <li>Only valid when creation method is innerDivide. Sets
+                how many divisions between selected nodes.</li>
+                </ul></li>
+                <li><strong>IncludeRotation</strong>
+                <ul>
+                <li>Sets whether to include rotation attribute in
+                created transform nodes.</li>
+                </ul></li>
+                <li><strong>Offset rotation values</strong>
+                <ul>
+                <li>Sets values to offset rotation for created transform
+                nodes.</li>
+                </ul></li>
+                <li><strong>AimVector</strong>
+                <ul>
+                <li>Sets how to obtain aim vector for created transform
+                nodes.
+                <ul>
+                <li><strong>CurveTangent</strong>
+                <ul>
+                <li>Obtains curve tangent vector.</li>
+                </ul></li>
+                <li><strong>NextPoint</strong>
+                <ul>
+                <li>Obtains vector to next order node’s position.</li>
+                </ul></li>
+                <li><strong>PreviousPoint</strong>
+                <ul>
+                <li>Obtains vector to previous order node’s
+                position.</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>UpVector</strong>
+                <ul>
+                <li>Sets how to obtain up vector for created transform
+                nodes.
+                <ul>
+                <li><strong>SceneUp</strong>
+                <ul>
+                <li>Obtains scene up vector. [0, 1, 0].</li>
+                </ul></li>
+                <li><strong>CurveNormal</strong>
+                <ul>
+                <li>Obtains curve normal vector.</li>
+                </ul></li>
+                <li><strong>SurfaceNormal</strong>
+                <ul>
+                <li>Obtains normal vector of surface curve belongs to.
+                At this time, curve must be created by duplicateCurve
+                command. Otherwise, CurveNormal is forcibly
+                applied.</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>SurfaceDir</strong>
+                <ul>
+                <li>When NURBS surface is selected, sets which direction
+                of surface to use as curve normal vector.
+                <ul>
+                <li><strong>U Direction</strong>
+                <ul>
+                <li>Uses U direction of surface.</li>
+                <li><strong>V Direction</strong></li>
+                <li>Uses V direction of surface.</li>
+                </ul></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Reverse</strong>
+                <ul>
+                <li>When transform nodes are created by duplication,
+                reverses their order.</li>
+                </ul></li>
+                <li><strong>Chain</strong>
+                <ul>
+                <li>When transform nodes are created by duplication,
+                makes them chain-like hierarchy structure.</li>
+                </ul></li>
+                </ul>
+                <h3 id="creation-methods">Creation Methods</h3>
+                <ul>
+                <li><strong>CVPositions</strong>
+                <ul>
+                <li>Creates transform nodes at CV positions of
+                curve.</li>
+                </ul></li>
+                <li><strong>EPPositions</strong>
+                <ul>
+                <li>Creates transform nodes at edit point positions of
+                curve.</li>
+                </ul></li>
+                <li><strong>CVClosestPositions</strong>
+                <ul>
+                <li>Creates transform nodes at positions on curve
+                closest to CVs.</li>
+                </ul></li>
+                <li><strong>ParameterPositions</strong>
+                <ul>
+                <li>Creates transform nodes at equal intervals from
+                curve parameter values. Number of nodes created is set
+                by Divisions.</li>
+                </ul></li>
+                <li><strong>LengthPositions</strong>
+                <ul>
+                <li>Creates transform nodes at equal intervals from
+                curve length. Number of nodes created is set by
+                Divisions.</li>
+                </ul></li>
+                <li><strong>CloudPositions</strong>
+                <ul>
+                <li>Creates transform nodes to make curve chord length
+                equal intervals. Number of nodes created is set by
+                Divisions.</li>
+                <li>For closed curves, may fail.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Lister - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="ソースとターゲットオブジェクト間のアトリビュート接続とコピー">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/connection_lister.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#connect-モード"
+                    id="toc-connect-モード">Connect モード</a></li>
+                    <li><a href="#command-モード"
+                    id="toc-command-モード">Command モード</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Connection Lister</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>このツールは、ノード間の接続、値のコピーを行うためのツールです。<br />
+                また、用意されたコマンドを使用することで、ノード間に対して特定の操作を行うことができます。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.connection_lister_ui
+faketools.tools.rig.connection_lister_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/connection_lister/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>ノードやアトリビュートのロード方法は
+                <strong>Attribute Lister</strong> と同様です。<br />
+                ノードを選択し、ロードボタンを押すことで、そのノードのアトリビュートがリストに表示されます。</p>
+                <p>表示されたノードに対して、<code>Connect</code>
+                モードで接続と値のコピーを行うことができます。<br />
+                また、<code>Command</code>
+                モードで、用意されたコマンドを使用することができます。</p>
+                <h2 id="connect-モード">Connect モード</h2>
+                <p>値をコピーする場合は、<code>Copy Value</code>
+                ボタンを押すことで、そのアトリビュートの値をコピーします。<br />
+                アトリビュートを接続する場合は、<code>Connect</code>
+                ボタンを押すことで、そのアトリビュートを接続します。</p>
+                <h4
+                id="ノードとアトリビュートの選択方法">ノードとアトリビュートの選択方法</h4>
+                <p>リストに表示されたノードやアトリビュートは、左右で同数のリストを選択するか、</p>
+                <p><img
+                src="../../images/rig/connection_lister/image003.png"
+                alt="image003" /></p>
+                <p>画像のように、ソースとなるノード、アトリビュートが一つで、ターゲットとなるノード、アトリビュートが複数の場合です。</p>
+                <p><img
+                src="../../images/rig/connection_lister/image004.png"
+                alt="image004" /></p>
+                <h2 id="command-モード">Command モード</h2>
+                <p><code>Command</code>
+                モードで、用意されたコマンドを使用することができます。</p>
+                <p>コマンドについては、<strong>Single Command</strong>
+                の <strong>Pair Command</strong>
+                と同様の機能です。<br />
+                <strong><a href="./single_commands.html">Single
+                Command</a></strong>
+                のドキュメントを参照してください。</p>
+                <p><img
+                src="../../images/rig/connection_lister/image002.png"
+                alt="image002" /></p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

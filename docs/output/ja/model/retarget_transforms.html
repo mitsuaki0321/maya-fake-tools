@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retarget Transforms - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="同一トポロジーのオブジェクト間でトランスフォーム階層を転送">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/model/retarget_transforms.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a>
+                    <ul>
+                    <li><a href="#default"
+                    id="toc-default">Default</a></li>
+                    <li><a href="#barycentric"
+                    id="toc-barycentric">Barycentric</a></li>
+                    <li><a href="#rbf" id="toc-rbf">Rbf</a></li>
+                    </ul></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#エクスポート"
+                    id="toc-エクスポート">エクスポート</a></li>
+                    <li><a href="#インポート"
+                    id="toc-インポート">インポート</a></li>
+                    </ul></li>
+                    <li><a href="#インポートオプション"
+                    id="toc-インポートオプション">インポートオプション</a></li>
+                    <li><a href="#コンテキストメニュー"
+                    id="toc-コンテキストメニュー">コンテキストメニュー</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Retarget Transforms</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>このツールは、選択したトランスフォームノードの位置や回転情報をファイルにエクスポート、インポートすることができます。<br />
+                いくつかの方法で位置情報を取得、設定することができます。方法は以下の通りです。</p>
+                <h3 id="default">Default</h3>
+                <p>トランスフォームノードの位置情報をワールド位置で取得し、ワールド位置で再現します。</p>
+                <h3 id="barycentric">Barycentric</h3>
+                <p>トランスフォームノードの位置情報をそのノードから一番近い三角ポリゴンのバリセントリック座標で取得し、メッシュのバリセントリック座標で再現します。<br />
+                再現時は、同じトポロジーのメッシュを選択する必要があります。</p>
+                <p>トランスフォームノードがメッシュの表面上にある場合に、有効な方法です。</p>
+                <p><img
+                src="../../images/model//retarget_transform/image002.png"
+                alt="image002" /></p>
+                <h3 id="rbf">Rbf</h3>
+                <p>トランスフォームノードの位置情報を周りの Vertex
+                位置から取得し、同トポロジーのメッシュへ再現します。<br />
+                再現時は、同じトポロジーのメッシュを選択する必要があります。</p>
+                <p>トランスフォームノードがメッシュの内部にある場合に、有効な方法です。</p>
+                <p><img
+                src="../../images/model//retarget_transform/image003.png"
+                alt="image003" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.model.retarget_transforms.ui
+faketools.tools.model.retarget_transforms.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model//retarget_transform/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <h3 id="エクスポート">エクスポート</h3>
+                <p>位置情報をエクスポートするには、以下の手順で行います。</p>
+                <ol type="1">
+                <li><p><code>Method</code>
+                からエクスポートする方法を選択します。<br />
+                <img
+                src="../../images/model//retarget_transform/image004.png"
+                alt="image004" /></p></li>
+                <li><p>方法に応じて位置情報をエクスポートする対象のノードを選択します。</p>
+                <ul>
+                <li><code>Default</code>
+                <ul>
+                <li>エクスポートするトランスフォームノードを選択してください
+                ( 複数選択可 )。</li>
+                </ul></li>
+                <li><code>Barycentric</code>
+                <ul>
+                <li>エクスポートするメッシュ (
+                メッシュのトランスフォームノード )
+                を選択してください。</li>
+                <li>追加でエクスポートするノードを選択してください (
+                複数選択可 )。</li>
+                </ul></li>
+                <li><code>Rbf</code>
+                <ul>
+                <li>エクスポートするメッシュ (
+                メッシュのトランスフォームノード )
+                を選択してください。</li>
+                <li>追加でエクスポートするノードを選択してください (
+                複数選択可 )。</li>
+                </ul></li>
+                </ul></li>
+                <li><p><code>File Name</code>
+                にエクスポートするファイル名を入力します。<br />
+                <img
+                src="../../images/model//retarget_transform/image005.png"
+                alt="image005" /></p></li>
+                <li><p><code>Export</code> ボタンを押します。<br />
+                エクスポートが完了すると、エクスポートしたファイル名がリストに表示されます。<br />
+                <img
+                src="../../images/model//retarget_transform/image006.png"
+                alt="image006" /></p></li>
+                </ol>
+                <p>※ <code>Rbf</code>
+                の方法を選択した時は、<code>Rbf Radius</code>
+                の値でエクスポート時の半径を設定できます。位置を再現する際に目的の挙動と異なる場合は、この値を大きくすることで期待する挙動が得られる場合があります。</p>
+                <h3 id="インポート">インポート</h3>
+                <p>位置情報をインポートするには、以下の手順で行います。</p>
+                <ol type="1">
+                <li><p>インポートするファイル名をリストから選択します。<br />
+                <img
+                src="../../images/model//retarget_transform/image006.png"
+                alt="image006" /></p></li>
+                <li><p>エクスポートした時の方法に応じて、インポートする対象のノードを選択します。</p>
+                <ul>
+                <li><code>Default</code>
+                <ul>
+                <li>選択の必要はありません。</li>
+                </ul></li>
+                <li><code>Barycentric</code>
+                <ul>
+                <li>エクスポートした時と同トポロジーのメッシュを選択してください。</li>
+                </ul></li>
+                <li><code>Rbf</code>
+                <ul>
+                <li>エクスポートした時と同トポロジーのメッシュを選択してください。</li>
+                </ul></li>
+                </ul></li>
+                <li><p>オプションを設定し、<code>Import</code>
+                ボタンを押します。デフォルトの設定では、エクスポート時に選択したノードに位置情報が適用されます。<br />
+                <img
+                src="../../images/model//retarget_transform/image007.png"
+                alt="image007" /></p></li>
+                </ol>
+                <h2 id="インポートオプション">インポートオプション</h2>
+                <p>インポート時に設定可能なオプションです。</p>
+                <ul>
+                <li><code>Is Rotation</code>
+                <ul>
+                <li>回転情報をトランスフォームノードに適用するかどうかを設定します。</li>
+                </ul></li>
+                <li><code>Create New</code>
+                <ul>
+                <li>チェックボックスがオンの時、<code>Object Type</code>
+                で選択したノードタイプで新規にトランスフォームノードを作成します。オフの場合は、エクスポート時に選択したノードに位置情報を適用します。</li>
+                <li>選択したノードが一つでも存在しなければ、エラーメッセージが表示されます。</li>
+                </ul></li>
+                <li><code>Object Type</code>
+                <ul>
+                <li><code>Create New</code>
+                がオンの時に作成するトランスフォームノードのタイプを選択します。</li>
+                </ul></li>
+                <li><code>Size</code>
+                <ul>
+                <li><code>Create New</code>
+                がオンの時に作成するトランスフォームノードのサイズを設定します。</li>
+                </ul></li>
+                </ul>
+                <h2 id="コンテキストメニュー">コンテキストメニュー</h2>
+                <p>リスト上で右クリックすると、コンテキストメニューが表示されます。</p>
+                <p><img
+                src="../../images/model//retarget_transform/image008.png"
+                alt="image008" /></p>
+                <ul>
+                <li><code>Select Nodes</code>
+                <ul>
+                <li>リストで選択しているファイルに記録されているノードを選択します。</li>
+                </ul></li>
+                <li><code>Remove File</code>
+                <ul>
+                <li>リストで選択しているファイルを削除します。(
+                実際のファイルも削除されます。 )</li>
+                </ul></li>
+                <li><code>Refresh</code>
+                <ul>
+                <li>リストを更新します。</li>
+                </ul></li>
+                <li><code>Open Directory</code>
+                <ul>
+                <li>エクスポートしたファイルが保存されているフォルダを開きます。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

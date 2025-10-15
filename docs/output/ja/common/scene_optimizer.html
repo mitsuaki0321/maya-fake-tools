@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Optimizer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Mayaシーンの最適化とクリーンアップ">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/scene_optimizer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#最適化内容"
+                    id="toc-最適化内容">最適化内容</a>
+                    <ul>
+                    <li><a href="#datastructure"
+                    id="toc-datastructure">DataStructure</a></li>
+                    <li><a href="#unknownnodes"
+                    id="toc-unknownnodes">UnknownNodes</a></li>
+                    <li><a href="#unusednodes"
+                    id="toc-unusednodes">UnusedNodes</a></li>
+                    <li><a href="#unknownplugins"
+                    id="toc-unknownplugins">UnknownPlugins</a></li>
+                    <li><a href="#scriptnodes"
+                    id="toc-scriptnodes">ScriptNodes</a></li>
+                    <li><a href="#colorsets"
+                    id="toc-colorsets">ColorSets</a></li>
+                    <li><a href="#displaylayers"
+                    id="toc-displaylayers">DisplayLayers</a></li>
+                    <li><a href="#timeanimcurves"
+                    id="toc-timeanimcurves">TimeAnimCurves</a></li>
+                    <li><a href="#unusedinfluences"
+                    id="toc-unusedinfluences">UnusedInfluences</a></li>
+                    <li><a href="#deletedagpose"
+                    id="toc-deletedagpose">DeleteDagPose</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Scene Optimizer</h1>
+                
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用メニューか以下のコマンドで起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.scene_optimizer_ui.ui
+faketools.tools.common.scene_optimizer_ui.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/scene_optimizer/image001.png"
+                alt="image001" /></p>
+                <p>各チェックボックスの右のテキストが最適化の内容です。それぞれ個別に実行したい場合は、<strong>Run</strong>
+                ボタンを押してください。</p>
+                <p>まとめて実行する場合は、<strong>Optimize
+                Scene</strong>
+                ボタンを押してください。チェックボックスがオンの処理が実行されます。</p>
+                <h2 id="最適化内容">最適化内容</h2>
+                <h3 id="datastructure">DataStructure</h3>
+                <p>シーンに存在する DataStructure
+                をすべて削除します。</p>
+                <h3 id="unknownnodes">UnknownNodes</h3>
+                <p>シーンに存在する unknown
+                ノードをすべて削除します。</p>
+                <h3 id="unusednodes">UnusedNodes</h3>
+                <p>シーンに存在する未使用ノードをすべて削除します。</p>
+                <h3 id="unknownplugins">UnknownPlugins</h3>
+                <p>シーンに存在する unknown
+                プラグインをすべて削除します。</p>
+                <h3 id="scriptnodes">ScriptNodes</h3>
+                <p>シーンに存在するスクリプトノードをすべて削除します。</p>
+                <h3 id="colorsets">ColorSets</h3>
+                <p>シーンに存在するカラーセットをすべて削除します。</p>
+                <h3 id="displaylayers">DisplayLayers</h3>
+                <p>シーンに存在するディスプレイレイヤをすべて削除します。</p>
+                <h3 id="timeanimcurves">TimeAnimCurves</h3>
+                <p>シーンに存在する時間依存のアニメーションカーブをすべて削除します。</p>
+                <h3 id="unusedinfluences">UnusedInfluences</h3>
+                <p>シーンに存在する未使用のインフルエンスをすべて削除します。</p>
+                <h3 id="deletedagpose">DeleteDagPose</h3>
+                <p>シーンに存在する DAG ポーズをすべて削除します。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transform Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Create transform nodes aligned to selected objects">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/transform_creator.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a>
+                    <ul>
+                    <li><a href="#basic-usage"
+                    id="toc-basic-usage">Basic Usage</a></li>
+                    <li><a href="#options"
+                    id="toc-options">Options</a></li>
+                    <li><a href="#creation-methods"
+                    id="toc-creation-methods">Creation Methods</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Transform Creator</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.transform_creator_ui
+faketools.tools.rig.transform_creator_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/transform_creator/image001.png"
+                alt="image001" /></p>
+                <h3 id="basic-usage">Basic Usage</h3>
+                <ol type="1">
+                <li>Select transform creation method from dropdown menu
+                at top.</li>
+                <li>Select transform nodes or components in scene.</li>
+                <li>Set other options. Options that are not grayed out
+                can be set.</li>
+                <li>Press <strong>[ Create ]</strong> button to create
+                transform nodes.</li>
+                </ol>
+                <p>※ Selectable components are: Vertex, Edge, Face,
+                CurveCV, CurveEP, SurfaceCV.</p>
+                <h3 id="options">Options</h3>
+                <ul>
+                <li><strong>Node Type</strong>
+                <ul>
+                <li>Select either locator or transform.</li>
+                </ul></li>
+                <li><strong>Divisions</strong>
+                <ul>
+                <li>Only valid when creation method is innerDivide. Sets
+                how many divisions between selected nodes.</li>
+                </ul></li>
+                <li><strong>IncludeRotation</strong>
+                <ul>
+                <li>Sets whether to include rotation attribute in
+                created transform nodes.</li>
+                </ul></li>
+                <li><strong>Offset rotation values</strong>
+                <ul>
+                <li>Sets values to offset rotation for created transform
+                nodes.</li>
+                </ul></li>
+                <li><strong>Tangent from Component</strong>
+                <ul>
+                <li>For Vertex, Edge, obtains tangent vector from
+                components connected to that component and sets
+                rotation.</li>
+                </ul></li>
+                <li><strong>Reverse</strong>
+                <ul>
+                <li>When transform nodes are created by duplication,
+                reverses their order.</li>
+                </ul></li>
+                <li><strong>Chain</strong>
+                <ul>
+                <li>When transform nodes are created by duplication,
+                makes them chain-like hierarchy structure.</li>
+                </ul></li>
+                </ul>
+                <h3 id="creation-methods">Creation Methods</h3>
+                <ul>
+                <li><strong>GravityCenter</strong>
+                <ul>
+                <li>Creates transform node at center of gravity of
+                selected nodes.</li>
+                </ul></li>
+                <li><strong>BoundingBoxCenter</strong>
+                <ul>
+                <li>Creates transform node at center of bounding box of
+                selected nodes.</li>
+                </ul></li>
+                <li><strong>EachPositions</strong>
+                <ul>
+                <li>Creates transform nodes at each position of selected
+                nodes.</li>
+                </ul></li>
+                <li><strong>InnerDivide</strong>
+                <ul>
+                <li>Divides between selected nodes and creates transform
+                nodes between them.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

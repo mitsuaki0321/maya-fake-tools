@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Component Selecter - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Component selection and filtering tool for mesh/curve/surface">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/component_selecter.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#unique-selection"
+                    id="toc-unique-selection">Unique Selection</a>
+                    <ul>
+                    <li><a href="#unique"
+                    id="toc-unique">Unique</a></li>
+                    <li><a href="#reverse"
+                    id="toc-reverse">Reverse</a></li>
+                    <li><a href="#same" id="toc-same">Same</a></li>
+                    <li><a href="#area-selection"
+                    id="toc-area-selection">Area Selection</a></li>
+                    <li><a href="#cv-area-selection"
+                    id="toc-cv-area-selection">CV Area
+                    Selection</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Component Selecter</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to assist in selecting Vertex, NurbsCurveCV,
+                NurbsSurfaceCV, and LatticePoint. Mainly provides the
+                following features:</p>
+                <ul>
+                <li>Reselect components in SoftSelection,
+                SymmetrySelection state</li>
+                <li>Invert selection</li>
+                <li>Select components at same position as mesh</li>
+                <li>Area selection of components</li>
+                <li>Area selection of CVs</li>
+                </ul>
+                <p>Each component can be selected across multiple
+                geometries.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.component_selecter_ui
+faketools.tools.rig.component_selecter_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/component_selecter/image001.png"
+                alt="image001" /></p>
+                <h2 id="unique-selection">Unique Selection</h2>
+                <p>Reselects components in various ways.</p>
+                <p><img
+                src="../../images/rig/component_selecter/image002.png"
+                alt="image002" /></p>
+                <h3 id="unique">Unique</h3>
+                <p>Reselects selected components from SoftSelection,
+                SymmetrySelection state.</p>
+                <p>To select, follow these steps:</p>
+                <ol type="1">
+                <li>Select components in SoftSelection,
+                SymmetrySelection mode.</li>
+                <li>Press <code>Unique</code> button.</li>
+                </ol>
+                <p>※ You can toggle each mode with
+                <code>Toggle Soft Selection</code> and
+                <code>Toggle Symmetry Selection</code> in the Edit
+                menu.</p>
+                <p><img
+                src="../../images/rig/component_selecter/image005.png"
+                alt="image005" /></p>
+                <h3 id="reverse">Reverse</h3>
+                <p>Inverts selected components.</p>
+                <h3 id="same">Same</h3>
+                <p>Selects components at the same position as the
+                mesh.</p>
+                <p>To select, follow these steps:</p>
+                <ol type="1">
+                <li>Select mesh.</li>
+                <li>Add select components.</li>
+                <li>Press <code>Same</code> button.</li>
+                </ol>
+                <h3 id="area-selection">Area Selection</h3>
+                <p><img
+                src="../../images/rig/component_selecter/image003.png"
+                alt="image003" /></p>
+                <p>Performs area selection of components. Can select
+                right, left, and center areas based on the YZ plane.</p>
+                <p>To select, follow these steps:</p>
+                <ol type="1">
+                <li>Select geometryShape derivative nodes or their
+                transform nodes (multiple selection allowed).</li>
+                <li>Press the button for the area you want to select
+                (<code>Right</code>, <code>Center</code>,
+                <code>Left</code>).</li>
+                </ol>
+                <h3 id="cv-area-selection">CV Area Selection</h3>
+                <p><img
+                src="../../images/rig/component_selecter/image004.png"
+                alt="image004" /></p>
+                <p>Performs area selection of CVs.</p>
+                <p>To select, follow these steps:</p>
+                <ol type="1">
+                <li>Select nurbsCurve, nurbsSurface derivative nodes or
+                their transform nodes (multiple selection allowed).</li>
+                <li>For nurbsSurface, select <code>u</code> or
+                <code>v</code> direction.</li>
+                <li>Specify selection range with <strong>max</strong>
+                and <strong>min</strong> spin boxes.</li>
+                <li>Press <code>Select</code> button.</li>
+                </ol>
+                <p>For example, if you select nurbsCurve, enter 2 for
+                <strong>max</strong> and 0 for <strong>min</strong>, and
+                press <code>Select</code> button, CVs 0 to 2 will be
+                selected.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

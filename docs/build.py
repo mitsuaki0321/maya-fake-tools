@@ -103,11 +103,17 @@ class DocBuilder:
             shutil.copytree(self.js_dir, output_js, dirs_exist_ok=True)
             print(f"Copied JS files to {output_js}")
 
-        # Copy common images
+        # Copy common images from docs/images
         output_images = self.output_dir / "images"
         if self.images_dir.exists():
             shutil.copytree(self.images_dir, output_images, dirs_exist_ok=True)
             print(f"Copied common images to {output_images}")
+
+        # Copy common images from docs/src/images
+        src_images_dir = self.src_dir / "images"
+        if src_images_dir.exists():
+            shutil.copytree(src_images_dir, output_images, dirs_exist_ok=True)
+            print(f"Copied source images to {output_images}")
 
     def get_relative_path(self, from_path: Path, to_path: Path) -> str:
         """
@@ -289,6 +295,8 @@ class DocBuilder:
                 "--no-highlight",
                 "--toc",
                 "--toc-depth=3",
+                "-f",
+                "markdown-implicit_figures",
             ]
 
             # Add metadata as Pandoc variables

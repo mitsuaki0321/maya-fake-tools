@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curve/Surface Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="NURBS curve and surface creation and manipulation tool">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/curveSurface_creator.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#basic-options"
+                    id="toc-basic-options">Basic Options</a></li>
+                    <li><a href="#curve-options"
+                    id="toc-curve-options">Curve Options</a></li>
+                    <li><a href="#loft-surface-options"
+                    id="toc-loft-surface-options">Loft Surface
+                    Options</a></li>
+                    <li><a href="#bind-options"
+                    id="toc-bind-options">Bind Options</a></li>
+                    </ul></li>
+                    <li><a href="#edit-menu" id="toc-edit-menu">Edit
+                    Menu</a>
+                    <ul>
+                    <li><a href="#move-cvs-positions"
+                    id="toc-move-cvs-positions">Move CVs
+                    Positions</a></li>
+                    <li><a href="#create-curve-to-vertices"
+                    id="toc-create-curve-to-vertices">Create Curve to
+                    Vertices</a></li>
+                    <li><a href="#create-curve-on-surfaceu-v"
+                    id="toc-create-curve-on-surfaceu-v">Create Curve on
+                    SurfaceU V</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Curve/Surface Creator</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Creates NURBS curves (hereinafter, curves) for
+                selected transform nodes, and creates lofted NURBS
+                surfaces (surfaces) or meshes based on those curves.</p>
+                <p>Also, if joint nodes are selected, created objects
+                can be smooth bound via options.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.curveSurface_creator_ui
+faketools.tools.rig.curveSurface_creator_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <ol type="1">
+                <li>Select transform nodes (multiple selection
+                allowed).</li>
+                <li>Select <code>Select Type</code> as either
+                <code>Selected</code> (create between selected nodes) or
+                <code>Hierarchy</code> (create for each hierarchy
+                structure of selected nodes).</li>
+                <li>Select the type of object to create from
+                <code>Object Type</code>.</li>
+                <li>Set options that are not grayed out.</li>
+                <li>Press <code>Create</code> button to create curves
+                and surfaces.</li>
+                </ol>
+                <h2 id="options">Options</h2>
+                <p>Main options are divided into four categories:</p>
+                <ul>
+                <li>Basic Options</li>
+                <li>Curve Options</li>
+                <li>Loft Surface Options</li>
+                <li>Bind Options</li>
+                </ul>
+                <h3 id="basic-options">Basic Options</h3>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image002.png"
+                alt="image002" /></p>
+                <ul>
+                <li><strong>Select Type</strong>
+                <ul>
+                <li>Specifies how to select transform nodes for curve
+                creation.
+                <ul>
+                <li><code>Selected</code>: Creates between selected
+                nodes.</li>
+                <li><code>Hierarchy</code>: Creates for each hierarchy
+                structure of selected nodes.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Object Type</strong>
+                <ul>
+                <li>Specifies the type of object to create.
+                <ul>
+                <li><code>Curve</code>: Creates curves.</li>
+                <li><code>Surface</code>: Creates lofted surfaces based
+                on curves.</li>
+                <li><code>Mesh</code>: Creates lofted meshes based on
+                curves.</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+                <h3 id="curve-options">Curve Options</h3>
+                <p>Options for curve creation.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image003.png"
+                alt="image003" /></p>
+                <ul>
+                <li><strong>Degree</strong>
+                <ul>
+                <li>Specifies the degree of curves to create.</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>Makes curves created at the center of selected
+                nodes.</li>
+                </ul></li>
+                <li><strong>Close</strong>
+                <ul>
+                <li>Makes curves closed shape.</li>
+                </ul></li>
+                <li><strong>Reverse</strong>
+                <ul>
+                <li>Reverses curve creation direction.</li>
+                </ul></li>
+                <li><strong>Divisions</strong>
+                <ul>
+                <li>Specifies curve division count.</li>
+                </ul></li>
+                <li><strong>Skip</strong>
+                <ul>
+                <li>Skips selected nodes by this value when creating
+                curves.</li>
+                </ul></li>
+                </ul>
+                <h3 id="loft-surface-options">Loft Surface Options</h3>
+                <p>Options for surface and mesh creation. Only valid
+                when objectType is <code>Surface</code> or
+                <code>Mesh</code>.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image004.png"
+                alt="image004" /></p>
+                <ul>
+                <li><strong>Axis</strong>
+                <ul>
+                <li>Specifies surface creation direction.
+                <ul>
+                <li><code>X</code>: Creates surface in X-axis direction
+                of selected nodes.</li>
+                <li><code>Y</code>: Creates surface in Y-axis direction
+                of selected nodes.</li>
+                <li><code>Z</code>: Creates surface in Z-axis direction
+                of selected nodes.</li>
+                <li><code>Normal</code>: Creates surface in normal
+                direction of created curves.</li>
+                <li><code>Binormal</code>: Creates surface in binormal
+                direction of created curves.</li>
+                <li><code>Surface Normal</code>: Creates surface in
+                normal direction of reference surface (must specify
+                NURBS surface as reference object).</li>
+                <li><code>Surface Binormal</code>: Creates surface in
+                binormal direction of reference surface (must specify
+                NURBS surface as reference object).</li>
+                <li><code>Mesh Normal</code>: Creates surface in normal
+                direction of reference mesh (must specify mesh as
+                reference object).</li>
+                <li><code>Mesh Binormal</code>: Creates surface in
+                binormal direction of reference mesh (must specify mesh
+                as reference object).</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Reference Object</strong>
+                <ul>
+                <li>Specifies reference object to use when selecting
+                <code>Surface Normal</code>,
+                <code>Surface Binormal</code>, <code>Mesh Normal</code>,
+                <code>Mesh Binormal</code>.</li>
+                <li>Can be set by selecting reference object and
+                pressing <code>&lt;&lt;</code> button.</li>
+                <li>For <code>Surface Normal</code> /
+                <code>Surface Binormal</code>, specify NURBS
+                surface.</li>
+                <li>For <code>Mesh Normal</code> /
+                <code>Mesh Binormal</code>, specify mesh.</li>
+                <li>From the position of each node creating surface,
+                finds the nearest point on reference object and uses
+                that position’s normal direction.</li>
+                </ul></li>
+                <li><strong>Width</strong>
+                <ul>
+                <li>Specifies surface width.</li>
+                </ul></li>
+                <li><strong>Width Center</strong>
+                <ul>
+                <li>Creates surface centered on this value relative to
+                surface creation direction. At 0.5, surface has same
+                plus-minus width.</li>
+                <li>For example, if Width is 10.0 and Width Center is
+                0.5, surface ranges from -5.0 to 5.0.</li>
+                </ul></li>
+                </ul>
+                <h3 id="bind-options">Bind Options</h3>
+                <p>Options for smooth binding object after creation with
+                selected nodes. Only valid when selected nodes are joint
+                nodes.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image005.png"
+                alt="image005" /></p>
+                <ul>
+                <li><strong>Is Bind</strong>
+                <ul>
+                <li>When this checkbox is on, smooth binds created
+                object with selected nodes.</li>
+                </ul></li>
+                <li><strong>Bind Method</strong>
+                <ul>
+                <li>Specifies smooth bind method.
+                <ul>
+                <li><p><code>Linear</code>: Binds with linear
+                weight.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image006.png"
+                alt="image006" /></p></li>
+                <li><p><code>Ease</code>: Binds with ease in-out
+                weight.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image007.png"
+                alt="image007" /></p></li>
+                <li><p><code>Step</code>: Binds with step weight.</p>
+                <p><img
+                src="../../images/rig/curveSurface_creator/image008.png"
+                alt="image008" /></p></li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Smooth Levels</strong>
+                <ul>
+                <li>After weight setting by <code>Bind Method</code>,
+                specifies level to smooth weights.</li>
+                </ul></li>
+                <li><strong>Parent Influences</strong>
+                <ul>
+                <li>When this value is 0, binds based on selected
+                nodes.</li>
+                <li>When value of 1 or more is specified, goes back this
+                value of parent nodes from selected nodes and binds
+                based on those nodes.</li>
+                </ul></li>
+                <li><strong>Remove End</strong>
+                <ul>
+                <li>When <code>close</code> option is off and this
+                option is on, excludes last node of selected nodes from
+                binding.</li>
+                </ul></li>
+                <li><strong>To Skin Cage</strong>
+                <ul>
+                <li>Like <strong>Skin Weights to Mesh</strong> tool,
+                converts smooth bound object to skin cage. Only valid
+                when <code>objectType</code> is
+                <code>Surface</code>.</li>
+                </ul></li>
+                <li><strong>Division Levels</strong>
+                <ul>
+                <li>When <code>To Skin Cage</code> is on, specifies skin
+                cage division count.</li>
+                </ul></li>
+                </ul>
+                <h2 id="edit-menu">Edit Menu</h2>
+                <p>Contains commands used when creating/editing
+                curves.</p>
+                <h3 id="move-cvs-positions">Move CVs Positions</h3>
+                <ul>
+                <li>Select one CV for closed curve and execute.</li>
+                <li>Moves CV number 0 position to selected CV
+                position.</li>
+                </ul>
+                <p><img
+                src="../../images/curveSurface_creator/image009.png"
+                alt="image009" /> <img
+                src="../../images/rig/curveSurface_creator/image010.png"
+                alt="image010" /></p>
+                <h3 id="create-curve-to-vertices">Create Curve to
+                Vertices</h3>
+                <ul>
+                <li>Select Vertex (mesh vertices) (multiple selection
+                allowed) and execute.</li>
+                <li>Creates curve based on selected Vertex.</li>
+                </ul>
+                <p><img
+                src="../../images/curveSurface_creator/image011.png"
+                alt="image011" /> <img
+                src="../../images/rig/curveSurface_creator/image012.png"
+                alt="image012" /></p>
+                <h3 id="create-curve-on-surfaceu-v">Create Curve on
+                SurfaceU V</h3>
+                <ul>
+                <li>Select surface (multiple selection allowed) and
+                execute.</li>
+                <li>Creates curve at center of each UV value on selected
+                surface.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retarget Mesh - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="同一トポロジーのメッシュ間で頂点位置を転送するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/model/retarget_mesh.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#advanced-parameters"
+                    id="toc-advanced-parameters">Advanced Parameters</a>
+                    <ul>
+                    <li><a href="#radius-multiplier半径倍率"
+                    id="toc-radius-multiplier半径倍率">Radius
+                    Multiplier（半径倍率）</a></li>
+                    <li><a href="#max-vertices最大頂点数"
+                    id="toc-max-vertices最大頂点数">Max
+                    Vertices（最大頂点数）</a></li>
+                    <li><a href="#min-source-vertices最小ソース頂点数"
+                    id="toc-min-source-vertices最小ソース頂点数">Min
+                    Source Vertices（最小ソース頂点数）</a></li>
+                    <li><a href="#max-iterations最大反復回数"
+                    id="toc-max-iterations最大反復回数">Max
+                    Iterations（最大反復回数）</a></li>
+                    </ul></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Retarget Mesh</h1>
+                
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.model.retarget_mesh.ui
+faketools.tools.model.retarget_mesh.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/retarget_mesh/image002.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>ツールを使用するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>変形に使用する元のジオメトリを選択し、<code>Set Source Mesh</code>
+                ボタンを押します。</li>
+                <li>変形に使用する先のジオメトリを選択し、<code>Set Destination Mesh</code>
+                ボタンを押します ( 複数選択可能 )。</li>
+                <li>変形するジオメトリを選択し、<code>Set Target Mesh</code>
+                ボタンを押します。</li>
+                <li>新しいジオメトリを作成する場合は、<code>Create New Mesh</code>
+                チェックボックスをオンにします。</li>
+                <li><code>Retarget Mesh</code> ボタンを押します。</li>
+                </ol>
+                <p><img
+                src="../../images/model/retarget_mesh/image001.gif"
+                alt="image001" /></p>
+                <h2 id="advanced-parameters">Advanced Parameters</h2>
+                <p>高度な設定パラメーターを調整することで、より正確な転送結果を得ることができます。</p>
+                <h3 id="radius-multiplier半径倍率">Radius
+                Multiplier（半径倍率）</h3>
+                <ul>
+                <li><strong>デフォルト値</strong>: 1.0</li>
+                <li><strong>範囲</strong>: 0.5 ～ 10.0</li>
+                <li><strong>説明</strong>:
+                ソースメッシュの頂点を検索する際の半径倍率です。</li>
+                <li><strong>使い方</strong>:
+                <ul>
+                <li>メッシュが小さい場合や離れている場合は、値を
+                <strong>大きく</strong> してください（例: 2.0 ～
+                5.0）</li>
+                <li>変形がうまくいかない場合、この値を調整することで改善されることがあります</li>
+                <li>値が大きすぎると、影響範囲が広すぎて意図しない変形になる可能性があります</li>
+                </ul></li>
+                </ul>
+                <h3 id="max-vertices最大頂点数">Max
+                Vertices（最大頂点数）</h3>
+                <ul>
+                <li><strong>デフォルト値</strong>: 1000</li>
+                <li><strong>範囲</strong>: 100 ～ 10000</li>
+                <li><strong>説明</strong>:
+                ターゲットメッシュを処理する際の、1グループあたりの最大頂点数です。</li>
+                <li><strong>使い方</strong>:
+                <ul>
+                <li>ターゲットメッシュの頂点数がこの値を超えると、自動的に複数のグループに分割して処理されます</li>
+                <li>値を <strong>小さく</strong>
+                すると、大きなメッシュがより細かく分割されます（処理は遅くなりますが、精度が向上する場合があります）</li>
+                <li>値を <strong>大きく</strong>
+                すると、処理が速くなりますが、メモリ使用量が増えます</li>
+                </ul></li>
+                </ul>
+                <h3 id="min-source-vertices最小ソース頂点数">Min Source
+                Vertices（最小ソース頂点数）</h3>
+                <ul>
+                <li><strong>デフォルト値</strong>: 10</li>
+                <li><strong>範囲</strong>: 4 ～ 100</li>
+                <li><strong>説明</strong>:
+                変形計算に使用する最小のソースメッシュ頂点数です。</li>
+                <li><strong>使い方</strong>:
+                <ul>
+                <li>値を <strong>大きく</strong>
+                すると、変形の精度が向上しますが、処理時間が長くなります（例:
+                20 ～ 50）</li>
+                <li>値を <strong>小さく</strong>
+                すると、処理が速くなりますが、精度が低下する可能性があります</li>
+                <li>最低でも4頂点は必要です（4頂点未満では正しく計算できません）</li>
+                </ul></li>
+                </ul>
+                <h3 id="max-iterations最大反復回数">Max
+                Iterations（最大反復回数）</h3>
+                <ul>
+                <li><strong>デフォルト値</strong>: 10</li>
+                <li><strong>範囲</strong>: 1 ～ 20</li>
+                <li><strong>説明</strong>:
+                十分なソース頂点が見つからない場合に、検索半径を自動調整する最大試行回数です。</li>
+                <li><strong>使い方</strong>:
+                <ul>
+                <li>通常はデフォルト値（10）で問題ありません</li>
+                <li>値を <strong>大きく</strong>
+                すると、より多くの試行で適切な頂点を見つけようとします</li>
+                <li>エラーが発生する場合は、この値を増やすよりも Radius
+                Multiplier を調整することをお勧めします</li>
+                </ul></li>
+                </ul>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>ソースメッシュ と デスティネーションメッシュ
+                のトポロジーは同じである必要があります。</li>
+                <li><code>Create New Mesh</code> がオフで
+                デスティネーションメッシュ
+                が複数の場合は、作成されません。</li>
+                <li>ターゲットメッシュの頂点数が多い場合の処理は、時間がかかる可能性があります。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

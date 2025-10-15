@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Tools - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Comprehensive skin weight management tool">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/skin_tools.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#edit-menu" id="toc-edit-menu">Edit
+                    Menu</a></li>
+                    <li><a href="#skin-tools-bar"
+                    id="toc-skin-tools-bar">Skin Tools Bar</a>
+                    <ul>
+                    <li><a href="#copy" id="toc-copy">Copy</a></li>
+                    <li><a href="#mirror-self"
+                    id="toc-mirror-self">Mirror Self</a></li>
+                    <li><a href="#mirror-sub" id="toc-mirror-sub">Mirror
+                    Sub</a></li>
+                    </ul></li>
+                    <li><a href="#copy-skin-weights-custom"
+                    id="toc-copy-skin-weights-custom">Copy Skin Weights
+                    Custom</a>
+                    <ul>
+                    <li><a href="#usage-1"
+                    id="toc-usage-1">Usage</a></li>
+                    <li><a href="#options"
+                    id="toc-options">Options</a></li>
+                    </ul></li>
+                    <li><a href="#skin-weights-to-mesh"
+                    id="toc-skin-weights-to-mesh">Skin Weights to
+                    Mesh</a>
+                    <ul>
+                    <li><a href="#usage-2"
+                    id="toc-usage-2">Usage</a></li>
+                    </ul></li>
+                    <li><a href="#adjust-center-skin-weights"
+                    id="toc-adjust-center-skin-weights">Adjust Center
+                    Skin Weights</a>
+                    <ul>
+                    <li><a href="#usage-3"
+                    id="toc-usage-3">Usage</a></li>
+                    </ul></li>
+                    <li><a href="#combine-skin-weights"
+                    id="toc-combine-skin-weights">Combine Skin
+                    Weights</a>
+                    <ul>
+                    <li><a href="#usage-4"
+                    id="toc-usage-4">Usage</a></li>
+                    </ul></li>
+                    <li><a href="#relax-skin-weights"
+                    id="toc-relax-skin-weights">Relax Skin Weights</a>
+                    <ul>
+                    <li><a href="#usage-5"
+                    id="toc-usage-5">Usage</a></li>
+                    <li><a href="#options-1"
+                    id="toc-options-1">Options</a></li>
+                    </ul></li>
+                    <li><a href="#influence-exchange"
+                    id="toc-influence-exchange">Influence Exchange</a>
+                    <ul>
+                    <li><a href="#usage-6"
+                    id="toc-usage-6">Usage</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Tools</h1>
+                
+                <h2 id="notes">Notes</h2>
+                <p>SkinCluster operations in this tool are based on
+                several prerequisites: - Assumes skinCluster method is
+                Classic Linear and does not support other methods. -
+                Does not support multiple skinCluster support introduced
+                in Maya 2024 and later.</p>
+                <h2 id="usage">Usage</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.skin_tools.ui
+faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
+                <p><img src="../../images/rig/skin_tools/image001.png"
+                alt="image001" /></p>
+                <h2 id="edit-menu">Edit Menu</h2>
+                <p><img src="../../images/rig/skin_tools/image002.png"
+                alt="image002" /></p>
+                <ul>
+                <li><strong>Select Influences</strong>
+                <ul>
+                <li>When you select geometry and vertices (multiple
+                objects allowed) and execute, selects influences of
+                skinCluster set for them.</li>
+                <li>When vertices are selected, selects only influences
+                with weights of 0 or more for those vertices.</li>
+                </ul></li>
+                <li><strong>Rebind SkinCluster</strong>
+                <ul>
+                <li>When you select geometry and vertices (multiple
+                objects allowed) and execute, rebinds skinCluster set
+                for them at the positions of its influences.</li>
+                </ul></li>
+                <li><strong>Prune Small Weights</strong>
+                <ul>
+                <li>When you select geometry and execute, sets weights
+                of influences with weights less than 0.005 to 0. Unlike
+                Maya’s standard function, ignores locked
+                influences.</li>
+                </ul></li>
+                <li><strong>Remove Unused Influences</strong>
+                <ul>
+                <li>When you select geometry (multiple selection
+                allowed) and execute, removes influences with all
+                weights of 0 from that skinCluster.</li>
+                </ul></li>
+                <li><strong>Average Skin Weights</strong>
+                <ul>
+                <li>When you select vertices and execute, averages
+                weights of selected vertices.</li>
+                </ul></li>
+                <li><strong>Average Skin Weights Shell</strong>
+                <ul>
+                <li>When you select geometry and execute, averages
+                weights of selected geometry per shell.</li>
+                </ul></li>
+                </ul>
+                <h2 id="skin-tools-bar">Skin Tools Bar</h2>
+                <p>Copies and mirrors weights.<br />
+                If destination is not bound, automatically creates
+                skinCluster.</p>
+                <p><img
+                src="../../images/rig/skinWeights_bar/image001.png"
+                alt="skinWeights_bar001" /></p>
+                <h3 id="copy">Copy</h3>
+                <p>Copies and mirrors weights.</p>
+                <p>Performs weight copy.</p>
+                <ol type="1">
+                <li>Select source geometry.</li>
+                <li>Select destination geometry (multiple selection
+                allowed).</li>
+                <li>Press <code>COPY</code> button to copy source
+                weights to destination. When referencing UV, check
+                <code>UV</code> checkbox.</li>
+                </ol>
+                <p>This tool forcibly adds influences set in source
+                geometry to destination geometry’s skinCluster.</p>
+                <h3 id="mirror-self">Mirror Self</h3>
+                <p>Mirrors weights.</p>
+                <ol type="1">
+                <li>Select geometry.</li>
+                <li>Press <code>MIR SELF</code> button to mirror weights
+                of selected geometry. At this time, select mirroring
+                direction with arrow button. For <code>&lt;-</code>,
+                mirrors from X to -X, for <code>-&gt;</code>, mirrors
+                from -X to X.</li>
+                </ol>
+                <p>This tool searches for left and right influences set
+                in selected geometry, and if opposite influences are
+                found, forcibly adds those influences to
+                skinCluster.</p>
+                <h3 id="mirror-sub">Mirror Sub</h3>
+                <p>Mirrors weights to different geometry.</p>
+                <p>Usage example: For example, when mirroring weights of
+                left and right shoes of a character wearing shoes.</p>
+                <ol type="1">
+                <li>Select left shoe geometry.</li>
+                <li>Press <code>MIR SUB</code> button. Steps executed at
+                this time are as follows:
+                <ol type="1">
+                <li>Generates right shoe geometry name from left shoe
+                geometry name.</li>
+                <li>If right shoe geometry is found, converts influence
+                names set in left shoe geometry from left to right
+                names.</li>
+                <li>If converted influence names exist in right shoe
+                geometry, forcibly adds those influences to skinCluster
+                or creates new skinCluster and adds them.</li>
+                <li>Copies weights set in left shoe geometry to right
+                shoe geometry.</li>
+                </ol></li>
+                </ol>
+                <p>※ Method for searching opposite geometry and
+                influences is the same as Mirror Self.</p>
+                <h2 id="copy-skin-weights-custom">Copy Skin Weights
+                Custom</h2>
+                <p>Copies weights from mesh to other shapes.</p>
+                <p><img
+                src="../../images/rig/skinWeights_copy_custom/image001.png"
+                alt="skinWeights_copy001" /></p>
+                <h3 id="usage-1">Usage</h3>
+                <p>To copy weights, follow these steps:</p>
+                <ol type="1">
+                <li>Select source geometry.</li>
+                <li>Select destination geometry (multiple selection
+                allowed).</li>
+                <li>Select weight copy method and press
+                <code>Copy Skin Weights</code> button.</li>
+                </ol>
+                <h3 id="options">Options</h3>
+                <ul>
+                <li><strong>Blend</strong>
+                <ul>
+                <li>Copies weights at specified ratio.</li>
+                </ul></li>
+                <li><strong>Use Only Unlocked Influences</strong>
+                <ul>
+                <li>Uses only unlocked influences for copying.</li>
+                </ul></li>
+                <li><strong>Reference Original Shape</strong>
+                <ul>
+                <li>References original shape (Intermediate Object) for
+                copying.</li>
+                </ul></li>
+                <li><strong>Add Missing Influence</strong>
+                <ul>
+                <li>Automatically adds influences that don’t exist in
+                destination during copy.</li>
+                </ul></li>
+                </ul>
+                <h2 id="skin-weights-to-mesh">Skin Weights to Mesh</h2>
+                <p>Duplicates geometry with skinCluster applied to
+                different mesh while preserving weight
+                information.<br />
+                Source geometry must be mesh or NURBS surface.</p>
+                <p><img
+                src="../../images/rig/skinWeights_to_mesh/image001.png"
+                alt="skinWeights_to_mesh001" /></p>
+                <p><img
+                src="../../images/rig/skinWeights_to_mesh/image002.png"
+                alt="skinWeights_to_mesh002" /><img
+                src="../../images/rig/skinWeights_to_mesh/image003.png"
+                alt="skinWeights_to_mesh003" /></p>
+                <h3 id="usage-2">Usage</h3>
+                <p>To duplicate, follow these steps:</p>
+                <ol type="1">
+                <li>Select geometry with skinCluster set (multiple
+                selection allowed).</li>
+                <li>If selected geometry is mesh, set
+                <code>Mesh Division</code>; if NURBS surface, set
+                <code>U Division</code> and
+                <code>V Division</code>.</li>
+                <li>Press <code>Convert Skin Weights to Mesh</code>
+                button.</li>
+                </ol>
+                <p>Pressing <code>Create Template Mesh</code> button
+                creates geometry that becomes preview of duplicated
+                mesh. In preview state, you can change each division
+                value from UI.</p>
+                <h2 id="adjust-center-skin-weights">Adjust Center Skin
+                Weights</h2>
+                <p>Adjusts weights of vertices with weights applied.</p>
+                <p><img
+                src="../../images/rig/skinWeights_adjust_center/image001.png"
+                alt="skinWeights_adjust_center001" /></p>
+                <p>Mainly adjusts weights of vertices at center
+                position. Here, “center position” refers to vertices
+                located on left-right symmetry axis of geometry.</p>
+                <p>“Adjustment” means making weight values of influences
+                with left-right meaning the same for center position.
+                For example, if center vertex has three influences
+                (spine and left-right shoulders) with weights of 0.4,
+                0.2, 0.4 respectively, using this tool adjusts them to
+                0.4, 0.3, 0.3 respectively.</p>
+                <h3 id="usage-3">Usage</h3>
+                <h4 id="when-auto-search-is-enabled">When Auto Search is
+                Enabled</h4>
+                <p>When <code>Auto Search</code> is enabled,
+                automatically searches for paired influences from
+                selected vertices’ skin cluster. Automatic search is
+                performed by regular expression from
+                <code>ADJUST_CENTER_WEIGHT</code> described in
+                <code>settings.json</code>.</p>
+                <h4 id="when-auto-search-is-disabled">When Auto Search
+                is Disabled</h4>
+                <p><img
+                src="../../images/rig/skinWeights_adjust_center/image002.png"
+                alt="skinWeights_adjust_center002" /></p>
+                <ol type="1">
+                <li>Select one of left or right influences (multiple
+                allowed) for <code>Source Influences</code> and press
+                <code>SET</code> button.</li>
+                <li>Select influences paired with
+                <code>Source Influences</code> for
+                <code>Target Influences</code> and press
+                <code>SET</code> button.</li>
+                <li>Press <code>Adjust Center Weights</code>
+                button.</li>
+                </ol>
+                <p>When no influence is registered in
+                <code>Static Influence</code>, average value of source
+                and target influence pairs is set.</p>
+                <p>On the other hand, when influence is registered in
+                <code>Static Influence</code>, source influence weight
+                value is applied to target influence. If total of all
+                influence weight values exceeds 1.0 as a result, that
+                difference is subtracted from Static Influence.</p>
+                <h2 id="combine-skin-weights">Combine Skin Weights</h2>
+                <p>Combines weights from multiple influences to one
+                influence.</p>
+                <p><img
+                src="../../images/rig/skinWeights_combine/image001.png"
+                alt="skinWeights_combine001" /></p>
+                <h3 id="usage-4">Usage</h3>
+                <p>To combine weights, follow these steps:</p>
+                <ol type="1">
+                <li>Select source influences (multiple allowed) for
+                <code>Source Influences</code> and press
+                <code>SET</code> button.</li>
+                <li>Select destination influence for
+                <code>Target Influence</code> and press <code>SET</code>
+                button.</li>
+                <li>Press <code>Combine Skin Weights</code> button.</li>
+                </ol>
+                <h2 id="relax-skin-weights">Relax Skin Weights</h2>
+                <p>Smooths and relaxes weights.</p>
+                <p><img
+                src="../../images/rig/skinWeights_relax/image001.png"
+                alt="skinWeights_relax001" /></p>
+                <h3 id="usage-5">Usage</h3>
+                <p>To smooth and relax weights, follow these steps:</p>
+                <ol type="1">
+                <li>Select components.</li>
+                <li>Select smooth type from top menu.</li>
+                <li>Set options.</li>
+                <li>Press <code>Relax Skin Weights</code> button.</li>
+                </ol>
+                <h3 id="options-1">Options</h3>
+                <ul>
+                <li><strong>Iterations</strong>
+                <ul>
+                <li>Sets smooth iteration count. More iterations smooth
+                weights more.</li>
+                </ul></li>
+                <li><strong>After Blend</strong>
+                <ul>
+                <li>Sets ratio to blend original weights with smoothed
+                weights after smoothing. 0.0 for original weights, 1.0
+                for smoothed weights.</li>
+                </ul></li>
+                <li><strong>Use Only Unlocked Influences</strong>
+                <ul>
+                <li>Smooths using only unlocked influences. Somewhat
+                experimental feature.</li>
+                </ul></li>
+                </ul>
+                <h2 id="influence-exchange">Influence Exchange</h2>
+                <p>Exchanges already bound influences with unbound
+                influences.</p>
+                <p><img
+                src="../../images/rig/influence_exchange/image001.png"
+                alt="skinWeights_influence_exchange001" /></p>
+                <h3 id="usage-6">Usage</h3>
+                <p>To exchange influences, follow these steps:</p>
+                <ol type="1">
+                <li>Select skin clusters to exchange for
+                <code>Target SkinClusters</code> and press
+                <code>SET</code> button.</li>
+                <li>Select source influences to exchange for
+                <code>Binding Influences</code> and press
+                <code>SET</code> button. All influences set here must be
+                bound to skin clusters set in
+                <code>Target SkinClusters</code>.</li>
+                <li>Select destination influences to exchange for
+                <code>Exchange Influences</code> and press
+                <code>SET</code> button. All influences set here must
+                not be bound to skin clusters set in
+                <code>Target SkinClusters</code>.</li>
+                <li>Press <code>Exchange Influences</code> button.</li>
+                </ol>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

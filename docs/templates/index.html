@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="$lang$">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$title$ - FakeTools</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    $header$
+
+    <div class="container">
+        <main class="main-content index-page">
+            <h1 class="page-title">$title$</h1>
+
+            $if(intro)$
+            <div class="intro">
+                $intro$
+            </div>
+            $endif$
+
+            $if(categories)$
+            <div class="tool-categories">
+                $for(categories)$
+                <section class="category-section">
+                    <h2 id="$categories.id$">$categories.name$</h2>
+                    $if(categories.description)$
+                    <p class="category-description">$categories.description$</p>
+                    $endif$
+
+                    $if(categories.tools)$
+                    <div class="tool-grid">
+                        $for(categories.tools)$
+                        <div class="tool-card$if(categories.tools.has_doc)$ has-doc$endif$">
+                            <h3>
+                                $if(categories.tools.url)$
+                                <a href="$categories.tools.url$">$categories.tools.name$</a>
+                                $else$
+                                $categories.tools.name$
+                                $endif$
+                            </h3>
+                            <p class="tool-description">$categories.tools.description$</p>
+                            $if(categories.tools.version)$
+                            <span class="tool-version">v$categories.tools.version$</span>
+                            $endif$
+                        </div>
+                        $endfor$
+                    </div>
+                    $endif$
+                </section>
+                $endfor$
+            </div>
+            $endif$
+        </main>
+    </div>
+
+    $footer$
+
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scene Optimizer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Optimize and clean up Maya scenes">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/scene_optimizer.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#optimization-details"
+                    id="toc-optimization-details">Optimization
+                    Details</a>
+                    <ul>
+                    <li><a href="#datastructure"
+                    id="toc-datastructure">DataStructure</a></li>
+                    <li><a href="#unknownnodes"
+                    id="toc-unknownnodes">UnknownNodes</a></li>
+                    <li><a href="#unusednodes"
+                    id="toc-unusednodes">UnusedNodes</a></li>
+                    <li><a href="#unknownplugins"
+                    id="toc-unknownplugins">UnknownPlugins</a></li>
+                    <li><a href="#scriptnodes"
+                    id="toc-scriptnodes">ScriptNodes</a></li>
+                    <li><a href="#colorsets"
+                    id="toc-colorsets">ColorSets</a></li>
+                    <li><a href="#displaylayers"
+                    id="toc-displaylayers">DisplayLayers</a></li>
+                    <li><a href="#timeanimcurves"
+                    id="toc-timeanimcurves">TimeAnimCurves</a></li>
+                    <li><a href="#unusedinfluences"
+                    id="toc-unusedinfluences">UnusedInfluences</a></li>
+                    <li><a href="#deletedagpose"
+                    id="toc-deletedagpose">DeleteDagPose</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Scene Optimizer</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch from the dedicated menu or with the following
+                command.</p>
+                <pre class="python"><code>import faketools.tools.common.scene_optimizer_ui.ui
+faketools.tools.common.scene_optimizer_ui.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/scene_optimizer/image001.png"
+                alt="image001" /></p>
+                <p>The text to the right of each checkbox describes the
+                optimization process. To execute each individually,
+                press the <strong>Run</strong> button.</p>
+                <p>To execute all at once, press the <strong>Optimize
+                Scene</strong> button. Processes with checkboxes turned
+                on will be executed.</p>
+                <h2 id="optimization-details">Optimization Details</h2>
+                <h3 id="datastructure">DataStructure</h3>
+                <p>Deletes all DataStructure nodes that exist in the
+                scene.</p>
+                <h3 id="unknownnodes">UnknownNodes</h3>
+                <p>Deletes all unknown nodes that exist in the
+                scene.</p>
+                <h3 id="unusednodes">UnusedNodes</h3>
+                <p>Deletes all unused nodes that exist in the scene.</p>
+                <h3 id="unknownplugins">UnknownPlugins</h3>
+                <p>Deletes all unknown plugins that exist in the
+                scene.</p>
+                <h3 id="scriptnodes">ScriptNodes</h3>
+                <p>Deletes all script nodes that exist in the scene.</p>
+                <h3 id="colorsets">ColorSets</h3>
+                <p>Deletes all color sets that exist in the scene.</p>
+                <h3 id="displaylayers">DisplayLayers</h3>
+                <p>Deletes all display layers that exist in the
+                scene.</p>
+                <h3 id="timeanimcurves">TimeAnimCurves</h3>
+                <p>Deletes all time-dependent animation curves that
+                exist in the scene.</p>
+                <h3 id="unusedinfluences">UnusedInfluences</h3>
+                <p>Deletes all unused influences that exist in the
+                scene.</p>
+                <h3 id="deletedagpose">DeleteDagPose</h3>
+                <p>Deletes all DAG poses that exist in the scene.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

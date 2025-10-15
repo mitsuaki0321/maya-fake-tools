@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Stocker - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Store and quickly access frequently used nodes">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/node_stocker.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#saving-nodes"
+                    id="toc-saving-nodes">Saving Nodes</a></li>
+                    <li><a href="#selecting-nodes"
+                    id="toc-selecting-nodes">Selecting Nodes</a></li>
+                    <li><a href="#clearing-saved-nodes"
+                    id="toc-clearing-saved-nodes">Clearing Saved
+                    Nodes</a></li>
+                    </ul></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#include-namespace-when-selecting"
+                    id="toc-include-namespace-when-selecting">Include
+                    Namespace When Selecting</a></li>
+                    <li><a href="#replace-node-name-when-selecting"
+                    id="toc-replace-node-name-when-selecting">Replace
+                    Node Name When Selecting</a></li>
+                    <li><a href="#refresh-the-tool"
+                    id="toc-refresh-the-tool">Refresh the Tool</a></li>
+                    <li><a href="#clear-all-registrations-in-active-tab"
+                    id="toc-clear-all-registrations-in-active-tab">Clear
+                    All Registrations in Active Tab</a></li>
+                    </ul></li>
+                    <li><a
+                    href="#special-operations-on-registered-nodes"
+                    id="toc-special-operations-on-registered-nodes">Special
+                    Operations on Registered Nodes</a>
+                    <ul>
+                    <li><a href="#set-keyframe"
+                    id="toc-set-keyframe">Set Keyframe</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Node Stocker</h1>
+                
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.common.node_stocker.ui
+faketools.tools.common.node_stocker.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/node_stocker/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>Explains how to save, select, and clear nodes.</p>
+                <h3 id="saving-nodes">Saving Nodes</h3>
+                <ol type="1">
+                <li><p>Select the nodes you want to save.</p></li>
+                <li><p>Select the area to save. The area is determined
+                by the radio buttons at the top.</p></li>
+                <li><p>Middle-click on a numbered button to display a
+                pie menu.<br />
+                Select <code>register</code> to save the currently
+                selected nodes to that button.</p>
+                <p><img
+                src="../../images/common/node_stocker/image002.png"
+                alt="image002" /></p>
+                <p>When a node is registered to a button, the button’s
+                background color changes.</p></li>
+                </ol>
+                <h3 id="selecting-nodes">Selecting Nodes</h3>
+                <ol type="1">
+                <li><p>Select the area you want to select from.</p></li>
+                <li><p>Click on a button with a changed background color
+                to select the nodes registered to that button.</p>
+                <p><strong>Selection using modifier keys</strong> is
+                also possible. The selection rules are the same as
+                selection in Maya’s View. Additionally, you can
+                <strong>rectangle select</strong> on the area to call up
+                multiple button’s nodes at once.</p></li>
+                </ol>
+                <h3 id="clearing-saved-nodes">Clearing Saved Nodes</h3>
+                <p>To clear saved nodes, middle-click on the button and
+                select <code>unregister</code> from the pie menu.</p>
+                <p><img
+                src="../../images/common/node_stocker/image003.png"
+                alt="image003" /></p>
+                <h2 id="options">Options</h2>
+                <h3 id="include-namespace-when-selecting">Include
+                Namespace When Selecting</h3>
+                <p>You can set whether to include the namespace when
+                calling up nodes.</p>
+                <p>To select with namespace included, check the checkbox
+                and select the target namespace from the dropdown menu
+                at the bottom.</p>
+                <p><img
+                src="../../images/common/node_stocker/image004.png"
+                alt="image004" /></p>
+                <p>※ If the registered node does not have a namespace,
+                it will select a node with that namespace added. ※ If
+                the node is registered with full path included, the
+                parent’s namespace will also be replaced according to
+                the specification.</p>
+                <h3 id="replace-node-name-when-selecting">Replace Node
+                Name When Selecting</h3>
+                <p>You can replace the node name when calling up
+                nodes.</p>
+                <p>To select with node name replaced, check the checkbox
+                and enter the original and replacement node names in the
+                text boxes at the bottom.</p>
+                <p><strong>Example: When replacing surface in registered
+                nodes with curve</strong></p>
+                <p><img
+                src="../../images/common/node_stocker/image005.png"
+                alt="image005" /></p>
+                <p>To reverse the replacement, click the middle arrow
+                button.</p>
+                <p><img
+                src="../../images/common/node_stocker/image006.png"
+                alt="image006" /></p>
+                <p>Also, checking the leftmost button will perform
+                replacement using regular expressions.</p>
+                <p><strong>Example: When adding curve to the beginning
+                of registered nodes</strong></p>
+                <p><img
+                src="../../images/common/node_stocker/image007.png"
+                alt="image007" /></p>
+                <p>※ In non-regular expression mode, the text to be
+                replaced is required.</p>
+                <h3 id="refresh-the-tool">Refresh the Tool</h3>
+                <p><img
+                src="../../images/common/node_stocker/image008.png"
+                alt="image008" /></p>
+                <p>To refresh the tool, click the <strong>refresh
+                button</strong> at the top right. Registered nodes are
+                reloaded from file, and the namespace list is also
+                updated.</p>
+                <h3 id="clear-all-registrations-in-active-tab">Clear All
+                Registrations in Active Tab</h3>
+                <p><img
+                src="../../images/common/node_stocker/image009.png"
+                alt="image009" /></p>
+                <p>To clear all registrations in the active tab, click
+                the <strong>clear button</strong> at the top right.</p>
+                <h2 id="special-operations-on-registered-nodes">Special
+                Operations on Registered Nodes</h2>
+                <p>Right-clicking on a button displays a pie menu with
+                special operations for registered nodes.</p>
+                <p><img
+                src="../../images/common/node_stocker/image010.png"
+                alt="image010" /></p>
+                <h3 id="set-keyframe">Set Keyframe</h3>
+                <p>Sets a keyframe for registered nodes.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

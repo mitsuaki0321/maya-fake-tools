@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Handler - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="デフォーマーのコンポーネントタグメンバーシップ管理ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/membership_handler.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a>
+                    <ul>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a>
+                    <ul>
+                    <li><a href="#起動する条件"
+                    id="toc-起動する条件">起動する条件</a></li>
+                    </ul></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Membership Handler</h1>
+                
+                <h1 id="概要">概要</h1>
+                <p>デフォーマーのメンバーシップを編集します。コンポーネントタグ設定が有効な場合のみ利用可能です。</p>
+                <p>WeightGeometryFilter
+                タイプのデフォーマーのみが対象です。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.membership_handler_ui
+faketools.tools.rig.membership_handler_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/membership_handler/image001.png"
+                alt="image001" /></p>
+                <h3 id="起動する条件">起動する条件</h3>
+                <p>このツールは、コンポーネントタグが有効な場合のみ利用可能です。</p>
+                <p>以下の設定でコンポーネントタグを有効にします。</p>
+                <ol type="1">
+                <li><code>Preferences</code> &gt; <code>Settings</code>
+                &gt; <code>Animation</code> に移動する。</li>
+                <li><code>Rigging</code> セクションの
+                以下三つの設定をそれぞれ設定する。
+                <ul>
+                <li><code>Use component tags for deformation component subsets</code>
+                にチェックを入れる。</li>
+                <li><code>Create component tags on deformer creation</code>
+                にチェックを入れる。</li>
+                <li><code>Add tweak nodes on deformer creation</code>
+                のチェックを外す。</li>
+                </ul></li>
+                </ol>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li><p>編集対象のデフォーマーを選択し、<img
+                src="../../images/rig/membership_handler/image002.png"
+                alt="image002" /> ボタンを押します。<br />
+                <img
+                src="../../images/rig/membership_handler/image006.png"
+                alt="image006" /><br />
+                ※ 画像では、cluster
+                デフォーマーのハンドルを選択していますが、実際はデフォーマー自体を選択してボタンを押してください。</p></li>
+                <li><p>真ん中のフィールドに選択したデフォーマーの名前が表示されます。<br />
+                <img
+                src="../../images/rig/membership_handler/image005.png"
+                alt="image005" /></p></li>
+                <li><p><img
+                src="../../images/rig/membership_handler/image004.png"
+                alt="image004" />
+                ボタンを押して、そのデフォーマーに登録されれているメンバーシップを選択します。<br />
+                <img
+                src="../../images/rig/membership_handler/image007.png"
+                alt="image007" /></p></li>
+                <li><p>更新したいコンポーネントを選択肢、<img
+                src="../../images/rig/membership_handler/image003.png"
+                alt="image001" />
+                ボタンを押すことで、メンバーシップが更新されます。<br />
+                <img
+                src="../../images/rig/membership_handler/image008.png"
+                alt="image008" /></p></li>
+                </ol>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

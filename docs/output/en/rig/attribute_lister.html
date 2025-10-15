@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attribute Lister - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="List, filter, and manage Maya node attributes">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/attribute_lister.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a
+                    href="#about-states-where-values-can-be-changed"
+                    id="toc-about-states-where-values-can-be-changed">About
+                    States Where Values Can Be Changed</a>
+                    <ul>
+                    <li><a href="#unlocked-attributes"
+                    id="toc-unlocked-attributes">Unlocked
+                    Attributes</a></li>
+                    <li><a href="#attributes-without-connections"
+                    id="toc-attributes-without-connections">Attributes
+                    Without Connections</a></li>
+                    <li><a href="#same-type-attributes"
+                    id="toc-same-type-attributes">Same Type
+                    Attributes</a></li>
+                    </ul></li>
+                    <li><a href="#change-node-state"
+                    id="toc-change-node-state">Change Node
+                    State</a></li>
+                    <li><a href="#node-list-operations"
+                    id="toc-node-list-operations">Node List
+                    Operations</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Attribute Lister</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to change the state of node attributes.
+                Mainly, you can change attribute locks, node display
+                state, and attribute values.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.attribute_lister_ui
+faketools.tools.rig.attribute_lister_ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/attribute_lister/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <ol type="1">
+                <li>Select nodes (multiple selection allowed).</li>
+                <li>Press <code>Load</code> button to load selected
+                nodes to upper list. At this time, holding
+                <code>Shift</code> key while selecting adds to the
+                list.</li>
+                <li>Select nodes loaded in list (multiple selection
+                allowed). Attributes of selected nodes are displayed in
+                lower list.</li>
+                <li>Select attributes to change state (multiple
+                selection allowed).</li>
+                <li>Enter value in bottom field and press
+                <code>Enter</code> key to change selected attribute
+                values.</li>
+                </ol>
+                <h2 id="about-states-where-values-can-be-changed">About
+                States Where Values Can Be Changed</h2>
+                <p>States where values can be changed are as follows.
+                When values can be changed, field is displayed as
+                follows:</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image002.png"
+                alt="image002" /></p>
+                <h3 id="unlocked-attributes">Unlocked Attributes</h3>
+                <p>Unlocked attributes. If even one selected node and
+                attribute is locked, values cannot be changed. When
+                locked, field is grayed out.</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image003.png"
+                alt="image003" /></p>
+                <h3 id="attributes-without-connections">Attributes
+                Without Connections</h3>
+                <p>Attributes without connections. If even one selected
+                node and attribute has a connection, values cannot be
+                changed. When connected, field is displayed in
+                yellow.</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image004.png"
+                alt="image004" /></p>
+                <h3 id="same-type-attributes">Same Type Attributes</h3>
+                <p>Same type attributes. If even one selected node and
+                attribute is a different type, values cannot be changed.
+                When there are different type attributes, field is
+                displayed in red.</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image005.png"
+                alt="image005" /></p>
+                <h2 id="change-node-state">Change Node State</h2>
+                <p>Right-clicking on attribute list displays menu to
+                change node state.</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image006.png"
+                alt="image006" /></p>
+                <p>The following operations are possible for attributes
+                of selected nodes:</p>
+                <ul>
+                <li><strong>Lock</strong>
+                <ul>
+                <li>Locks selected attributes.</li>
+                </ul></li>
+                <li><strong>Unlock</strong>
+                <ul>
+                <li>Unlocks selected attributes.</li>
+                </ul></li>
+                <li><strong>Keyable</strong>
+                <ul>
+                <li>Displays selected attributes in channel box.</li>
+                </ul></li>
+                <li><strong>Unkeyable</strong>
+                <ul>
+                <li>Hides selected attributes from channel box.</li>
+                </ul></li>
+                </ul>
+                <h2 id="node-list-operations">Node List Operations</h2>
+                <p>Right-clicking on node list displays node list
+                operation menu.</p>
+                <p><img
+                src="../../images/rig/attribute_lister/image007.png"
+                alt="image007" /></p>
+                <ul>
+                <li><strong>Select All Nodes</strong>
+                <ul>
+                <li>Selects all nodes loaded in list within the
+                list.</li>
+                </ul></li>
+                <li><strong>Select Scene Nodes</strong>
+                <ul>
+                <li>Selects nodes selected in list in the scene.</li>
+                </ul></li>
+                <li><strong>Select All Scene Nodes</strong>
+                <ul>
+                <li>Selects all nodes loaded in list in the scene.</li>
+                </ul></li>
+                <li><strong>Remove Nodes</strong>
+                <ul>
+                <li>Removes nodes selected in list from the list.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
