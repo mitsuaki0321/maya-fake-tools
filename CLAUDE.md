@@ -829,6 +829,67 @@ uv run ruff check . --fix
 uv run mypy scripts/faketools
 ```
 
+## Release Process
+
+### Creating a Release
+
+**IMPORTANT: Do NOT create release tags during regular commits.**
+
+The project uses GitHub Actions to automatically create releases when a version tag is pushed. Release tags should only be created intentionally when you want to publish a new version.
+
+**Release Workflow:**
+
+1. **Complete and commit all changes** for the release
+2. **Push commits to main branch** (without tags)
+   ```bash
+   git push origin main
+   ```
+3. **Create and push a release tag** (only when ready to publish)
+   ```bash
+   # Create a version tag (e.g., v1.0.0)
+   git tag v1.0.0 -m "Release version 1.0.0"
+
+   # Push the tag (this triggers the release workflow)
+   git push origin v1.0.0
+   ```
+
+**What Happens Automatically:**
+- GitHub Actions workflow (`.github/workflows/release.yml`) is triggered
+- Release package is created with necessary files:
+  - `docs/output/` → HTML documentation
+  - `plug-ins/` → Maya plugins
+  - `scripts/` → Python tools
+  - `faketools.mod` → Module descriptor
+  - `LICENSE`, `README.md`
+- ZIP file `maya-fake-tools_{version}.zip` is created
+- GitHub Release is published with auto-generated release notes
+- Release asset is uploaded
+
+**Tag Naming Convention:**
+- Use semantic versioning: `v{major}.{minor}.{patch}`
+- Examples: `v1.0.0`, `v1.2.3`, `v2.0.0-beta`
+
+**NEVER do this:**
+```bash
+# ❌ WRONG - Do not create tags during regular commits
+git add .
+git commit -m "feat: Add new feature"
+git tag v1.0.0  # This will trigger a release!
+git push origin main --tags
+```
+
+**Always do this:**
+```bash
+# ✅ CORRECT - Separate commits from releases
+git add .
+git commit -m "feat: Add new feature"
+git push origin main
+
+# Later, when ready to release:
+git tag v1.0.0 -m "Release version 1.0.0"
+git push origin v1.0.0
+```
+
 ## Logging Management
 
 ### Change Log Level at Runtime
