@@ -43,6 +43,21 @@ faketools.tools.rig.skinWeights_copy_paste_ui.show_ui()
 
 ## オプションの機能
 
-スピンボックスの上下の矢印は、Ctrl キーを押しながらクリックすることで、0.01 単位での変更が可能です。
+### スピンボックスでの入力
+
+スピンボックスの上下の矢印は、Ctrl キーを押しながらクリックすることで、0.01 単位での変更が可能です。\
 また、Shift キーを押しながらクリックすることで、0.5 単位での変更が可能です。
+
+### ロック機能
+
+![image005](../../images/rig/skinWeights_copy_paste/image005.png) アイコンをオンにするとアンロックされたインフルエンス間のみでウエイトを移動することができます。\
+目的のコンポーネントに対して紐づいているインフルエンスがすべてロックされている場合はエラーとなるので注意してください。
+
+**ロックされた状態**
+
+![image004](../../images/rig/skinWeights_copy_paste/image004.png)
+
+**ロックされていない状態**
+
+![image001](../../images/rig/skinWeights_copy_paste/image001.png)
 

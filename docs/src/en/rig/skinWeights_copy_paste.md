@@ -43,5 +43,20 @@ To copy and paste weights, follow these steps:
 
 ## Optional Features
 
-Spinbox up/down arrows can change in 0.01 increments when clicked while holding Ctrl key.
-Also, can change in 0.5 increments when clicked while holding Shift key.
+### Input with Spinbox
+
+You can change values in the spinbox by clicking the up or down arrows while holding the Ctrl key for increments of 0.01.\
+Holding the Shift key while clicking changes the value in increments of 0.5.
+
+### Lock Feature
+
+![image005](../../images/rig/skinWeights_copy_paste/image005.png) Turning on the icon allows weight transfer only between unlocked influences.\
+If all influences linked to the target component are locked, an error will occur, so please be careful.
+
+**Locked State**
+
+![image004](../../images/rig/skinWeights_copy_paste/image004.png)
+
+**Unlocked State**
+
+![image001](../../images/rig/skinWeights_copy_paste/image001.png)
