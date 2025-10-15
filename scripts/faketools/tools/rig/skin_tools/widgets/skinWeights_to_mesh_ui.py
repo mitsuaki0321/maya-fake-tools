@@ -112,26 +112,44 @@ class SkinWeightsMeshConverterWidgets(QWidget):
         template_button.clicked.connect(self.create_template_mesh)
         convert_button.clicked.connect(self.convert_skin_weights_to_mesh)
 
-    @maya_decorator.undo_chunk("Update Preview Values")
-    @maya_decorator.error_handler
-    def _update_preview_values(self, sender):
-        """Update the preview values."""
+    def _update_preview_values(self, sender, *args):
+        """Update the preview values.
+
+        Args:
+            sender: The widget that triggered this update
+            *args: Extra arguments from Qt signals (ignored)
+        """
         # Check slide and field values
         if sender == self.mesh_div_field:
-            value = self.mesh_div_field.text()
-            self.mesh_div_slider.setValue(int(value))
+            text = self.mesh_div_field.text()
+            if text:  # Only update if text is not empty
+                try:
+                    value = int(text)
+                    self.mesh_div_slider.setValue(value)
+                except ValueError:
+                    pass  # Ignore invalid values during typing
         elif sender == self.mesh_div_slider:
             value = self.mesh_div_slider.value()
             self.mesh_div_field.setText(str(value))
         elif sender == self.u_div_field:
-            value = self.u_div_field.text()
-            self.u_div_slider.setValue(int(value))
+            text = self.u_div_field.text()
+            if text:
+                try:
+                    value = int(text)
+                    self.u_div_slider.setValue(value)
+                except ValueError:
+                    pass
         elif sender == self.u_div_slider:
             value = self.u_div_slider.value()
             self.u_div_field.setText(str(value))
         elif sender == self.v_div_field:
-            value = self.v_div_field.text()
-            self.v_div_slider.setValue(int(value))
+            text = self.v_div_field.text()
+            if text:
+                try:
+                    value = int(text)
+                    self.v_div_slider.setValue(value)
+                except ValueError:
+                    pass
         elif sender == self.v_div_slider:
             value = self.v_div_slider.value()
             self.v_div_field.setText(str(value))
@@ -145,19 +163,20 @@ class SkinWeightsMeshConverterWidgets(QWidget):
             logger.debug("Preview mesh not found.")
             return
 
-        if cmds.nodeType(self.preview_mesh_node) == "polySmoothFace":
-            value = self.mesh_div_slider.value()
-            cmds.setAttr(f"{self.preview_mesh_node}.divisions", value)
+        try:
+            if cmds.nodeType(self.preview_mesh_node) == "polySmoothFace":
+                value = self.mesh_div_slider.value()
+                cmds.setAttr(f"{self.preview_mesh_node}.divisions", value)
+                logger.debug(f"Update preview node values: {self.preview_mesh_node} >> {value}")
+            elif cmds.nodeType(self.preview_mesh_node) == "nurbsTessellate":
+                u_value = self.u_div_slider.value()
+                cmds.setAttr(f"{self.preview_mesh_node}.uNumber", u_value)
 
-            logger.debug(f"Update preview node values: {self.preview_mesh_node} >> {value}")
-        elif cmds.nodeType(self.preview_mesh_node) == "nurbsTessellate":
-            u_value = self.u_div_slider.value()
-            cmds.setAttr(f"{self.preview_mesh_node}.uNumber", u_value)
-
-            v_value = self.v_div_slider.value()
-            cmds.setAttr(f"{self.preview_mesh_node}.vNumber", v_value)
-
-            logger.debug(f"Update preview node values: {self.preview_mesh_node} >> {u_value}, {v_value}")
+                v_value = self.v_div_slider.value()
+                cmds.setAttr(f"{self.preview_mesh_node}.vNumber", v_value)
+                logger.debug(f"Update preview node values: {self.preview_mesh_node} >> {u_value}, {v_value}")
+        except Exception as e:
+            logger.warning(f"Failed to update preview values: {e}")
 
     @maya_decorator.undo_chunk("Create Template Mesh")
     @maya_decorator.error_handler
@@ -233,13 +252,37 @@ class SkinWeightsMeshConverterWidgets(QWidget):
             settings_data (dict): Settings data to apply
         """
         if "mesh_divisions" in settings_data:
-            self.mesh_div_field.setText(str(settings_data["mesh_divisions"]))
-            self.mesh_div_slider.setValue(int(self.mesh_div_field.text()))
+            mesh_divisions = settings_data["mesh_divisions"]
+            # Handle empty or invalid values with default of 1
+            if mesh_divisions == "" or mesh_divisions is None:
+                mesh_divisions = 1
+            try:
+                self.mesh_div_field.setText(str(mesh_divisions))
+                self.mesh_div_slider.setValue(int(mesh_divisions))
+            except (ValueError, TypeError):
+                self.mesh_div_field.setText("1")
+                self.mesh_div_slider.setValue(1)
 
         if "u_divisions" in settings_data:
-            self.u_div_field.setText(str(settings_data["u_divisions"]))
-            self.u_div_slider.setValue(int(self.u_div_field.text()))
+            u_divisions = settings_data["u_divisions"]
+            # Handle empty or invalid values with default of 1
+            if u_divisions == "" or u_divisions is None:
+                u_divisions = 1
+            try:
+                self.u_div_field.setText(str(u_divisions))
+                self.u_div_slider.setValue(int(u_divisions))
+            except (ValueError, TypeError):
+                self.u_div_field.setText("1")
+                self.u_div_slider.setValue(1)
 
         if "v_divisions" in settings_data:
-            self.v_div_field.setText(str(settings_data["v_divisions"]))
-            self.v_div_slider.setValue(int(self.v_div_field.text()))
+            v_divisions = settings_data["v_divisions"]
+            # Handle empty or invalid values with default of 1
+            if v_divisions == "" or v_divisions is None:
+                v_divisions = 1
+            try:
+                self.v_div_field.setText(str(v_divisions))
+                self.v_div_slider.setValue(int(v_divisions))
+            except (ValueError, TypeError):
+                self.v_div_field.setText("1")
+                self.v_div_slider.setValue(1)

@@ -181,12 +181,28 @@ class SkinWeightsRelaxWidgets(QWidget):
             settings_data (dict): Settings data to apply
         """
         if "iterations" in settings_data:
-            self.iterations_field.setText(str(settings_data["iterations"]))
-            self.iterations_slider.setValue(int(self.iterations_field.text()))
+            iterations = settings_data["iterations"]
+            # Handle empty or invalid values with default of 1
+            if iterations == "" or iterations is None:
+                iterations = 1
+            try:
+                self.iterations_field.setText(str(iterations))
+                self.iterations_slider.setValue(int(iterations))
+            except (ValueError, TypeError):
+                self.iterations_field.setText("1")
+                self.iterations_slider.setValue(1)
 
         if "after_blend" in settings_data:
-            self.after_blend_field.setText(str(settings_data["after_blend"]))
-            self.after_blend_slider.setValue(int(float(self.after_blend_field.text()) * 100))
+            after_blend = settings_data["after_blend"]
+            # Handle empty or invalid values with default of 1.0
+            if after_blend == "" or after_blend is None:
+                after_blend = "1.0"
+            try:
+                self.after_blend_field.setText(str(after_blend))
+                self.after_blend_slider.setValue(int(float(after_blend) * 100))
+            except (ValueError, TypeError):
+                self.after_blend_field.setText("1.0")
+                self.after_blend_slider.setValue(100)
 
         if "only_unlock_inf" in settings_data:
             self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])

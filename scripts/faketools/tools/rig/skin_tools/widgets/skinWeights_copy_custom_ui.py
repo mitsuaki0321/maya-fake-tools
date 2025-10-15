@@ -8,7 +8,6 @@ import maya.cmds as cmds
 
 from .....lib import lib_skinCluster
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.qt_compat import (
     QCheckBox,
     QDoubleValidator,
@@ -22,6 +21,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 
 logger = getLogger(__name__)
@@ -102,8 +102,13 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         sender = self.sender()
 
         if sender == self.blend_field:
-            value = float(sender.text())
-            self.blend_slider.setValue(value * 100)
+            text = sender.text()
+            if text:  # Only update if text is not empty
+                try:
+                    value = float(text)
+                    self.blend_slider.setValue(value * 100)
+                except ValueError:
+                    pass  # Ignore invalid values during typing
         elif sender == self.blend_slider:
             value = sender.value() / 100
             self.blend_field.setText(str(value))
@@ -164,8 +169,17 @@ class SkinWeightsCopyCustomWidgets(QWidget):
             settings_data (dict): Settings data to apply
         """
         if "blend_value" in settings_data:
-            self.blend_field.setText(str(settings_data["blend_value"]))
-            self.blend_slider.setValue(float(settings_data["blend_value"]) * 100)
+            blend_value = settings_data["blend_value"]
+            # Handle empty string or invalid values with default of 1.0
+            if blend_value == "" or blend_value is None:
+                blend_value = "1.0"
+            try:
+                self.blend_field.setText(str(blend_value))
+                self.blend_slider.setValue(float(blend_value) * 100)
+            except (ValueError, TypeError):
+                # If conversion fails, use default value
+                self.blend_field.setText("1.0")
+                self.blend_slider.setValue(100)
         if "only_unlock_inf" in settings_data:
             self.only_unlock_inf_checkBox.setChecked(settings_data["only_unlock_inf"])
         if "reference_orig" in settings_data:
