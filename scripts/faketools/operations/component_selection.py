@@ -1,6 +1,7 @@
 """Component selection operations for selecting components by various criteria."""
 
 from logging import getLogger
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -44,7 +45,7 @@ def _get_component_positions(components: list[str]) -> list[tuple[float, float, 
         list[tuple[float, float, float]]: The component positions (x, y, z)
     """
     positions = cmds.xform(components, q=True, ws=True, t=True)
-    return list(zip(positions[::3], positions[1::3], positions[2::3], strict=False))
+    return list(zip(positions[::3], positions[1::3], positions[2::3]))
 
 
 def reverse_selection(components: list[str]) -> list[str]:
@@ -100,13 +101,13 @@ def x_area_selection(components: list[str], area: str = "center") -> list[str]:
     positions = _get_component_positions(validated)
 
     if area == "center":
-        result_components = [component for component, position in zip(validated, positions, strict=False) if 0.001 > position[0] > -0.001]
+        result_components = [component for component, position in zip(validated, positions) if 0.001 > position[0] > -0.001]
         logger.debug(f"Center area components: {result_components}")
     elif area == "left":
-        result_components = [component for component, position in zip(validated, positions, strict=False) if position[0] > 0.001]
+        result_components = [component for component, position in zip(validated, positions) if position[0] > 0.001]
         logger.debug(f"Left area components: {result_components}")
     elif area == "right":
-        result_components = [component for component, position in zip(validated, positions, strict=False) if position[0] < -0.001]
+        result_components = [component for component, position in zip(validated, positions) if position[0] < -0.001]
         logger.debug(f"Right area components: {result_components}")
 
     logger.debug(f"X area components: {result_components}")
@@ -151,7 +152,7 @@ def same_position_selection(components: list[str], driver_mesh: str, *, max_dist
     component_positions = _get_component_positions(validated)
 
     result_components = []
-    for component, position in zip(validated, component_positions, strict=False):
+    for component, position in zip(validated, component_positions):
         component_point = om.MPoint(position)
         point_on_mesh = mesh_intersector.getClosestPoint(component_point, max_distance)
 
@@ -165,7 +166,7 @@ def same_position_selection(components: list[str], driver_mesh: str, *, max_dist
     return result_components
 
 
-def uv_area_selection(components: list[str], uv: str = "u", area: list[float] | None = None) -> list[str]:
+def uv_area_selection(components: list[str], uv: str = "u", area: Optional[list[float]] = None) -> list[str]:
     """UV area selection of components.
 
     Only nurbsCurve and nurbsSurface components are supported.
@@ -225,7 +226,7 @@ def uv_area_selection(components: list[str], uv: str = "u", area: list[float] | 
     return result_components
 
 
-def get_unique_selections(filter_geometries: list[str] | None = None) -> dict[str, float]:
+def get_unique_selections(filter_geometries: Optional[list[str]] = None) -> dict[str, float]:
     """Get the unique components from rich selection.
 
     This function retrieves components with their weights from Maya's rich selection
@@ -279,7 +280,7 @@ def get_unique_selections(filter_geometries: list[str] | None = None) -> dict[st
             selection_list (list): List of component types
             attr_list (list): List of attribute names
         """
-        for component_type, attr in zip(selection_list, attr_list, strict=False):
+        for component_type, attr in zip(selection_list, attr_list):
             iterator = om.MItSelectionList(selection, component_type)
             while not iterator.isDone():
                 dag_path, component = iterator.getComponent()
@@ -306,7 +307,7 @@ def get_unique_selections(filter_geometries: list[str] | None = None) -> dict[st
             selection_list (list): List of component types
             attr_list (list): List of attribute names
         """
-        for component_type, attr in zip(selection_list, attr_list, strict=False):
+        for component_type, attr in zip(selection_list, attr_list):
             iterator = om.MItSelectionList(selection, component_type)
             while not iterator.isDone():
                 dag_path, component = iterator.getComponent()
@@ -333,7 +334,7 @@ def get_unique_selections(filter_geometries: list[str] | None = None) -> dict[st
             selection_list (list): List of component types
             attr_list (list): List of attribute names
         """
-        for component_type, attr in zip(selection_list, attr_list, strict=False):
+        for component_type, attr in zip(selection_list, attr_list):
             iterator = om.MItSelectionList(selection, component_type)
             while not iterator.isDone():
                 dag_path, component = iterator.getComponent()

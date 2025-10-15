@@ -15,7 +15,7 @@ Example:
 
 import json
 import logging
-from typing import Any
+from typing import Any, Optional
 
 import maya.cmds as cmds
 
@@ -55,7 +55,7 @@ class ToolOptionSettings:
         """
         return f"{self.tool_name}.{key}"
 
-    def read(self, key: str, default: Any | None = None) -> Any:
+    def read(self, key: str, default: Optional[Any] = None) -> Any:
         """
         Read the specified key from the optionVar.
 
@@ -64,7 +64,7 @@ class ToolOptionSettings:
 
         Args:
             key (str): The key to read.
-            default (Any | None): The default value to return if the key does not exist.
+            default: The default value to return if the key does not exist.
 
         Returns:
             Any: The value for the specified key, or default if key doesn't exist.
@@ -155,13 +155,12 @@ class ToolOptionSettings:
         logger.debug(f"Key exists check for {self._full_key(key)}: {exists}")
         return exists
 
-    def get_window_geometry(self) -> dict[str, list[int]] | None:
+    def get_window_geometry(self) -> Optional[dict]:
         """
         Get saved window geometry (size and position).
 
         Returns:
-            dict[str, list[int]] | None: Dictionary with 'size' and 'position' keys,
-                                        or None if not saved
+            Dictionary with 'size' and 'position' keys, or None if not saved
 
         Example:
             >>> settings = ToolOptionSettings("my_tool")
@@ -177,13 +176,13 @@ class ToolOptionSettings:
         logger.debug("No window geometry found")
         return None
 
-    def set_window_geometry(self, size: list[int], position: list[int] | None = None) -> None:
+    def set_window_geometry(self, size: list, position: Optional[list] = None) -> None:
         """
         Save window geometry (size and optionally position).
 
         Args:
-            size (list[int]): Window size [width, height]
-            position (list[int] | None): Window position [x, y]. If None, only size is saved.
+            size: Window size [width, height]
+            position: Window position [x, y]. If None, only size is saved.
 
         Example:
             >>> settings = ToolOptionSettings("my_tool")

@@ -90,7 +90,7 @@ class RBFDeform:
         out_y = np.dot(AB, weight_y[:num_out]) + out_y
         out_z = np.dot(AB, weight_z[:num_out]) + out_z
 
-        return [(float(px), float(py), float(pz)) for px, py, pz in zip(out_x, out_y, out_z, strict=False)]
+        return [(float(px), float(py), float(pz)) for px, py, pz in zip(out_x, out_y, out_z)]
 
     def _solve_weight(self, base_matrix: np.ndarray, trg_points: np.ndarray) -> np.ndarray:
         """Solve the system of linear equations for the RBF. Uses a sparse solver and falls back to pinv if necessary.

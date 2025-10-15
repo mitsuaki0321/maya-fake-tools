@@ -7,8 +7,8 @@ import maya.cmds as cmds
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QPushButton, QSizePolicy, Qt
+from ....lib_ui.tool_settings import ToolSettingsManager
 from . import command
 
 logger = getLogger(__name__)
@@ -174,7 +174,7 @@ class MainWindow(BaseMainWindow):
                 if checkboxes[0].isChecked():
                     enable_attributes.append(attribute)
             else:
-                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes, strict=False):
+                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes):
                     if checkbox.isChecked():
                         enable_attributes.append(f"{attribute}{axis}")
 
@@ -192,7 +192,7 @@ class MainWindow(BaseMainWindow):
             if attribute == "visibility":
                 checkbox_states[attribute] = checkboxes[0].isChecked()
             else:
-                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes, strict=False):
+                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes):
                     key = f"{attribute}{axis}"
                     checkbox_states[key] = checkbox.isChecked()
 
@@ -211,7 +211,7 @@ class MainWindow(BaseMainWindow):
                 state = checkbox_states.get(attribute, False)
                 checkboxes[0].setChecked(state)
             else:
-                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes, strict=False):
+                for axis, checkbox in zip(["X", "Y", "Z"], checkboxes):
                     key = f"{attribute}{axis}"
                     state = checkbox_states.get(key, False)
                     checkbox.setChecked(state)

@@ -9,6 +9,7 @@ Example:
 """
 
 import logging
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -103,12 +104,12 @@ class PresetEditDialog(QDialog):
         else:
             self.delete_button.setEnabled(False)
 
-    def _get_selected_preset_name(self) -> str | None:
+    def _get_selected_preset_name(self) -> Optional[str]:
         """
         Get the currently selected preset name.
 
         Returns:
-            str | None: Selected preset name, or None if no selection
+            Selected preset name, or None if no selection
         """
         selected_items = self.preset_list.selectedItems()
         if not selected_items:

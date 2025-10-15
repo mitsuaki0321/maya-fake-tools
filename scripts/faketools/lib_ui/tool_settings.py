@@ -16,7 +16,7 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, Optional, Union
 
 from .tool_data import ToolDataManager
 
@@ -301,13 +301,13 @@ class ToolSettingsManager:
             logger.error(f"Failed to rename preset '{old_name}' to '{new_name}': {e}")
             raise
 
-    def export_preset(self, preset_name: str, file_path: str | Path) -> None:
+    def export_preset(self, preset_name: str, file_path: Union[str, Path]) -> None:
         """
         Export a preset to an external JSON file.
 
         Args:
             preset_name (str): Name of the preset to export
-            file_path (str | Path): Destination file path
+            file_path: Destination file path
 
         Raises:
             ValueError: If preset doesn't exist
@@ -333,14 +333,14 @@ class ToolSettingsManager:
             logger.error(f"Failed to export preset '{preset_name}' to '{dest_path}': {e}")
             raise
 
-    def import_preset(self, file_path: str | Path, preset_name: str | None = None) -> str:
+    def import_preset(self, file_path: Union[str, Path], preset_name: Optional[str] = None) -> str:
         """
         Import a preset from an external JSON file.
 
         Args:
-            file_path (str | Path): Source file path
-            preset_name (str | None): Name for the imported preset.
-                                     If None, uses the source file's basename (without extension)
+            file_path: Source file path
+            preset_name: Name for the imported preset.
+                        If None, uses the source file's basename (without extension)
 
         Returns:
             str: Name of the imported preset

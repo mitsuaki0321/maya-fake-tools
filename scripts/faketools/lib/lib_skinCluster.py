@@ -4,6 +4,7 @@ SkinCluster node functions.
 
 from collections.abc import Sequence
 from logging import getLogger
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -18,7 +19,7 @@ def load_skinWeights_plugin() -> None:
         cmds.loadPlugin(f"{PLUGIN_NAME}.py")
 
 
-def get_skinCluster(shape: str) -> str | None:
+def get_skinCluster(shape: str) -> Optional[str]:
     """Get the skinCluster node.
 
     Args:
@@ -336,7 +337,7 @@ def copy_skin_weights_custom(
     logger.debug(f"Copy skin weights custom: {src_skinCluster} -> {dst_skinCluster}")
 
 
-def get_skin_weights_custom(skinCluster: str, components: Sequence[str] | None = None, all_components: bool = False) -> list[float]:
+def get_skin_weights_custom(skinCluster: str, components: Optional[Sequence[str]] = None, all_components: bool = False) -> list[float]:
     """Get the skin weights.
 
     Args:
@@ -374,7 +375,7 @@ def get_skin_weights_custom(skinCluster: str, components: Sequence[str] | None =
     return weights
 
 
-def set_skin_weights_custom(skinCluster: str, weights: dict, components: Sequence[str] | None) -> None:
+def set_skin_weights_custom(skinCluster: str, weights: dict, components: Optional[Sequence[str]]) -> None:
     """Set the skin weights.
 
     Args:
@@ -398,7 +399,7 @@ def set_skin_weights_custom(skinCluster: str, weights: dict, components: Sequenc
     logger.debug(f"Set skin weights: {skinCluster}")
 
 
-def get_skin_weights(skinCluster: str, components: Sequence[str] | None = None, all_components: bool = False) -> list[float]:
+def get_skin_weights(skinCluster: str, components: Optional[Sequence[str]] = None, all_components: bool = False) -> list[float]:
     """Get the skin weights.
 
     Args:
@@ -436,7 +437,7 @@ def get_skin_weights(skinCluster: str, components: Sequence[str] | None = None, 
     return weights
 
 
-def set_skin_weights(skinCluster: str, weights: list[list[float]], components: Sequence[str] | None) -> None:
+def set_skin_weights(skinCluster: str, weights: list[list[float]], components: Optional[Sequence[str]]) -> None:
     """Set the skin weights.
 
     Args:
@@ -458,8 +459,8 @@ def set_skin_weights(skinCluster: str, weights: list[list[float]], components: S
 
     infs = cmds.skinCluster(skinCluster, query=True, influence=True)
     components = cmds.ls(components, flatten=True)
-    for component, weight in zip(components, weights, strict=False):
-        cmds.skinPercent(skinCluster, component, transformValue=zip(infs, weight, strict=False))
+    for component, weight in zip(components, weights):
+        cmds.skinPercent(skinCluster, component, transformValue=zip(infs, weight))
 
     logger.debug(f"Set skin weights: {skinCluster}")
 

@@ -4,6 +4,7 @@ This module provides the main API for creating curve surfaces from nodes.
 """
 
 from logging import getLogger
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -23,9 +24,9 @@ def main(
     is_bind: bool = False,
     to_skin_cage: bool = False,
     skin_cage_division_levels: int = 1,
-    select_options: dict | None = None,
-    create_options: dict | None = None,
-    bind_options: dict | None = None,
+    select_options: Optional[dict] = None,
+    create_options: Optional[dict] = None,
+    bind_options: Optional[dict] = None,
 ) -> list[str]:
     """Create and bind curve surface.
 
@@ -239,12 +240,12 @@ def _transfer_curve_weights(curve: str, surface: str) -> None:
     for i, weight in enumerate(weights):
         if surface_type == OBJECT_TYPE_SURFACE:
             # NurbsSurface has two rows of CVs (U direction)
-            cmds.skinPercent(surface_skin_cluster, f"{surface}.cv[0][{i}]", transformValue=list(zip(infs, weight, strict=False)))
-            cmds.skinPercent(surface_skin_cluster, f"{surface}.cv[1][{i}]", transformValue=list(zip(infs, weight, strict=False)))
+            cmds.skinPercent(surface_skin_cluster, f"{surface}.cv[0][{i}]", transformValue=list(zip(infs, weight)))
+            cmds.skinPercent(surface_skin_cluster, f"{surface}.cv[1][{i}]", transformValue=list(zip(infs, weight)))
         elif surface_type == OBJECT_TYPE_MESH:
             # Mesh has vertices on both edges
-            cmds.skinPercent(surface_skin_cluster, f"{surface}.vtx[{i}]", transformValue=list(zip(infs, weight, strict=False)))
-            cmds.skinPercent(surface_skin_cluster, f"{surface}.vtx[{num_cvs + i}]", transformValue=list(zip(infs, weight, strict=False)))
+            cmds.skinPercent(surface_skin_cluster, f"{surface}.vtx[{i}]", transformValue=list(zip(infs, weight)))
+            cmds.skinPercent(surface_skin_cluster, f"{surface}.vtx[{num_cvs + i}]", transformValue=list(zip(infs, weight)))
 
     logger.debug(f"Transfer weights: {curve} -> {surface}")
 

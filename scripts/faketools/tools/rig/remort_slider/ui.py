@@ -163,7 +163,7 @@ class RemoteSliderWindow:
         )
 
         # Pop-up menus for min and max fields
-        for i, field in zip([-1.0, 1.0], [self.min_field, self.max_field], strict=False):
+        for i, field in zip([-1.0, 1.0], [self.min_field, self.max_field]):
             pop = cmds.popupMenu(p=field)
             for val in self.preset_values:
                 cmds.menuItem(l=str(val), c=partial(self.set_preset_value, field, val * i), p=pop)

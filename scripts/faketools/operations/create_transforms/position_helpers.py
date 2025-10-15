@@ -2,6 +2,7 @@
 
 from logging import getLogger
 import math
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -20,7 +21,7 @@ def get_selected_positions(
     include_rotation: bool = False,
     closest_position: bool = False,
     tangent_from_component: bool = False,
-) -> tuple[list[list[float]], list[list[float]]] | None:
+) -> Optional[tuple[list[list[float]], list[list[float]]]]:
     """Get the selected object's position and rotation.
 
     Args:
@@ -179,10 +180,7 @@ def _get_mesh_positions(
 
             if not tangent_from_component:
                 rotations.extend(
-                    [
-                        lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-                        for normal, tangent in zip(normals, tangents, strict=False)
-                    ]
+                    [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
                 )
             else:
                 vertex_rotations = _get_vertex_rotations_from_topology(mesh_vertex, vertex_positions, normals, tangents, indices)
@@ -206,10 +204,7 @@ def _get_mesh_positions(
             normals = mesh_face.get_face_normal(indices)
             tangents = mesh_face.get_face_tangent(indices)
             rotations.extend(
-                [
-                    lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-                    for normal, tangent in zip(normals, tangents, strict=False)
-                ]
+                [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
             )
 
     return positions, rotations
@@ -265,7 +260,7 @@ def _get_vertex_rotations_from_topology(
     rotations = []
     connected_vertices_list = mesh_vertex.get_connected_vertices(indices)
 
-    for position, normal, tangent, connected_vertices in zip(positions, normals, tangents, connected_vertices_list, strict=False):
+    for position, normal, tangent, connected_vertices in zip(positions, normals, tangents, connected_vertices_list):
         connected_positions = mesh_vertex.get_vertex_positions(connected_vertices)
 
         angle = math.pi
@@ -313,16 +308,13 @@ def _get_edge_rotations(mesh_edge: MeshEdge, indices: list[int], tangent_from_co
     tangents = mesh_edge.get_edge_tangent(indices)
 
     if not tangent_from_component:
-        return [
-            lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-            for normal, tangent in zip(normals, tangents, strict=False)
-        ]
+        return [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
 
     # Get the vector of the vertices that make up the edge, which is closest to the current tangent
     vertex_vectors = mesh_edge.get_edge_vector(indices, normalize=True)
     rotations = []
 
-    for normal, tangent, vertex_vector in zip(normals, tangents, vertex_vectors, strict=False):
+    for normal, tangent, vertex_vector in zip(normals, tangents, vertex_vectors):
         tangent = lib_math.vector_orthogonalize(normal, tangent)
         binormal = normal ^ tangent
 
@@ -330,7 +322,7 @@ def _get_edge_rotations(mesh_edge: MeshEdge, indices: list[int], tangent_from_co
         angle = math.pi
         tangent_axis = "x"
 
-        for axis_vector, axis in zip([tangent, binormal], ["x", "y"], strict=False):
+        for axis_vector, axis in zip([tangent, binormal], ["x", "y"]):
             dot_product = axis_vector * vertex_vector
             candidate_vector = dot_product > 0 and vertex_vector or vertex_vector * -1.0
 
@@ -381,10 +373,7 @@ def _get_curve_positions(
         if include_rotation:
             normals, tangents = curve.get_normal_and_tangents(params)
             rotations.extend(
-                [
-                    lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-                    for normal, tangent in zip(normals, tangents, strict=False)
-                ]
+                [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
             )
 
     # EP
@@ -396,10 +385,7 @@ def _get_curve_positions(
         if include_rotation:
             normals, tangents = curve.get_normal_and_tangents(params)
             rotations.extend(
-                [
-                    lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-                    for normal, tangent in zip(normals, tangents, strict=False)
-                ]
+                [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
             )
 
     return positions, rotations
@@ -439,10 +425,7 @@ def _get_surface_positions(
         if include_rotation:
             normals, tangents = surface.get_normal_and_tangents(params)
             rotations.extend(
-                [
-                    lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x")
-                    for normal, tangent in zip(normals, tangents, strict=False)
-                ]
+                [lib_math.vector_to_rotation(normal, tangent, primary_axis="z", secondary_axis="x") for normal, tangent in zip(normals, tangents)]
             )
 
     return positions, rotations

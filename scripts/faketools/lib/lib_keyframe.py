@@ -4,6 +4,7 @@ Keyframe functions.
 
 from dataclasses import dataclass, fields
 from logging import getLogger
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -167,7 +168,7 @@ class TimeKeyframe:
         """
         return cmds.keyframe(self.plug, query=True, timeChange=True) or []
 
-    def find_anim_curve(self) -> str | None:
+    def find_anim_curve(self) -> Optional[str]:
         """Find the animation curve node.
 
         Returns:
@@ -292,7 +293,7 @@ class AttributeKeyframe:
 
         return cmds.keyframe(anim_curve, query=True, floatChange=True) or []
 
-    def find_anim_curve(self, driver_plug: str) -> str | None:
+    def find_anim_curve(self, driver_plug: str) -> Optional[str]:
         """Find the animation curve node.
 
         Args:

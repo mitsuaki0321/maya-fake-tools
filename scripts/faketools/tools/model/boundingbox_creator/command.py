@@ -3,6 +3,7 @@ Create a bounding box around the selected objects.
 """
 
 from logging import getLogger
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -26,7 +27,7 @@ class CreateBoundingBox:
 
         self._bounding_box = bounding_box
 
-    def create(self, box_object: BoxObject, include_scale: bool = True, base_line: list[float] | None = None):
+    def create(self, box_object: BoxObject, include_scale: bool = True, base_line: Optional[list[float]] = None):
         """Create a bounding box around the selected objects.
 
         Args:
@@ -39,7 +40,7 @@ class CreateBoundingBox:
             base_line = None
 
         if base_line is not None:
-            if not isinstance(base_line, list | tuple):
+            if not isinstance(base_line, (list, tuple)):
                 raise TypeError("base_line must be a list or tuple.")
 
             if not all([-1.0 <= val <= 1.0 for val in base_line]):
@@ -71,8 +72,7 @@ class CreateBoundingBox:
         if base_line is not None or not include_scale:
             box_geometry_shp = cmds.listRelatives(box_geometry, s=True, f=True)[0]
             if box_geometry_shp and cmds.objectType(box_geometry_shp) == "mesh":
-                # lib_transform.FreezeTransformNode(box_geometry).freeze(freeze_transform=False, freeze_pivot=False, freeze_vertex=True)
-                lib_transform.FreezeTransformNode(box_geometry).freeze(freeze_transform=False, freeze_pivot=False, freeze_vertex=True)
+                lib_transform.freeze_mesh_vertices(box_geometry)
 
         return box_geometry
 

@@ -306,7 +306,7 @@ class MeshRBFPosition(MeshPosition):
             if len(rotations) != len(positions):
                 raise ValueError("Rotations and positions length mismatch.")
 
-            for position, rotation in zip(positions, rotations, strict=False):
+            for position, rotation in zip(positions, rotations):
                 quat = om.MEulerRotation([math.radians(rot) for rot in rotation], om.MEulerRotation.kXYZ).asQuaternion()
                 quat_mat = quat.asMatrix()
                 x_vector = om.MVector(om.MVector.kXaxisVector) * quat_mat

@@ -149,7 +149,7 @@ class SubstitutionSelectionWidget(QWidget):
         convert_names = lib_name.substitute_names(nodes, LEFT_TO_RIGHT[0], LEFT_TO_RIGHT[1])
 
         result_nodes = []
-        for name, node in zip(convert_names, nodes, strict=False):
+        for name, node in zip(convert_names, nodes):
             if not cmds.objExists(name):
                 cmds.warning(f"Node does not exist: {node}")
                 continue
@@ -183,7 +183,7 @@ class SubstitutionSelectionWidget(QWidget):
         convert_names = lib_name.substitute_names(nodes, RIGHT_TO_LEFT[0], RIGHT_TO_LEFT[1])
 
         result_nodes = []
-        for name, node in zip(convert_names, nodes, strict=False):
+        for name, node in zip(convert_names, nodes):
             if not cmds.objExists(name):
                 cmds.warning(f"Node does not exist: {node}")
                 continue
@@ -219,7 +219,7 @@ class SubstitutionSelectionWidget(QWidget):
         convert_names = lib_name.substitute_names(nodes, search_text, replace_text)
 
         result_nodes = []
-        for name, node in zip(convert_names, nodes, strict=False):
+        for name, node in zip(convert_names, nodes):
             if not cmds.objExists(name):
                 cmds.warning(f"Node does not exist: {node}")
                 continue
@@ -268,7 +268,7 @@ class SubstitutionSelectionWidget(QWidget):
         convert_names = lib_name.substitute_names(nodes, search_text, replace_text)
 
         result_nodes = []
-        for name, node in zip(convert_names, nodes, strict=False):
+        for name, node in zip(convert_names, nodes):
             if not cmds.objExists(name):
                 cmds.warning(f"Node does not exist: {node}")
                 continue

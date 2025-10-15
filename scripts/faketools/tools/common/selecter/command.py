@@ -161,7 +161,7 @@ def _rename_dag_nodes(node_names: list[str], new_names: list[str]) -> list[str]:
         mobjects.append(dag_path.node())
 
     result_nodes = []
-    for mobject, new_name in zip(mobjects, new_names, strict=False):
+    for mobject, new_name in zip(mobjects, new_names):
         # Get current path from MObject (updates even if parent renamed)
         dag_path = om.MDagPath.getAPathTo(mobject)
         current_path = dag_path.fullPathName()
@@ -196,7 +196,7 @@ def _rename_non_dag_nodes(nodes: list[str], new_names: list[str]) -> list[str]:
         list[str]: The renamed node list.
     """
     result_nodes = []
-    for node, new_name in zip(nodes, new_names, strict=False):
+    for node, new_name in zip(nodes, new_names):
         if node == new_name:
             result_nodes.append(node)
         else:

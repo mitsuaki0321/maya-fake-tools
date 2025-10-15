@@ -7,7 +7,7 @@ Provides automatic tool discovery and registration for the menu system.
 import importlib
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from .base.tool import BaseTool
 
@@ -31,12 +31,12 @@ class ToolRegistry:
         self._categories: dict[str, list[str]] = {}
         self._loaded_modules = set()
 
-    def discover_tools(self, tools_path: Path | None = None) -> None:
+    def discover_tools(self, tools_path: Optional[Path] = None) -> None:
         """
         Discover all tools in the tools directory.
 
         Args:
-            tools_path (Path | None): Path to tools directory (default: scripts/faketools/tools)
+            tools_path: Path to tools directory (default: scripts/faketools/tools)
         """
         # Clear existing tools to prevent duplicates
         self._tools.clear()
@@ -97,17 +97,17 @@ class ToolRegistry:
         except Exception as e:
             logger.error(f"Failed to register tool {tool_name}: {e}")
 
-    def _load_tool_config(self, category: str, tool_name: str, module_path: str = None) -> dict | None:
+    def _load_tool_config(self, category: str, tool_name: str, module_path: Optional[str] = None) -> Optional[dict]:
         """
         Load tool configuration if it exists.
 
         Args:
             category (str): Tool category
             tool_name (str): Tool name
-            module_path (str | None): Optional module path override
+            module_path: Optional module path override
 
         Returns:
-            dict | None: Tool configuration dictionary or None
+            Tool configuration dictionary or None
         """
         try:
             if module_path is None:
@@ -211,7 +211,7 @@ class ToolRegistry:
 
         logger.info(f"Registered tool class: {tool_id}")
 
-    def get_tool(self, tool_id: str) -> dict | None:
+    def get_tool(self, tool_id: str) -> Optional[dict]:
         """
         Get tool information by ID.
 
@@ -219,7 +219,7 @@ class ToolRegistry:
             tool_id (str): Tool ID (e.g., "rig.skin_tools")
 
         Returns:
-            dict | None: Tool information dictionary or None
+            Tool information dictionary or None
         """
         return self._tools.get(tool_id)
 
@@ -254,7 +254,7 @@ class ToolRegistry:
             parent: Parent widget
 
         Returns:
-            object | None: Tool instance or None
+            Tool instance or None
         """
         tool_info = self.get_tool(tool_id)
         if not tool_info:

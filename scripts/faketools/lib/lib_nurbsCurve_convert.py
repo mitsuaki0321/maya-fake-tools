@@ -151,7 +151,7 @@ class ConvertNurbsCurve:
 
         count = 0
         while count < iterations:
-            for cv_index, source_position in zip(cv_indices, source_positions, strict=False):
+            for cv_index, source_position in zip(cv_indices, source_positions):
                 closest_position, _ = self.nurbs_curve.get_closest_position(source_position)
                 goal_position = source_position - closest_position
                 cmds.xform(f"{self.curve}.cv[{cv_index}]", t=goal_position, ws=True, r=True)

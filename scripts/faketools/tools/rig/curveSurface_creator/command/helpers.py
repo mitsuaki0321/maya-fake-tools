@@ -1,6 +1,7 @@
 """Helper functions for curve surface creation."""
 
 from logging import getLogger
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -10,7 +11,7 @@ from .constants import CURVE_DEGREE_LINEAR, OBJECT_TYPE_CURVE, OBJECT_TYPE_SURFA
 logger = getLogger(__name__)
 
 
-def validate_geometry(geometry: str, node_types: list[str] | None = None) -> str:
+def validate_geometry(geometry: str, node_types: Optional[list[str]] = None) -> str:
     """Validate geometry and return its shape node.
 
     Args:
@@ -147,7 +148,7 @@ def move_cv_positions(target_cv: str) -> None:
     move_positions = cv_positions[target_cv_index:] + cv_positions[:target_cv_index]
 
     # Apply rotated positions
-    for cv, move_position in zip(cvs, move_positions, strict=False):
+    for cv, move_position in zip(cvs, move_positions):
         cmds.xform(cv, ws=True, t=move_position)
 
     logger.debug(f"Rotated CV positions starting from: {target_cv}")

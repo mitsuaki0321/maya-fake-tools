@@ -1,5 +1,7 @@
 """Maya Qt utilities."""
 
+from typing import Optional
+
 import maya.OpenMayaUI as omui
 
 from .qt_compat import QObject, QWidget, shiboken
@@ -56,7 +58,7 @@ def qt_widget_from_maya_window(object_name: str) -> QWidget:
     return shiboken.wrapInstance(int(ptr), QWidget)
 
 
-def get_maya_main_window() -> QWidget | None:
+def get_maya_main_window() -> Optional[QWidget]:
     """Get the Maya main window as a Qt widget.
 
     Returns:

@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from logging import getLogger
+from typing import Union
 
 import maya.api.OpenMaya as om
 import numpy as np
@@ -13,19 +14,19 @@ logger = getLogger(__name__)
 class BoundingBox(ABC):
     """Abstract base class for bounding boxes."""
 
-    def __init__(self, points: list[list[float]] | np.ndarray):
+    def __init__(self, points: Union[list[list[float]], np.ndarray]):
         """Initialize the BoundingBox with a list of points.
 
         Args:
             points (Union[list[list[float]], np.ndarray]): The list of points. Each point must be a 3-element list or numpy array.
         """
-        if not isinstance(points, list | np.ndarray):
+        if not isinstance(points, (list, np.ndarray)):
             raise ValueError("Points must be a list or numpy array.")
 
         if isinstance(points, list):
             points = np.array(points)
 
-        if not all(isinstance(pt, list | np.ndarray) and len(pt) == 3 for pt in points):
+        if not all(isinstance(pt, (list, np.ndarray)) and len(pt) == 3 for pt in points):
             raise ValueError("Points must be a list of 3-element lists or numpy arrays.")
 
         self._points = points
@@ -169,7 +170,7 @@ class WorldBoundingBox(BoundingBox):
 class MinimumBoundingBox(BoundingBox):
     """Class representing the bounding box with the minimum volume."""
 
-    def __init__(self, points: list[list[float]] | np.ndarray):
+    def __init__(self, points: Union[list[list[float]], np.ndarray]):
         """Initialize the MinimumBoundingBox with a list of points.
 
         Args:
@@ -276,8 +277,8 @@ class AxisAlignedBoundingBox(BoundingBox):
 
     def __init__(
         self,
-        points: list[list[float]] | np.ndarray,
-        axis_direction: list[float] | np.ndarray = (0, 1, 0),
+        points: Union[list[list[float]], np.ndarray],
+        axis_direction: Union[list[float], np.ndarray] = (0, 1, 0),
         axis: str = "y",
         theta_samples: int = 360,
     ):

@@ -224,27 +224,7 @@ class FreezeMeshVerticesCommand(AllCommand):
         super().execute(target_nodes)
 
         for target_node in target_nodes:
-            if not cmds.objectType(target_node, isAType="transform"):
-                logger.warning(f"Node is not a transform: {target_node}, skipping.")
-                continue
-
-            shapes = cmds.listRelatives(target_node, shapes=True, pa=True, type="mesh", ni=True) or []
-            if not shapes:
-                logger.warning(f"No mesh shapes found under: {target_node}, skipping.")
-                continue
-            else:
-                mesh = shapes[0]
-
-            try:
-                cmds.polyCollapseTweaks(mesh)
-            except RuntimeError:
-                vertex_count = cmds.polyEvaluate(mesh, vertex=True)
-                for i in range(vertex_count):
-                    current_pos = cmds.getAttr(f"{mesh}.pnts[{i}]")[0]
-                    if current_pos != (0.0, 0.0, 0.0):
-                        cmds.setAttr(f"{mesh}.pnts[{i}]", 0.0, 0.0, 0.0)
-
-            logger.debug(f"Froze mesh vertices for node: {target_node}")
+            lib_transform.freeze_mesh_vertices(target_node)
 
 
 class DeleteConstraintsCommand(AllCommand):

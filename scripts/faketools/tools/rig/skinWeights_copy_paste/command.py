@@ -346,9 +346,9 @@ class SkinWeightsCopyPaste:
 
         # Calculate blended weights
         blended_weights = []
-        for src_weight, dst_weight in zip(self._src_weights, self._dst_weights, strict=False):
+        for src_weight, dst_weight in zip(self._src_weights, self._dst_weights):
             new_weight = []
-            for src_w, dst_w in zip(src_weight, dst_weight, strict=False):
+            for src_w, dst_w in zip(src_weight, dst_weight):
                 new_weight.append(src_w * self._blend_weights + dst_w * (1.0 - self._blend_weights))
 
             blended_weights.append(new_weight)
@@ -365,7 +365,7 @@ class SkinWeightsCopyPaste:
 
             # Adjust weights for each component
             final_weights = []
-            for new_weight, original_weight in zip(blended_weights, self._dst_weights, strict=False):
+            for new_weight, original_weight in zip(blended_weights, self._dst_weights):
                 adjusted_weight = self._adjust_unlock_weights(new_weight, original_weight, unlocked_status)
                 final_weights.append(adjusted_weight)
         else:

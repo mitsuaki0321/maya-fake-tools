@@ -99,7 +99,7 @@ class SkinClusterToMesh:
             weights.append([moved_positions[i] - default_positions[i] for i in range(vtx_num)])
             cmds.move(-1.0, inf, r=True, y=True)
 
-        weights = list(itertools.chain(*zip(*weights, strict=False)))
+        weights = list(itertools.chain(*zip(*weights)))
 
         # Create the mesh
         convert_mesh = cmds.duplicate(preview_geometry, n=f"{self.geometry}_converted")[0]

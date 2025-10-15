@@ -136,7 +136,7 @@ class DocBuilder:
 
             # Find common prefix
             common_length = 0
-            for i, (a, b) in enumerate(zip(from_parts, to_parts, strict=False)):
+            for i, (a, b) in enumerate(zip(from_parts, to_parts)):
                 if a == b:
                     common_length = i + 1
                 else:

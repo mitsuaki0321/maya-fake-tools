@@ -3,6 +3,7 @@
 import itertools
 from logging import getLogger
 import re
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -51,7 +52,7 @@ def get_influences_from_objects(objs: list[str]) -> list[str]:
         else:
             # Get only influences with weights greater than 0
             weights = lib_skinCluster.get_skin_weights(skinCluster, components)
-            weights = [sum(w) for w in zip(*weights, strict=False)]
+            weights = [sum(w) for w in zip(*weights)]
             result_infs.extend([infs[i] for i, w in enumerate(weights) if w > 0.0])
 
     result_infs = list(dict.fromkeys(result_infs))
@@ -84,7 +85,7 @@ def average_skin_weights(components: list[str]) -> None:
     weights = lib_skinCluster.get_skin_weights(skinCluster, components)
     num_components = len(components)
 
-    average_weights = [sum(ws) / num_components for ws in list(zip(*weights, strict=False))]
+    average_weights = [sum(ws) / num_components for ws in list(zip(*weights))]
     average_weights = [average_weights for _ in range(num_components)]
 
     lib_skinCluster.set_skin_weights(skinCluster, average_weights, components)
@@ -124,7 +125,7 @@ def average_skin_weights_shell(mesh: str) -> None:
     logger.debug(f"Averaged skin weights shell: {mesh}")
 
 
-def combine_pair_skin_weights(components: list[str], method: str = "auto", static_inf: str | None = None, **kwargs) -> None:
+def combine_pair_skin_weights(components: list[str], method: str = "auto", static_inf: Optional[str] = None, **kwargs) -> None:
     """Combine the pair influences weights of the components.
 
     Args:

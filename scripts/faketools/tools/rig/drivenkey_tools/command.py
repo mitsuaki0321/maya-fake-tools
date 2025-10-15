@@ -7,6 +7,7 @@ import json
 from logging import getLogger
 import os
 import re
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -192,7 +193,7 @@ class DrivenKeyTransfer:
                         logger.debug(f"Deleted driven keys: {target_driven_plug}")
 
             # Transfer driven keys
-            for source_driven_plug, target_driven_plug in zip(source_driven_plugs, target_driven_plugs, strict=False):
+            for source_driven_plug, target_driven_plug in zip(source_driven_plugs, target_driven_plugs):
                 source_driver_plugs = cmds.setDrivenKeyframe(source_driven_plug, q=True, driver=True)
 
                 anim_curve_datas = {}
@@ -303,7 +304,7 @@ def cleanup_driven_keys(node: str) -> None:
     logger.debug(f"Cleanup driven keys: {node}")
 
 
-def mirror_transform_anim_curve(transform: str, time_attrs: list[str] | None, value_attrs: list[str] | None) -> None:
+def mirror_transform_anim_curve(transform: str, time_attrs: Optional[list[str]], value_attrs: Optional[list[str]]) -> None:
     """Mirror the transform animation curve.
 
     Args:

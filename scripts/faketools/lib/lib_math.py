@@ -80,7 +80,7 @@ def inner_divide(point_a: Sequence[float], point_b: Sequence[float], *, spans: i
     divided_points = []
     for i in range(spans + 1):
         t = i / spans if spans > 0 else 0
-        point = [a + t * (b - a) for a, b in zip(point_a, point_b, strict=False)]
+        point = [a + t * (b - a) for a, b in zip(point_a, point_b)]
         divided_points.append(point)
 
     logger.debug(f"Inner divided points: {divided_points}")
@@ -104,9 +104,9 @@ def get_bounding_box(points: list[list[float]]) -> tuple[list[float], list[float
         return [], []
 
     # Calculate min and max for each dimension using zip (more efficient)
-    transposed = zip(*points, strict=False)
+    transposed = zip(*points)
     min_point = [min(coords) for coords in transposed]
-    transposed = zip(*points, strict=False)
+    transposed = zip(*points)
     max_point = [max(coords) for coords in transposed]
 
     logger.debug(f"Bounding box: {min_point}, {max_point}")
@@ -124,7 +124,7 @@ def get_bounding_box_center(points: list[list[float]]) -> list[float]:
         list[float]: Coordinates of the center point.
     """
     min_point, max_point = get_bounding_box(points)
-    center_point = [(min_val + max_val) / 2 for min_val, max_val in zip(min_point, max_point, strict=False)]
+    center_point = [(min_val + max_val) / 2 for min_val, max_val in zip(min_point, max_point)]
 
     logger.debug(f"Bounding box center: {center_point}")
 
@@ -166,7 +166,7 @@ def get_vector(point_a: Sequence[float], point_b: Sequence[float]) -> list[float
     Returns:
         list[float]: The vector.
     """
-    vector = [(b - a) for a, b in zip(point_a, point_b, strict=False)]
+    vector = [(b - a) for a, b in zip(point_a, point_b)]
 
     logger.debug(f"Vector: {vector}")
 

@@ -31,7 +31,7 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
 **Development-Only Libraries (not used in runtime code):**
 - **ruff** - Code formatting and linting
 - **mypy** - Import validation (type checking disabled)
-- **numpy, scipy, scikit-learn** - Used only for testing/benchmarking
+- **numpy, scipy** - Used only for testing/benchmarking
 
 **Important Notes:**
 - **NO scikit-learn dependency**: All clustering algorithms (`lib_cluster.py`) are implemented using numpy only
@@ -159,7 +159,7 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `SceneCommand`: Base class for scene-wide operations (auto-executes on init)
      - `AllCommand`: Base class for operations on all selected nodes
      - `PairCommand`: Base class for operations between source and target node pairs
-   - See "Command Pattern Architecture" section below for usage examples
+   - See [SINGLE_COMMANDS.md](SINGLE_COMMANDS.md) for detailed usage guide
 
 10. **Operations** ([scripts/faketools/operations/](scripts/faketools/operations/))
    - High-level operations that combine multiple `lib` utilities
@@ -197,70 +197,6 @@ tools/{category}/{tool_name}/
 ├── ui.py           # UI layer with show_ui() function
 └── command.py      # Business logic (Maya operations)
 ```
-
-### Command Pattern Architecture
-
-The framework provides base command classes in `single_commands/base_commands.py` for implementing reusable Maya operations. These commands can be used in two ways:
-
-1. **In Single Commands menu**: Create command classes in `single_commands/{scene,all,pair}_commands.py` for direct menu access
-2. **In tool command layer**: Import and use command patterns in tool `command.py` files
-
-**SceneCommand Pattern:**
-```python
-from faketools.single_commands import SceneCommand
-
-class OptimizeScene(SceneCommand):
-    _name = "Optimize Scene"  # Display name in menu
-    _description = "Optimize scene for faster performance"
-
-    def execute(self):
-        """Executes automatically on instantiation."""
-        # Scene-wide operations here
-        pass
-
-# Usage: OptimizeScene()  # Auto-executes
-```
-
-**AllCommand Pattern** (operates on all selected nodes):
-```python
-from faketools.single_commands import AllCommand
-
-class LockAndHide(AllCommand):
-    _name = "Lock and Hide"
-    _description = "Lock and hide selected nodes"
-
-    def execute(self, target_nodes: list[str]):
-        """Process all nodes."""
-        for node in target_nodes:
-            # Process each node
-            pass
-
-# Usage: LockAndHide(nodes)  # Validates nodes, then calls execute
-```
-
-**PairCommand Pattern** (operates on source→target pairs):
-```python
-from faketools.single_commands import PairCommand
-
-class SnapPosition(PairCommand):
-    _name = "Snap Position"
-    _description = "Snap target positions to source"
-
-    def execute_pair(self, source_node: str, target_node: str):
-        """Process source-target pair."""
-        # Snap target to source
-        pass
-
-# Usage: SnapPosition(source_nodes, target_nodes)
-# Note: If len(source_nodes)==1, it's duplicated to match target_nodes length
-```
-
-**Key Behaviors:**
-- All command classes auto-validate input on instantiation
-- Commands execute immediately on instantiation (no separate `.run()` call)
-- Commands in `single_commands/` modules are automatically added to "Single Commands" menu
-- Commands must define `_name` and `_description` class attributes for menu display
-- Use these classes for reusable operations that work standalone or within tool UIs
 
 ### Layer Separation Pattern
 
@@ -643,7 +579,7 @@ uv run mypy scripts/faketools 2>&1 | grep -E "(import-not-found|import-untyped)"
 
 ## Code Standards
 
-- Python 3.11.4 (specified in `.python-version`)
+- Python 3.9.7 (specified in `.python-version`, matches Maya 2023)
 - Line length: 150 characters
 - Ruff linting: E, F, UP, B, SIM, I rules enabled (ignoring E203, E501, E701, SIM108)
 - Double quotes, space indentation
@@ -777,31 +713,7 @@ When creating a new tool:
 
 ## Creating New Single Commands
 
-When creating a standalone command (no UI required):
-
-1. Choose the appropriate module:
-   - `single_commands/scene_commands.py` for scene-wide operations
-   - `single_commands/all_commands.py` for operations on all selected nodes
-   - `single_commands/pair_commands.py` for source→target operations
-
-2. Create a command class:
-```python
-from .base_commands import AllCommand
-import maya.cmds as cmds
-
-class LockTransforms(AllCommand):
-    _name = "Lock Transforms"
-    _description = "Lock translate, rotate, scale on selected nodes"
-
-    def execute(self, target_nodes: list[str]):
-        for node in target_nodes:
-            for attr in ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'sx', 'sy', 'sz']:
-                cmds.setAttr(f"{node}.{attr}", lock=True)
-```
-
-3. Add to module's `__all__` list
-4. Reload menu: `import faketools.menu; faketools.menu.reload_menu()`
-5. Command appears in FakeTools → Single Commands submenu
+See [SINGLE_COMMANDS.md](SINGLE_COMMANDS.md) for detailed guide on creating standalone commands (SceneCommand, AllCommand, PairCommand).
 
 ## Workflow
 
@@ -892,90 +804,20 @@ git push origin v1.0.0
 
 ## Logging Management
 
-### Change Log Level at Runtime
-```python
-import faketools
-import logging
-
-# Set to DEBUG for verbose output during development
-faketools.set_log_level(logging.DEBUG)
-
-# Set to INFO for normal operation (default)
-faketools.set_log_level(logging.INFO)
-```
-
-### Use Logger in Modules
-```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-def my_function():
-    logger.debug("Debug message")
-    logger.info("Info message")
-    logger.warning("Warning message")
-    logger.error("Error message")
-```
+See [LOGGING_USAGE.md](LOGGING_USAGE.md) for detailed guide on logging system usage, including:
+- How to use loggers in modules
+- Changing log levels at runtime
+- Best practices for logging
+- Troubleshooting logging issues
 
 ## Settings Management
 
-### Global Settings (JSON file)
-```python
-from faketools.config import get_global_config
-
-config = get_global_config()
-config.set_data_root_dir("D:/MyProject/maya_data")
-config.set_log_level("DEBUG")
-config.save()  # Must call save() to persist changes
-```
-
-### Tool Settings with Presets - Use ToolSettingsManager (RECOMMENDED)
-```python
-from faketools.lib_ui import ToolSettingsManager
-
-# Initialize for your tool
-settings = ToolSettingsManager("skin_weights", "rig")
-
-# Save settings to a preset
-data = {"smooth_iterations": 5, "normalize": True}
-settings.save_settings(data, "my_preset")
-
-# Load settings from a preset
-loaded_data = settings.load_settings("my_preset")
-
-# List available presets
-presets = settings.list_presets()
-
-# Delete/rename presets
-settings.delete_preset("old_preset")
-settings.rename_preset("old_name", "new_name")
-
-# Export/import presets
-settings.export_preset("my_preset", "D:/backup.json")
-settings.import_preset("D:/shared_preset.json", "imported_preset")
-```
-
-### Tool Settings (Maya optionVar) - Use ToolOptionSettings
-```python
-from faketools.lib_ui import ToolOptionSettings
-
-settings = ToolOptionSettings(__name__)
-settings.write("window_size", [800, 600])
-size = settings.read("window_size", [400, 300])
-
-# Window geometry helpers
-settings.set_window_geometry([800, 600], [100, 100])
-geometry = settings.get_window_geometry()
-```
-
-### Tool Data Files (filesystem)
-```python
-from faketools.lib_ui import ToolDataManager
-
-data_manager = ToolDataManager("skin_weights", "rig")
-data_manager.ensure_data_dir()
-file_path = data_manager.get_data_path("character_a.json")
-```
+See [SETTINGS_USAGE.md](SETTINGS_USAGE.md) for detailed guide on settings management, including:
+- **Global Config**: FakeTools-wide settings (JSON file)
+- **ToolSettingsManager**: Tool settings with preset support (RECOMMENDED)
+- **ToolOptionSettings**: Simple tool settings (Maya optionVar)
+- **ToolDataManager**: Tool data file management
+- Usage examples and best practices
 
 ## Future Work
 
@@ -1032,117 +874,16 @@ def move_cvs_position(self):
 
 ## Documentation System
 
-The project includes a Pandoc-based multilingual documentation system in the `docs/` directory.
-
-### Overview
-
-- **Location**: `docs/` directory
-- **Build Tool**: `docs/build.py` - Python script using Pandoc for Markdown to HTML conversion
-- **Languages**: Japanese (ja) and English (en)
-- **Output**: Static HTML files in `docs/output/`
-- **Syntax Highlighting**: highlight.js (atom-one-dark theme) for Python, MEL, and JavaScript
-- **Design**: Dark theme with sticky header, responsive layout, and compact cards
-
-### Key Features
-
-- **Automatic Tool Discovery**: Integrates with ToolRegistry to discover available tools
-- **Multilingual Support**: Separate pages for Japanese and English with language switcher
-- **TOC Generation**: Automatic table of contents for each page
-- **Responsive Design**: Works across different screen resolutions
-- **Syntax Highlighting**: Code blocks are automatically highlighted using highlight.js
-
-### Project Structure
-
-```
-docs/
-├── build.py                 # Build script (Python)
-├── README.md               # Build and usage instructions
-├── css/
-│   └── style.css           # Main stylesheet (dark theme)
-├── js/
-│   └── main.js             # Client-side JavaScript
-├── templates/
-│   ├── index.html          # Template for index pages
-│   └── page.html           # Template for tool pages
-├── ja/                     # Japanese markdown sources
-│   ├── index.yaml          # Japanese index page metadata
-│   ├── rig/
-│   ├── model/
-│   ├── anim/
-│   └── common/
-├── en/                     # English markdown sources
-│   ├── index.yaml          # English index page metadata
-│   ├── rig/
-│   ├── model/
-│   ├── anim/
-│   └── common/
-└── output/                 # Generated HTML files
-    ├── index.html          # Japanese index
-    ├── index_en.html       # English index
-    ├── ja/                 # Japanese pages
-    └── en/                 # English pages
-```
-
-### Building Documentation
-
-```bash
-# From docs directory
-cd docs
-python build.py
-```
-
-**Note**: During build, you may see a warning: `"Warning: Could not load ToolRegistry: No module named 'maya'"`. This is expected when building outside of Maya environment and does not affect the build process. The system falls back to scanning markdown files directly.
-
-### Adding New Pages
-
-1. **Create markdown file**: `docs/{lang}/{category}/{tool_name}.md`
-2. **Add YAML front matter**:
-   ```yaml
-   ---
-   title: Tool Name
-   description: Brief description
-   lang: ja  # or "en"
-   category: rig  # or model/anim/common
-   ---
-   ```
-3. **Write content**: Use standard Markdown with code blocks
-4. **Build**: Run `python build.py` from docs directory
-
-### Design Specifications
-
-**Color Scheme (Dark Theme)**:
-- Background primary: `#1a1a1a`
-- Background secondary: `#242424`
-- Text primary: `#e8e8e8`
-- Text secondary: `#a0a0a0`
-- Accent primary: `#4a9eff`
-- Border color: `#3a3a3a`
-
-**Key Design Elements**:
-- Sticky header (fixed on scroll)
-- Compact tool cards (280px minimum width)
-- TOC sidebar (250px width, sticky positioning)
-- Code blocks with syntax highlighting
-- Responsive breakpoints: 1024px, 768px, 480px
-
-### Technologies Used
-
-- **Pandoc**: Markdown to HTML conversion with templates
-- **Python 3.11+**: Build script
-- **highlight.js 11.9.0**: Syntax highlighting (atom-one-dark theme)
-- **CSS Variables**: Theme customization
-- **YAML Front Matter**: Page metadata
-
-### Files Modified for Documentation System
-
-- `docs/build.py`: Build script with tool discovery and Pandoc integration
-- `docs/css/style.css`: Dark theme stylesheet with responsive design
-- `docs/templates/page.html`: Page template with highlight.js integration
-- `docs/README.md`: Simplified documentation focused on usage
+See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed guide on the Pandoc-based multilingual documentation system, including:
+- Project structure and build process
+- Adding new documentation pages
+- Design specifications and technologies used
 
 ## Additional Documentation
 
 - **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
+- **[SINGLE_COMMANDS.md](SINGLE_COMMANDS.md)**: Single Commands system usage guide
 - **[SETTINGS_USAGE.md](SETTINGS_USAGE.md)**: Settings system usage guide (Japanese)
 - **[LOGGING_USAGE.md](LOGGING_USAGE.md)**: Logging system usage guide (Japanese)
+- **[DOCUMENTATION.md](DOCUMENTATION.md)**: Documentation system guide
 - **[PIE_MENU_USAGE.md](PIE_MENU_USAGE.md)**: PieMenu widget usage guide with examples

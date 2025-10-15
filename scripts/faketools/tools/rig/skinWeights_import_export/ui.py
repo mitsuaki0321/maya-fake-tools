@@ -510,7 +510,7 @@ class MainWindow(BaseMainWindow):
         skinCluster_io_ins = SkinClusterDataIO()
 
         with maya_ui.progress_bar(len(file_path_list), msg="Importing SkinCluster Weights") as progress:
-            for shape, file_path in zip(shapes, file_path_list, strict=False):
+            for shape, file_path in zip(shapes, file_path_list):
                 skinCluster_data = skinCluster_io_ins.load_data(file_path)
                 skinCluster_io_ins.import_weights(skinCluster_data, shape)
 
@@ -565,7 +565,7 @@ class MainWindow(BaseMainWindow):
         result_geos = []
         skinCluster_io_ins = SkinClusterDataIO()
         with maya_ui.progress_bar(len(file_path_list), msg="Importing SkinCluster Weights") as progress:
-            for shape, file_path in zip(shapes, file_path_list, strict=False):
+            for shape, file_path in zip(shapes, file_path_list):
                 skinCluster_data = skinCluster_io_ins.load_data(file_path)
                 skinCluster_io_ins.import_weights(skinCluster_data, shape)
 

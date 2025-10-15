@@ -257,7 +257,7 @@ def retarget_mesh(
             # Create MeshVertex instance for batch vertex position updates
             deform_mesh_vtx = MeshVertex(deform_mesh)
 
-            for trg_indices, src_indices in zip(trg_index_list, src_index_list, strict=False):
+            for trg_indices, src_indices in zip(trg_index_list, src_index_list):
                 rbf_deform = lib_retarget.RBFDeform(src_points[src_indices])
                 weight_x, weight_y, weight_z = rbf_deform.compute_weights(dst_points[src_indices])
                 computed_points = rbf_deform.compute_points(trg_positions[trg_indices], weight_x, weight_y, weight_z)

@@ -9,6 +9,7 @@ for better code organization:
 
 from collections.abc import Sequence
 from logging import getLogger
+from typing import Union
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -100,7 +101,7 @@ class NurbsCurve:
         """
         return self.fn.length()
 
-    def get_cv_position(self, cv_ids: list[int], as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
+    def get_cv_position(self, cv_ids: list[int], as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the CV positions.
 
         Args:
@@ -116,7 +117,7 @@ class NurbsCurve:
 
         return positions
 
-    def get_cv_positions(self, as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
+    def get_cv_positions(self, as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the CV positions.
 
         Args:
@@ -137,7 +138,7 @@ class NurbsCurve:
 
         return cv_positions
 
-    def get_edit_position(self, edit_ids: list[int], as_float: bool = False) -> tuple[list[om.MPoint] | list[list[float]], list[float]]:
+    def get_edit_position(self, edit_ids: list[int], as_float: bool = False) -> tuple[Union[list[om.MPoint], list[list[float]]], list[float]]:
         """Get the edit points.
 
         Args:
@@ -145,7 +146,7 @@ class NurbsCurve:
             as_float (bool): Return as float. Default is False.
 
         Returns:
-            tuple[list[om.MPoint] | list[list[float]], list[float]]: The positions and parameters.
+            tuple[Union[list[om.MPoint], list[list[float]]], list[float]]: The positions and parameters.
 
         Raises:
             ValueError: If edit ID is out of valid range.
@@ -170,14 +171,14 @@ class NurbsCurve:
 
         return positions, params
 
-    def get_edit_positions(self, as_float: bool = False) -> tuple[list[om.MPoint] | list[list[float]], list[float]]:
+    def get_edit_positions(self, as_float: bool = False) -> tuple[Union[list[om.MPoint], list[list[float]]], list[float]]:
         """Get the edit points.
 
         Args:
             as_float (bool): Return as float. Default is False.
 
         Returns:
-            tuple[list[om.MPoint] | list[list[float]], list[float]]: The positions and parameters.
+            tuple[Union[list[om.MPoint], list[list[float]]], list[float]]: The positions and parameters.
         """
         min_param, max_param = self.fn.knotDomain
         param_range = max_param - min_param
@@ -196,7 +197,7 @@ class NurbsCurve:
 
         return positions, params
 
-    def get_closest_position(self, reference_position: Sequence[float], as_float: bool = False) -> tuple[om.MPoint | list[float], float]:
+    def get_closest_position(self, reference_position: Sequence[float], as_float: bool = False) -> tuple[Union[om.MPoint, list[float]], float]:
         """Get the closest CV position.
 
         Args:
@@ -204,7 +205,7 @@ class NurbsCurve:
             as_float (bool): Return as float. Default is False.
 
         Returns:
-            tuple[om.MPoint | list[float], float]: The position and parameter.
+            tuple[Union[om.MPoint, list[float]], float]: The position and parameter.
         """
         closest_position, param = self.fn.closestPoint(om.MPoint(reference_position), space=om.MSpace.kWorld)
 
@@ -215,7 +216,7 @@ class NurbsCurve:
 
     def get_closest_positions(
         self, reference_positions: list[Sequence[float]], as_float: bool = False
-    ) -> tuple[list[om.MPoint] | list[list[float]], list[float]]:
+    ) -> tuple[Union[list[om.MPoint], list[list[float]]], list[float]]:
         """Get the closest CV positions.
 
         Args:
@@ -223,7 +224,7 @@ class NurbsCurve:
             as_float (bool): Return as float. Default is False.
 
         Returns:
-            tuple[list[om.MPoint] | list[list[float]], list[float]]: The positions and parameters.
+            tuple[Union[list[om.MPoint], list[list[float]]], list[float]]: The positions and parameters.
         """
         positions = []
         params = []

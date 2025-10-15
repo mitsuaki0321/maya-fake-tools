@@ -5,6 +5,7 @@ Relax skin weights using various methods.
 from itertools import chain
 from logging import getLogger
 import math
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -129,7 +130,7 @@ class SmoothSkinWeights:
         vertex_indices = self.mesh_vertex.get_vertex_components(indices)
         weights = lib_skinCluster.get_skin_weights(skinCluster, vertex_indices)
 
-        return {i: w for i, w in zip(indices, weights, strict=False)}
+        return {i: w for i, w in zip(indices, weights)}
 
     def _get_indices_positions(self, indices: list[int]) -> dict[int, om.MPoint]:
         """Get the vertex indices and their positions.
@@ -141,7 +142,7 @@ class SmoothSkinWeights:
             dict[int, om.MPoint]: The vertex indices and their positions.
         """
         positions = self.mesh_vertex.get_vertex_positions(indices)
-        return {i: p for i, p in zip(indices, positions, strict=False)}
+        return {i: p for i, p in zip(indices, positions)}
 
 
 class LaplacianSkinWeights(SmoothSkinWeights):
@@ -162,7 +163,7 @@ class LaplacianSkinWeights(SmoothSkinWeights):
         for _ in range(iterations):
             for i in range(self.num_indices):
                 neighbor_weights = [all_indices_weights[neighbor_index] for neighbor_index in neighbor_indices_list[i]]
-                smoothed_weights[i] = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights, strict=False)]
+                smoothed_weights[i] = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights)]
 
             if iterations > 1:
                 for i, index in enumerate(self.indices):
@@ -212,7 +213,7 @@ class RBFSkinWeights(SmoothSkinWeights):
 
         return weight_function_map[weight_type]
 
-    def calculate_weights(self, iterations: int = 1, weight_type: str = "gaussian", options: dict | None = None) -> None:
+    def calculate_weights(self, iterations: int = 1, weight_type: str = "gaussian", options: Optional[dict] = None) -> None:
         """Calculate the weights for the RBF smoothing operation.
 
         Args:
@@ -291,7 +292,7 @@ class BiharmonicSkinWeights(SmoothSkinWeights):
 
         neighbor_indices_list = self.mesh_vertex.get_connected_vertices(self.indices)
         second_neighbor_indices_list = []
-        for index, neighbor_indices in zip(self.indices, neighbor_indices_list, strict=False):
+        for index, neighbor_indices in zip(self.indices, neighbor_indices_list):
             second_indices = self.mesh_vertex.get_connected_vertices(neighbor_indices)
             second_indices = set(chain.from_iterable(second_indices))
             if index in second_indices:
@@ -312,8 +313,8 @@ class BiharmonicSkinWeights(SmoothSkinWeights):
                 neighbor_weights = [indices_weights[neighbor_index] for neighbor_index in neighbor_indices_list[i]]
                 second_neighbor_weights = [indices_weights[second_neighbor_index] for second_neighbor_index in second_neighbor_indices_list[i]]
 
-                avg_first_order = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights, strict=False)]
-                avg_second_order = [sum(w) / len(second_neighbor_weights) for w in zip(*second_neighbor_weights, strict=False)]
+                avg_first_order = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights)]
+                avg_second_order = [sum(w) / len(second_neighbor_weights) for w in zip(*second_neighbor_weights)]
 
                 smoothed_weights[i] = [
                     first_order_weight * avg_first_order[j] + second_order_weight * avg_second_order[j] for j in range(len(avg_first_order))
@@ -350,7 +351,7 @@ class RelaxSkinWeights(SmoothSkinWeights):
         for _ in range(iterations):
             for i in range(self.num_indices):
                 neighbor_weights = [all_indices_weights[j] for j in neighbor_indices_list[i]]
-                avg_weight = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights, strict=False)]
+                avg_weight = [sum(w) / len(neighbor_weights) for w in zip(*neighbor_weights)]
 
                 # Relax the weight towards the average of its neighbors
                 smoothed_weights[i] = [

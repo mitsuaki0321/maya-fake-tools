@@ -3,6 +3,7 @@
 import json
 from logging import getLogger
 import os
+from typing import Optional
 
 logger = getLogger(__name__)
 
@@ -152,7 +153,7 @@ class NodeStockFile:
 
         return data[key]
 
-    def add_nodes(self, key: str, nodes: list[str] | None, overwrite: bool = False) -> None:
+    def add_nodes(self, key: str, nodes: Optional[list[str]], overwrite: bool = False) -> None:
         """Set the nodes to file.
 
         Args:

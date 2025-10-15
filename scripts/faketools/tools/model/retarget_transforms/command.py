@@ -274,7 +274,7 @@ def import_transform_position(input_file_path: str, create_new: bool = False, is
 
         if restore_hierarchy:
             transform_hierarchy = TransformHierarchy.set_hierarchy_data(hierarchy_data)
-            for target_transform, new_transform in zip(target_transforms, new_transforms, strict=False):
+            for target_transform, new_transform in zip(target_transforms, new_transforms):
                 register_parent = transform_hierarchy.get_registered_parent(target_transform)
                 if not register_parent:
                     continue

@@ -5,6 +5,8 @@ Provides optional base class for tools. Tools are NOT required to inherit from t
 This is provided as a convenience for tools that want standard metadata support.
 """
 
+from typing import Optional
+
 from ...lib_ui.qt_compat import QWidget
 
 
@@ -27,12 +29,12 @@ class BaseTool(QWidget):
     TOOL_DESCRIPTION = "Base tool class"
     TOOL_CATEGORY = "common"
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: Optional[QWidget] = None):
         """
         Initialize the base tool.
 
         Args:
-            parent (QWidget | None): Parent widget (typically Maya main window)
+            parent: Parent widget (typically Maya main window)
         """
         super().__init__(parent)
         self.setup_ui()

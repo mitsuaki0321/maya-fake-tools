@@ -3,6 +3,7 @@
 from contextlib import contextmanager
 from logging import getLogger
 import re
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -332,7 +333,7 @@ def get_siblings(nodes: list[str], fullpath: bool = False) -> list[str]:
     return _to_fullpath(result_nodes, fullpath)
 
 
-def get_shapes(nodes: list[str], shape_type: str | None = None, fullpath: bool = False) -> list[str]:
+def get_shapes(nodes: list[str], shape_type: Optional[str] = None, fullpath: bool = False) -> list[str]:
     """Get shape nodes from transform nodes.
 
     Retrieves shape nodes (geometry) from transform nodes. Duplicates are automatically removed.

@@ -17,7 +17,7 @@ def get_relative_size(widget, width_ratio=1.0, height_ratio=1.0, base_size=None)
         widget (QWidget): The widget to calculate size for
         width_ratio (float): Width multiplier (default: 1.0)
         height_ratio (float): Height multiplier (default: 1.0)
-        base_size (tuple[int, int] | None): Base (width, height) to multiply ratios by.
+        base_size: Base (width, height) to multiply ratios by.
             If None, uses a default base size derived from font metrics.
 
     Returns:
@@ -122,7 +122,7 @@ def scale_by_dpi(value, widget=None):
 
     Args:
         value (int | float): The base value at standard DPI (96 DPI on Windows, 72 DPI on Mac)
-        widget (QWidget | None): Optional widget for context-specific DPI
+        widget: Optional widget for context-specific DPI
 
     Returns:
         int: Scaled value

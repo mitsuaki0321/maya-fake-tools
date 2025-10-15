@@ -150,6 +150,41 @@ def freeze_transform_pivot(node: str) -> None:
             cmds.setAttr(f"{node}.{attr}", lock=True)
 
 
+def freeze_mesh_vertices(node: str) -> None:
+    """Freeze the vertices of the specified mesh node.
+
+    Args:
+        node (str): The target mesh transform node.
+
+    Raises:
+        ValueError: If node doesn't exist, is not unique, or is not a transform.
+        RuntimeError: If the node has connected transform attributes.
+
+    Notes:
+        - This freezes only the vertices, keeping the transform values unchanged.
+        - If any transform attributes (tx, ty, tz, rx, ry, rz, sx, sy, sz) are connected, the operation will fail.
+    """
+    node = _validate_and_get_transform(node)
+
+    shapes = cmds.listRelatives(node, shapes=True, pa=True, type="mesh", ni=True) or []
+    if not shapes:
+        logger.warning(f"No mesh shapes found under: {node}, skipping.")
+        return
+    else:
+        mesh = shapes[0]
+
+    try:
+        cmds.polyCollapseTweaks(mesh)
+    except RuntimeError:
+        vertex_count = cmds.polyEvaluate(mesh, vertex=True)
+        for i in range(vertex_count):
+            current_pos = cmds.getAttr(f"{mesh}.pnts[{i}]")[0]
+            if current_pos != (0.0, 0.0, 0.0):
+                cmds.setAttr(f"{mesh}.pnts[{i}]", 0.0, 0.0, 0.0)
+
+    logger.debug(f"Froze mesh vertices for node: {node}")
+
+
 __all__ = [
     "freeze_transform",
     "freeze_transform_pivot",

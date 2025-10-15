@@ -100,7 +100,7 @@ class CurveWeightSetting:
         inf_lengths = [self.nurbs_curve.fn.findLengthFromParam(inf_param) for inf_param in inf_params]
 
         # Sort influences by their position along the curve
-        sorted_infs, sorted_lengths = zip(*sorted(zip(infs, inf_lengths, strict=False), key=lambda x: x[1]), strict=False)
+        sorted_infs, sorted_lengths = zip(*sorted(zip(infs, inf_lengths), key=lambda x: x[1]))
 
         # Calculate weights
         cv_weights = self._calculate_weights(cv_lengths, sorted_lengths, method, parent_influence_ratio)
@@ -116,7 +116,7 @@ class CurveWeightSetting:
         # Apply weights to curve
         cmds.skinCluster(self.skin_cluster, e=True, normalizeWeights=0)
         for i in range(len(cv_lengths)):
-            cmds.skinPercent(self.skin_cluster, f"{self.curve}.cv[{i}]", transformValue=list(zip(sorted_infs, cv_weights[i], strict=False)))
+            cmds.skinPercent(self.skin_cluster, f"{self.curve}.cv[{i}]", transformValue=list(zip(sorted_infs, cv_weights[i])))
         cmds.skinCluster(self.skin_cluster, e=True, normalizeWeights=1)
 
         # Remove end influence from skinCluster if weights were merged
@@ -292,7 +292,7 @@ class CurveWeightSetting:
                 total_distance = sum(1.0 / d for d in neighbor_distances)
                 weighted_sum = [0.0] * num_infs
 
-                for weight, dist in zip(neighbor_weights, neighbor_distances, strict=False):
+                for weight, dist in zip(neighbor_weights, neighbor_distances):
                     inv_dist = 1.0 / dist
                     for j in range(num_infs):
                         weighted_sum[j] += weight[j] * inv_dist

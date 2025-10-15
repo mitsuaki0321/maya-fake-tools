@@ -163,6 +163,6 @@ class AdjustCenterSkinWeightsWidgets(QWidget):
             if len(src_infs) != len(target_infs):
                 cmds.error("Influence count mismatch.")
 
-            pair_infs = list(zip(src_infs, target_infs, strict=False))
+            pair_infs = list(zip(src_infs, target_infs))
 
             combine_pair_skin_weights(components, method="manual", pair_infs=pair_infs, static_inf=static_inf)

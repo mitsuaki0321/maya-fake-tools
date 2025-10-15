@@ -6,8 +6,8 @@ from maya.app.general.mayaMixin import MayaQWidgetDockableMixin
 import maya.cmds as cmds
 
 from ....lib_ui import get_maya_main_window
-from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.qt_compat import QHBoxLayout, QSizePolicy, QSpacerItem, Qt, QWidget
+from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from .widgets import (
     ExtraSelectionWidget,

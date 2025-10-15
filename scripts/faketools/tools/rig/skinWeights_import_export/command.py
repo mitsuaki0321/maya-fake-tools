@@ -5,6 +5,7 @@ import json
 from logging import getLogger
 import os
 import pickle
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -117,7 +118,7 @@ class SkinClusterDataIO:
 
         logger.debug(f"Exported skinCluster data: {output_file_path}")
 
-    def import_weights(self, skinCluster_data: SkinClusterData, target_geometry: str | None = None) -> None:
+    def import_weights(self, skinCluster_data: SkinClusterData, target_geometry: Optional[str] = None) -> None:
         """Import the skinCluster weights.
 
         Args:

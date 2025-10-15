@@ -125,7 +125,7 @@ class MainWindow(BaseMainWindow):
             cmds.warning("Please check the optimize method you want to execute.")
             return
 
-        for checkbox, optimize_cls in zip(self.enable_checkboxes, self.optimize_cls_list, strict=False):
+        for checkbox, optimize_cls in zip(self.enable_checkboxes, self.optimize_cls_list):
             if checkbox.isChecked():
                 optimize_cls(echo=True)
 

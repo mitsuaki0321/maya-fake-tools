@@ -1,6 +1,7 @@
 """Functions for getting positions from curves."""
 
 from logging import getLogger
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -321,7 +322,7 @@ def _get_selected_curves() -> list[str]:
     return cmds.ls(sl=True, dag=True, type="nurbsCurve", ni=True)
 
 
-def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], list[str] | None, list[str] | None]:
+def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], Optional[list[str]], Optional[list[str]]]:
     """Get the selected nurbsCurve or nurbsSurface.
 
     Keyword Args:
@@ -351,7 +352,7 @@ def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], list[str] | N
     return temp_curves, surfaces, temp_curves
 
 
-def _convert_surface_to_isoparm_curve(surface: str, direction: str = "u") -> str | None:
+def _convert_surface_to_isoparm_curve(surface: str, direction: str = "u") -> Optional[str]:
     """Convert nurbsSurface to isoparm curve at center.
 
     Args:

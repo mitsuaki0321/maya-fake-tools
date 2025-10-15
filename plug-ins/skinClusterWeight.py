@@ -591,7 +591,7 @@ class CopySkinWeightsCustom(OpenMaya.MPxCommand):
             ) = src_mit_mesh.getTriangle(src_point_on_mesh.triangle, OpenMaya.MSpace.kWorld)
 
             calc_weight = OpenMaya.MDoubleArray(num_dst_infs, 0.0)
-            for vtx_index, bary_weight in zip(triangle_vtx_indices, [uw, vw, 1 - uw - vw], strict=False):
+            for vtx_index, bary_weight in zip(triangle_vtx_indices, [uw, vw, 1 - uw - vw]):
                 weights = src_weights_array[vtx_index]
                 for i in range(num_dst_infs):
                     calc_weight[i] += weights[i] * bary_weight

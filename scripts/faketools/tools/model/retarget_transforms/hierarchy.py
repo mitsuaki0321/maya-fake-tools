@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -144,7 +145,7 @@ class TransformHierarchy:
                     logger.debug(f"Updated register hierarchy: {node} -> Parent: {parent_node}, Children: {node}")
                     break
 
-    def get_parent(self, node: str) -> str | None:
+    def get_parent(self, node: str) -> Optional[str]:
         """Get the parent node of the node.
 
         Args:
@@ -184,7 +185,7 @@ class TransformHierarchy:
 
         return self._hierarchy[node]["children"]
 
-    def get_registered_parent(self, node: str) -> str | None:
+    def get_registered_parent(self, node: str) -> Optional[str]:
         """Get the registered parent node of the node.
 
         Args:

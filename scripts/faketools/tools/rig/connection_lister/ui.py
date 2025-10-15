@@ -375,8 +375,8 @@ class MainWindow(base_window.BaseMainWindow):
         if len(source_attrs) == 1:
             source_attrs = source_attrs * len(dest_attrs)
 
-        for source_node, dest_node in zip(source_nodes, dest_nodes, strict=False):
-            for source_attr, dest_attr in zip(source_attrs, dest_attrs, strict=False):
+        for source_node, dest_node in zip(source_nodes, dest_nodes):
+            for source_attr, dest_attr in zip(source_attrs, dest_attrs):
                 func(source_node, source_attr, dest_node, dest_attr)
 
     @staticmethod

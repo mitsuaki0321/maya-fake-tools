@@ -3,6 +3,7 @@ Mesh point operations (closest point, intersection).
 """
 
 from logging import getLogger
+from typing import Optional, Union
 
 import maya.api.OpenMaya as om
 
@@ -16,7 +17,7 @@ class MeshPoint(MeshComponent):
 
     def get_closest_points(
         self, reference_points: list[list[float]], max_distance: float = 100.0, as_float: bool = False
-    ) -> list[om.MPoint] | list[list[float]]:
+    ) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the closest point on the mesh.
 
         Args:
@@ -49,7 +50,7 @@ class MeshPoint(MeshComponent):
 
         return result_positions
 
-    def get_intersect_point(self, start_point: list[float], end_point: list[float], **kwargs) -> tuple | None:
+    def get_intersect_point(self, start_point: list[float], end_point: list[float], **kwargs) -> Optional[tuple]:
         """Get the intersection point on the mesh.
 
         Args:

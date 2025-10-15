@@ -195,7 +195,7 @@ def test_retarget_from_file(file_path: str, *, max_vertices: int = 1000, radius_
             result_vertices = trg_vertices.copy()
 
             # Apply RBF deformation for each cluster
-            for trg_indices, src_indices in zip(trg_index_list, src_index_list, strict=False):
+            for trg_indices, src_indices in zip(trg_index_list, src_index_list):
                 rbf_deform = lib_retarget.RBFDeform(src_vertices[src_indices])
                 weight_x, weight_y, weight_z = rbf_deform.compute_weights(dst_vertices[src_indices])
                 computed_points = rbf_deform.compute_points(trg_vertices[trg_indices], weight_x, weight_y, weight_z)

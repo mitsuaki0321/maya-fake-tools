@@ -3,6 +3,7 @@ Mesh vertex operations.
 """
 
 from logging import getLogger
+from typing import Optional, Union
 
 import maya.api.OpenMaya as om
 
@@ -14,7 +15,7 @@ logger = getLogger(__name__)
 class MeshVertex(MeshComponent):
     """Mesh vertex class."""
 
-    def get_vertex_positions(self, vtx_indices: list[int] | None = None, as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
+    def get_vertex_positions(self, vtx_indices: Optional[list[int]] = None, as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the vertex positions.
 
         Args:
@@ -40,7 +41,7 @@ class MeshVertex(MeshComponent):
 
         return [[p.x, p.y, p.z] for p in positions]
 
-    def get_vertex_normals(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
+    def get_vertex_normals(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
         """Get the vertex normals.
 
         Args:
@@ -61,7 +62,7 @@ class MeshVertex(MeshComponent):
 
         return normals
 
-    def get_vertex_tangents(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
+    def get_vertex_tangents(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
         """Get the vertex tangents from the connected faces average.
 
         Args:
@@ -99,7 +100,7 @@ class MeshVertex(MeshComponent):
 
         return result_tangents
 
-    def get_vertex_binormals(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
+    def get_vertex_binormals(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
         """Get the vertex binormals from the connected faces average.
 
         Args:
@@ -195,7 +196,9 @@ class MeshVertex(MeshComponent):
         """
         return self.get_components_from_indices(indices, "vertex")
 
-    def set_vertex_positions(self, positions: list[tuple[float, float, float]] | list[om.MPoint], vtx_indices: list[int] | None = None) -> None:
+    def set_vertex_positions(
+        self, positions: Union[list[tuple[float, float, float]], list[om.MPoint]], vtx_indices: Optional[list[int]] = None
+    ) -> None:
         """Set the vertex positions.
 
         Args:

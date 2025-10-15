@@ -86,7 +86,7 @@ class MainWindow(BaseFramelessWindow):
 
         # Enable for all child widgets recursively and install event filter
         for widget in self.findChildren(object):
-            if hasattr(widget, 'setMouseTracking'):
+            if hasattr(widget, "setMouseTracking"):
                 widget.setMouseTracking(True)
                 widget.installEventFilter(self)
 

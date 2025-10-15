@@ -3,14 +3,14 @@ name = "maya-fake-tools"
 version = "0.1.0"
 description = "Maya tools packages."
 readme = "README.md"
-requires-python = ">=3.11.4"
+requires-python = ">=3.9"
 dependencies = [
     "ruff>=0.13.3",
 ]
 
 [tool.ruff]
 line-length = 150
-target-version = "py311"
+target-version = "py39"
 fix = true
 
 [tool.ruff.format]
@@ -19,7 +19,7 @@ indent-style = "space"
 
 [tool.ruff.lint]
 select = ["E", "F", "UP", "B", "SIM", "I"]
-ignore = ["E203", "E501", "E701", "SIM108"]
+ignore = ["E203", "E501", "E701", "SIM108", "UP045"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -27,15 +27,14 @@ force-sort-within-sections = true
 
 [dependency-groups]
 dev = [
-    "mypy>=1.18.2",
-    "numpy>=2.3.3",
-    "pyyaml>=6.0.2",
-    "scikit-learn>=1.7.2",
-    "scipy>=1.16.2",
+    "mypy>=1.0.0",
+    "numpy>=1.24.0,<2.0.0",
+    "pyyaml>=6.0.0",
+    "scipy>=1.10.0,<2.0.0",
 ]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.9"
 exclude = ["plug-ins/"]
 # Import validation only (type checking disabled)
 check_untyped_defs = false

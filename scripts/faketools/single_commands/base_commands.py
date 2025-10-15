@@ -142,7 +142,7 @@ class PairCommand(BaseCommand):
         self.target_nodes = target_nodes
 
         # Execute for each pair
-        for source_node, target_node in zip(source_nodes, target_nodes, strict=False):
+        for source_node, target_node in zip(source_nodes, target_nodes):
             self.execute_pair(source_node, target_node)
 
     def execute(self, source_nodes: list[str], target_nodes: list[str]):

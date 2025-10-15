@@ -20,7 +20,7 @@ class BaseMainWindow(QMainWindow):
 
     Attributes:
         central_widget (QWidget): The central widget of the main window
-        central_layout (QVBoxLayout | QHBoxLayout): The main layout (vertical or horizontal)
+        central_layout (Union[QVBoxLayout, QHBoxLayout]): The main layout (vertical or horizontal)
     """
 
     def __init__(self, parent=None, object_name="MainWindow", window_title="Main Window", central_layout="vertical"):
@@ -28,7 +28,7 @@ class BaseMainWindow(QMainWindow):
         Initialize the base main window.
 
         Args:
-            parent (QWidget | None): Parent widget (typically Maya main window)
+            parent: Parent widget (typically Maya main window)
             object_name (str): Object name for the window (used for identification)
             window_title (str): Title displayed in window title bar
             central_layout (str): Layout orientation - "vertical" or "horizontal"
@@ -129,7 +129,7 @@ class BaseFramelessWindow(QWidget):
     - Normal window behavior (can go behind other apps)
 
     Attributes:
-        central_layout (QVBoxLayout | QHBoxLayout): The main layout (vertical or horizontal)
+        central_layout (Union[QVBoxLayout, QHBoxLayout]): The main layout (vertical or horizontal)
         title_bar (QWidget): The custom title bar widget
         title_label (QLabel): The title label in the title bar
     """
@@ -139,7 +139,7 @@ class BaseFramelessWindow(QWidget):
         Initialize the frameless window.
 
         Args:
-            parent (QWidget | None): Parent widget (typically Maya main window)
+            parent: Parent widget (typically Maya main window)
             object_name (str): Object name for the window (used for identification)
             window_title (str): Title displayed in custom title bar
             central_layout (str): Layout orientation - "vertical" or "horizontal"

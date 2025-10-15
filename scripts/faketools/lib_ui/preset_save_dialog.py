@@ -11,6 +11,7 @@ Example:
 """
 
 import logging
+from typing import Optional
 
 import maya.cmds as cmds
 
@@ -86,12 +87,12 @@ class PresetSaveDialog(QDialog):
 
         logger.debug("PresetSaveDialog UI setup complete")
 
-    def get_preset_name(self) -> str | None:
+    def get_preset_name(self) -> Optional[str]:
         """
         Get the entered preset name.
 
         Returns:
-            str | None: Preset name if dialog was accepted, None otherwise
+            Preset name if dialog was accepted, None otherwise
 
         Example:
             >>> dialog = PresetSaveDialog(settings)

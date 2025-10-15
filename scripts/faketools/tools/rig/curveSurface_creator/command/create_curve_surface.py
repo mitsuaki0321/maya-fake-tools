@@ -1,6 +1,7 @@
 """CreateCurveSurface class for creating curves and surfaces from nodes."""
 
 from logging import getLogger
+from typing import Optional
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -79,7 +80,7 @@ class CreateCurveSurface:
         surface_width: float = 1.0,
         surface_width_center: float = 0.5,
         surface_axis: str = AXIS_X,
-        reference_object: str | None = None,
+        reference_object: Optional[str] = None,
     ) -> str:
         """Create curve surface.
 

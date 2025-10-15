@@ -5,6 +5,7 @@ NurbsCurve and NurbsSurface functions.
 from collections.abc import Sequence
 from logging import getLogger
 import re
+from typing import Union
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -51,7 +52,7 @@ class NurbsSurface:
         """
         return self.fn.knotDomainInU, self.fn.knotDomainInV
 
-    def get_cv_position(self, uv_indices: list[list[int]], as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
+    def get_cv_position(self, uv_indices: list[list[int]], as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the CV positions.
 
         Args:
@@ -67,7 +68,7 @@ class NurbsSurface:
 
         return positions
 
-    def get_cv_positions(self, as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
+    def get_cv_positions(self, as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
         """Get the CV positions.
 
         Args:
@@ -84,7 +85,7 @@ class NurbsSurface:
 
     def get_closest_positions(
         self, reference_positions: list[Sequence[float]], as_float: bool = False
-    ) -> tuple[list[om.MPoint] | list[list[float]], list[list[float]]]:  # noqa: E501
+    ) -> tuple[Union[list[om.MPoint], list[list[float]]], list[list[float]]]:  # noqa: E501
         """Get the closest CV positions.
 
         Args:
@@ -92,7 +93,7 @@ class NurbsSurface:
             as_float (bool): Return the positions as float. Default is False.
 
         Returns:
-            tuple[list[om.MPoint] | list[list[float]], list[list[float]]]: The closest positions and parameters.
+            tuple[Union[list[om.MPoint], list[list[float]]], list[list[float]]]: The closest positions and parameters.
         """
         positions = []
         params = []

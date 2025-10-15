@@ -9,7 +9,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -51,13 +51,13 @@ class GlobalConfig:
         config_path (Path): Path to the configuration JSON file
     """
 
-    def __init__(self, config_path: Path | None = None):
+    def __init__(self, config_path: Optional[Path] = None):
         """
         Initialize the global configuration.
 
         Args:
-            config_path (Path | None): Custom path to config file.
-                                       If None, uses default location.
+            config_path: Custom path to config file.
+                        If None, uses default location.
         """
         self._config_path = config_path or self._default_config_path()
         self._config = self._load_config()
@@ -133,12 +133,12 @@ class GlobalConfig:
         logger.debug(f"Data root directory: {path}")
         return path
 
-    def set_data_root_dir(self, path: Path | str) -> None:
+    def set_data_root_dir(self, path: Union[Path, str]) -> None:
         """
         Set the data root directory path.
 
         Args:
-            path (Path | str): New data root directory path
+            path: New data root directory path
 
         Example:
             >>> config = GlobalConfig()
@@ -227,7 +227,7 @@ class GlobalConfig:
 
 
 # Global singleton instance
-_global_config: GlobalConfig | None = None
+_global_config: Optional[GlobalConfig] = None
 
 
 def get_global_config() -> GlobalConfig:

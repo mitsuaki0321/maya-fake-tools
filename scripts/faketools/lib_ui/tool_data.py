@@ -8,6 +8,7 @@ global data root.
 
 import logging
 from pathlib import Path
+from typing import Optional, Union
 
 from ..config import get_global_config
 
@@ -43,7 +44,7 @@ class ToolDataManager:
         """
         self.tool_name = tool_name
         self.category = category
-        self._custom_data_dir: Path | None = None
+        self._custom_data_dir: Optional[Path] = None
         logger.debug(f"ToolDataManager initialized for {category}/{tool_name}")
 
     def _resolve_data_dir(self) -> Path:
@@ -80,7 +81,7 @@ class ToolDataManager:
         """
         return self._resolve_data_dir()
 
-    def set_custom_data_dir(self, path: Path | str) -> None:
+    def set_custom_data_dir(self, path: Union[Path, str]) -> None:
         """
         Set a custom data directory path.
 

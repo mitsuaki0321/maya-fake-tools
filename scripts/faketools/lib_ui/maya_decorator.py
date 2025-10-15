@@ -6,7 +6,7 @@ from collections.abc import Callable
 import contextlib
 import functools
 import traceback
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from maya.api.OpenMaya import MGlobal
 import maya.cmds as cmds
@@ -45,14 +45,14 @@ def error_handler(func: Callable) -> Callable:
     return wrapper
 
 
-def undo_chunk(name: str = None) -> Callable:
+def undo_chunk(name: Optional[str] = None) -> Callable:
     """
     Decorator to wrap function in Maya undo chunk.
 
     Creates a single undo operation for all commands in the function.
 
     Args:
-        name (str | None): Optional name for the undo chunk (defaults to function name)
+        name: Optional name for the undo chunk (defaults to function name)
 
     Returns:
         Callable: Decorated function
@@ -114,7 +114,7 @@ def disable_undo(func: Callable) -> Callable:
     return wrapper
 
 
-def repeatable(label: str = None) -> Callable:
+def repeatable(label: Optional[str] = None) -> Callable:
     """
     Decorator to make a UI method repeatable with Maya's repeat last command.
 
@@ -122,8 +122,8 @@ def repeatable(label: str = None) -> Callable:
     the 'G' key or Edit -> Repeat menu. Supports methods with arguments.
 
     Args:
-        label (str | None): Optional label for the repeat command.
-                           Defaults to the function name with title case.
+        label: Optional label for the repeat command.
+               Defaults to the function name with title case.
 
     Returns:
         Callable: Decorated function
