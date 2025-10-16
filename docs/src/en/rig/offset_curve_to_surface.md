@@ -21,7 +21,7 @@ import faketools.tools.rig.offset_curve_to_surface.ui
 faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
 ```
 
-Image 1: Offset Curve to Surface Tool UI
+![image001](../../images/rig/offset_curve_to_surface/image001.png)
 
 ## Usage
 
@@ -30,13 +30,13 @@ Image 1: Offset Curve to Surface Tool UI
 3. Configure options as needed.
 4. Click the `Create` button to create the surface.
 
-Image 2: Basic usage example (creating surface from curve)
+![image002](../../images/rig/offset_curve_to_surface/image002.png)
 
 ## Options
 
 ### Axis (Offset Direction)
 
-Image 3: Axis option selection
+![image003](../../images/rig/offset_curve_to_surface/image003.png)
 
 Specifies the direction for creating the surface.
 
@@ -72,11 +72,9 @@ Specifies the direction for creating the surface.
   * Requires specifying a NURBS surface in the `Reference` field.
   * Uses the cross product of the surface's normal direction and the curve's tangent direction.
 
-Image 4: Comparison of each offset direction
-
 ### Vector (Vector Direction)
 
-Image 5: Vector option
+![image004](../../images/rig/offset_curve_to_surface/image004.png)
 
 Only active when `Axis` is set to `Vector`.
 
@@ -86,7 +84,7 @@ Only active when `Axis` is set to `Vector`.
 
 ### Reference (Reference Object)
 
-Image 6: Reference option
+![image005](../../images/rig/offset_curve_to_surface/image005.png)
 
 Only active when `Axis` is set to `Mesh Normal`, `Mesh Binormal`, `Surface Normal`, or `Surface Binormal`.
 
@@ -97,7 +95,7 @@ Only active when `Axis` is set to `Mesh Normal`, `Mesh Binormal`, `Surface Norma
 
 ### Width (Surface Width)
 
-Image 7: Width and Center options
+![image006](../../images/rig/offset_curve_to_surface/image006.png)
 
 * **Width**
   * Specifies the width of the surface.
@@ -112,50 +110,6 @@ Image 7: Width and Center options
   * Range: 0.0 ~ 1.0
 
 Image 8: Results with different Width and Center values
-
-## Examples
-
-### Example 1: Create Surface in Vector Direction
-
-1. Select a curve.
-2. Set `Axis` to `Vector`.
-3. Set `Vector` to (0.0, 1.0, 0.0) (Y-axis direction).
-4. Set `Width` to 2.0.
-5. Click the `Create` button.
-
-Image 9: Surface creation example in vector direction
-
-### Example 2: Create Surface in Curve Normal Direction
-
-1. Select a curve.
-2. Set `Axis` to `Normal`.
-3. Set `Width` to 1.0.
-4. Click the `Create` button.
-
-Image 10: Surface creation example in curve normal direction
-
-### Example 3: Create Surface in Mesh Normal Direction
-
-1. Select a curve.
-2. Set `Axis` to `Mesh Normal`.
-3. Select a reference mesh and click the `<<` button to set it in `Reference`.
-4. Set `Width` to 0.5.
-5. Click the `Create` button.
-
-Image 11: Surface creation example in mesh normal direction
-
-## Preset Feature
-
-Tool settings can be saved and loaded as presets.
-
-Image 12: Preset menu
-
-* **Presets Menu**
-  * `Save Preset...` : Saves current settings as a new preset.
-  * `Rename Preset...` : Renames the selected preset.
-  * `Delete Preset...` : Deletes the selected preset.
-  * `Export Preset...` : Exports the selected preset to an external file.
-  * `Import Preset...` : Imports a preset from an external file.
 
 ## Notes
 
