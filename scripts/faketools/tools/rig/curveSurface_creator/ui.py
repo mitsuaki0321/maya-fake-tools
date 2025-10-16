@@ -1,6 +1,5 @@
 """Create curve/surface UI."""
 
-from functools import partial
 from logging import getLogger
 
 import maya.cmds as cmds
@@ -14,9 +13,7 @@ from ....lib_ui import (
     repeatable,
     undo_chunk,
 )
-from ....lib_ui.maya_dialog import confirm_dialog, show_info_dialog
-from ....lib_ui.preset_edit_dialog import PresetEditDialog
-from ....lib_ui.preset_save_dialog import PresetSaveDialog
+from ....lib_ui.preset_menu_manager import PresetMenuManager
 from ....lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
@@ -60,6 +57,13 @@ class MainWindow(BaseMainWindow):
         )
 
         self.settings = ToolSettingsManager(tool_name="curveSurface_creator", category="rig")
+
+        # Setup preset menu using composition
+        self.preset_manager = PresetMenuManager(
+            window=self, settings_manager=self.settings, collect_callback=self._collect_settings, apply_callback=self._apply_settings
+        )
+        self.preset_manager.add_menu()
+
         self._add_menu()
         self.setup_ui()
         self._restore_settings()
@@ -283,24 +287,6 @@ class MainWindow(BaseMainWindow):
 
     def _add_menu(self):
         """Add the menu bar actions."""
-        # Preset menu
-        preset_menu = self.menuBar().addMenu("Preset")
-
-        action = preset_menu.addAction("Save Settings...")
-        action.triggered.connect(self._on_save_preset)
-
-        action = preset_menu.addAction("Edit Settings...")
-        action.triggered.connect(self._on_edit_presets)
-
-        action = preset_menu.addAction("Reset Settings...")
-        action.triggered.connect(self._on_reset_settings)
-
-        preset_menu.addSeparator()
-
-        # Preset list will be populated dynamically
-        self.preset_menu = preset_menu
-        self._update_preset_menu()
-
         # Edit menu
         edit_menu = self.menuBar().addMenu("Edit")
 
@@ -313,10 +299,10 @@ class MainWindow(BaseMainWindow):
         edit_menu.addSeparator()
 
         action = edit_menu.addAction("Create Curve on Surface U")
-        action.triggered.connect(partial(self.create_curve_on_surface, "u"))
+        action.triggered.connect(lambda: self.create_curve_on_surface("u"))
 
         action = edit_menu.addAction("Create Curve on Surface V")
-        action.triggered.connect(partial(self.create_curve_on_surface, "v"))
+        action.triggered.connect(lambda: self.create_curve_on_surface("v"))
 
     def _apply_settings(self, settings_data: dict):
         """
@@ -392,78 +378,6 @@ class MainWindow(BaseMainWindow):
         """Save UI settings to default preset."""
         settings_data = self._collect_settings()
         self.settings.save_settings(settings_data, "default")
-
-    def _update_preset_menu(self):
-        """Update the preset menu with current presets."""
-        try:
-            # Remove all actions after the separator
-            actions = self.preset_menu.actions()
-            separator_index = -1
-            for i, action in enumerate(actions):
-                if action.isSeparator():
-                    separator_index = i
-                    break
-
-            # Remove preset actions (everything after separator)
-            if separator_index >= 0:
-                for action in actions[separator_index + 1 :]:
-                    self.preset_menu.removeAction(action)
-
-            # Add preset actions
-            presets = self.settings.list_presets()
-
-            # Ensure "default" is always first
-            if "default" in presets:
-                presets.remove("default")
-                presets.insert(0, "default")
-
-            for preset_name in presets:
-                action = self.preset_menu.addAction(preset_name)
-                action.triggered.connect(partial(self._on_load_preset, preset_name))
-
-            logger.debug(f"Updated preset menu with {len(presets)} presets")
-        except RuntimeError as e:
-            # Menu object may have been deleted (C++ object destroyed)
-            logger.warning(f"Could not update preset menu: {e}")
-
-    def _on_save_preset(self):
-        """Handle Save Settings menu action."""
-        dialog = PresetSaveDialog(self.settings, parent=self)
-        if dialog.exec():
-            preset_name = dialog.get_preset_name()
-            if preset_name:
-                settings_data = self._collect_settings()
-                self.settings.save_settings(settings_data, preset_name)
-                self._update_preset_menu()
-                show_info_dialog("Preset Saved", f"Settings saved to preset '{preset_name}'")
-                logger.info(f"Saved preset: {preset_name}")
-
-    def _on_edit_presets(self):
-        """Handle Edit Settings menu action."""
-        dialog = PresetEditDialog(self.settings, parent=self)
-        dialog.exec()
-        self._update_preset_menu()
-
-    def _on_reset_settings(self):
-        """Handle Reset Settings menu action."""
-        result = confirm_dialog(title="Reset Settings", message="Reset all settings to default values?")
-
-        if result:
-            # Load empty settings to reset to defaults
-            self._apply_settings({})
-            logger.info("Settings reset to defaults")
-
-    def _on_load_preset(self, preset_name: str):
-        """
-        Handle preset menu action.
-
-        Args:
-            preset_name (str): Name of the preset to load
-        """
-        settings_data = self.settings.load_settings(preset_name)
-        if settings_data:
-            self._apply_settings(settings_data)
-            logger.info(f"Loaded preset: {preset_name}")
 
     def _change_bind_mode(self):
         """Update UI state based on bind checkbox state."""
