@@ -66,9 +66,15 @@ class ToolRegistry:
                 if not tool_dir.is_dir() or tool_dir.name.startswith("_"):
                     continue
 
-                # Check for __init__.py
-                init_file = tool_dir / "__init__.py"
-                if not init_file.exists():
+                # Check for __init__.py or __init__.pyc (for compiled-only deployments)
+                init_py = tool_dir / "__init__.py"
+                init_pyc = tool_dir / "__init__.pyc"
+                # Also check __pycache__ directory for Python 3 compiled files
+                pycache_dir = tool_dir / "__pycache__"
+                has_init = init_py.exists() or init_pyc.exists() or (pycache_dir.exists() and pycache_dir.is_dir())
+
+                if not has_init:
+                    logger.debug(f"Skipping {tool_dir.name}: no __init__ file found")
                     continue
 
                 tool_name = tool_dir.name
