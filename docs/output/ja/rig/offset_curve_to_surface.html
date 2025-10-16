@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offset Curve to Surface - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="カーブをオフセットしてNURBSサーフェスを作成するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/offset_curve_to_surface.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#axisオフセット方向"
+                    id="toc-axisオフセット方向">Axis（オフセット方向）</a></li>
+                    <li><a href="#vectorベクトル方向"
+                    id="toc-vectorベクトル方向">Vector（ベクトル方向）</a></li>
+                    <li><a href="#reference参照オブジェクト"
+                    id="toc-reference参照オブジェクト">Reference（参照オブジェクト）</a></li>
+                    <li><a href="#widthサーフェスの幅"
+                    id="toc-widthサーフェスの幅">Width（サーフェスの幅）</a></li>
+                    </ul></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Offset Curve to Surface</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>選択した NURBS カーブの CV
+                位置を指定した方向にオフセットし、ロフトされた NURBS
+                サーフェスを作成します。</p>
+                <p>オフセット方向として、任意のベクトル、カーブの法線・従法線、参照メッシュ・サーフェスの法線・従法線を選択できます。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.offset_curve_to_surface.ui
+faketools.tools.rig.offset_curve_to_surface.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li>NURBS カーブを選択します（複数選択可能）。</li>
+                <li>オフセット方向を <code>Axis</code>
+                から選択します。</li>
+                <li>必要に応じてオプションを設定します。</li>
+                <li><code>Create</code>
+                ボタンを押すことでサーフェスが作成されます。</li>
+                </ol>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image002.png"
+                alt="image002" /></p>
+                <h2 id="オプション">オプション</h2>
+                <h3 id="axisオフセット方向">Axis（オフセット方向）</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image003.png"
+                alt="image003" /></p>
+                <p>サーフェスを作成する方向を指定します。</p>
+                <ul>
+                <li><strong>Vector</strong>
+                <ul>
+                <li>任意のベクトル方向にオフセットします。</li>
+                <li><code>Vector</code> フィールドで X, Y, Z
+                の方向を指定します。</li>
+                </ul></li>
+                <li><strong>Normal</strong>
+                <ul>
+                <li>カーブの法線方向にオフセットします。</li>
+                <li>カーブの各 CV
+                位置における法線方向を使用します。</li>
+                </ul></li>
+                <li><strong>Binormal</strong>
+                <ul>
+                <li>カーブの従法線方向にオフセットします。</li>
+                <li>カーブの各 CV
+                位置における従法線方向（法線と接線の外積）を使用します。</li>
+                </ul></li>
+                <li><strong>Mesh Normal</strong>
+                <ul>
+                <li>参照メッシュの法線方向にオフセットします。</li>
+                <li><code>Reference</code>
+                フィールドで参照するメッシュを指定する必要があります。</li>
+                <li>カーブの各 CV
+                位置から参照メッシュ上の最も近い点を探し、その位置の法線方向を使用します。</li>
+                </ul></li>
+                <li><strong>Mesh Binormal</strong>
+                <ul>
+                <li>参照メッシュの従法線方向にオフセットします。</li>
+                <li><code>Reference</code>
+                フィールドで参照するメッシュを指定する必要があります。</li>
+                <li>メッシュの法線方向とカーブの接線方向の外積を使用します。</li>
+                </ul></li>
+                <li><strong>Surface Normal</strong>
+                <ul>
+                <li>参照サーフェスの法線方向にオフセットします。</li>
+                <li><code>Reference</code> フィールドで参照する NURBS
+                サーフェスを指定する必要があります。</li>
+                <li>カーブの各 CV
+                位置から参照サーフェス上の最も近い点を探し、その位置の法線方向を使用します。</li>
+                </ul></li>
+                <li><strong>Surface Binormal</strong>
+                <ul>
+                <li>参照サーフェスの従法線方向にオフセットします。</li>
+                <li><code>Reference</code> フィールドで参照する NURBS
+                サーフェスを指定する必要があります。</li>
+                <li>サーフェスの法線方向とカーブの接線方向の外積を使用します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="vectorベクトル方向">Vector（ベクトル方向）</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image004.png"
+                alt="image004" /></p>
+                <p><code>Axis</code> が <code>Vector</code>
+                の場合のみ有効です。</p>
+                <ul>
+                <li>X, Y, Z の 3
+                つのスピンボックスでオフセット方向のベクトルを指定します。</li>
+                <li>ベクトルは自動的に正規化されます。</li>
+                <li>デフォルト値は (0.0, 1.0, 0.0) です。</li>
+                </ul>
+                <h3
+                id="reference参照オブジェクト">Reference（参照オブジェクト）</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image005.png"
+                alt="image005" /></p>
+                <p><code>Axis</code> が <code>Mesh Normal</code>,
+                <code>Mesh Binormal</code>, <code>Surface Normal</code>,
+                <code>Surface Binormal</code> の場合のみ有効です。</p>
+                <ul>
+                <li>参照するメッシュまたは NURBS
+                サーフェスを指定します。</li>
+                <li>参照オブジェクトを選択し、<code>&lt;&lt;</code>
+                ボタンを押すことで設定できます。</li>
+                <li><code>Mesh Normal</code> /
+                <code>Mesh Binormal</code>
+                の場合は、メッシュを指定してください。</li>
+                <li><code>Surface Normal</code> /
+                <code>Surface Binormal</code> の場合は、NURBS
+                サーフェスを指定してください。</li>
+                </ul>
+                <h3
+                id="widthサーフェスの幅">Width（サーフェスの幅）</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image006.png"
+                alt="image006" /></p>
+                <ul>
+                <li><strong>Width</strong>
+                <ul>
+                <li>サーフェスの幅を指定します。</li>
+                <li>デフォルト値は 1.0 です。</li>
+                <li>範囲：0.001 ～ 10000.0</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>サーフェースの作成方向に対して、この値を中心にサーフェースを作成します。</li>
+                <li>0.5
+                でサーフェースはプラスマイナス同じ幅になります。</li>
+                <li>例えば、Width が 10.0 で Center が 0.5
+                の場合、サーフェースは -5.0 から 5.0
+                までの幅になります。</li>
+                <li>デフォルト値は 0.5 です。</li>
+                <li>範囲：0.0 ～ 1.0</li>
+                </ul></li>
+                </ul>
+                <p>画像８：Width と Center の値による結果の違い</p>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>カーブの次数は選択したカーブから自動的に取得されます。</li>
+                <li>トランスフォームノードまたはシェイプノードを選択しても動作します。</li>
+                <li>複数のカーブを選択した場合、それぞれのカーブに対してサーフェスが作成されます。</li>
+                <li>作成されたサーフェスは自動的に選択されます。</li>
+                <li><code>Vector</code> が (0, 0, 0)
+                の場合はエラーになります。</li>
+                <li>参照オブジェクトが必要な Axis
+                を選択した場合、必ず適切なタイプのオブジェクトを
+                <code>Reference</code> に設定してください。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ import faketools.tools.rig.offset_curve_to_surface.ui
 faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
 ```
 
-画像１：Offset Curve to Surface ツールのUI
+![image001](../../images/rig/offset_curve_to_surface/image001.png)
 
 ## 使用方法
 
@@ -30,13 +30,13 @@ faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
 3. 必要に応じてオプションを設定します。
 4. `Create` ボタンを押すことでサーフェスが作成されます。
 
-画像２：基本的な使用例（カーブからサーフェスを作成）
+![image002](../../images/rig/offset_curve_to_surface/image002.png)
 
 ## オプション
 
 ### Axis（オフセット方向）
 
-画像３：Axis オプションの選択
+![image003](../../images/rig/offset_curve_to_surface/image003.png)
 
 サーフェスを作成する方向を指定します。
 
@@ -72,11 +72,9 @@ faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
   * `Reference` フィールドで参照する NURBS サーフェスを指定する必要があります。
   * サーフェスの法線方向とカーブの接線方向の外積を使用します。
 
-画像４：各オフセット方向の比較図
-
 ### Vector（ベクトル方向）
 
-画像５：Vector オプション
+![image004](../../images/rig/offset_curve_to_surface/image004.png)
 
 `Axis` が `Vector` の場合のみ有効です。
 
@@ -86,7 +84,7 @@ faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
 
 ### Reference（参照オブジェクト）
 
-画像６：Reference オプション
+![image005](../../images/rig/offset_curve_to_surface/image005.png)
 
 `Axis` が `Mesh Normal`, `Mesh Binormal`, `Surface Normal`, `Surface Binormal` の場合のみ有効です。
 
@@ -97,7 +95,7 @@ faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
 
 ### Width（サーフェスの幅）
 
-画像７：Width と Center オプション
+![image006](../../images/rig/offset_curve_to_surface/image006.png)
 
 * **Width**
   * サーフェスの幅を指定します。
@@ -112,50 +110,6 @@ faketools.tools.rig.offset_curve_to_surface.ui.show_ui()
   * 範囲：0.0 ～ 1.0
 
 画像８：Width と Center の値による結果の違い
-
-## 使用例
-
-### 例1：ベクトル方向でサーフェスを作成
-
-1. カーブを選択します。
-2. `Axis` を `Vector` に設定します。
-3. `Vector` を (0.0, 1.0, 0.0) に設定します（Y軸方向）。
-4. `Width` を 2.0 に設定します。
-5. `Create` ボタンを押します。
-
-画像９：ベクトル方向でのサーフェス作成例
-
-### 例2：カーブの法線方向でサーフェスを作成
-
-1. カーブを選択します。
-2. `Axis` を `Normal` に設定します。
-3. `Width` を 1.0 に設定します。
-4. `Create` ボタンを押します。
-
-画像１０：カーブの法線方向でのサーフェス作成例
-
-### 例3：メッシュの法線方向でサーフェスを作成
-
-1. カーブを選択します。
-2. `Axis` を `Mesh Normal` に設定します。
-3. 参照メッシュを選択し、`<<` ボタンを押して `Reference` に設定します。
-4. `Width` を 0.5 に設定します。
-5. `Create` ボタンを押します。
-
-画像１１：メッシュの法線方向でのサーフェス作成例
-
-## プリセット機能
-
-ツールの設定はプリセットとして保存・読み込みが可能です。
-
-画像１２：プリセットメニュー
-
-* **Presets メニュー**
-  * `Save Preset...` : 現在の設定を新しいプリセットとして保存します。
-  * `Rename Preset...` : 選択中のプリセット名を変更します。
-  * `Delete Preset...` : 選択中のプリセットを削除します。
-  * `Export Preset...` : 選択中のプリセットを外部ファイルにエクスポートします。
-  * `Import Preset...` : 外部ファイルからプリセットをインポートします。
 
 ## 注意事項
 

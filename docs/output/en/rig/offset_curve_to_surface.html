@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offset Curve to Surface - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Tool for creating NURBS surfaces by offsetting curves">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/offset_curve_to_surface.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#axis-offset-direction"
+                    id="toc-axis-offset-direction">Axis (Offset
+                    Direction)</a></li>
+                    <li><a href="#vector-vector-direction"
+                    id="toc-vector-vector-direction">Vector (Vector
+                    Direction)</a></li>
+                    <li><a href="#reference-reference-object"
+                    id="toc-reference-reference-object">Reference
+                    (Reference Object)</a></li>
+                    <li><a href="#width-surface-width"
+                    id="toc-width-surface-width">Width (Surface
+                    Width)</a></li>
+                    </ul></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Offset Curve to Surface</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>This tool creates lofted NURBS surfaces by offsetting
+                the CV positions of selected NURBS curves in specified
+                directions.</p>
+                <p>You can choose offset directions from arbitrary
+                vectors, curve normals/binormals, or reference
+                mesh/surface normals/binormals.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or use the
+                following command:</p>
+                <pre class="python"><code>import faketools.tools.rig.offset_curve_to_surface.ui
+faketools.tools.rig.offset_curve_to_surface.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <ol type="1">
+                <li>Select NURBS curve(s) (multiple selection
+                supported).</li>
+                <li>Select the offset direction from
+                <code>Axis</code>.</li>
+                <li>Configure options as needed.</li>
+                <li>Click the <code>Create</code> button to create the
+                surface.</li>
+                </ol>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image002.png"
+                alt="image002" /></p>
+                <h2 id="options">Options</h2>
+                <h3 id="axis-offset-direction">Axis (Offset
+                Direction)</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image003.png"
+                alt="image003" /></p>
+                <p>Specifies the direction for creating the surface.</p>
+                <ul>
+                <li><strong>Vector</strong>
+                <ul>
+                <li>Offsets in an arbitrary vector direction.</li>
+                <li>Specify X, Y, Z direction in the <code>Vector</code>
+                field.</li>
+                </ul></li>
+                <li><strong>Normal</strong>
+                <ul>
+                <li>Offsets in the curve’s normal direction.</li>
+                <li>Uses the normal direction at each CV position of the
+                curve.</li>
+                </ul></li>
+                <li><strong>Binormal</strong>
+                <ul>
+                <li>Offsets in the curve’s binormal direction.</li>
+                <li>Uses the binormal direction (cross product of normal
+                and tangent) at each CV position of the curve.</li>
+                </ul></li>
+                <li><strong>Mesh Normal</strong>
+                <ul>
+                <li>Offsets in the reference mesh’s normal
+                direction.</li>
+                <li>Requires specifying a mesh in the
+                <code>Reference</code> field.</li>
+                <li>Finds the closest point on the reference mesh from
+                each CV position of the curve and uses the normal
+                direction at that point.</li>
+                </ul></li>
+                <li><strong>Mesh Binormal</strong>
+                <ul>
+                <li>Offsets in the reference mesh’s binormal
+                direction.</li>
+                <li>Requires specifying a mesh in the
+                <code>Reference</code> field.</li>
+                <li>Uses the cross product of the mesh’s normal
+                direction and the curve’s tangent direction.</li>
+                </ul></li>
+                <li><strong>Surface Normal</strong>
+                <ul>
+                <li>Offsets in the reference surface’s normal
+                direction.</li>
+                <li>Requires specifying a NURBS surface in the
+                <code>Reference</code> field.</li>
+                <li>Finds the closest point on the reference surface
+                from each CV position of the curve and uses the normal
+                direction at that point.</li>
+                </ul></li>
+                <li><strong>Surface Binormal</strong>
+                <ul>
+                <li>Offsets in the reference surface’s binormal
+                direction.</li>
+                <li>Requires specifying a NURBS surface in the
+                <code>Reference</code> field.</li>
+                <li>Uses the cross product of the surface’s normal
+                direction and the curve’s tangent direction.</li>
+                </ul></li>
+                </ul>
+                <h3 id="vector-vector-direction">Vector (Vector
+                Direction)</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image004.png"
+                alt="image004" /></p>
+                <p>Only active when <code>Axis</code> is set to
+                <code>Vector</code>.</p>
+                <ul>
+                <li>Specify the offset direction vector using three
+                spinboxes for X, Y, Z.</li>
+                <li>The vector is automatically normalized.</li>
+                <li>Default value is (0.0, 1.0, 0.0).</li>
+                </ul>
+                <h3 id="reference-reference-object">Reference (Reference
+                Object)</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image005.png"
+                alt="image005" /></p>
+                <p>Only active when <code>Axis</code> is set to
+                <code>Mesh Normal</code>, <code>Mesh Binormal</code>,
+                <code>Surface Normal</code>, or
+                <code>Surface Binormal</code>.</p>
+                <ul>
+                <li>Specify the reference mesh or NURBS surface.</li>
+                <li>Select the reference object and click the
+                <code>&lt;&lt;</code> button to set it.</li>
+                <li>For <code>Mesh Normal</code> /
+                <code>Mesh Binormal</code>, specify a mesh.</li>
+                <li>For <code>Surface Normal</code> /
+                <code>Surface Binormal</code>, specify a NURBS
+                surface.</li>
+                </ul>
+                <h3 id="width-surface-width">Width (Surface Width)</h3>
+                <p><img
+                src="../../images/rig/offset_curve_to_surface/image006.png"
+                alt="image006" /></p>
+                <ul>
+                <li><strong>Width</strong>
+                <ul>
+                <li>Specifies the width of the surface.</li>
+                <li>Default value is 1.0.</li>
+                <li>Range: 0.001 ~ 10000.0</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>Creates the surface centered at this value relative
+                to the creation direction.</li>
+                <li>At 0.5, the surface has equal width in plus and
+                minus directions.</li>
+                <li>For example, if Width is 10.0 and Center is 0.5, the
+                surface ranges from -5.0 to 5.0.</li>
+                <li>Default value is 0.5.</li>
+                <li>Range: 0.0 ~ 1.0</li>
+                </ul></li>
+                </ul>
+                <p>Image 8: Results with different Width and Center
+                values</p>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Curve degree is automatically obtained from the
+                selected curve.</li>
+                <li>Works with both transform nodes and shape nodes
+                selected.</li>
+                <li>When multiple curves are selected, surfaces are
+                created for each curve.</li>
+                <li>Created surfaces are automatically selected.</li>
+                <li>Error occurs if <code>Vector</code> is (0, 0,
+                0).</li>
+                <li>When selecting an Axis that requires a reference
+                object, always set an appropriate type of object in the
+                <code>Reference</code> field.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
