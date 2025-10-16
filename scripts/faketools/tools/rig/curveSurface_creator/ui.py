@@ -395,32 +395,36 @@ class MainWindow(BaseMainWindow):
 
     def _update_preset_menu(self):
         """Update the preset menu with current presets."""
-        # Remove all actions after the separator
-        actions = self.preset_menu.actions()
-        separator_index = -1
-        for i, action in enumerate(actions):
-            if action.isSeparator():
-                separator_index = i
-                break
+        try:
+            # Remove all actions after the separator
+            actions = self.preset_menu.actions()
+            separator_index = -1
+            for i, action in enumerate(actions):
+                if action.isSeparator():
+                    separator_index = i
+                    break
 
-        # Remove preset actions (everything after separator)
-        if separator_index >= 0:
-            for action in actions[separator_index + 1 :]:
-                self.preset_menu.removeAction(action)
+            # Remove preset actions (everything after separator)
+            if separator_index >= 0:
+                for action in actions[separator_index + 1 :]:
+                    self.preset_menu.removeAction(action)
 
-        # Add preset actions
-        presets = self.settings.list_presets()
+            # Add preset actions
+            presets = self.settings.list_presets()
 
-        # Ensure "default" is always first
-        if "default" in presets:
-            presets.remove("default")
-            presets.insert(0, "default")
+            # Ensure "default" is always first
+            if "default" in presets:
+                presets.remove("default")
+                presets.insert(0, "default")
 
-        for preset_name in presets:
-            action = self.preset_menu.addAction(preset_name)
-            action.triggered.connect(partial(self._on_load_preset, preset_name))
+            for preset_name in presets:
+                action = self.preset_menu.addAction(preset_name)
+                action.triggered.connect(partial(self._on_load_preset, preset_name))
 
-        logger.debug(f"Updated preset menu with {len(presets)} presets")
+            logger.debug(f"Updated preset menu with {len(presets)} presets")
+        except RuntimeError as e:
+            # Menu object may have been deleted (C++ object destroyed)
+            logger.warning(f"Could not update preset menu: {e}")
 
     def _on_save_preset(self):
         """Handle Save Settings menu action."""

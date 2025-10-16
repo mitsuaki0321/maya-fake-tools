@@ -13,9 +13,7 @@ Example:
 import logging
 from typing import Optional
 
-import maya.cmds as cmds
-
-from .maya_dialog import show_error_dialog
+from .maya_dialog import confirm_dialog, show_error_dialog
 from .qt_compat import QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
 from .tool_settings import ToolSettingsManager
 
@@ -116,15 +114,8 @@ class PresetSaveDialog(QDialog):
 
             # Check if preset already exists
             if self.settings_manager.preset_exists(preset_name):
-                result = cmds.confirmDialog(
-                    title="Preset Exists",
-                    message=f"Preset '{preset_name}' already exists. Overwrite?",
-                    button=["Overwrite", "Cancel"],
-                    defaultButton="Cancel",
-                    cancelButton="Cancel",
-                    dismissString="Cancel",
-                )
-                if result != "Overwrite":
+                result = confirm_dialog(title="Preset Exists", message=f"Preset '{preset_name}' already exists. Overwrite?")
+                if not result:
                     return
 
             # Accept dialog
