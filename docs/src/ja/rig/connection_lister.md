@@ -51,7 +51,7 @@ faketools.tools.rig.connection_lister_ui.show_ui()
 `Command` モードで、用意されたコマンドを使用することができます。
 
 コマンドについては、**Single Command** の **Pair Command** と同様の機能です。  
-**[Single Command](./single_commands.html)** のドキュメントを参照してください。
+**[Single Command](../common/singleCommands.html)** のドキュメントを参照してください。
 
 ![image002](../../images/rig/connection_lister/image002.png)
 

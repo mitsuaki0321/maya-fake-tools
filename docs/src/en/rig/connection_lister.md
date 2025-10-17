@@ -51,6 +51,6 @@ or as shown in the image, one source node/attribute and multiple target nodes/at
 You can use provided commands in `Command` mode.
 
 Commands have the same functionality as **Pair Command** in **Single Command**.
-Refer to **[Single Command](./single_commands.html)** documentation.
+Refer to **[Single Command](../common/singleCommands.html)** documentation.
 
 ![image002](../../images/rig/connection_lister/image002.png)

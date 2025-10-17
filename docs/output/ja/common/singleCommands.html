@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Commands - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="よく使用する単一のコマンド">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/singleCommands.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#コマンド一覧"
+                    id="toc-コマンド一覧">コマンド一覧</a>
+                    <ul>
+                    <li><a href="#scene-command"
+                    id="toc-scene-command">Scene Command</a></li>
+                    <li><a href="#all-command" id="toc-all-command">All
+                    Command</a></li>
+                    <li><a href="#pair-command"
+                    id="toc-pair-command">Pair Command</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Single Commands</h1>
+                
+                <h3 id="使用方法">使用方法</h3>
+                <p>メニューからコマンドを選択して実行します。</p>
+                <p>コマンドにより、ノードの選択方法が異なります。以下の三つのタイプのコマンドがあります。</p>
+                <p><strong>Scene Command</strong><br />
+                シーン全体に対して実行されるコマンドです。選択とは無関係に実行されます。</p>
+                <p><strong>All Command</strong><br />
+                選択された全てのノードに対して実行されるコマンドです。</p>
+                <p><strong>Pair Command</strong><br />
+                １つめに選択されたノードを基準に、２つめ以降に選択されたノードに対して実行されるコマンドです。</p>
+                <h2 id="コマンド一覧">コマンド一覧</h2>
+                <h3 id="scene-command">Scene Command</h3>
+                <ul>
+                <li><strong>OptimizeScene</strong>
+                <ul>
+                <li>シーンを最適化します。
+                <ul>
+                <li>不明なプラグインを除去します。</li>
+                <li>不明なノードを削除します。</li>
+                <li>使用していないノードを削除します。</li>
+                <li>DataStructure を削除します。</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+                <h3 id="all-command">All Command</h3>
+                <ul>
+                <li><strong>Lock And Hide</strong>
+                <ul>
+                <li>選択されたノードのチャンネルボックスに表示されているアトリビュートをロックして非表示にします。</li>
+                <li>チャンネルボックスのアトリビュートを直接選択している場合は、そのアトリビュートのみに適用されます。</li>
+                <li>Visibility
+                は非表示になりますが、ロックされません。</li>
+                </ul></li>
+                <li><strong>Unlock And Show</strong>
+                <ul>
+                <li>チャンネルボックスの表示をそのノードが作成された時の状態に戻します。</li>
+                <li>ダイナミックアトリビュート (
+                ユーザー定義のアトリビュート ) は考慮されません。</li>
+                </ul></li>
+                <li><strong>ZeroOut</strong>
+                <ul>
+                <li>選択されたノードのチャンネルボックスに表示されているアトリビュートをデフォルト値にリセットします。</li>
+                </ul></li>
+                <li><strong>Break Connections</strong>
+                <ul>
+                <li>選択されたノードのチャンネルボックスに表示されているアトリビュートの接続を解除します。</li>
+                <li>チャンネルボックスのアトリビュートを直接選択している場合は、そのアトリビュートのみに適用されます。</li>
+                </ul></li>
+                <li><strong>Freeze Transform</strong>
+                <ul>
+                <li>選択されたノードのトランスフォームをフリーズし、ピボットをリセットします。</li>
+                </ul></li>
+                <li><strong>Freeze Mesh Vertices</strong>
+                <ul>
+                <li>選択されたメッシュの頂点をフリーズします。</li>
+                </ul></li>
+                <li><strong>DeleteConstraint</strong>
+                <ul>
+                <li>選択されたノードの Constraint を削除します。</li>
+                </ul></li>
+                <li><strong>Joint to Chain</strong>
+                <ul>
+                <li>選択されたノードをチェイン状に親子関係を設定します。</li>
+                </ul></li>
+                <li><strong>Mirror Joints</strong>
+                <ul>
+                <li>選択されたノードをYZ平面でミラーリングします。</li>
+                </ul></li>
+                <li><strong>Delete Extra Attributes</strong>
+                <ul>
+                <li>選択されたノードのダイナミックアトリビュート (
+                ユーザー定義のアトリビュート ) をすべて削除します。</li>
+                <li>ロックされているアトリビュートも削除されます。</li>
+                </ul></li>
+                <li><strong>Duplicate Original Shape</strong>
+                <ul>
+                <li>選択したシェイプのオリジナルシェイプを複製します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="pair-command">Pair Command</h3>
+                <ul>
+                <li><p><strong>Snap Positions</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの位置を、２つめ以降に選択されたノードの位置にスナップします。</li>
+                </ul></li>
+                <li><p><strong>Snap Rotations</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの回転を、２つめ以降に選択されたノードの回転にスナップします。</li>
+                </ul></li>
+                <li><p><strong>Snap Scales</strong></p>
+                <ul>
+                <li>１つめに選択されたノードのスケールを、２つめ以降に選択されたノードのスケールにスナップします。</li>
+                </ul></li>
+                <li><p><strong>Snap Translate and Rotate</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの位置と回転を、２つめ以降に選択されたノードの位置と回転にスナップします。</li>
+                </ul></li>
+                <li><p><strong>Copy Transform</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの Translate と
+                Rotate、Scale
+                を、２つめ以降に選択されたノードにコピーします。</li>
+                </ul></li>
+                <li><p><strong>Connect Transform</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの Translate と
+                Rotate、Scale
+                を、２つめ以降に選択されたノードに接続します。</li>
+                </ul></li>
+                <li><p><strong>Copy Weights</strong></p>
+                <ul>
+                <li>１つめに選択されたノードの SkinCluster
+                のウェイトを、２つめ以降に選択されたノードにコピーします。</li>
+                <li>２つめ以降に選択されたノードに SkinCluster
+                が存在しない場合は、自動的に SkinCluster
+                を作成します。</li>
+                </ul></li>
+                <li><p><strong>Connect Shape</strong></p>
+                <ul>
+                <li>１つめに選択されたノードのトポロジーを、２つめ以降に選択されたノードに接続します。</li>
+                </ul></li>
+                <li><p><strong>Copy Shape</strong></p></li>
+                <li><p>１つめに選択されたノードのトポロジーを、２つめ以降に選択されたノードにコピーします。</p></li>
+                <li><p><strong>Parent Transform</strong></p>
+                <ul>
+                <li>１つめに選択されたノードを、２つめ以降に選択されたノードに親子関係を設定します。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

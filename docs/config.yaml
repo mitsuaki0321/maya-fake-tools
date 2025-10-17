@@ -11,6 +11,11 @@ languages:
     name: English
 
 categories:
+  - id: common
+    name_ja: 共通
+    name_en: Common
+    description_ja: 共通ツール
+    description_en: Common utilities
   - id: rig
     name_ja: リグ
     name_en: Rig
@@ -26,8 +31,3 @@ categories:
     name_en: Animation
     description_ja: アニメーション用ツール
     description_en: Animation tools
-  - id: common
-    name_ja: 共通
-    name_en: Common
-    description_ja: 共通ツール
-    description_en: Common utilities

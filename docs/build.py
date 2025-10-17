@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+from typing import Optional
 
 import yaml
 
@@ -196,7 +197,7 @@ class DocBuilder:
         except ValueError:
             return {}, content
 
-    def find_lang_pair(self, md_file: Path, current_lang: str) -> Path | None:
+    def find_lang_pair(self, md_file: Path, current_lang: str) -> Optional[Path]:
         """
         Find corresponding file in other language.
 

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Commands - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Frequently used single commands">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/singleCommands.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#command-list"
+                    id="toc-command-list">Command List</a>
+                    <ul>
+                    <li><a href="#scene-command"
+                    id="toc-scene-command">Scene Command</a></li>
+                    <li><a href="#all-command" id="toc-all-command">All
+                    Command</a></li>
+                    <li><a href="#pair-command"
+                    id="toc-pair-command">Pair Command</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Single Commands</h1>
+                
+                <h3 id="usage">Usage</h3>
+                <p>Select a command from the menu to execute it.</p>
+                <p>Commands differ in how they handle selection. There
+                are three types of commands below.</p>
+                <p><strong>Scene Command</strong><br />
+                A command that runs on the entire scene. It executes
+                regardless of selection.</p>
+                <p><strong>All Command</strong><br />
+                A command that runs on all selected nodes.</p>
+                <p><strong>Pair Command</strong><br />
+                A command that uses the first selected node as the
+                source and applies to the subsequent selected nodes.</p>
+                <h2 id="command-list">Command List</h2>
+                <h3 id="scene-command">Scene Command</h3>
+                <ul>
+                <li><strong>OptimizeScene</strong>
+                <ul>
+                <li>Optimizes the scene.
+                <ul>
+                <li>Removes unknown plugins.</li>
+                <li>Deletes unknown nodes.</li>
+                <li>Deletes unused nodes.</li>
+                <li>Removes DataStructure.</li>
+                </ul></li>
+                </ul></li>
+                </ul>
+                <h3 id="all-command">All Command</h3>
+                <ul>
+                <li><strong>Lock And Hide</strong>
+                <ul>
+                <li>Locks and hides the attributes shown in the Channel
+                Box for the selected nodes.</li>
+                <li>If a Channel Box attribute is directly selected, it
+                applies only to that attribute.</li>
+                <li>Visibility is hidden but not locked.</li>
+                </ul></li>
+                <li><strong>Unlock And Show</strong>
+                <ul>
+                <li>Restores the Channel Box display to the state when
+                the node was created.</li>
+                <li>Dynamic attributes (user-defined attributes) are not
+                considered.</li>
+                </ul></li>
+                <li><strong>ZeroOut</strong>
+                <ul>
+                <li>Resets the attributes shown in the Channel Box for
+                the selected nodes to their default values.</li>
+                </ul></li>
+                <li><strong>Break Connections</strong>
+                <ul>
+                <li>Breaks connections for the attributes shown in the
+                Channel Box for the selected nodes.</li>
+                <li>If a Channel Box attribute is directly selected, it
+                applies only to that attribute.</li>
+                </ul></li>
+                <li><strong>Freeze Transform</strong>
+                <ul>
+                <li>Freezes transforms and resets the pivot for the
+                selected nodes.</li>
+                </ul></li>
+                <li><strong>Freeze Mesh Vertices</strong>
+                <ul>
+                <li>Freezes the vertices of the selected mesh(es).</li>
+                </ul></li>
+                <li><strong>DeleteConstraint</strong>
+                <ul>
+                <li>Deletes constraints from the selected nodes.</li>
+                </ul></li>
+                <li><strong>Joint to Chain</strong>
+                <ul>
+                <li>Sets up parent-child relationships for the selected
+                nodes in a chain.</li>
+                </ul></li>
+                <li><strong>Mirror Joints</strong>
+                <ul>
+                <li>Mirrors the selected nodes across the YZ plane.</li>
+                </ul></li>
+                <li><strong>Delete Extra Attributes</strong>
+                <ul>
+                <li>Deletes all dynamic attributes (user-defined
+                attributes) from the selected nodes.</li>
+                <li>Locked attributes are also deleted.</li>
+                </ul></li>
+                <li><strong>Duplicate Original Shape</strong>
+                <ul>
+                <li>Duplicates the original shape of the selected
+                shape(s).</li>
+                </ul></li>
+                </ul>
+                <h3 id="pair-command">Pair Command</h3>
+                <ul>
+                <li><strong>Snap Positions</strong>
+                <ul>
+                <li>Snaps the positions of the second and subsequent
+                selected nodes to the first selected node’s
+                position.</li>
+                </ul></li>
+                <li><strong>Snap Rotations</strong>
+                <ul>
+                <li>Snaps the rotations of the second and subsequent
+                selected nodes to the first selected node’s
+                rotation.</li>
+                </ul></li>
+                <li><strong>Snap Scales</strong>
+                <ul>
+                <li>Snaps the scales of the second and subsequent
+                selected nodes to the first selected node’s scale.</li>
+                </ul></li>
+                <li><strong>Snap Translate and Rotate</strong>
+                <ul>
+                <li>Snaps the translation and rotation of the second and
+                subsequent selected nodes to the first selected node’s
+                translation and rotation.</li>
+                </ul></li>
+                <li><strong>Copy Transform</strong>
+                <ul>
+                <li>Copies Translate, Rotate, and Scale from the first
+                selected node to the second and subsequent selected
+                nodes.</li>
+                </ul></li>
+                <li><strong>Connect Transform</strong>
+                <ul>
+                <li>Connects Translate, Rotate, and Scale from the first
+                selected node to the second and subsequent selected
+                nodes.</li>
+                </ul></li>
+                <li><strong>Copy Weights</strong>
+                <ul>
+                <li>Copies SkinCluster weights from the first selected
+                node to the second and subsequent selected nodes.</li>
+                <li>If a SkinCluster does not exist on the second and
+                subsequent selected nodes, one is created
+                automatically.</li>
+                </ul></li>
+                <li><strong>Connect Shape</strong>
+                <ul>
+                <li>Connects the topology of the first selected node to
+                the second and subsequent selected nodes.</li>
+                </ul></li>
+                <li><strong>Copy Shape</strong>
+                <ul>
+                <li>Copies the topology of the first selected node to
+                the second and subsequent selected nodes.</li>
+                </ul></li>
+                <li><strong>Parent Transform</strong>
+                <ul>
+                <li>Parents the first selected node under the second and
+                subsequent selected nodes.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
