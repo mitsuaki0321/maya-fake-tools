@@ -1,3 +1,4 @@
+# __ppi_no_compile
 """
 Command for skinCluster weights.
 
