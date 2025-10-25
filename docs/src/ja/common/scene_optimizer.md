@@ -4,6 +4,7 @@ category: common
 description: Mayaシーンの最適化とクリーンアップ
 lang: ja
 lang-ref: scene_optimizer
+order: 30
 ---
 
 ## 起動方法

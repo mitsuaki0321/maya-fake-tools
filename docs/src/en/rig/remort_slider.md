@@ -4,6 +4,7 @@ category: rig
 description: Control object transform attributes with floating slider
 lang: en
 lang-ref: remort_slider
+order: 40
 ---
 
 ![image001](../../images/rig/remote_slider/image001.gif)

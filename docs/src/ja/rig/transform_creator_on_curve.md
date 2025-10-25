@@ -4,6 +4,7 @@ category: rig
 description: カーブ上にトランスフォームノードを作成
 lang: ja
 lang-ref: transform_creator_on_curve
+order: 30
 ---
 
 ## 起動方法

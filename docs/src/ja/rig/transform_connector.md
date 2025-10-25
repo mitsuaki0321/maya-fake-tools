@@ -4,6 +4,7 @@ category: rig
 description: トランスフォーム属性の接続とコピーツール
 lang: ja
 lang-ref: transform_connector
+order: 10
 ---
 
 ## 起動方法

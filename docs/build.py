@@ -444,7 +444,7 @@ class DocBuilder:
             cat_id: Category ID
 
         Returns:
-            list[dict]: List of tool information
+            list[dict]: List of tool information (sorted by order field)
         """
         tools_data = []
         cat_dir = self.src_dir / lang / cat_id
@@ -459,6 +459,7 @@ class DocBuilder:
             metadata, _ = self.parse_front_matter(md_file)
             tool_name = metadata.get("title", md_file.stem)
             tool_description = metadata.get("description", "")
+            order = metadata.get("order", 100)  # Default order: 100
 
             tools_data.append(
                 {
@@ -467,8 +468,12 @@ class DocBuilder:
                     "version": "",
                     "url": f"{lang}/{cat_id}/{md_file.stem}.html",
                     "has_doc": True,
+                    "order": order,
                 }
             )
+
+        # Sort by order (ascending), then by name (alphabetically)
+        tools_data.sort(key=lambda t: (t["order"], t["name"]))
 
         return tools_data
 
@@ -520,11 +525,18 @@ class DocBuilder:
                     doc_file = self.src_dir / lang / cat_id / f"{tool_tool_name}.md"
                     has_doc = doc_file.exists()
                     url = ""
+                    order = 100  # Default order
 
                     if has_doc:
                         url = f"{lang}/{cat_id}/{tool_tool_name}.html"
+                        # Get order from markdown front matter
+                        metadata, _ = self.parse_front_matter(doc_file)
+                        order = metadata.get("order", 100)
 
-                    tools_data.append({"name": tool_name, "description": tool_description, "version": tool_version, "url": url, "has_doc": has_doc})
+                    tools_data.append({"name": tool_name, "description": tool_description, "version": tool_version, "url": url, "has_doc": has_doc, "order": order})
+
+                # Sort by order (ascending), then by name (alphabetically)
+                tools_data.sort(key=lambda t: (t["order"], t["name"]))
             else:
                 # Fallback: collect from markdown files
                 tools_data = self._collect_tools_from_markdown(lang, cat_id)

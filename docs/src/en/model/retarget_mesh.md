@@ -4,6 +4,7 @@ category: model
 description: Transfer vertex positions between meshes with identical topology
 lang: en
 lang-ref: retarget_mesh
+order: 20
 ---
 
 ## How to Launch

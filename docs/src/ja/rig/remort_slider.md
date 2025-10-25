@@ -4,6 +4,7 @@ category: rig
 description: フローティングスライダーでオブジェクトのトランスフォーム属性を制御
 lang: ja
 lang-ref: remort_slider
+order: 40
 ---
 
 ![image001](../../images/rig/remote_slider/image001.gif)

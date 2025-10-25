@@ -4,6 +4,7 @@ category: rig
 description: NURBS curve and surface creation and manipulation tool
 lang: en
 lang-ref: curvesurface_creator
+order: 50
 ---
 
 ## Overview

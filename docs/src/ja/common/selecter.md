@@ -4,6 +4,7 @@ category: common
 description: 高度な選択機能を提供するツール
 lang: ja
 lang-ref: selecter
+order: 10
 ---
 
 ## 概要

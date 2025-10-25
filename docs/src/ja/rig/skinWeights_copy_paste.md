@@ -4,6 +4,7 @@ category: rig
 description: スキンウェイトのコピー&ペーストツール
 lang: ja
 lang-ref: skinweights_copy_paste
+order: 120
 ---
 
 ## 起動方法

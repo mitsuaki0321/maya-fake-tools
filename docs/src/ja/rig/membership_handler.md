@@ -4,6 +4,7 @@ category: rig
 description: デフォーマーのコンポーネントタグメンバーシップ管理ツール
 lang: ja
 lang-ref: membership_handler
+order: 100
 ---
 
 # 概要

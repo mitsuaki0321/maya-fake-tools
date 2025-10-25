@@ -4,6 +4,7 @@ category: rig
 description: Tool for creating NURBS surfaces by offsetting curves
 lang: en
 lang-ref: offset_curve_to_surface
+order: 50
 ---
 
 ## Overview

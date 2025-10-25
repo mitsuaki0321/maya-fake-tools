@@ -4,6 +4,7 @@ category: rig
 description: Transform attribute connection and copying tool
 lang: en
 lang-ref: transform_connector
+order: 10
 ---
 
 ## How to Launch

@@ -4,6 +4,7 @@ category: rig
 description: Comprehensive skin weight management tool
 lang: en
 lang-ref: skin_tools
+order: 110
 ---
 
 ## Notes

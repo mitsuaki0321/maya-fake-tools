@@ -4,6 +4,7 @@ category: common
 description: Optimize and clean up Maya scenes
 lang: en
 lang-ref: scene_optimizer
+order: 30
 ---
 
 ## How to Launch

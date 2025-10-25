@@ -4,6 +4,7 @@ category: rig
 description: Component selection and filtering tool for mesh/curve/surface
 lang: en
 lang-ref: component_selecter
+order: 60
 ---
 
 ## Overview

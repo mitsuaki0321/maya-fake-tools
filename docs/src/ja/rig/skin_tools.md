@@ -4,6 +4,7 @@ category: rig
 description: スキンウェイト管理のための包括的なツール
 lang: ja
 lang-ref: skin_tools
+order: 110
 ---
 
 ## 注意点

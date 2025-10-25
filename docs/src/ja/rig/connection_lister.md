@@ -4,6 +4,7 @@ category: rig
 description: ソースとターゲットオブジェクト間のアトリビュート接続とコピー
 lang: ja
 lang-ref: connection_lister
+order: 80
 ---
 
 ## 概要

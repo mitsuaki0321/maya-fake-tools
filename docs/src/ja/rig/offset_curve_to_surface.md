@@ -4,6 +4,7 @@ category: rig
 description: カーブをオフセットしてNURBSサーフェスを作成するツール
 lang: ja
 lang-ref: offset_curve_to_surface
+order: 50
 ---
 
 ## 概要

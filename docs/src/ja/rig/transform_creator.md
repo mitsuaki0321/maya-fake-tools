@@ -4,6 +4,7 @@ category: rig
 description: 選択オブジェクトに整列したトランスフォームノードを作成
 lang: ja
 lang-ref: transform_creator
+order: 20
 ---
 
 ## 起動方法

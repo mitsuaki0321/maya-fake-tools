@@ -4,6 +4,7 @@ category: model
 description: 選択オブジェクト周囲のバウンディングボックスジオメトリを作成
 lang: ja
 lang-ref: boundingbox_creator
+order: 10
 ---
 
 ## 概要

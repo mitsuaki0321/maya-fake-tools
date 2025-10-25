@@ -4,6 +4,7 @@ category: model
 description: 同一トポロジーのメッシュ間で頂点位置を転送するツール
 lang: ja
 lang-ref: retarget_mesh
+order: 20
 ---
 
 ## 起動方法

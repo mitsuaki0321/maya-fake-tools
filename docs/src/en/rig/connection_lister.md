@@ -4,6 +4,7 @@ category: rig
 description: Attribute connection and copying between source and target objects
 lang: en
 lang-ref: connection_lister
+order: 80
 ---
 
 ## Overview

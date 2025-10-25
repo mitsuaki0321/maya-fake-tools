@@ -4,6 +4,7 @@ category: rig
 description: List, filter, and manage Maya node attributes
 lang: en
 lang-ref: attribute_lister
+order: 90
 ---
 
 ## Overview

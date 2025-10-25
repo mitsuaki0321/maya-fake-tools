@@ -4,6 +4,7 @@ category: rig
 description: Create transform nodes aligned to selected objects
 lang: en
 lang-ref: transform_creator
+order: 20
 ---
 
 ## How to Launch

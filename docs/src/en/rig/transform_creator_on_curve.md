@@ -4,6 +4,7 @@ category: rig
 description: Create transform nodes on curve
 lang: en
 lang-ref: transform_creator_on_curve
+order: 30
 ---
 
 ## How to Launch

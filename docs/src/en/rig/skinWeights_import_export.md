@@ -4,6 +4,7 @@ category: rig
 description: Skin weight import/export tool
 lang: en
 lang-ref: skinweights_import_export
+order: 130
 ---
 
 ## Overview

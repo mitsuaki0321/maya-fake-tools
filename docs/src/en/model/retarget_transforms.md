@@ -4,6 +4,7 @@ category: model
 description: Transfer transform hierarchy between objects with identical topology
 lang: en
 lang-ref: retarget_transforms
+order: 30
 ---
 
 ## Overview

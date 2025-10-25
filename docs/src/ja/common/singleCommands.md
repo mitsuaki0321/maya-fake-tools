@@ -4,6 +4,7 @@ category: common
 description: よく使用する単一のコマンド
 lang: ja
 lang-ref: Single Commands
+order: 0
 ---
 
 ### 使用方法

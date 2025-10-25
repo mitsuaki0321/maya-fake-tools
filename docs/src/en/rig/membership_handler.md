@@ -4,6 +4,7 @@ category: rig
 description: Deformer component tag membership management tool
 lang: en
 lang-ref: membership_handler
+order: 100
 ---
 
 # Overview

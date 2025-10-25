@@ -4,6 +4,7 @@ category: common
 description: 頻繁に使用するノードを保存し素早くアクセス
 lang: ja
 lang-ref: node_stocker
+order: 20
 ---
 
 ## 起動方法

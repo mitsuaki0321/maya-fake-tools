@@ -4,6 +4,7 @@ category: model
 description: Create bounding box geometry around selected objects
 lang: en
 lang-ref: boundingbox_creator
+order: 10
 ---
 
 ## Overview

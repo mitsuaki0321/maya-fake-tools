@@ -4,6 +4,7 @@ category: rig
 description: Skin weight copy & paste tool
 lang: en
 lang-ref: skinweights_copy_paste
+order: 120
 ---
 
 ## How to Launch

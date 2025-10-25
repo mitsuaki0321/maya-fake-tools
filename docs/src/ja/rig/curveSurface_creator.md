@@ -4,6 +4,7 @@ category: rig
 description: NURBSカーブとサーフェスの作成と操作ツール
 lang: ja
 lang-ref: curvesurface_creator
+order: 50
 ---
 
 ## 概要

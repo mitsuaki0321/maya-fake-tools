@@ -4,6 +4,7 @@ category: common
 description: Store and quickly access frequently used nodes
 lang: en
 lang-ref: node_stocker
+order: 20
 ---
 
 ## How to Launch

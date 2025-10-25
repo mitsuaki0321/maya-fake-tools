@@ -4,6 +4,7 @@ category: rig
 description: スキンウェイトのインポート/エクスポートツール
 lang: ja
 lang-ref: skinweights_import_export
+order: 130
 ---
 
 ## 概要

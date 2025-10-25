@@ -4,6 +4,7 @@ category: common
 description: Tool providing advanced selection features
 lang: en
 lang-ref: selecter
+order: 10
 ---
 
 ## Overview
