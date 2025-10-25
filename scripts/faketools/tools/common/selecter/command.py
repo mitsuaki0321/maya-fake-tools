@@ -8,7 +8,7 @@ import maya.api.OpenMaya as om
 import maya.cmds as cmds
 
 from ....lib import lib_name, lib_shape
-from ....lib.lib_selection import get_hierarchy, get_top_nodes
+from ....lib.lib_selection import get_hierarchy, get_top_nodes, reorder_outliner
 
 logger = getLogger(__name__)
 
@@ -334,3 +334,48 @@ def substitute_duplicate_original(nodes: list[str], regex_name: str, replace_nam
     result_nodes = _rename_non_dag_nodes(dup_nodes, new_names)
 
     return result_nodes
+
+
+def reorder_nodes_by_name(nodes: list[str], reverse: bool = False) -> None:
+    """Reorder nodes in outliner by name.
+
+    Args:
+        nodes (list[str]): Nodes to reorder. All nodes must be siblings (same parent).
+        reverse (bool): If True, reverse the sort order (Z→A). Default is False (A→Z).
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, are not DAG nodes,
+                   or are not all siblings (different parents).
+
+    Example:
+        >>> reorder_nodes_by_name(["joint3", "joint1", "joint2"])
+        # Result: joint1, joint2, joint3 (A→Z)
+
+        >>> reorder_nodes_by_name(["node_C", "node_A", "node_B"], reverse=True)
+        # Result: node_C, node_B, node_A (Z→A)
+    """
+    reorder_outliner(nodes, mode="name", reverse=reverse)
+
+
+def reorder_nodes_by_reversed_name(nodes: list[str], reverse: bool = False) -> None:
+    """Reorder nodes in outliner by reversed name.
+
+    Reverses each node's name (e.g., "test" becomes "tset"), then sorts by that reversed name.
+
+    Args:
+        nodes (list[str]): Nodes to reorder. All nodes must be siblings (same parent).
+        reverse (bool): If True, reverse the sort order. Default is False.
+
+    Raises:
+        ValueError: If nodes are invalid, don't exist, are not unique, are not DAG nodes,
+                   or are not all siblings (different parents).
+
+    Example:
+        >>> reorder_nodes_by_reversed_name(["abc", "cba", "bca"])
+        # Reversed names: "cba", "abc", "acb"
+        # Result: abc, bca, cba (sorted by reversed names)
+
+        >>> reorder_nodes_by_reversed_name(["abc", "cba", "bca"], reverse=True)
+        # Result: cba, bca, abc (reversed sort)
+    """
+    reorder_outliner(nodes, mode="name_reversed", reverse=reverse)

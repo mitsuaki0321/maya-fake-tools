@@ -9,6 +9,8 @@ FILTER_COLOR = "#6D7B8D"
 HIERARCHY_COLOR = "#4C516D"
 SUBSTITUTION_COLOR = "#6E7F80"
 RENAME_COLOR = "#536878"
+REORDER_COLOR = "#627282"  # Reorder normal sort color (brighter)
+REORDER_REVERSED_COLOR = "#426272"  # Reorder reversed name sort color (darker)
 
 # Substitution patterns for left/right mirror
 LEFT_TO_RIGHT = ["(.*)(L)", r"\g<1>R"]
@@ -57,6 +59,8 @@ __all__ = [
     "HIERARCHY_COLOR",
     "SUBSTITUTION_COLOR",
     "RENAME_COLOR",
+    "REORDER_COLOR",
+    "REORDER_REVERSED_COLOR",
     "LEFT_TO_RIGHT",
     "RIGHT_TO_LEFT",
     "selecter_handler",

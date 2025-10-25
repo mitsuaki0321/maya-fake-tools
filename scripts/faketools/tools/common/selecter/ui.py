@@ -14,6 +14,7 @@ from .widgets import (
     FilterSelectionWidget,
     HierarchicalSelectionWidget,
     RenameSelectionWidget,
+    ReorderWidget,
     SubstitutionSelectionWidget,
 )
 
@@ -45,6 +46,14 @@ class DockableWidget(MayaQWidgetDockableMixin, QWidget):
         # Filter selection widget
         self.filter_selection_widget = FilterSelectionWidget(self.settings)
         main_layout.addWidget(self.filter_selection_widget)
+
+        # Separator
+        separator = extra_widgets.VerticalSeparator()
+        main_layout.addWidget(separator)
+
+        # Reorder widget
+        self.reorder_widget = ReorderWidget()
+        main_layout.addWidget(self.reorder_widget)
 
         # Separator
         separator = extra_widgets.VerticalSeparator()

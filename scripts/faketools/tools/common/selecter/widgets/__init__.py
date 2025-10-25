@@ -13,6 +13,7 @@ from .extra_selection import ExtraSelectionWidget
 from .filter_selection import FilterSelectionWidget
 from .hierarchical_selection import HierarchicalSelectionWidget
 from .rename_selection import RenameSelectionWidget
+from .reorder_selection import ReorderWidget
 from .selecter_button import SelecterButton
 from .substitution_selection import SubstitutionSelectionWidget
 
@@ -21,6 +22,7 @@ __all__ = [
     "HierarchicalSelectionWidget",
     "SubstitutionSelectionWidget",
     "RenameSelectionWidget",
+    "ReorderWidget",
     "ExtraSelectionWidget",
     "SelecterButton",
     "selecter_handler",
