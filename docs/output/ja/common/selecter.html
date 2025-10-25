@@ -36,6 +36,8 @@
                     <ul>
                     <li><a href="#選択を名前でフィルタリング"
                     id="toc-選択を名前でフィルタリング">選択を名前でフィルタリング</a></li>
+                    <li><a href="#アウトライナーでのノード順序変更"
+                    id="toc-アウトライナーでのノード順序変更">アウトライナーでのノード順序変更</a></li>
                     <li><a href="#選択をノードタイプでフィルタリング"
                     id="toc-選択をノードタイプでフィルタリング">選択をノードタイプでフィルタリング</a></li>
                     <li><a href="#選択したノードの親子兄弟を選択"
@@ -48,8 +50,8 @@
                     id="toc-名前を置換しての選択リネーム複製オリジナルシェイプを複製">名前を置換しての選択、リネーム、複製、オリジナルシェイプを複製</a></li>
                     <li><a href="#選択したノードの名前を変更"
                     id="toc-選択したノードの名前を変更">選択したノードの名前を変更</a></li>
-                    <li><a href="#特殊な機能"
-                    id="toc-特殊な機能">特殊な機能</a></li>
+                    <li><a href="#選択順序の変更"
+                    id="toc-選択順序の変更">選択順序の変更</a></li>
                     </ul></li>
                     </ul>
                 </div>
@@ -93,6 +95,36 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 ボタンを押すと、大文字と小文字を区別しないフィルタリングを行います。</p>
                 <p><img src="../../images/common/selecter/image013.png"
                 alt="image013" /></p>
+                <h3
+                id="アウトライナーでのノード順序変更">アウトライナーでのノード順序変更</h3>
+                <p>選択したノードをアウトライナーで並び替えます。
+                すべてのノードは同じ親を持つ必要があります（兄弟ノード）。</p>
+                <p><img src="../../images/common/selecter/image014.png"
+                alt="image014" /></p>
+                <ul>
+                <li><strong>A-Z</strong> (明るい色)
+                <ul>
+                <li>ノード名でアルファベット順にソートします
+                (A→Z)。</li>
+                </ul></li>
+                <li><strong>Z-A</strong> (明るい色)
+                <ul>
+                <li>ノード名でアルファベット逆順にソートします
+                (Z→A)。</li>
+                </ul></li>
+                <li><strong>A-Z</strong> (暗い色)
+                <ul>
+                <li>ノード名を逆転 (test→tset)
+                してからアルファベット順にソートします。</li>
+                </ul></li>
+                <li><strong>Z-A</strong> (暗い色)
+                <ul>
+                <li>ノード名を逆転 (test→tset)
+                してからアルファベット逆順にソートします。</li>
+                </ul></li>
+                </ul>
+                <p><strong>注意:</strong>
+                アウトライナーでのノード順序を変更する機能です。選択順は変更されません。</p>
                 <h3
                 id="選択をノードタイプでフィルタリング">選択をノードタイプでフィルタリング</h3>
                 <p>選択したノードをノードタイプでフィルタリングします。<br />
@@ -222,16 +254,32 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="特殊な機能">特殊な機能</h3>
-                <p>それぞれのボタンを押すことで、特殊な機能を使用することができます。</p>
-                <p><img src="../../images/common/selecter/image007.png"
-                alt="image007" /></p>
+                <h3 id="選択順序の変更">選択順序の変更</h3>
+                <p>選択したノードの選択順序を変更します。</p>
+                <p><img src="../../images/common/selecter/image015.png"
+                alt="image015" /></p>
                 <ul>
-                <li><strong>L2F</strong>
+                <li><strong>LF</strong> (Last to First)
                 <ul>
-                <li>最後に選択したのノードを最初に選択したノードに変更します。</li>
+                <li>最後に選択したノードを最初に移動します。</li>
+                <li>例: <code>[A,B,C,D,E]</code> →
+                <code>[E,A,B,C,D]</code></li>
+                </ul></li>
+                <li><strong>FL</strong> (First to Last)
+                <ul>
+                <li>最初に選択したノードを最後に移動します。</li>
+                <li>例: <code>[A,B,C,D,E]</code> →
+                <code>[B,C,D,E,A]</code></li>
+                </ul></li>
+                <li><strong>REV</strong> (Reverse)
+                <ul>
+                <li>選択順序を完全に逆転します。</li>
+                <li>例: <code>[A,B,C,D,E]</code> →
+                <code>[E,D,C,B,A]</code></li>
                 </ul></li>
                 </ul>
+                <p><strong>注意:</strong>
+                選択順序のみを変更する機能です。アウトライナーでのノード順序は変更されません。</p>
             </main>
         </div>
     </div>

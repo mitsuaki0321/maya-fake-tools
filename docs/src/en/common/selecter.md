@@ -50,6 +50,24 @@ Pressing the `Aa` button performs case-insensitive filtering.
 ![image013](../../images/common/selecter/image013.png)
 
 
+### Reorder Nodes in Outliner
+
+Reorders selected nodes in the outliner.
+All nodes must have the same parent (sibling nodes).
+
+![image014](../../images/common/selecter/image014.png)
+
+- **A-Z** (brighter color)
+  - Sorts nodes alphabetically by name (A→Z).
+- **Z-A** (brighter color)
+  - Sorts nodes in reverse alphabetical order (Z→A).
+- **A-Z** (darker color)
+  - Reverses node names (test→tset) then sorts alphabetically.
+- **Z-A** (darker color)
+  - Reverses node names (test→tset) then sorts in reverse alphabetical order.
+
+**Note:** This changes the node order in the outliner. Selection order is not changed.
+
 
 ### Filter Selection by Node Type
 
@@ -78,6 +96,7 @@ Selects parents, children, siblings of selected nodes.
   - Selects all nodes including shape nodes of selected nodes.
 
 All can use modifier keys just like selection in Maya's view.
+
 
 ### Select with Name Replacement (Left/Right)
 
@@ -108,6 +127,7 @@ Commands are executed by replacing names with strings entered in each text box. 
 - **ORG**
   - Duplicates original shapes with replaced names of selected nodes.
 
+
 ### Rename Selected Nodes
 
 Renames selected nodes.
@@ -127,13 +147,20 @@ Renames selected nodes.
 | Any | ~_fake | Any_fake |
 
 
+### Change Selection Order
 
+Changes the selection order of selected nodes.
 
-### Special Features
+![image014](../../images/common/selecter/image015.png)
 
-You can use special features by pressing each button.
+- **LF** (Last to First)
+  - Moves the last selected node to the first position.
+  - Example: `[A,B,C,D,E]` → `[E,A,B,C,D]`
+- **FL** (First to Last)
+  - Moves the first selected node to the last position.
+  - Example: `[A,B,C,D,E]` → `[B,C,D,E,A]`
+- **REV** (Reverse)
+  - Completely reverses the selection order.
+  - Example: `[A,B,C,D,E]` → `[E,D,C,B,A]`
 
-![image007](../../images/common/selecter/image007.png)
-
-- **L2F**
-  - Changes the last selected node to the first selected node.
+**Note:** This only changes the selection order. Node order in the outliner is not changed.

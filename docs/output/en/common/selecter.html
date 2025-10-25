@@ -37,6 +37,9 @@
                     <li><a href="#filter-selection-by-name"
                     id="toc-filter-selection-by-name">Filter Selection
                     by Name</a></li>
+                    <li><a href="#reorder-nodes-in-outliner"
+                    id="toc-reorder-nodes-in-outliner">Reorder Nodes in
+                    Outliner</a></li>
                     <li><a href="#filter-selection-by-node-type"
                     id="toc-filter-selection-by-node-type">Filter
                     Selection by Node Type</a></li>
@@ -57,8 +60,9 @@
                     <li><a href="#rename-selected-nodes"
                     id="toc-rename-selected-nodes">Rename Selected
                     Nodes</a></li>
-                    <li><a href="#special-features"
-                    id="toc-special-features">Special Features</a></li>
+                    <li><a href="#change-selection-order"
+                    id="toc-change-selection-order">Change Selection
+                    Order</a></li>
                     </ul></li>
                     </ul>
                 </div>
@@ -107,6 +111,35 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 case-insensitive filtering.</p>
                 <p><img src="../../images/common/selecter/image013.png"
                 alt="image013" /></p>
+                <h3 id="reorder-nodes-in-outliner">Reorder Nodes in
+                Outliner</h3>
+                <p>Reorders selected nodes in the outliner. All nodes
+                must have the same parent (sibling nodes).</p>
+                <p><img src="../../images/common/selecter/image014.png"
+                alt="image014" /></p>
+                <ul>
+                <li><strong>A-Z</strong> (brighter color)
+                <ul>
+                <li>Sorts nodes alphabetically by name (A→Z).</li>
+                </ul></li>
+                <li><strong>Z-A</strong> (brighter color)
+                <ul>
+                <li>Sorts nodes in reverse alphabetical order
+                (Z→A).</li>
+                </ul></li>
+                <li><strong>A-Z</strong> (darker color)
+                <ul>
+                <li>Reverses node names (test→tset) then sorts
+                alphabetically.</li>
+                </ul></li>
+                <li><strong>Z-A</strong> (darker color)
+                <ul>
+                <li>Reverses node names (test→tset) then sorts in
+                reverse alphabetical order.</li>
+                </ul></li>
+                </ul>
+                <p><strong>Note:</strong> This changes the node order in
+                the outliner. Selection order is not changed.</p>
                 <h3 id="filter-selection-by-node-type">Filter Selection
                 by Node Type</h3>
                 <p>Filters selected nodes by node type. Holding
@@ -248,18 +281,36 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="special-features">Special Features</h3>
-                <p>You can use special features by pressing each
-                button.</p>
-                <p><img src="../../images/common/selecter/image007.png"
-                alt="image007" /></p>
+                <h3 id="change-selection-order">Change Selection
+                Order</h3>
+                <p>Changes the selection order of selected nodes.</p>
+                <p><img src="../../images/common/selecter/image015.png"
+                alt="image014" /></p>
                 <ul>
-                <li><strong>L2F</strong>
+                <li><strong>LF</strong> (Last to First)
                 <ul>
-                <li>Changes the last selected node to the first selected
-                node.</li>
+                <li>Moves the last selected node to the first
+                position.</li>
+                <li>Example: <code>[A,B,C,D,E]</code> →
+                <code>[E,A,B,C,D]</code></li>
+                </ul></li>
+                <li><strong>FL</strong> (First to Last)
+                <ul>
+                <li>Moves the first selected node to the last
+                position.</li>
+                <li>Example: <code>[A,B,C,D,E]</code> →
+                <code>[B,C,D,E,A]</code></li>
+                </ul></li>
+                <li><strong>REV</strong> (Reverse)
+                <ul>
+                <li>Completely reverses the selection order.</li>
+                <li>Example: <code>[A,B,C,D,E]</code> →
+                <code>[E,D,C,B,A]</code></li>
                 </ul></li>
                 </ul>
+                <p><strong>Note:</strong> This only changes the
+                selection order. Node order in the outliner is not
+                changed.</p>
             </main>
         </div>
     </div>
