@@ -29,13 +29,14 @@ Example:
     ...         self.checkbox.setChecked(settings_data.get("option", False))
 """
 
-import logging
 from functools import partial
+import logging
 from typing import Callable
 
 from .maya_dialog import confirm_dialog, show_info_dialog
 from .preset_edit_dialog import PresetEditDialog
 from .preset_save_dialog import PresetSaveDialog
+from .qt_compat import QTimer
 from .tool_settings import ToolSettingsManager
 
 logger = logging.getLogger(__name__)
@@ -172,7 +173,8 @@ class PresetMenuManager:
                 # Collect settings from UI
                 settings_data = self.collect_callback()
                 self.settings_manager.save_settings(settings_data, preset_name)
-                self._update_preset_menu()
+                # Defer menu update to avoid RuntimeError with deleted C++ object
+                QTimer.singleShot(0, self._update_preset_menu)
                 show_info_dialog("Preset Saved", f"Settings saved to preset '{preset_name}'")
                 logger.info(f"Saved preset: {preset_name}")
 
@@ -180,7 +182,8 @@ class PresetMenuManager:
         """Handle Edit Settings menu action."""
         dialog = PresetEditDialog(self.settings_manager, parent=self.window)
         dialog.exec()
-        self._update_preset_menu()
+        # Defer menu update to avoid RuntimeError with deleted C++ object
+        QTimer.singleShot(0, self._update_preset_menu)
 
     def _on_reset_settings(self):
         """Handle Reset Settings menu action."""
