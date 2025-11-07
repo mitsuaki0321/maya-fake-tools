@@ -14,7 +14,7 @@ from typing import Optional
 import maya.cmds as cmds
 
 from .maya_dialog import show_error_dialog, show_info_dialog
-from .qt_compat import QDialog, QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout
+from .qt_compat import QDialog, QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, Signal
 from .tool_settings import ToolSettingsManager
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,12 @@ class PresetEditDialog(QDialog):
     Dialog for editing presets.
 
     Currently supports deleting presets only.
+
+    Signals:
+        presets_changed: Emitted when presets are modified (deleted)
     """
+
+    presets_changed = Signal()
 
     def __init__(self, settings_manager: ToolSettingsManager, parent=None):
         """
@@ -143,6 +148,8 @@ class PresetEditDialog(QDialog):
             self.settings_manager.delete_preset(preset_name)
             logger.info(f"Deleted preset: {preset_name}")
             self._refresh_preset_list()
+            # Emit signal to notify parent that presets have changed
+            self.presets_changed.emit()
             show_info_dialog("Preset Deleted", f"Preset '{preset_name}' has been deleted.")
         except Exception as e:
             logger.error(f"Failed to delete preset '{preset_name}': {e}")

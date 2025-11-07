@@ -167,6 +167,8 @@ class PresetMenuManager:
     def _on_save_preset(self):
         """Handle Save Settings menu action."""
         dialog = PresetSaveDialog(self.settings_manager, parent=self.window)
+        # Connect to preset_saved signal to update menu immediately when preset is saved
+        dialog.preset_saved.connect(lambda name: self._update_preset_menu())
         if dialog.exec():
             preset_name = dialog.get_preset_name()
             if preset_name:
@@ -181,6 +183,8 @@ class PresetMenuManager:
     def _on_edit_presets(self):
         """Handle Edit Settings menu action."""
         dialog = PresetEditDialog(self.settings_manager, parent=self.window)
+        # Connect to presets_changed signal to update menu immediately when presets are deleted
+        dialog.presets_changed.connect(self._update_preset_menu)
         dialog.exec()
         # Defer menu update to avoid RuntimeError with deleted C++ object
         QTimer.singleShot(0, self._update_preset_menu)

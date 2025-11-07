@@ -14,7 +14,7 @@ import logging
 from typing import Optional
 
 from .maya_dialog import confirm_dialog, show_error_dialog
-from .qt_compat import QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout
+from .qt_compat import QDialog, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, Signal
 from .tool_settings import ToolSettingsManager
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,12 @@ class PresetSaveDialog(QDialog):
 
     Provides a simple input field for preset name and Save/Cancel buttons.
     Validates preset name and confirms overwrite if preset already exists.
+
+    Signals:
+        preset_saved: Emitted when a preset name is confirmed (with preset name as argument)
     """
+
+    preset_saved = Signal(str)
 
     def __init__(self, settings_manager: ToolSettingsManager, parent=None):
         """
@@ -121,6 +126,8 @@ class PresetSaveDialog(QDialog):
             # Accept dialog
             self._preset_name = preset_name
             logger.info(f"Preset name confirmed: {preset_name}")
+            # Emit signal before accepting to notify parent
+            self.preset_saved.emit(preset_name)
             self.accept()
 
         except ValueError as e:
