@@ -36,7 +36,7 @@ from typing import Callable
 from .maya_dialog import confirm_dialog, show_info_dialog
 from .preset_edit_dialog import PresetEditDialog
 from .preset_save_dialog import PresetSaveDialog
-from .qt_compat import QTimer, shiboken
+from .qt_compat import QMenu, QTimer, shiboken
 from .tool_settings import ToolSettingsManager
 
 logger = logging.getLogger(__name__)
@@ -90,17 +90,25 @@ class PresetMenuManager:
         self.preset_menu = None
 
     def _is_widget_alive(self, widget) -> bool:
-        """Return True if the Qt widget still has a valid C++ object."""
+        """Return True if the Qt object still has a valid C++ instance."""
         return widget is not None and shiboken.isValid(widget)
 
     def _remove_existing_menu_entry(self, menu_bar):
-        """Remove an orphaned Preset menu entry before rebuilding."""
-        for action in menu_bar.actions():
+        """Remove an orphaned Preset menu entry before rebuilding.
+
+        Returns the QAction that originally followed the Preset menu so the
+        recreated menu can be inserted at the same position.
+        """
+        actions = menu_bar.actions()
+        for index, action in enumerate(actions):
             # Strip mnemonic markers (&) when comparing titles
-            if action.text().replace("&", "") == self.MENU_TITLE:
+            if (action.text() or "").replace("&", "") == self.MENU_TITLE:
+                next_action = actions[index + 1] if index + 1 < len(actions) else None
                 menu_bar.removeAction(action)
                 action.deleteLater()
-                break
+                return next_action
+
+        return None
 
     def _create_preset_menu(self):
         """Create the preset menu structure (static actions + separator)."""
@@ -110,9 +118,13 @@ class PresetMenuManager:
             return None
 
         menu_bar = self.window.menuBar()
-        self._remove_existing_menu_entry(menu_bar)
+        insert_before = self._remove_existing_menu_entry(menu_bar)
 
-        self.preset_menu = menu_bar.addMenu(self.MENU_TITLE)
+        self.preset_menu = QMenu(self.MENU_TITLE, menu_bar)
+        if insert_before and self._is_widget_alive(insert_before):
+            menu_bar.insertMenu(insert_before, self.preset_menu)
+        else:
+            menu_bar.addMenu(self.preset_menu)
 
         action = self.preset_menu.addAction("Save Settings...")
         action.triggered.connect(self._on_save_preset)
