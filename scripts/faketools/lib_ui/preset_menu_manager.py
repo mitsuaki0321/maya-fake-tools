@@ -36,7 +36,7 @@ from typing import Callable
 from .maya_dialog import confirm_dialog, show_info_dialog
 from .preset_edit_dialog import PresetEditDialog
 from .preset_save_dialog import PresetSaveDialog
-from .qt_compat import QTimer
+from .qt_compat import QTimer, shiboken
 from .tool_settings import ToolSettingsManager
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,8 @@ class PresetMenuManager:
         apply_callback: Function that applies settings dict to UI
         preset_menu: The Qt menu object for presets
     """
+
+    MENU_TITLE = "Preset"
 
     def __init__(
         self,
@@ -87,6 +89,54 @@ class PresetMenuManager:
         self.apply_callback = apply_callback
         self.preset_menu = None
 
+    def _is_widget_alive(self, widget) -> bool:
+        """Return True if the Qt widget still has a valid C++ object."""
+        return widget is not None and shiboken.isValid(widget)
+
+    def _remove_existing_menu_entry(self, menu_bar):
+        """Remove an orphaned Preset menu entry before rebuilding."""
+        for action in menu_bar.actions():
+            # Strip mnemonic markers (&) when comparing titles
+            if action.text().replace("&", "") == self.MENU_TITLE:
+                menu_bar.removeAction(action)
+                action.deleteLater()
+                break
+
+    def _create_preset_menu(self):
+        """Create the preset menu structure (static actions + separator)."""
+        if not self._is_widget_alive(self.window):
+            logger.warning("Cannot create preset menu because parent window no longer exists.")
+            self.preset_menu = None
+            return None
+
+        menu_bar = self.window.menuBar()
+        self._remove_existing_menu_entry(menu_bar)
+
+        self.preset_menu = menu_bar.addMenu(self.MENU_TITLE)
+
+        action = self.preset_menu.addAction("Save Settings...")
+        action.triggered.connect(self._on_save_preset)
+
+        action = self.preset_menu.addAction("Edit Settings...")
+        action.triggered.connect(self._on_edit_presets)
+
+        action = self.preset_menu.addAction("Reset Settings...")
+        action.triggered.connect(self._on_reset_settings)
+
+        self.preset_menu.addSeparator()
+        return self.preset_menu
+
+    def _ensure_menu(self):
+        """Ensure we have a live QMenu reference, rebuilding if needed."""
+        if not self._is_widget_alive(self.window):
+            return None
+
+        if not self._is_widget_alive(self.preset_menu):
+            logger.debug("Preset menu was deleted; recreating menu entry.")
+            self._create_preset_menu()
+
+        return self.preset_menu
+
     def add_menu(self):
         """
         Add preset menu to window's menu bar.
@@ -102,23 +152,8 @@ class PresetMenuManager:
             >>> manager = PresetMenuManager(...)
             >>> manager.add_menu()
         """
-        # Get menu bar from window
-        menu_bar = self.window.menuBar()
-
-        # Create Preset menu
-        self.preset_menu = menu_bar.addMenu("Preset")
-
-        # Add menu actions
-        action = self.preset_menu.addAction("Save Settings...")
-        action.triggered.connect(self._on_save_preset)
-
-        action = self.preset_menu.addAction("Edit Settings...")
-        action.triggered.connect(self._on_edit_presets)
-
-        action = self.preset_menu.addAction("Reset Settings...")
-        action.triggered.connect(self._on_reset_settings)
-
-        self.preset_menu.addSeparator()
+        if self._create_preset_menu() is None:
+            return
 
         # Populate preset list
         self._update_preset_menu()
@@ -132,9 +167,14 @@ class PresetMenuManager:
         Refreshes the list of available presets in the menu.
         Protected against RuntimeError when menu object is deleted.
         """
+        preset_menu = self._ensure_menu()
+        if preset_menu is None:
+            logger.debug("Skipping preset menu update because menu is unavailable.")
+            return
+
         try:
             # Remove all actions after the separator
-            actions = self.preset_menu.actions()
+            actions = preset_menu.actions()
             separator_index = -1
             for i, action in enumerate(actions):
                 if action.isSeparator():
@@ -144,7 +184,7 @@ class PresetMenuManager:
             # Remove preset actions (everything after separator)
             if separator_index >= 0:
                 for action in actions[separator_index + 1 :]:
-                    self.preset_menu.removeAction(action)
+                    preset_menu.removeAction(action)
 
             # Add preset actions
             presets = self.settings_manager.list_presets()
@@ -155,7 +195,7 @@ class PresetMenuManager:
                 presets.insert(0, "default")
 
             for preset_name in presets:
-                action = self.preset_menu.addAction(preset_name)
+                action = preset_menu.addAction(preset_name)
                 action.triggered.connect(partial(self._on_load_preset, preset_name))
 
             logger.debug(f"Updated preset menu with {len(presets)} presets")
@@ -163,6 +203,8 @@ class PresetMenuManager:
         except RuntimeError as e:
             # Menu object may have been deleted (C++ object destroyed)
             logger.warning(f"Could not update preset menu: {e}")
+            # Drop invalid reference so next attempt can rebuild cleanly
+            self.preset_menu = None
 
     def _on_save_preset(self):
         """Handle Save Settings menu action."""
