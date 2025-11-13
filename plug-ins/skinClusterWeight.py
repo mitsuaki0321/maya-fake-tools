@@ -47,6 +47,7 @@ cmds.copySkinWeightsCustom(sourceSkin='skinCluster1', destinationSkin='skinClust
 """
 
 import sys
+from typing import Optional
 
 from maya.api import OpenMaya, OpenMayaAnim
 import maya.cmds as cmds
@@ -713,7 +714,7 @@ def get_skinCluster_fn(skinCluster_name) -> OpenMayaAnim.MFnSkinCluster:
     return skinCluster_fn
 
 
-def get_components_from_name(components) -> tuple[OpenMaya.MDagPath, OpenMaya.MObject] | None:
+def get_components_from_name(components) -> Optional[tuple[OpenMaya.MDagPath, OpenMaya.MObject]]:
     """Get components from the component name list.
 
     Args:
