@@ -3,8 +3,7 @@
 from abc import ABC, abstractmethod
 
 import maya.cmds as cmds
-
-from .lib_commands.unused_nodes import find_unused_nodes
+import maya.mel as mel
 
 
 class OptimizeBase(ABC):
@@ -91,19 +90,7 @@ class RemoveUnusedNodes(OptimizeBase):
             print("Removing unused nodes...")
             print("#" * 20)
 
-        unused_nodes = find_unused_nodes()
-        if not unused_nodes:
-            if self.echo:
-                print("No unused nodes found.")
-            return
-
-        for node in unused_nodes:
-            try:
-                cmds.delete(node)
-                if self.echo:
-                    print(node)
-            except Exception as e:
-                cmds.warning(f"Could not delete node {node}: {e}")
+        mel.eval("MLdeleteUnused;")
 
 
 class RemoveUnknownPlugins(OptimizeBase):
