@@ -83,6 +83,7 @@ result, skin = command.main(
     smooth_iterations: int = 0,       # スムージング回数
     parent_influence_ratio: float = 0.0,  # 親ジョイントの影響比率
     remove_end: bool = False,         # 末端ジョイントのウェイトを親にマージ
+    loft_weight_method: str = "index", # ロフト方向のウェイト分配方法: "index" | "distance" | "projection"
     to_skin_cage: bool = False,       # スキンケージに変換（nurbsSurface + is_bind=True時のみ）
     skin_cage_division_levels: int = 1, # スキンケージの分割レベル
 ) -> tuple[str, Optional[str]]        # (ジオメトリ名, スキンクラスター名)
@@ -166,6 +167,29 @@ result, skin = command.main(
 B-spline基底関数の特性により、degree=3では中間CVのウェイトを調整:
 - 最初のスパン: position_in_segment = 1/3 → (0.667, 0.333)
 - 最後のスパン: position_in_segment = 2/3 → (0.333, 0.667)
+
+### loft_weight_method の詳細
+
+ロフト方向（チェーン間）のウェイト補間方法を制御します。
+
+**index (デフォルト)**:
+- インデックスベースの線形補間
+- CV/頂点のグリッド位置から補間係数を計算
+- 最も高速で、均等なCV配置に適している
+
+**distance**:
+- U=0のCV列に沿った累積距離に基づく補間
+- 各CVの位置を取得し、実際の3D距離を計算
+- CV間の距離が不均等な場合に有効
+
+**projection**:
+- 点Pを線分ABに投影して補間係数を計算
+- A: 一方のチェーンに対応するCV位置
+- B: 他方のチェーンに対応するCV位置
+- P: 補間対象のCV位置
+- T: PからABへの垂線の足
+- AT:TB の比率でウェイトを分配
+- ジオメトリの形状に基づいた自然な補間
 
 ---
 

@@ -8,6 +8,7 @@ import maya.cmds as cmds
 from .....lib import lib_nurbsCurve
 from .constants import (
     CURVE_DEGREE,
+    LOFT_WEIGHT_INDEX,
     MIN_CHAINS_FOR_CLOSE,
     MIN_POSITIONS_FOR_CUBIC_CURVE,
     MIN_POSITIONS_FOR_CURVE,
@@ -56,6 +57,7 @@ class CreateLoftSurface:
         smooth_iterations: int = 0,
         parent_influence_ratio: float = 0.0,
         remove_end: bool = False,
+        loft_weight_method: str = LOFT_WEIGHT_INDEX,
     ) -> tuple[str, Optional[str]]:
         """Create lofted surface from joint chains.
 
@@ -72,6 +74,8 @@ class CreateLoftSurface:
             smooth_iterations (int): Number of weight smoothing iterations.
             parent_influence_ratio (float): Ratio of influence from parent joint (0.0 to 1.0).
             remove_end (bool): For open chains, merge end joint weights to parent.
+            loft_weight_method (str): Loft direction weight distribution method.
+                One of: 'index', 'distance', 'projection'.
 
         Returns:
             tuple[str, str | None]: (geometry_name, skin_cluster_name or None if not bound)
@@ -127,6 +131,7 @@ class CreateLoftSurface:
                 smooth_iterations=smooth_iterations,
                 parent_influence_ratio=parent_influence_ratio,
                 remove_end=remove_end,
+                loft_weight_method=loft_weight_method,
             )
 
         return result, skin_cluster

@@ -6,6 +6,10 @@ from math import sqrt
 import maya.cmds as cmds
 
 from .constants import (
+    LOFT_WEIGHT_DISTANCE,
+    LOFT_WEIGHT_INDEX,
+    LOFT_WEIGHT_PROJECTION,
+    VALID_LOFT_WEIGHT_METHODS,
     VALID_WEIGHT_METHODS,
     WEIGHT_METHOD_EASE,
     WEIGHT_METHOD_LINEAR,
@@ -188,6 +192,7 @@ class LoftWeightSetting:
         smooth_iterations: int = 0,
         parent_influence_ratio: float = 0.0,
         remove_end: bool = False,
+        loft_weight_method: str = LOFT_WEIGHT_INDEX,
     ) -> str:
         """Create skin cluster and apply weights to the geometry.
 
@@ -196,6 +201,8 @@ class LoftWeightSetting:
             smooth_iterations (int): Number of smoothing iterations.
             parent_influence_ratio (float): Ratio of influence from parent joint (0.0 to 1.0).
             remove_end (bool): For open chains, merge end joint weights to parent.
+            loft_weight_method (str): Loft direction weight distribution method.
+                One of: 'index', 'distance', 'projection'.
 
         Returns:
             str: Created skin cluster name.
@@ -205,6 +212,9 @@ class LoftWeightSetting:
         """
         if method not in VALID_WEIGHT_METHODS:
             raise ValueError(f"Invalid method '{method}'. Valid options are: {VALID_WEIGHT_METHODS}")
+
+        if loft_weight_method not in VALID_LOFT_WEIGHT_METHODS:
+            raise ValueError(f"Invalid loft_weight_method '{loft_weight_method}'. Valid options are: {VALID_LOFT_WEIGHT_METHODS}")
 
         # Validate parent_influence_ratio
         if not 0.0 <= parent_influence_ratio <= 1.0:
@@ -223,14 +233,20 @@ class LoftWeightSetting:
         logger.info(f"Created skin cluster: {skin_cluster}")
 
         # Calculate and apply weights
-        self._apply_weights(skin_cluster, method, smooth_iterations, parent_influence_ratio, remove_end)
+        self._apply_weights(skin_cluster, method, smooth_iterations, parent_influence_ratio, remove_end, loft_weight_method)
 
         logger.info(f"Applied weights to {self.geometry}")
 
         return skin_cluster
 
     def _apply_weights(
-        self, skin_cluster: str, method: str, smooth_iterations: int, parent_influence_ratio: float, remove_end: bool
+        self,
+        skin_cluster: str,
+        method: str,
+        smooth_iterations: int,
+        parent_influence_ratio: float,
+        remove_end: bool,
+        loft_weight_method: str,
     ) -> None:
         """Apply weights to geometry.
 
@@ -240,6 +256,7 @@ class LoftWeightSetting:
             smooth_iterations (int): Number of smoothing iterations.
             parent_influence_ratio (float): Ratio of influence from parent joint.
             remove_end (bool): Whether to merge end joint weights to parent.
+            loft_weight_method (str): Loft direction weight distribution method.
         """
         # Step 1: Calculate weights for each chain position (curve direction)
         chain_position_weights = self._calculate_chain_position_weights(method, parent_influence_ratio, remove_end)
@@ -252,9 +269,9 @@ class LoftWeightSetting:
         cmds.skinCluster(skin_cluster, e=True, normalizeWeights=0)
 
         if self.shape_type == "nurbsSurface":
-            self._apply_nurbs_weights(skin_cluster, chain_position_weights)
+            self._apply_nurbs_weights(skin_cluster, chain_position_weights, loft_weight_method)
         else:
-            self._apply_mesh_weights(skin_cluster, chain_position_weights)
+            self._apply_mesh_weights(skin_cluster, chain_position_weights, loft_weight_method)
 
         cmds.skinCluster(skin_cluster, e=True, normalizeWeights=1)
 
@@ -401,36 +418,56 @@ class LoftWeightSetting:
 
         return cv_weights
 
-    def _apply_nurbs_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]]) -> None:
+    def _apply_nurbs_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]], loft_weight_method: str) -> None:
         """Apply weights to NURBS surface CVs.
 
         Args:
             skin_cluster (str): Skin cluster name.
             chain_position_weights (list): Pre-calculated weights for each chain position.
+            loft_weight_method (str): Loft direction weight distribution method.
         """
         # Get chain position indices in V direction
         chain_v_indices = self._get_chain_v_indices_nurbs()
+
+        # Pre-calculate CV positions for distance/projection methods
+        cv_positions = None
+        if loft_weight_method in (LOFT_WEIGHT_DISTANCE, LOFT_WEIGHT_PROJECTION):
+            cv_positions = self._get_nurbs_cv_positions()
 
         for cv_u in range(self.num_cvs_u):  # curve direction
             for cv_v in range(self.num_cvs_v):  # loft direction
                 cv_name = f"{self.geometry}.cv[{cv_u}][{cv_v}]"
 
                 # Determine weights for this CV
-                weights = self._get_weights_for_loft_position(cv_u, cv_v, chain_v_indices, chain_position_weights, is_nurbs=True)
+                weights = self._get_weights_for_loft_position(
+                    cv_u,
+                    cv_v,
+                    chain_v_indices,
+                    chain_position_weights,
+                    is_nurbs=True,
+                    loft_weight_method=loft_weight_method,
+                    cv_positions=cv_positions,
+                )
 
                 # Apply weights
                 transform_values = list(zip(self.all_influences, weights))
                 cmds.skinPercent(skin_cluster, cv_name, transformValue=transform_values)
 
-    def _apply_mesh_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]]) -> None:
+    def _apply_mesh_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]], loft_weight_method: str) -> None:
         """Apply weights to mesh vertices.
 
         Args:
             skin_cluster (str): Skin cluster name.
             chain_position_weights (list): Pre-calculated weights for each chain position.
+            loft_weight_method (str): Loft direction weight distribution method.
         """
         # Get chain position indices in loft direction (row indices)
         chain_row_indices = self._get_chain_row_indices_mesh()
+
+        # Pre-calculate vertex positions for distance/projection methods
+        vtx_positions = None
+        if loft_weight_method in (LOFT_WEIGHT_DISTANCE, LOFT_WEIGHT_PROJECTION):
+            vtx_positions = self._get_mesh_vtx_positions()
 
         for vtx_index in range(self.num_vertices):
             vtx_name = f"{self.geometry}.vtx[{vtx_index}]"
@@ -440,7 +477,15 @@ class LoftWeightSetting:
             col = vtx_index % self.num_verts_along_curve  # curve direction
 
             # Determine weights for this vertex
-            weights = self._get_weights_for_loft_position(col, row, chain_row_indices, chain_position_weights, is_nurbs=False)
+            weights = self._get_weights_for_loft_position(
+                col,
+                row,
+                chain_row_indices,
+                chain_position_weights,
+                is_nurbs=False,
+                loft_weight_method=loft_weight_method,
+                vtx_positions=vtx_positions,
+            )
 
             # Apply weights
             transform_values = list(zip(self.all_influences, weights))
@@ -499,6 +544,9 @@ class LoftWeightSetting:
         chain_indices: list[int],
         chain_position_weights: list[list[list[float]]],
         is_nurbs: bool,
+        loft_weight_method: str = LOFT_WEIGHT_INDEX,
+        cv_positions: "list[list[list[float]]] | None" = None,
+        vtx_positions: "list[list[list[float]]] | None" = None,
     ) -> list[float]:
         """Get weights for a CV/vertex at a specific loft position.
 
@@ -511,6 +559,9 @@ class LoftWeightSetting:
             chain_indices (list[int]): Loft indices that correspond to chain positions.
             chain_position_weights (list): Pre-calculated weights for each chain.
             is_nurbs (bool): Whether this is for NURBS surface.
+            loft_weight_method (str): Loft direction weight distribution method.
+            cv_positions (list | None): CV positions for NURBS (used by distance/projection methods).
+            vtx_positions (list | None): Vertex positions for mesh (used by distance/projection methods).
 
         Returns:
             list[float]: Interpolated weights.
@@ -522,8 +573,21 @@ class LoftWeightSetting:
             if loft_pos == chain_loft_idx:
                 return chain_position_weights[chain_idx][curve_pos]
 
-        # Find which two chains this position is between
-        chain_a_idx, chain_b_idx, t = self._find_adjacent_chains(loft_pos, chain_indices, is_nurbs)
+        # Find which two chains this position is between (index-based)
+        chain_a_idx, chain_b_idx, t_index = self._find_adjacent_chains(loft_pos, chain_indices, is_nurbs)
+
+        # Calculate interpolation factor based on method
+        if loft_weight_method == LOFT_WEIGHT_INDEX:
+            t = t_index
+        else:
+            # Get positions for distance/projection calculation
+            positions = cv_positions if is_nurbs else vtx_positions
+            if positions is None:
+                t = t_index
+            else:
+                loft_idx_a = chain_indices[chain_a_idx]
+                loft_idx_b = chain_indices[chain_b_idx]
+                t = self._calculate_loft_interpolation_factor(curve_pos, loft_pos, loft_idx_a, loft_idx_b, positions, loft_weight_method, is_nurbs)
 
         # Get weights from both chains
         weights_a = chain_position_weights[chain_a_idx][curve_pos]
@@ -693,9 +757,7 @@ class LoftWeightSetting:
             return [w / total for w in weights]
         return weights
 
-    def _smooth_chain_weights(
-        self, chain_position_weights: list[list[list[float]]], iterations: int
-    ) -> list[list[list[float]]]:
+    def _smooth_chain_weights(self, chain_position_weights: list[list[list[float]]], iterations: int) -> list[list[list[float]]]:
         """Smooth weights in curve direction only for each chain.
 
         Uses distance-weighted averaging to blend weights with neighbors,
@@ -759,6 +821,181 @@ class LoftWeightSetting:
 
         logger.debug(f"Smoothed chain weights {iterations} times (curve direction only)")
         return smoothed_weights
+
+    def _get_nurbs_cv_positions(self) -> list[list[list[float]]]:
+        """Get all CV positions for NURBS surface.
+
+        Returns:
+            list[list[list[float]]]: CV positions as [u][v][xyz].
+        """
+        positions = []
+        for cv_u in range(self.num_cvs_u):
+            row_positions = []
+            for cv_v in range(self.num_cvs_v):
+                cv_name = f"{self.geometry}.cv[{cv_u}][{cv_v}]"
+                pos = cmds.xform(cv_name, q=True, ws=True, t=True)
+                row_positions.append(pos)
+            positions.append(row_positions)
+        return positions
+
+    def _get_mesh_vtx_positions(self) -> list[list[list[float]]]:
+        """Get all vertex positions for mesh as a 2D grid.
+
+        Returns:
+            list[list[list[float]]]: Vertex positions as [row][col][xyz].
+        """
+        positions = []
+        for row in range(self.num_verts_loft_direction):
+            row_positions = []
+            for col in range(self.num_verts_along_curve):
+                vtx_idx = row * self.num_verts_along_curve + col
+                vtx_name = f"{self.geometry}.vtx[{vtx_idx}]"
+                pos = cmds.xform(vtx_name, q=True, ws=True, t=True)
+                row_positions.append(pos)
+            positions.append(row_positions)
+        return positions
+
+    def _calculate_loft_interpolation_factor(
+        self,
+        curve_pos: int,
+        loft_pos: int,
+        loft_idx_a: int,
+        loft_idx_b: int,
+        positions: list[list[list[float]]],
+        method: str,
+        is_nurbs: bool,
+    ) -> float:
+        """Calculate interpolation factor for loft direction using distance or projection method.
+
+        Args:
+            curve_pos (int): Position in curve direction (u index for NURBS, col for mesh).
+            loft_pos (int): Current position in loft direction.
+            loft_idx_a (int): Loft index of chain A.
+            loft_idx_b (int): Loft index of chain B.
+            positions (list): 2D array of positions [curve_dir][loft_dir][xyz] for NURBS,
+                              or [loft_dir][curve_dir][xyz] for mesh.
+            method (str): 'distance' or 'projection'.
+            is_nurbs (bool): Whether this is for NURBS surface.
+
+        Returns:
+            float: Interpolation factor (0.0 to 1.0).
+        """
+        # Get positions for point A (chain A), point B (chain B), and point P (current)
+        if is_nurbs:
+            # NURBS: positions[u][v][xyz], curve_pos=u, loft_pos=v
+            pos_a = positions[curve_pos][loft_idx_a]
+            pos_b = positions[curve_pos][loft_idx_b]
+            pos_p = positions[curve_pos][loft_pos]
+        else:
+            # Mesh: positions[row][col][xyz], curve_pos=col, loft_pos=row
+            pos_a = positions[loft_idx_a][curve_pos]
+            pos_b = positions[loft_idx_b][curve_pos]
+            pos_p = positions[loft_pos][curve_pos]
+
+        if method == LOFT_WEIGHT_DISTANCE:
+            return self._calculate_distance_factor(pos_a, pos_b, pos_p, loft_pos, loft_idx_a, loft_idx_b, positions, curve_pos, is_nurbs)
+        elif method == LOFT_WEIGHT_PROJECTION:
+            return self._calculate_projection_factor(pos_a, pos_b, pos_p)
+        else:
+            return 0.0
+
+    def _calculate_distance_factor(
+        self,
+        pos_a: list[float],
+        pos_b: list[float],
+        pos_p: list[float],
+        loft_pos: int,
+        loft_idx_a: int,
+        loft_idx_b: int,
+        positions: list[list[list[float]]],
+        curve_pos: int,
+        is_nurbs: bool,
+    ) -> float:
+        """Calculate interpolation factor based on cumulative distance along U=0 CVs.
+
+        Args:
+            pos_a, pos_b, pos_p: Positions of chain A, chain B, and current point.
+            loft_pos: Current loft position index.
+            loft_idx_a, loft_idx_b: Loft indices of chain A and B.
+            positions: 2D position array.
+            curve_pos: Current curve position index.
+            is_nurbs: Whether this is NURBS.
+
+        Returns:
+            float: Interpolation factor based on distance ratio.
+        """
+        # Calculate cumulative distance from A to P and from A to B along the U=0 (or col=0) CVs
+        # Use curve_pos=0 for consistency (distance along first row/column)
+        dist_a_to_p = 0.0
+        dist_a_to_b = 0.0
+
+        # Determine the range of loft indices to traverse
+        start_idx = min(loft_idx_a, loft_idx_b)
+        end_idx = max(loft_idx_a, loft_idx_b)
+
+        # Calculate distances using U=0 (first row of curve direction)
+        ref_curve_pos = 0
+
+        for i in range(start_idx, end_idx):
+            if is_nurbs:
+                p1 = positions[ref_curve_pos][i]
+                p2 = positions[ref_curve_pos][i + 1]
+            else:
+                p1 = positions[i][ref_curve_pos]
+                p2 = positions[i + 1][ref_curve_pos]
+
+            segment_dist = sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2 + (p2[2] - p1[2]) ** 2)
+            dist_a_to_b += segment_dist
+
+            if i < loft_pos:
+                dist_a_to_p += segment_dist
+            elif i == loft_pos - 1:
+                # Add partial distance to reach loft_pos
+                dist_a_to_p += segment_dist
+
+        if dist_a_to_b == 0:
+            return 0.0
+
+        # If loft_idx_a > loft_idx_b, we need to invert the factor
+        if loft_idx_a > loft_idx_b:
+            return 1.0 - (dist_a_to_p / dist_a_to_b)
+
+        return dist_a_to_p / dist_a_to_b
+
+    def _calculate_projection_factor(self, pos_a: list[float], pos_b: list[float], pos_p: list[float]) -> float:
+        """Calculate interpolation factor by projecting P onto line AB.
+
+        Projects point P onto the line segment AB and calculates the ratio AT:AB
+        where T is the projection point.
+
+        Args:
+            pos_a: Position of chain A (point A).
+            pos_b: Position of chain B (point B).
+            pos_p: Position of current CV/vertex (point P).
+
+        Returns:
+            float: Interpolation factor (clamped to 0.0-1.0).
+        """
+        # Vector AB
+        ab = [pos_b[i] - pos_a[i] for i in range(3)]
+
+        # Vector AP
+        ap = [pos_p[i] - pos_a[i] for i in range(3)]
+
+        # Length squared of AB
+        ab_length_sq = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2
+
+        if ab_length_sq == 0:
+            return 0.0
+
+        # Dot product of AP and AB
+        dot_ap_ab = ap[0] * ab[0] + ap[1] * ab[1] + ap[2] * ab[2]
+
+        # t = (AP · AB) / |AB|² gives the projection factor
+        t = dot_ap_ab / ab_length_sq
+
+        # Clamp to [0, 1] to ensure we stay within the segment
+        return max(0.0, min(1.0, t))
 
 
 __all__ = ["LoftWeightSetting"]

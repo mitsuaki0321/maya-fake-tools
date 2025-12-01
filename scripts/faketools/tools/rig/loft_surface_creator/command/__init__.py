@@ -8,8 +8,12 @@ import maya.cmds as cmds
 from .....lib import lib_math, lib_nurbsCurve, lib_nurbsSurface, lib_skinCluster
 from .....operations import convert_weight
 from .constants import (
+    LOFT_WEIGHT_DISTANCE,
+    LOFT_WEIGHT_INDEX,
+    LOFT_WEIGHT_PROJECTION,
     OUTPUT_MESH,
     OUTPUT_NURBS_SURFACE,
+    VALID_LOFT_WEIGHT_METHODS,
     VALID_OUTPUT_TYPES,
     VALID_WEIGHT_METHODS,
     WEIGHT_METHOD_EASE,
@@ -36,6 +40,7 @@ def main(
     smooth_iterations: int = 0,
     parent_influence_ratio: float = 0.0,
     remove_end: bool = False,
+    loft_weight_method: str = LOFT_WEIGHT_INDEX,
     to_skin_cage: bool = False,
     skin_cage_division_levels: int = 1,
 ) -> tuple[str, Optional[str]]:
@@ -59,6 +64,8 @@ def main(
         smooth_iterations (int): Number of weight smoothing iterations.
         parent_influence_ratio (float): Ratio of influence from parent joint (0.0 to 1.0).
         remove_end (bool): For open chains, merge end joint weights to parent.
+        loft_weight_method (str): Loft direction weight distribution method.
+            One of: 'index', 'distance', 'projection'.
         to_skin_cage (bool): Whether to convert to skin cage mesh. Only for nurbsSurface with is_bind=True.
         skin_cage_division_levels (int): Number of division levels for the skin cage.
 
@@ -109,6 +116,7 @@ def main(
         smooth_iterations=smooth_iterations,
         parent_influence_ratio=parent_influence_ratio,
         remove_end=remove_end,
+        loft_weight_method=loft_weight_method,
     )
 
     # Convert to skin cage if requested
@@ -212,4 +220,9 @@ __all__ = [
     "WEIGHT_METHOD_EASE",
     "WEIGHT_METHOD_STEP",
     "VALID_WEIGHT_METHODS",
+    # Constants - Loft weight methods
+    "LOFT_WEIGHT_INDEX",
+    "LOFT_WEIGHT_DISTANCE",
+    "LOFT_WEIGHT_PROJECTION",
+    "VALID_LOFT_WEIGHT_METHODS",
 ]
