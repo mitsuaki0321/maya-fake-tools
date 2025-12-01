@@ -159,7 +159,6 @@ Maya tools package that extends Autodesk Maya through plugins and scripts using 
      - `SceneCommand`: Base class for scene-wide operations (auto-executes on init)
      - `AllCommand`: Base class for operations on all selected nodes
      - `PairCommand`: Base class for operations between source and target node pairs
-   - See [SINGLE_COMMANDS.md](SINGLE_COMMANDS.md) for detailed usage guide
 
 10. **Operations** ([scripts/faketools/operations/](scripts/faketools/operations/))
    - High-level operations that combine multiple `lib` utilities
@@ -516,6 +515,18 @@ These cases are acceptable:
 
 ## Development Commands
 
+### Environment Setup
+
+This project uses `uv` as the package manager for development dependencies:
+
+```bash
+# Install uv (if not already installed)
+pip install uv
+
+# Sync dependencies (creates virtual environment and installs dev dependencies)
+uv sync
+```
+
 ### Module Cleanup (Development)
 During development, you may need to reload modules after making changes. Use the module cleaner to remove all faketools modules from memory:
 
@@ -538,6 +549,22 @@ This will:
 2. Remove the FakeTools menu
 3. Remove all faketools modules from `sys.modules`
 4. Force garbage collection
+
+### Documentation Build
+
+Build HTML documentation from Markdown sources:
+
+```bash
+# Build documentation (requires Pandoc)
+python docs/build.py
+
+# Output will be in docs/output/
+# Open docs/output/index.html in browser to view
+```
+
+**Requirements**: [Pandoc](https://pandoc.org/installing.html) must be installed.
+
+See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed documentation system guide.
 
 ### Linting and Formatting
 
@@ -571,8 +598,11 @@ uv run mypy scripts/faketools/tools/rig/skin_tools/
 # Check entire project (use before commits)
 uv run mypy scripts/faketools
 
-# Check for import errors only
+# Check for import errors only (Linux/Mac)
 uv run mypy scripts/faketools 2>&1 | grep -E "(import-not-found|import-untyped)"
+
+# Check for import errors only (Windows PowerShell)
+uv run mypy scripts/faketools 2>&1 | Select-String -Pattern "import-not-found|import-untyped"
 ```
 
 **Note**: mypy is configured to only check import existence. Type checking is disabled to avoid errors in legacy code. External dependencies (maya, numpy, scipy, PySide2/6) are ignored in the configuration.
@@ -713,7 +743,10 @@ When creating a new tool:
 
 ## Creating New Single Commands
 
-See [SINGLE_COMMANDS.md](SINGLE_COMMANDS.md) for detailed guide on creating standalone commands (SceneCommand, AllCommand, PairCommand).
+Create a new command class in `scripts/faketools/single_commands/` inheriting from one of the base classes:
+- `SceneCommand`: For scene-wide operations (auto-executes on init)
+- `AllCommand`: For operations on all selected nodes
+- `PairCommand`: For operations between source and target node pairs
 
 ## Workflow
 
@@ -882,7 +915,6 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for detailed guide on the Pandoc-based 
 ## Additional Documentation
 
 - **[DEVELOP.md](DEVELOP.md)**: Detailed Japanese documentation covering internal architecture, best practices, and troubleshooting
-- **[SINGLE_COMMANDS.md](SINGLE_COMMANDS.md)**: Single Commands system usage guide
 - **[SETTINGS_USAGE.md](SETTINGS_USAGE.md)**: Settings system usage guide (Japanese)
 - **[LOGGING_USAGE.md](LOGGING_USAGE.md)**: Logging system usage guide (Japanese)
 - **[DOCUMENTATION.md](DOCUMENTATION.md)**: Documentation system guide
