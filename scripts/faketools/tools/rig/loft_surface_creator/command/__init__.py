@@ -3,11 +3,8 @@
 from typing import Optional
 
 from .constants import (
-    CURVE_DEGREE_CUBIC,
-    CURVE_DEGREE_LINEAR,
     OUTPUT_MESH,
     OUTPUT_NURBS_SURFACE,
-    VALID_CURVE_DEGREES,
     VALID_OUTPUT_TYPES,
     VALID_WEIGHT_METHODS,
     WEIGHT_METHOD_EASE,
@@ -24,7 +21,6 @@ def main(
     close: bool = False,
     output_type: str = OUTPUT_NURBS_SURFACE,
     surface_divisions: int = 1,
-    degree: int = CURVE_DEGREE_CUBIC,
     center: bool = False,
     curve_divisions: int = 0,
     skip: int = 0,
@@ -37,13 +33,14 @@ def main(
     """Create lofted surface from joint chains.
 
     This is the main entry point for loft surface creation.
+    Always uses degree 3 (cubic) curves.
 
     Args:
         root_joints (list[str]): List of root joint names. At least 2 required.
+            For close=True, at least 3 required.
         close (bool): Whether to close the loft loop (connect last chain to first).
         output_type (str): Type of output geometry. One of: 'nurbsSurface', 'mesh'.
         surface_divisions (int): Number of divisions between curves in loft direction.
-        degree (int): Degree of the curves (1=linear, 3=cubic).
         center (bool): Whether to center cubic curves.
         curve_divisions (int): Number of CVs to insert between joint positions.
         skip (int): Number of joints to skip in each chain.
@@ -83,7 +80,6 @@ def main(
         close=close,
         output_type=output_type,
         surface_divisions=surface_divisions,
-        degree=degree,
         center=center,
         curve_divisions=curve_divisions,
         skip=skip,
@@ -105,10 +101,6 @@ __all__ = [
     "validate_root_joints",
     "get_joint_chain_from_root",
     "get_joint_chains_from_roots",
-    # Constants - Curve degrees
-    "CURVE_DEGREE_LINEAR",
-    "CURVE_DEGREE_CUBIC",
-    "VALID_CURVE_DEGREES",
     # Constants - Output types
     "OUTPUT_NURBS_SURFACE",
     "OUTPUT_MESH",

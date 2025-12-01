@@ -93,19 +93,19 @@ class LoftWeightSetting:
             # spansU/V + degreeU/V = numCVsU/V (for non-periodic)
             spans_u = cmds.getAttr(f"{self.shape}.spansU")
             spans_v = cmds.getAttr(f"{self.shape}.spansV")
-            degree_u = cmds.getAttr(f"{self.shape}.degreeU")
-            degree_v = cmds.getAttr(f"{self.shape}.degreeV")
+            self.degree_u = cmds.getAttr(f"{self.shape}.degreeU")
+            self.degree_v = cmds.getAttr(f"{self.shape}.degreeV")
             form_u = cmds.getAttr(f"{self.shape}.formU")  # 0=open, 1=closed, 2=periodic
 
             if form_u == 2:  # periodic
                 self.num_cvs_u = spans_u
             else:
-                self.num_cvs_u = spans_u + degree_u
+                self.num_cvs_u = spans_u + self.degree_u
 
-            self.num_cvs_v = spans_v + degree_v
+            self.num_cvs_v = spans_v + self.degree_v
             self.total_cvs = self.num_cvs_u * self.num_cvs_v
 
-            logger.debug(f"NURBS Surface: {self.num_cvs_u} x {self.num_cvs_v} CVs")
+            logger.debug(f"NURBS Surface: {self.num_cvs_u} x {self.num_cvs_v} CVs (degree U={self.degree_u}, V={self.degree_v})")
 
         elif self.shape_type == "mesh":
             # Get mesh vertex count
@@ -132,7 +132,9 @@ class LoftWeightSetting:
         # Each chain creates 1 vertex row
         # Between chains, surface_divisions creates additional rows
         if self.is_closed:
-            return self.num_chains * self.surface_divisions
+            # For closed loft, there's a duplicate row at the seam
+            # (first and last rows are at the same position)
+            return self.num_chains + 1
         else:
             return self.num_chains + (self.num_chains - 1) * (self.surface_divisions - 1)
 
@@ -196,12 +198,17 @@ class LoftWeightSetting:
         # Disable normalization during weight setting
         cmds.skinCluster(skin_cluster, e=True, normalizeWeights=0)
 
-        for u in range(self.num_cvs_u):
-            for v in range(self.num_cvs_v):
-                cv_name = f"{self.geometry}.cv[{u}][{v}]"
+        # Maya's NURBS surface from loft:
+        # - cv[u][v]: u = curve direction (joint positions), v = loft direction (chain positions)
+        # - num_cvs_u corresponds to curve direction
+        # - num_cvs_v corresponds to loft direction
+        for cv_u in range(self.num_cvs_u):  # curve direction (joints)
+            for cv_v in range(self.num_cvs_v):  # loft direction (chains)
+                cv_name = f"{self.geometry}.cv[{cv_u}][{cv_v}]"
 
-                # Calculate weights for this CV
-                weights = self._calculate_cv_weights(u, v, method)
+                # _calculate_cv_weights expects (loft_position, curve_position)
+                # cv_v is loft direction, cv_u is curve direction
+                weights = self._calculate_cv_weights(cv_v, cv_u, method)
 
                 # Apply weights
                 transform_values = list(zip(self.all_influences, weights))
@@ -323,40 +330,74 @@ class LoftWeightSetting:
             tuple[int, float]: (chain_index, interpolation_factor 0.0-1.0)
         """
         if self.shape_type == "nurbsSurface":
-            # For NURBS surface, u directly maps to chain positions
-            # u=0 -> chain 0, u=num_cvs_u-1 -> last chain (or wraps if closed)
-            total_spans = self.num_chains if self.is_closed else self.num_chains - 1
-            if total_spans == 0:
-                return 0, 0.0
+            # For NURBS surface from loft:
+            # - V direction (num_cvs_v) is the loft direction (between chains)
+            # - u parameter here represents position in loft direction
+            if self.is_closed:
+                # For closed NURBS loft, CV indices are offset by 1:
+                # cv[*][0] = last chain, cv[*][1] = first chain, cv[*][2] = second chain
+                # So: chain_index = (u - 1 + num_chains) % num_chains
+                chain_index = (u - 1 + self.num_chains) % self.num_chains
+                return chain_index, 0.0
+            else:
+                # Open NURBS
+                total_spans = self.num_chains - 1
+                if total_spans == 0:
+                    return 0, 0.0
 
-            # Calculate which segment and position within segment
-            segment_size = self.num_cvs_u / total_spans if self.is_closed else (self.num_cvs_u - 1) / total_spans
-            if segment_size == 0:
-                return 0, 0.0
+                # Use num_cvs_v because V direction is the loft direction in Maya
+                segment_size = (self.num_cvs_v - 1) / total_spans
+                if segment_size == 0:
+                    return 0, 0.0
 
-            chain_index = int(u / segment_size)
-            if chain_index >= total_spans:
-                chain_index = total_spans - 1
+                chain_index = int(u / segment_size)
+                if chain_index >= total_spans:
+                    chain_index = total_spans - 1
 
-            position_in_segment = (u / segment_size) - chain_index
-            return chain_index, position_in_segment
+                position_in_segment = (u / segment_size) - chain_index
+
+                # For degree 3, adjust intermediate CV positions to account for
+                # B-spline basis function weights
+                if self.degree_v == 3 and 0 < position_in_segment < 1:
+                    if chain_index == 0:
+                        # First span: intermediate CV weighted towards first chain
+                        position_in_segment = 1 / 3  # gives (0.667, 0.333)
+                    elif chain_index == total_spans - 1:
+                        # Last span: intermediate CV weighted towards last chain
+                        position_in_segment = 2 / 3  # gives (0.333, 0.667)
+
+                return chain_index, position_in_segment
 
         else:
-            # For mesh, similar calculation
-            total_spans = self.num_chains if self.is_closed else self.num_chains - 1
-            if total_spans == 0:
-                return 0, 0.0
+            # For mesh
+            if self.is_closed:
+                # For closed mesh, vertices are arranged as:
+                # rows 0 to num_chains-1: one row per chain
+                # row num_chains: duplicate of row 0 (same position as first chain)
+                if u >= self.num_chains:
+                    # Last row is duplicate of first chain
+                    return 0, 0.0
+                else:
+                    return u, 0.0
+            else:
+                # Open mesh
+                total_spans = self.num_chains - 1
+                if total_spans == 0:
+                    return 0, 0.0
 
-            verts_per_span = self.num_verts_loft_direction / total_spans
-            if verts_per_span == 0:
-                return 0, 0.0
+                # Use (num_verts - 1) to correctly map vertex indices to positions
+                # This matches the approach used in _get_joint_info_from_v()
+                if self.num_verts_loft_direction <= 1:
+                    return 0, 0.0
 
-            chain_index = int(u / verts_per_span)
-            if chain_index >= total_spans:
-                chain_index = total_spans - 1
+                segment_size = (self.num_verts_loft_direction - 1) / total_spans
 
-            position_in_segment = (u / verts_per_span) - chain_index
-            return chain_index, min(position_in_segment, 1.0)
+                chain_index = int(u / segment_size)
+                if chain_index >= total_spans:
+                    chain_index = total_spans - 1
+
+                position_in_segment = (u / segment_size) - chain_index
+                return chain_index, min(position_in_segment, 1.0)
 
     def _get_joint_info_from_v(self, v: int, chain_length: int) -> tuple[int, float]:
         """Get joint index and interpolation factor from v position.
@@ -369,12 +410,15 @@ class LoftWeightSetting:
             tuple[int, float]: (joint_index, interpolation_factor 0.0-1.0)
         """
         if self.shape_type == "nurbsSurface":
-            # For NURBS, v maps to joint positions
+            # For NURBS surface from loft:
+            # - U direction (num_cvs_u) is the curve direction (joint positions)
+            # - v parameter here represents position along curve
             total_joints = chain_length - 1  # Number of segments between joints
             if total_joints <= 0:
                 return 0, 0.0
 
-            segment_size = (self.num_cvs_v - 1) / total_joints
+            # Use num_cvs_u because U direction is the curve direction in Maya
+            segment_size = (self.num_cvs_u - 1) / total_joints
             if segment_size == 0:
                 return 0, 0.0
 
@@ -383,6 +427,17 @@ class LoftWeightSetting:
                 joint_index = total_joints - 1
 
             position_in_segment = (v / segment_size) - joint_index
+
+            # For degree 3, adjust intermediate CV positions to account for
+            # B-spline basis function weights
+            if self.degree_u == 3 and 0 < position_in_segment < 1:
+                if joint_index == 0:
+                    # First segment: intermediate CV weighted towards first joint
+                    position_in_segment = 1 / 3  # gives (0.667, 0.333)
+                elif joint_index == total_joints - 1:
+                    # Last segment: intermediate CV weighted towards last joint
+                    position_in_segment = 2 / 3  # gives (0.333, 0.667)
+
             return joint_index, min(position_in_segment, 1.0)
 
         else:

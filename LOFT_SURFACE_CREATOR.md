@@ -6,6 +6,115 @@
 
 Curve/Surface Creator に似ているツールだがこちらのほうが少し複雑になる。
 
+---
+
+## 実装進捗
+
+### Phase 1: 基本機能 ✅ 完了
+
+- [x] ジョイントチェーンからカーブ作成（degree=3固定）
+- [x] カーブからNURBSサーフェスをロフト
+- [x] カーブからメッシュをロフト（format=3, polygonType=1）
+- [x] 基本的なスキンバインディング
+
+### Phase 2: ウェイト計算 ✅ 完了
+
+- [x] ジョイント方向（カーブ方向）のウェイト計算
+- [x] チェーン方向（ロフト方向）のウェイト計算
+- [x] メッシュの頂点インデックスからUV位置への変換
+- [x] NURBSのCV座標系（U=カーブ方向、V=ロフト方向）対応
+- [x] degree=3の中間CV用ウェイト調整（0.667/0.333）
+
+### Phase 3: close=True対応 ✅ 完了
+
+- [x] 3本以上のチェーン必須バリデーション（MIN_CHAINS_FOR_CLOSE=3）
+- [x] メッシュ: 重複頂点行の処理（vtx[0]とvtx[12]が同位置）
+- [x] NURBS: CVインデックスオフセット（v=0→最後のチェーン、v=1→最初のチェーン）
+
+### Phase 4: 追加ウェイト処理 ⏳ 未着手
+
+- [ ] `weight_method="ease"` - イーズイン/アウト補間
+- [ ] `weight_method="step"` - ステップ補間（最も近いジョイント100%）
+- [ ] `smooth_iterations` - ウェイトスムージング（NURBS対応）
+- [ ] `parent_influence_ratio` - 親ジョイントへの影響比率
+- [ ] `remove_end` - 末端ジョイントのウェイトを親にマージ
+
+### Phase 5: UI ⏳ 未着手
+
+- [ ] ui.py の作成
+- [ ] ジョイント選択UI
+- [ ] パラメータ設定UI
+- [ ] プリセット保存/読み込み
+
+---
+
+## ファイル構成
+
+```
+scripts/faketools/tools/rig/loft_surface_creator/
+├── __init__.py              # TOOL_CONFIG定義
+└── command/
+    ├── __init__.py          # main() エントリーポイント
+    ├── constants.py         # 定数定義
+    ├── helpers.py           # ジョイントチェーン取得ヘルパー
+    ├── create_loft.py       # CreateLoftSurface クラス
+    └── weight_setting.py    # LoftWeightSetting クラス
+```
+
+---
+
+## API
+
+### main() 関数
+
+```python
+from faketools.tools.rig.loft_surface_creator import command
+
+result, skin = command.main(
+    root_joints: list[str],           # ルートジョイントのリスト（2本以上必須）
+    close: bool = False,              # 環状にするか（True時は3本以上必須）
+    output_type: str = "nurbsSurface", # 出力タイプ: "nurbsSurface" | "mesh"
+    surface_divisions: int = 1,       # カーブ間の分割数
+    center: bool = False,             # カーブのCV位置を中央に調整
+    curve_divisions: int = 0,         # ジョイント間に挿入するCV数
+    skip: int = 0,                    # スキップするジョイント数
+    is_bind: bool = False,            # スキンクラスターを作成するか
+    weight_method: str = "linear",    # ウェイト計算方法: "linear" | "ease" | "step"
+    smooth_iterations: int = 0,       # スムージング回数
+    parent_influence_ratio: float = 0.0,  # 親ジョイントの影響比率
+    remove_end: bool = False,         # 末端ジョイントのウェイトを親にマージ
+) -> tuple[str, Optional[str]]        # (ジオメトリ名, スキンクラスター名)
+```
+
+### 使用例
+
+```python
+# 基本使用例（オープン）
+result, skin = command.main(
+    root_joints=["jointA1", "jointB1"],
+    output_type="mesh",
+    is_bind=True,
+)
+
+# 環状メッシュ（スカート用）
+result, skin = command.main(
+    root_joints=["jointA1", "jointB1", "jointC1"],
+    close=True,
+    output_type="mesh",
+    is_bind=True,
+)
+
+# 環状NURBSサーフェス
+result, skin = command.main(
+    root_joints=["jointA1", "jointB1", "jointC1"],
+    close=True,
+    output_type="nurbsSurface",
+    is_bind=True,
+)
+```
+
+---
+
 ## 具体的な使用方法
 
 - jointA1, jointA2, jointA3, ... と jointB1, jointB2, jointB3, ... とそれぞれジョイントチェーンがあった場合その二つのルートジョイントとなる jointA1 と jointB1 を選択し実行する。
@@ -13,30 +122,65 @@ Curve/Surface Creator に似ているツールだがこちらのほうが少し�
 
 - jointA1, jointB1, jointC1, jointD1... など複数のジョイントチェーンのルートを選択し実行する。そうすると jointA1, jointB1, jointC1, jointD1 とロフトされさらに Close オプションがオンの時、jointD1 と jointA1 間もロフトされ閉じられた（この場合スカートだったらシリンダーの形状になるように）オブジェクトが作成される。
 
-- 上の仕様でサーフェースが作成され、Curve/Surface Creator と同じ方法で is_bind がオンの時スキンウエイトも自動で作成される。（相談）
+- 上の仕様でサーフェースが作成され、is_bind がオンの時スキンウエイトも自動で作成される。
 
-## 必要なオプション
+---
+
+## 技術的な詳細
+
+### Maya loftコマンドの仕様
+
+**NURBS出力時:**
+- `cv[u][v]`: u=カーブ方向（ジョイント位置）、v=ロフト方向（チェーン位置）
+- degree=3でロフト → 中間CVが生成される
+- `close=True`時: CVインデックスが1つオフセット（v=0が最後のチェーン）
+- `rsn=True` で法線を反転（外向きに）
+
+**メッシュ出力時:**
+- `format=3`（CV位置にテッセレート）を使用
+- `polygonType=1`（クワッド）を使用
+- `close=True`時: 最初と最後の頂点行が同じ位置（シームで重複）
+- `rsn=False` で法線は反転しない
+
+### ウェイト計算ロジック
+
+1. CV/頂点のグリッド位置 (u, v) を取得
+2. u位置からチェーンインデックスと補間係数を計算
+3. v位置からジョイントインデックスと補間係数を計算
+4. 4つのジョイント（2チェーン × 2ジョイント）に対してウェイト分配
+5. 正規化して合計1.0にする
+
+### degree=3の中間CV処理
+
+B-spline基底関数の特性により、degree=3では中間CVのウェイトを調整:
+- 最初のスパン: position_in_segment = 1/3 → (0.667, 0.333)
+- 最後のスパン: position_in_segment = 2/3 → (0.333, 0.667)
+
+---
+
+## 必要なオプション（元の設計）
 
 ### Curve 作成時のオプション
 ※ 実際カーブは最後に削除されますが、工程として内部的には一度作成する必要があります。
 
-基本的に、Curve/Surface Creator からコードを引用するか参照できます。
-また、アルゴリズムもそちらを参考にしてください。
-
-- Degree
+- ~~Degree~~ → 削除（常にdegree=3を使用）
 - Center
-- Divisions
+- Divisions (curve_divisions)
 - Skip
 
 ### Surface 作成時のオプション
 
 - Close: ロフトを最終的に閉じるかどうか
-- Divisions: サーフェースの間の分割数（ちょっと複雑なので ## Surface の Divisions についてを参照してください。）
-
+- Divisions (surface_divisions): サーフェースの間の分割数
 
 ### バインド時のオプション
-基本的にCurve/Surface Creatorと同様ですが、各カーブ間のウエイトをどのように作成するか相談させてください。
 
+- weight_method: linear / ease / step
+- smooth_iterations: スムージング回数
+- parent_influence_ratio: 親ジョイントの影響比率
+- remove_end: 末端ジョイントのウェイトを親にマージ
+
+---
 
 ## Surface の Divisions について
 

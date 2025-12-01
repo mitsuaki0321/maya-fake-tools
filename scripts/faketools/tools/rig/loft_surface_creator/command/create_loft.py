@@ -7,13 +7,12 @@ import maya.cmds as cmds
 
 from .....lib import lib_nurbsCurve
 from .constants import (
-    CURVE_DEGREE_CUBIC,
-    CURVE_DEGREE_LINEAR,
+    CURVE_DEGREE,
+    MIN_CHAINS_FOR_CLOSE,
     MIN_POSITIONS_FOR_CUBIC_CURVE,
     MIN_POSITIONS_FOR_CURVE,
     OUTPUT_MESH,
     OUTPUT_NURBS_SURFACE,
-    VALID_CURVE_DEGREES,
     VALID_OUTPUT_TYPES,
     VALID_WEIGHT_METHODS,
     WEIGHT_METHOD_LINEAR,
@@ -49,7 +48,6 @@ class CreateLoftSurface:
         close: bool = False,
         output_type: str = OUTPUT_NURBS_SURFACE,
         surface_divisions: int = 1,
-        degree: int = CURVE_DEGREE_CUBIC,
         center: bool = False,
         curve_divisions: int = 0,
         skip: int = 0,
@@ -65,7 +63,6 @@ class CreateLoftSurface:
             close (bool): Whether to close the loft loop (connect last chain to first).
             output_type (str): Type of output geometry. One of: 'nurbsSurface', 'mesh'.
             surface_divisions (int): Number of divisions between curves in loft direction.
-            degree (int): Degree of the curves (1=linear, 3=cubic).
             center (bool): Whether to center cubic curves.
             curve_divisions (int): Number of CVs to insert between joint positions.
             skip (int): Number of joints to skip in each chain.
@@ -85,8 +82,8 @@ class CreateLoftSurface:
         if output_type not in VALID_OUTPUT_TYPES:
             raise ValueError(f"Invalid output type '{output_type}'. Valid options are: {VALID_OUTPUT_TYPES}")
 
-        if degree not in VALID_CURVE_DEGREES:
-            raise ValueError(f"Invalid degree ({degree}). Valid options are: {VALID_CURVE_DEGREES}")
+        if close and len(self.root_joints) < MIN_CHAINS_FOR_CLOSE:
+            raise ValueError(f"At least {MIN_CHAINS_FOR_CLOSE} joint chains are required for closed loft.")
 
         if surface_divisions < 1:
             raise ValueError(f"Invalid surface divisions ({surface_divisions}). Must be >= 1.")
@@ -99,7 +96,6 @@ class CreateLoftSurface:
 
         # Create curves from joint chains
         curves = self._create_curves_from_chains(
-            degree=degree,
             center=center,
             curve_divisions=curve_divisions,
         )
@@ -110,7 +106,6 @@ class CreateLoftSurface:
             close=close,
             output_type=output_type,
             surface_divisions=surface_divisions,
-            degree=degree,
         )
 
         logger.info(f"Created lofted surface: {result}")
@@ -136,14 +131,12 @@ class CreateLoftSurface:
 
     def _create_curves_from_chains(
         self,
-        degree: int = CURVE_DEGREE_CUBIC,
         center: bool = False,
         curve_divisions: int = 0,
     ) -> list[str]:
         """Create curves from each joint chain.
 
         Args:
-            degree (int): Degree of the curves.
             center (bool): Whether to center cubic curves.
             curve_divisions (int): Number of CVs to insert between joint positions.
 
@@ -159,7 +152,6 @@ class CreateLoftSurface:
             # Create curve from positions
             curve = self._create_curve(
                 positions=positions,
-                degree=degree,
                 center=center,
                 divisions=curve_divisions,
             )
@@ -171,17 +163,16 @@ class CreateLoftSurface:
     def _create_curve(
         self,
         positions: list[list[float]],
-        degree: int = CURVE_DEGREE_CUBIC,
         center: bool = False,
         divisions: int = 0,
     ) -> str:
         """Create curve from positions.
 
         This method is adapted from curveSurface_creator's _create_curve().
+        Always creates degree 3 (cubic) curves.
 
         Args:
             positions (list[list[float]]): Target positions (list of [x, y, z] coordinates).
-            degree (int): Degree of the curve (1 or 3).
             center (bool): Whether to center cubic curves.
             divisions (int): Number of CVs to insert between given positions.
 
@@ -191,41 +182,28 @@ class CreateLoftSurface:
         Raises:
             ValueError: If parameters are invalid.
         """
-        if degree not in VALID_CURVE_DEGREES:
-            raise ValueError(f"Invalid degree ({degree}). Valid options are: {VALID_CURVE_DEGREES}")
-
         num_positions = len(positions)
         if num_positions < MIN_POSITIONS_FOR_CURVE:
             raise ValueError(f"At least {MIN_POSITIONS_FOR_CURVE} positions are required.")
 
-        # Handle special case: 2 positions
+        # Handle special case: 2 positions - need at least 3 for degree 3
         if num_positions == MIN_POSITIONS_FOR_CURVE:
-            if degree == CURVE_DEGREE_CUBIC:
-                logger.warning("Degree 3 curve requires at least 3 positions. Creating degree 1 curve instead.")
+            raise ValueError(f"At least {MIN_POSITIONS_FOR_CUBIC_CURVE} positions are required for degree 3 curves.")
 
-            curve = cmds.curve(d=CURVE_DEGREE_LINEAR, p=positions)
-            if divisions:
-                curve_shape = cmds.listRelatives(curve, s=True, f=True)[0]
-                lib_nurbsCurve.ConvertNurbsCurve(curve_shape).insert_cvs(divisions)
-
-            logger.debug(f"Created curve: {curve}")
-            return curve
-
-        # Handle special case: 3 positions with cubic degree
+        # Handle special case: 3 positions - create linear first then rebuild to cubic
         if num_positions == MIN_POSITIONS_FOR_CUBIC_CURVE:
-            curve = cmds.curve(d=CURVE_DEGREE_LINEAR, p=positions)
-            if degree == CURVE_DEGREE_CUBIC:
-                curve = cmds.rebuildCurve(curve, ch=False, d=CURVE_DEGREE_CUBIC, s=0)[0]
+            curve = cmds.curve(d=1, p=positions)
+            curve = cmds.rebuildCurve(curve, ch=False, d=CURVE_DEGREE, s=0)[0]
         else:
             # Normal case: 4+ positions
-            curve = cmds.curve(d=degree, p=positions)
+            curve = cmds.curve(d=CURVE_DEGREE, p=positions)
 
         # Apply curve modifications if needed
         if center or divisions:
             curve_shape = cmds.listRelatives(curve, s=True, f=True)[0]
             convert_nurbs_curve = lib_nurbsCurve.ConvertNurbsCurve(curve_shape)
 
-            if center and degree == CURVE_DEGREE_CUBIC:
+            if center:
                 convert_nurbs_curve.center_curve()
 
             if divisions:
@@ -240,7 +218,6 @@ class CreateLoftSurface:
         close: bool,
         output_type: str,
         surface_divisions: int,
-        degree: int,
     ) -> str:
         """Loft multiple curves into a surface or mesh.
 
@@ -249,7 +226,6 @@ class CreateLoftSurface:
             close (bool): Whether to close the loft loop.
             output_type (str): Type of output ('nurbsSurface' or 'mesh').
             surface_divisions (int): Number of divisions between curves.
-            degree (int): Degree of the loft (1=linear, 3=cubic).
 
         Returns:
             str: Created surface or mesh transform name.
@@ -257,11 +233,8 @@ class CreateLoftSurface:
         if len(curves) < 2:
             raise ValueError("At least 2 curves are required for lofting.")
 
-        # Determine loft degree based on curve degree
-        loft_degree = degree if output_type == OUTPUT_NURBS_SURFACE else CURVE_DEGREE_LINEAR
-
         if output_type == OUTPUT_NURBS_SURFACE:
-            # NURBS Surface: no construction history needed
+            # NURBS Surface: use degree 3 for loft direction
             # rsn=True to reverse surface normals (face outward)
             result = cmds.loft(
                 curves,
@@ -269,14 +242,15 @@ class CreateLoftSurface:
                 u=True,
                 c=close,
                 ar=True,
-                d=loft_degree,
+                d=CURVE_DEGREE,
                 ss=surface_divisions,
                 rn=False,
                 po=0,
                 rsn=True,
             )[0]
         else:
-            # Mesh: need construction history to configure nurbsTessellate node
+            # Mesh: use degree 1 (linear) for loft direction
+            # This is required because degree 3 mesh loft has different tessellation behavior
             # rsn=False for mesh (normals face outward without reversal)
             result, loft_node = cmds.loft(
                 curves,
@@ -284,7 +258,7 @@ class CreateLoftSurface:
                 u=True,
                 c=close,
                 ar=True,
-                d=loft_degree,
+                d=1,  # Linear for mesh output
                 ss=surface_divisions,
                 rn=False,
                 po=1,
