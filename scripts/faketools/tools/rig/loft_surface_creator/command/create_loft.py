@@ -118,6 +118,7 @@ class CreateLoftSurface:
                 joint_chains=self.joint_chains,
                 num_chains=len(self.root_joints),
                 surface_divisions=surface_divisions,
+                curve_divisions=curve_divisions,
                 is_closed=close,
             )
             skin_cluster = weight_setter.execute(
@@ -278,11 +279,63 @@ class CreateLoftSurface:
             # Delete construction history
             cmds.delete(result, ch=True)
 
+            # For closed mesh, merge first and last row vertices
+            if close:
+                self._merge_seam_vertices(result)
+
         # Delete temporary curves
         cmds.delete(curves)
 
         logger.debug(f"Created lofted {'mesh' if output_type == OUTPUT_MESH else 'surface'}: {result}")
         return result
+
+    def _merge_seam_vertices(self, mesh: str) -> None:
+        """Merge first and last row vertices for closed mesh.
+
+        For closed loft, Maya creates duplicate vertices at the seam.
+        This method merges them to create a proper closed mesh.
+
+        Args:
+            mesh (str): Mesh transform name.
+        """
+        num_vertices = cmds.polyEvaluate(mesh, vertex=True)
+
+        # Calculate vertices per row (curve direction)
+        # This is determined by the curve, not affected by surface_divisions
+        # We need to figure out the row count from total vertices
+        # num_vertices = num_rows * verts_per_row
+        # For closed loft before merge: num_rows = num_chains * surface_divisions + 1
+
+        # Get the actual vertex count per row by checking vertex positions
+        # First row vertices are at indices 0, 1, 2, ...
+        # We find where the pattern repeats (same X position as vtx[0])
+        first_pos = cmds.xform(f"{mesh}.vtx[0]", q=True, ws=True, t=True)
+
+        verts_per_row = 0
+        for i in range(1, num_vertices):
+            pos = cmds.xform(f"{mesh}.vtx[{i}]", q=True, ws=True, t=True)
+            # Check if this vertex is at a different "row" (approximately same position as first)
+            dist = ((pos[0] - first_pos[0]) ** 2 + (pos[1] - first_pos[1]) ** 2 + (pos[2] - first_pos[2]) ** 2) ** 0.5
+            if dist < 0.0001:
+                # Found a vertex at the same position - this is the last row's first vertex
+                verts_per_row = i
+                break
+
+        if verts_per_row == 0:
+            logger.warning("Could not determine vertices per row for seam merge")
+            return
+
+        num_rows = num_vertices // verts_per_row
+        last_row_start = (num_rows - 1) * verts_per_row
+
+        # Merge each pair of first row and last row vertices
+        # Merge from last to first to avoid index shifting issues
+        for i in range(verts_per_row - 1, -1, -1):
+            first_vtx = f"{mesh}.vtx[{i}]"
+            last_vtx = f"{mesh}.vtx[{last_row_start + i}]"
+            cmds.polyMergeVertex(first_vtx, last_vtx, d=0.01, am=True, ch=False)
+
+        logger.debug(f"Merged {verts_per_row} seam vertex pairs")
 
 
 __all__ = ["CreateLoftSurface"]

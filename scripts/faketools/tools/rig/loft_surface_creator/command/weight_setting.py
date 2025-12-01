@@ -1,12 +1,15 @@
 """LoftWeightSetting class for applying weights to lofted surfaces."""
 
 from logging import getLogger
+from math import sqrt
 
 import maya.cmds as cmds
 
 from .constants import (
     VALID_WEIGHT_METHODS,
+    WEIGHT_METHOD_EASE,
     WEIGHT_METHOD_LINEAR,
+    WEIGHT_METHOD_STEP,
 )
 
 logger = getLogger(__name__)
@@ -16,9 +19,11 @@ class LoftWeightSetting:
     """Loft weight setting class.
 
     This class applies weights to a lofted surface (NURBS or mesh) based on joint chain positions.
-    Weights are calculated in two directions:
-    - Along curve direction: based on joint positions within each chain
-    - Loft direction: based on interpolation between adjacent chains
+    Weights are calculated using curve length-based approach (like CurveWeightSetting).
+
+    Two-step process:
+    1. Calculate weights for CVs/vertices at chain positions using curve length-based approach
+    2. Interpolate weights for intermediate CVs/vertices between chain positions
     """
 
     def __init__(
@@ -27,6 +32,7 @@ class LoftWeightSetting:
         joint_chains: list[list[str]],
         num_chains: int,
         surface_divisions: int,
+        curve_divisions: int = 0,
         is_closed: bool = False,
     ) -> None:
         """Initialize the LoftWeightSetting class.
@@ -36,6 +42,7 @@ class LoftWeightSetting:
             joint_chains (list[list[str]]): List of joint chains used for lofting.
             num_chains (int): Number of joint chains (curves) used in lofting.
             surface_divisions (int): Number of divisions between curves in loft direction.
+            curve_divisions (int): Number of CVs inserted between joint positions.
             is_closed (bool): Whether the loft is closed (cylinder shape).
 
         Raises:
@@ -57,6 +64,7 @@ class LoftWeightSetting:
         self.joint_chains = joint_chains
         self.num_chains = num_chains
         self.surface_divisions = surface_divisions
+        self.curve_divisions = curve_divisions
         self.is_closed = is_closed
 
         # Determine geometry type
@@ -72,6 +80,9 @@ class LoftWeightSetting:
 
         # Get CV/vertex count info
         self._analyze_geometry()
+
+        # Pre-calculate joint lengths for each chain
+        self._calculate_joint_lengths()
 
     def _collect_influences(self) -> list[str]:
         """Collect all unique joints from all chains as influences.
@@ -90,19 +101,23 @@ class LoftWeightSetting:
         """Analyze geometry to get CV/vertex layout information."""
         if self.shape_type == "nurbsSurface":
             # Get NURBS surface CV counts
-            # spansU/V + degreeU/V = numCVsU/V (for non-periodic)
             spans_u = cmds.getAttr(f"{self.shape}.spansU")
             spans_v = cmds.getAttr(f"{self.shape}.spansV")
             self.degree_u = cmds.getAttr(f"{self.shape}.degreeU")
             self.degree_v = cmds.getAttr(f"{self.shape}.degreeV")
             form_u = cmds.getAttr(f"{self.shape}.formU")  # 0=open, 1=closed, 2=periodic
+            form_v = cmds.getAttr(f"{self.shape}.formV")
 
             if form_u == 2:  # periodic
                 self.num_cvs_u = spans_u
             else:
                 self.num_cvs_u = spans_u + self.degree_u
 
-            self.num_cvs_v = spans_v + self.degree_v
+            if form_v == 2:  # periodic
+                self.num_cvs_v = spans_v
+            else:
+                self.num_cvs_v = spans_v + self.degree_v
+
             self.total_cvs = self.num_cvs_u * self.num_cvs_v
 
             logger.debug(f"NURBS Surface: {self.num_cvs_u} x {self.num_cvs_v} CVs (degree U={self.degree_u}, V={self.degree_v})")
@@ -112,9 +127,10 @@ class LoftWeightSetting:
             self.num_vertices = cmds.polyEvaluate(self.geometry, vertex=True)
 
             # Calculate expected layout based on loft parameters
-            # For mesh from loft: vertices are arranged in a grid
-            chain_length = len(self.joint_chains[0])  # Assume all chains have same length
-            self.num_verts_along_curve = chain_length
+            chain_length = len(self.joint_chains[0])
+            # curve_divisions adds intermediate vertices between each joint
+            # Formula: chain_length + (chain_length - 1) * curve_divisions
+            self.num_verts_along_curve = chain_length + (chain_length - 1) * self.curve_divisions
             self.num_verts_loft_direction = self._calculate_loft_verts()
 
             logger.debug(f"Mesh: {self.num_vertices} vertices, expected {self.num_verts_along_curve} x {self.num_verts_loft_direction}")
@@ -128,15 +144,40 @@ class LoftWeightSetting:
         Returns:
             int: Number of vertices in loft direction.
         """
-        # For mesh output with format=3 (CV positions):
-        # Each chain creates 1 vertex row
-        # Between chains, surface_divisions creates additional rows
         if self.is_closed:
-            # For closed loft, there's a duplicate row at the seam
-            # (first and last rows are at the same position)
-            return self.num_chains + 1
+            # For closed loft, seam vertices are merged
+            # Formula: num_chains * surface_divisions
+            return self.num_chains * self.surface_divisions
         else:
             return self.num_chains + (self.num_chains - 1) * (self.surface_divisions - 1)
+
+    def _calculate_joint_lengths(self) -> None:
+        """Pre-calculate cumulative lengths for each joint chain.
+
+        This creates a list of length values for each joint in each chain,
+        similar to how CurveWeightSetting calculates lengths along a curve.
+        """
+        self.chain_joint_lengths: list[list[float]] = []
+        self.chain_total_lengths: list[float] = []
+
+        for chain in self.joint_chains:
+            lengths = [0.0]  # First joint is at length 0
+            cumulative_length = 0.0
+
+            for i in range(1, len(chain)):
+                # Get positions of consecutive joints
+                pos1 = cmds.xform(chain[i - 1], q=True, ws=True, t=True)
+                pos2 = cmds.xform(chain[i], q=True, ws=True, t=True)
+
+                # Calculate distance
+                dist = sqrt((pos2[0] - pos1[0]) ** 2 + (pos2[1] - pos1[1]) ** 2 + (pos2[2] - pos1[2]) ** 2)
+                cumulative_length += dist
+                lengths.append(cumulative_length)
+
+            self.chain_joint_lengths.append(lengths)
+            self.chain_total_lengths.append(cumulative_length)
+
+        logger.debug(f"Calculated joint lengths for {len(self.joint_chains)} chains")
 
     def execute(
         self,
@@ -162,23 +203,24 @@ class LoftWeightSetting:
         if method not in VALID_WEIGHT_METHODS:
             raise ValueError(f"Invalid method '{method}'. Valid options are: {VALID_WEIGHT_METHODS}")
 
+        # Validate parent_influence_ratio
+        if not 0.0 <= parent_influence_ratio <= 1.0:
+            raise ValueError(f"Invalid parent_influence_ratio '{parent_influence_ratio}'. Must be between 0.0 and 1.0.")
+
         # Create skin cluster with all influences
         skin_cluster = cmds.skinCluster(
             self.all_influences,
             self.geometry,
             toSelectedBones=True,
-            bindMethod=0,  # Closest distance
+            bindMethod=0,
             normalizeWeights=1,
-            weightDistribution=0,  # Distance
+            weightDistribution=0,
         )[0]
 
         logger.info(f"Created skin cluster: {skin_cluster}")
 
-        # Calculate and apply weights based on geometry type
-        if self.shape_type == "nurbsSurface":
-            self._apply_nurbs_weights(skin_cluster, method)
-        else:
-            self._apply_mesh_weights(skin_cluster, method)
+        # Calculate and apply weights
+        self._apply_weights(skin_cluster, method, parent_influence_ratio, remove_end)
 
         # Apply smoothing if requested
         if smooth_iterations > 0:
@@ -188,274 +230,413 @@ class LoftWeightSetting:
 
         return skin_cluster
 
-    def _apply_nurbs_weights(self, skin_cluster: str, method: str) -> None:
-        """Apply weights to NURBS surface CVs.
+    def _apply_weights(self, skin_cluster: str, method: str, parent_influence_ratio: float, remove_end: bool) -> None:
+        """Apply weights to geometry.
 
         Args:
             skin_cluster (str): Skin cluster name.
             method (str): Weight calculation method.
+            parent_influence_ratio (float): Ratio of influence from parent joint.
+            remove_end (bool): Whether to merge end joint weights to parent.
         """
-        # Disable normalization during weight setting
+        # Step 1: Calculate weights for each chain position (curve direction)
+        chain_position_weights = self._calculate_chain_position_weights(method, parent_influence_ratio, remove_end)
+
+        # Step 2: Apply weights to all CVs/vertices
         cmds.skinCluster(skin_cluster, e=True, normalizeWeights=0)
 
-        # Maya's NURBS surface from loft:
-        # - cv[u][v]: u = curve direction (joint positions), v = loft direction (chain positions)
-        # - num_cvs_u corresponds to curve direction
-        # - num_cvs_v corresponds to loft direction
-        for cv_u in range(self.num_cvs_u):  # curve direction (joints)
-            for cv_v in range(self.num_cvs_v):  # loft direction (chains)
+        if self.shape_type == "nurbsSurface":
+            self._apply_nurbs_weights(skin_cluster, chain_position_weights)
+        else:
+            self._apply_mesh_weights(skin_cluster, chain_position_weights)
+
+        cmds.skinCluster(skin_cluster, e=True, normalizeWeights=1)
+
+    def _calculate_chain_position_weights(self, method: str, parent_influence_ratio: float, remove_end: bool) -> list[list[list[float]]]:
+        """Calculate weights for each CV/vertex at chain positions.
+
+        This uses the curve length-based approach from CurveWeightSetting.
+
+        Args:
+            method (str): Weight calculation method.
+            parent_influence_ratio (float): Ratio of influence from parent joint.
+            remove_end (bool): Whether to merge end joint weights to parent.
+
+        Returns:
+            list[list[list[float]]]: Weights for each chain, each CV position.
+                Shape: [num_chains][num_cvs_in_curve_direction][num_influences]
+        """
+        all_chain_weights = []
+
+        for chain_index in range(self.num_chains):
+            chain = self.joint_chains[chain_index]
+            joint_lengths = self.chain_joint_lengths[chain_index]
+            total_length = self.chain_total_lengths[chain_index]
+
+            # Get number of CVs/vertices in curve direction
+            if self.shape_type == "nurbsSurface":
+                num_cvs_curve = self.num_cvs_u
+            else:
+                num_cvs_curve = self.num_verts_along_curve
+
+            # Calculate CV positions along the chain (as length values)
+            cv_lengths = self._calculate_cv_lengths(num_cvs_curve, total_length)
+
+            # Calculate weights for each CV
+            chain_weights = self._calculate_weights_for_chain(cv_lengths, joint_lengths, chain, method, parent_influence_ratio)
+
+            # Merge end influence weights if requested
+            if remove_end and not self.is_closed:
+                chain_weights = self._merge_end_influence_weights(chain_weights, chain)
+
+            all_chain_weights.append(chain_weights)
+
+        return all_chain_weights
+
+    def _calculate_cv_lengths(self, num_cvs: int, total_length: float) -> list[float]:
+        """Calculate length values for CVs evenly distributed along the chain.
+
+        Args:
+            num_cvs (int): Number of CVs in curve direction.
+            total_length (float): Total length of the joint chain.
+
+        Returns:
+            list[float]: Length values for each CV.
+        """
+        if num_cvs <= 1:
+            return [0.0]
+
+        return [total_length * i / (num_cvs - 1) for i in range(num_cvs)]
+
+    def _calculate_weights_for_chain(
+        self,
+        cv_lengths: list[float],
+        joint_lengths: list[float],
+        chain: list[str],
+        method: str,
+        parent_influence_ratio: float,
+    ) -> list[list[float]]:
+        """Calculate weights for CVs in a single chain.
+
+        This implements the same algorithm as CurveWeightSetting._calculate_weights.
+
+        Args:
+            cv_lengths (list[float]): Length values of CVs along the chain.
+            joint_lengths (list[float]): Length values of joints along the chain.
+            chain (list[str]): Joint names in the chain.
+            method (str): Weight calculation method.
+            parent_influence_ratio (float): Ratio of influence from parent joint.
+
+        Returns:
+            list[list[float]]: Weights for each CV.
+        """
+        num_influences = len(self.all_influences)
+        num_joints = len(chain)
+        cv_weights = []
+
+        for cv_length in cv_lengths:
+            weights = [0.0] * num_influences
+            primary_influence_indices = []
+
+            # Find which joint segment this CV falls in
+            weight_assigned = False
+            for j in range(num_joints - 1):
+                joint_length_a = joint_lengths[j]
+                joint_length_b = joint_lengths[j + 1]
+
+                # CV exactly at joint position
+                if cv_length == joint_length_a:
+                    inf_index = self.all_influences.index(chain[j])
+                    weights[inf_index] = 1.0
+                    primary_influence_indices.append(inf_index)
+                    weight_assigned = True
+                    break
+                elif cv_length == joint_length_b:
+                    inf_index = self.all_influences.index(chain[j + 1])
+                    weights[inf_index] = 1.0
+                    primary_influence_indices.append(inf_index)
+                    weight_assigned = True
+                    break
+                # CV between two joints
+                elif joint_length_a < cv_length < joint_length_b:
+                    t = (cv_length - joint_length_a) / (joint_length_b - joint_length_a)
+                    weight_a, weight_b = self._interpolate_weight(t, method)
+
+                    inf_index_a = self.all_influences.index(chain[j])
+                    inf_index_b = self.all_influences.index(chain[j + 1])
+
+                    weights[inf_index_a] = weight_a
+                    weights[inf_index_b] = weight_b
+                    primary_influence_indices.extend([inf_index_a, inf_index_b])
+                    weight_assigned = True
+                    break
+
+            # Handle out-of-range CVs
+            if not weight_assigned:
+                if cv_length <= joint_lengths[0]:
+                    # Before first joint
+                    inf_index = self.all_influences.index(chain[0])
+                    weights[inf_index] = 1.0
+                    primary_influence_indices.append(inf_index)
+                elif cv_length >= joint_lengths[-1]:
+                    # After last joint
+                    inf_index = self.all_influences.index(chain[-1])
+                    weights[inf_index] = 1.0
+                    primary_influence_indices.append(inf_index)
+
+            # Apply parent influence
+            if parent_influence_ratio > 0.0:
+                for inf_index in primary_influence_indices:
+                    weights = self._apply_parent_influence(weights, inf_index, parent_influence_ratio, chain)
+
+            # Normalize weights
+            weights = self._normalize_weights(weights)
+            cv_weights.append(weights)
+
+        return cv_weights
+
+    def _apply_nurbs_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]]) -> None:
+        """Apply weights to NURBS surface CVs.
+
+        Args:
+            skin_cluster (str): Skin cluster name.
+            chain_position_weights (list): Pre-calculated weights for each chain position.
+        """
+        # Get chain position indices in V direction
+        chain_v_indices = self._get_chain_v_indices_nurbs()
+
+        for cv_u in range(self.num_cvs_u):  # curve direction
+            for cv_v in range(self.num_cvs_v):  # loft direction
                 cv_name = f"{self.geometry}.cv[{cv_u}][{cv_v}]"
 
-                # _calculate_cv_weights expects (loft_position, curve_position)
-                # cv_v is loft direction, cv_u is curve direction
-                weights = self._calculate_cv_weights(cv_v, cv_u, method)
+                # Determine weights for this CV
+                weights = self._get_weights_for_loft_position(cv_u, cv_v, chain_v_indices, chain_position_weights, is_nurbs=True)
 
                 # Apply weights
                 transform_values = list(zip(self.all_influences, weights))
                 cmds.skinPercent(skin_cluster, cv_name, transformValue=transform_values)
 
-        # Re-enable normalization
-        cmds.skinCluster(skin_cluster, e=True, normalizeWeights=1)
-
-    def _apply_mesh_weights(self, skin_cluster: str, method: str) -> None:
+    def _apply_mesh_weights(self, skin_cluster: str, chain_position_weights: list[list[list[float]]]) -> None:
         """Apply weights to mesh vertices.
 
         Args:
             skin_cluster (str): Skin cluster name.
-            method (str): Weight calculation method.
+            chain_position_weights (list): Pre-calculated weights for each chain position.
         """
-        # Disable normalization during weight setting
-        cmds.skinCluster(skin_cluster, e=True, normalizeWeights=0)
+        # Get chain position indices in loft direction (row indices)
+        chain_row_indices = self._get_chain_row_indices_mesh()
 
         for vtx_index in range(self.num_vertices):
             vtx_name = f"{self.geometry}.vtx[{vtx_index}]"
 
-            # Convert vertex index to grid position
-            u, v = self._vertex_index_to_uv(vtx_index)
+            # Convert to grid position
+            row = vtx_index // self.num_verts_along_curve  # loft direction
+            col = vtx_index % self.num_verts_along_curve  # curve direction
 
-            # Calculate weights for this vertex
-            weights = self._calculate_cv_weights(u, v, method)
+            # Determine weights for this vertex
+            weights = self._get_weights_for_loft_position(col, row, chain_row_indices, chain_position_weights, is_nurbs=False)
 
             # Apply weights
             transform_values = list(zip(self.all_influences, weights))
             cmds.skinPercent(skin_cluster, vtx_name, transformValue=transform_values)
 
-        # Re-enable normalization
-        cmds.skinCluster(skin_cluster, e=True, normalizeWeights=1)
-
-    def _vertex_index_to_uv(self, vtx_index: int) -> tuple[int, int]:
-        """Convert mesh vertex index to UV grid position.
-
-        Args:
-            vtx_index (int): Vertex index.
+    def _get_chain_v_indices_nurbs(self) -> list[int]:
+        """Get V indices that correspond to chain positions for NURBS surface.
 
         Returns:
-            tuple[int, int]: (u, v) grid position.
+            list[int]: V indices for each chain position.
         """
-        # Mesh vertices from loft are arranged row by row
-        # u = loft direction (between chains)
-        # v = along curve direction (along chain)
-        u = vtx_index // self.num_verts_along_curve
-        v = vtx_index % self.num_verts_along_curve
-        return u, v
+        if self.is_closed:
+            # For closed NURBS (periodic), CV indices follow a specific pattern:
+            # - First chain (A) is always at v=1 (offset by 1)
+            # - Subsequent chains are spaced by surface_divisions
+            # Example (3 chains, surface_divisions=2, num_cvs_v=6):
+            #   chain 0 -> v=1, chain 1 -> v=3, chain 2 -> v=5
+            return [(1 + chain_idx * self.surface_divisions) % self.num_cvs_v for chain_idx in range(self.num_chains)]
+        else:
+            # For open NURBS, chains are at evenly spaced V positions
+            if self.num_chains == 1:
+                return [0]
+            step = (self.num_cvs_v - 1) / (self.num_chains - 1)
+            return [int(round(i * step)) for i in range(self.num_chains)]
 
-    def _calculate_cv_weights(self, u: int, v: int, method: str) -> list[float]:
-        """Calculate weights for a CV/vertex at grid position (u, v).
-
-        Args:
-            u (int): Position in loft direction (which chain).
-            v (int): Position along curve direction (which joint in chain).
-            method (str): Weight calculation method.
+    def _get_chain_row_indices_mesh(self) -> list[int]:
+        """Get row indices that correspond to chain positions for mesh.
 
         Returns:
-            list[float]: Weights for each influence.
+            list[int]: Row indices for each chain position.
+        """
+        if self.is_closed:
+            # For closed mesh (after seam merge):
+            # Chains are evenly spaced with surface_divisions between each
+            # Chain 0 at row 0, chain 1 at row surface_divisions, etc.
+            return [i * self.surface_divisions for i in range(self.num_chains)]
+        else:
+            # For open mesh, chains are at evenly spaced row positions
+            if self.num_chains == 1:
+                return [0]
+            step = (self.num_verts_loft_direction - 1) / (self.num_chains - 1)
+            return [int(round(i * step)) for i in range(self.num_chains)]
+
+    def _get_weights_for_loft_position(
+        self,
+        curve_pos: int,
+        loft_pos: int,
+        chain_indices: list[int],
+        chain_position_weights: list[list[list[float]]],
+        is_nurbs: bool,
+    ) -> list[float]:
+        """Get weights for a CV/vertex at a specific loft position.
+
+        If the position is at a chain, returns the pre-calculated weights.
+        If between chains, interpolates between adjacent chain weights.
+
+        Args:
+            curve_pos (int): Position in curve direction (CV index or column).
+            loft_pos (int): Position in loft direction (CV index or row).
+            chain_indices (list[int]): Loft indices that correspond to chain positions.
+            chain_position_weights (list): Pre-calculated weights for each chain.
+            is_nurbs (bool): Whether this is for NURBS surface.
+
+        Returns:
+            list[float]: Interpolated weights.
         """
         num_influences = len(self.all_influences)
-        weights = [0.0] * num_influences
 
-        # Determine which chain(s) this CV belongs to based on u position
-        chain_index, loft_t = self._get_chain_info_from_u(u)
+        # Check if this position is exactly at a chain
+        for chain_idx, chain_loft_idx in enumerate(chain_indices):
+            if loft_pos == chain_loft_idx:
+                return chain_position_weights[chain_idx][curve_pos]
 
-        # Get the joint chains involved
-        chain_a_index = chain_index
-        chain_b_index = (chain_index + 1) % self.num_chains if self.is_closed else min(chain_index + 1, self.num_chains - 1)
+        # Find which two chains this position is between
+        chain_a_idx, chain_b_idx, t = self._find_adjacent_chains(loft_pos, chain_indices, is_nurbs)
 
-        chain_a = self.joint_chains[chain_a_index]
-        chain_b = self.joint_chains[chain_b_index]
+        # Get weights from both chains
+        weights_a = chain_position_weights[chain_a_idx][curve_pos]
+        weights_b = chain_position_weights[chain_b_idx][curve_pos]
 
-        # Calculate along-curve weights for each chain
-        joint_index, curve_t = self._get_joint_info_from_v(v, len(chain_a))
+        # Interpolate weights
+        interpolated = [0.0] * num_influences
+        for i in range(num_influences):
+            interpolated[i] = weights_a[i] * (1.0 - t) + weights_b[i] * t
 
-        # Get the joints involved in along-curve interpolation
-        joint_a1 = chain_a[joint_index]
-        joint_a2 = chain_a[min(joint_index + 1, len(chain_a) - 1)]
-        joint_b1 = chain_b[joint_index]
-        joint_b2 = chain_b[min(joint_index + 1, len(chain_b) - 1)]
+        return self._normalize_weights(interpolated)
 
-        # Calculate along-curve weights (same for both chains)
-        curve_weight_1, curve_weight_2 = self._interpolate_weight(curve_t, method)
+    def _find_adjacent_chains(self, loft_pos: int, chain_indices: list[int], is_nurbs: bool) -> tuple[int, int, float]:
+        """Find the two chains adjacent to a loft position and interpolation factor.
 
-        # Calculate loft direction weights
-        loft_weight_a, loft_weight_b = self._interpolate_weight(loft_t, method)
+        Args:
+            loft_pos (int): Position in loft direction.
+            chain_indices (list[int]): Loft indices that correspond to chain positions.
+            is_nurbs (bool): Whether this is for NURBS surface.
 
-        # Combine weights
-        # Final weight = loft_weight * curve_weight
-        if loft_t == 0.0:
-            # Exactly on chain A
-            weights[self.all_influences.index(joint_a1)] = curve_weight_1
-            weights[self.all_influences.index(joint_a2)] = curve_weight_2
-        elif loft_t == 1.0 or (chain_a_index == chain_b_index):
-            # Exactly on chain B (or same chain if not interpolating)
-            weights[self.all_influences.index(joint_b1)] = curve_weight_1
-            weights[self.all_influences.index(joint_b2)] = curve_weight_2
+        Returns:
+            tuple[int, int, float]: (chain_a_index, chain_b_index, interpolation_factor)
+        """
+        # Sort chain indices with their original chain index
+        sorted_chains = sorted(enumerate(chain_indices), key=lambda x: x[1])
+
+        # Find which segment the loft position falls in
+        for i in range(len(sorted_chains) - 1):
+            chain_a_idx, loft_a = sorted_chains[i]
+            chain_b_idx, loft_b = sorted_chains[i + 1]
+
+            if loft_a <= loft_pos <= loft_b:
+                if loft_b == loft_a:
+                    t = 0.0
+                else:
+                    t = (loft_pos - loft_a) / (loft_b - loft_a)
+                return chain_a_idx, chain_b_idx, t
+
+        # Handle closed loft - interpolate between last and first chain
+        if self.is_closed:
+            last_chain_idx, last_loft = sorted_chains[-1]
+            first_chain_idx, first_loft = sorted_chains[0]
+
+            if is_nurbs:
+                total_range = self.num_cvs_v
+            else:
+                total_range = self.num_verts_loft_direction
+
+            if loft_pos > last_loft:
+                # Between last chain and wrap-around
+                wrap_distance = total_range - last_loft + first_loft
+                t = (loft_pos - last_loft) / wrap_distance if wrap_distance > 0 else 0.0
+                return last_chain_idx, first_chain_idx, t
+            elif loft_pos < first_loft:
+                # Before first chain (wrapped from end)
+                wrap_distance = total_range - last_loft + first_loft
+                t = (total_range - last_loft + loft_pos) / wrap_distance if wrap_distance > 0 else 0.0
+                return last_chain_idx, first_chain_idx, t
+
+        # Fallback: clamp to nearest chain
+        if loft_pos <= sorted_chains[0][1]:
+            return sorted_chains[0][0], sorted_chains[0][0], 0.0
         else:
-            # Between chains - combine both
-            weights[self.all_influences.index(joint_a1)] += loft_weight_a * curve_weight_1
-            weights[self.all_influences.index(joint_a2)] += loft_weight_a * curve_weight_2
-            weights[self.all_influences.index(joint_b1)] += loft_weight_b * curve_weight_1
-            weights[self.all_influences.index(joint_b2)] += loft_weight_b * curve_weight_2
+            return sorted_chains[-1][0], sorted_chains[-1][0], 0.0
 
-        # Normalize weights
-        weights = self._normalize_weights(weights)
+    def _merge_end_influence_weights(self, cv_weights: list[list[float]], chain: list[str]) -> list[list[float]]:
+        """Merge end influence weights to parent influence for open chains.
+
+        Args:
+            cv_weights (list[list[float]]): CV weights before merging.
+            chain (list[str]): Joint chain.
+
+        Returns:
+            list[list[float]]: CV weights after merging.
+        """
+        if len(chain) < 2:
+            return cv_weights
+
+        end_joint = chain[-1]
+        parent_joint = chain[-2]
+
+        end_idx = self.all_influences.index(end_joint)
+        parent_idx = self.all_influences.index(parent_joint)
+
+        merged_weights = []
+        for weights in cv_weights:
+            new_weights = weights[:]
+            new_weights[parent_idx] += new_weights[end_idx]
+            new_weights[end_idx] = 0.0
+            merged_weights.append(self._normalize_weights(new_weights))
+
+        return merged_weights
+
+    def _apply_parent_influence(self, weights: list[float], primary_inf_index: int, parent_ratio: float, chain: list[str]) -> list[float]:
+        """Apply parent influence to weights.
+
+        Args:
+            weights (list[float]): Current weights.
+            primary_inf_index (int): Index of the primary influence.
+            parent_ratio (float): Ratio of influence from parent.
+            chain (list[str]): Joint chain.
+
+        Returns:
+            list[float]: Modified weights.
+        """
+        if parent_ratio <= 0.0:
+            return weights
+
+        # Find the joint in the chain
+        primary_joint = self.all_influences[primary_inf_index]
+        if primary_joint not in chain:
+            return weights
+
+        joint_idx_in_chain = chain.index(primary_joint)
+        if joint_idx_in_chain == 0:
+            # First joint has no parent
+            return weights
+
+        parent_joint = chain[joint_idx_in_chain - 1]
+        parent_inf_index = self.all_influences.index(parent_joint)
+
+        # Redistribute weight
+        primary_weight = weights[primary_inf_index]
+        weights[primary_inf_index] = primary_weight * (1.0 - parent_ratio)
+        weights[parent_inf_index] += primary_weight * parent_ratio
 
         return weights
-
-    def _get_chain_info_from_u(self, u: int) -> tuple[int, float]:
-        """Get chain index and interpolation factor from u position.
-
-        Args:
-            u (int): Position in loft direction.
-
-        Returns:
-            tuple[int, float]: (chain_index, interpolation_factor 0.0-1.0)
-        """
-        if self.shape_type == "nurbsSurface":
-            # For NURBS surface from loft:
-            # - V direction (num_cvs_v) is the loft direction (between chains)
-            # - u parameter here represents position in loft direction
-            if self.is_closed:
-                # For closed NURBS loft, CV indices are offset by 1:
-                # cv[*][0] = last chain, cv[*][1] = first chain, cv[*][2] = second chain
-                # So: chain_index = (u - 1 + num_chains) % num_chains
-                chain_index = (u - 1 + self.num_chains) % self.num_chains
-                return chain_index, 0.0
-            else:
-                # Open NURBS
-                total_spans = self.num_chains - 1
-                if total_spans == 0:
-                    return 0, 0.0
-
-                # Use num_cvs_v because V direction is the loft direction in Maya
-                segment_size = (self.num_cvs_v - 1) / total_spans
-                if segment_size == 0:
-                    return 0, 0.0
-
-                chain_index = int(u / segment_size)
-                if chain_index >= total_spans:
-                    chain_index = total_spans - 1
-
-                position_in_segment = (u / segment_size) - chain_index
-
-                # For degree 3, adjust intermediate CV positions to account for
-                # B-spline basis function weights
-                if self.degree_v == 3 and 0 < position_in_segment < 1:
-                    if chain_index == 0:
-                        # First span: intermediate CV weighted towards first chain
-                        position_in_segment = 1 / 3  # gives (0.667, 0.333)
-                    elif chain_index == total_spans - 1:
-                        # Last span: intermediate CV weighted towards last chain
-                        position_in_segment = 2 / 3  # gives (0.333, 0.667)
-
-                return chain_index, position_in_segment
-
-        else:
-            # For mesh
-            if self.is_closed:
-                # For closed mesh, vertices are arranged as:
-                # rows 0 to num_chains-1: one row per chain
-                # row num_chains: duplicate of row 0 (same position as first chain)
-                if u >= self.num_chains:
-                    # Last row is duplicate of first chain
-                    return 0, 0.0
-                else:
-                    return u, 0.0
-            else:
-                # Open mesh
-                total_spans = self.num_chains - 1
-                if total_spans == 0:
-                    return 0, 0.0
-
-                # Use (num_verts - 1) to correctly map vertex indices to positions
-                # This matches the approach used in _get_joint_info_from_v()
-                if self.num_verts_loft_direction <= 1:
-                    return 0, 0.0
-
-                segment_size = (self.num_verts_loft_direction - 1) / total_spans
-
-                chain_index = int(u / segment_size)
-                if chain_index >= total_spans:
-                    chain_index = total_spans - 1
-
-                position_in_segment = (u / segment_size) - chain_index
-                return chain_index, min(position_in_segment, 1.0)
-
-    def _get_joint_info_from_v(self, v: int, chain_length: int) -> tuple[int, float]:
-        """Get joint index and interpolation factor from v position.
-
-        Args:
-            v (int): Position along curve direction.
-            chain_length (int): Number of joints in the chain.
-
-        Returns:
-            tuple[int, float]: (joint_index, interpolation_factor 0.0-1.0)
-        """
-        if self.shape_type == "nurbsSurface":
-            # For NURBS surface from loft:
-            # - U direction (num_cvs_u) is the curve direction (joint positions)
-            # - v parameter here represents position along curve
-            total_joints = chain_length - 1  # Number of segments between joints
-            if total_joints <= 0:
-                return 0, 0.0
-
-            # Use num_cvs_u because U direction is the curve direction in Maya
-            segment_size = (self.num_cvs_u - 1) / total_joints
-            if segment_size == 0:
-                return 0, 0.0
-
-            joint_index = int(v / segment_size)
-            if joint_index >= total_joints:
-                joint_index = total_joints - 1
-
-            position_in_segment = (v / segment_size) - joint_index
-
-            # For degree 3, adjust intermediate CV positions to account for
-            # B-spline basis function weights
-            if self.degree_u == 3 and 0 < position_in_segment < 1:
-                if joint_index == 0:
-                    # First segment: intermediate CV weighted towards first joint
-                    position_in_segment = 1 / 3  # gives (0.667, 0.333)
-                elif joint_index == total_joints - 1:
-                    # Last segment: intermediate CV weighted towards last joint
-                    position_in_segment = 2 / 3  # gives (0.333, 0.667)
-
-            return joint_index, min(position_in_segment, 1.0)
-
-        else:
-            # For mesh
-            total_joints = chain_length - 1
-            if total_joints <= 0:
-                return 0, 0.0
-
-            segment_size = (self.num_verts_along_curve - 1) / total_joints if self.num_verts_along_curve > 1 else 1
-            if segment_size == 0:
-                return 0, 0.0
-
-            joint_index = int(v / segment_size)
-            if joint_index >= total_joints:
-                joint_index = total_joints - 1
-
-            position_in_segment = (v / segment_size) - joint_index
-            return joint_index, min(position_in_segment, 1.0)
 
     @staticmethod
     def _interpolate_weight(t: float, method: str) -> tuple[float, float]:
@@ -466,13 +647,21 @@ class LoftWeightSetting:
             method (str): Weight calculation method.
 
         Returns:
-            tuple[float, float]: (weight_1, weight_2)
+            tuple[float, float]: (weight_for_first, weight_for_second)
         """
         if method == WEIGHT_METHOD_LINEAR:
             return (1.0 - t, t)
+        elif method == WEIGHT_METHOD_EASE:
+            # Quadratic ease-in-out
+            if t < 0.5:
+                eased_t = 2 * (t**2)
+            else:
+                eased_t = 1 - 2 * ((1 - t) ** 2)
+            return (1.0 - eased_t, eased_t)
+        elif method == WEIGHT_METHOD_STEP:
+            # Step function - 100% to nearest
+            return (1.0, 0.0)
         else:
-            # For now, default to linear for all methods
-            # Can add ease/step later
             return (1.0 - t, t)
 
     @staticmethod
@@ -497,7 +686,6 @@ class LoftWeightSetting:
             skin_cluster (str): Skin cluster name.
             iterations (int): Number of smoothing iterations.
         """
-        # Use Maya's built-in smooth weights for simplicity
         if self.shape_type == "mesh":
             cmds.select(f"{self.geometry}.vtx[*]")
             for _ in range(iterations):
