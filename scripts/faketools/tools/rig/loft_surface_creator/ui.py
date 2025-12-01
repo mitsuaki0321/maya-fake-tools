@@ -143,9 +143,6 @@ class MainWindow(BaseMainWindow):
         self.output_type_combo = QComboBox()
         self.output_type_combo.addItems(["NURBS Surface", "Mesh"])
         layout.addWidget(self.output_type_combo, row, 1)
-
-        self.close_checkbox = QCheckBox("Close")
-        layout.addWidget(self.close_checkbox, row, 2)
         row += 1
 
         # Surface Divisions
@@ -157,6 +154,9 @@ class MainWindow(BaseMainWindow):
         self.surface_divisions_spin.setValue(0)
         self.surface_divisions_spin.setToolTip("Additional divisions between curves in loft direction")
         layout.addWidget(self.surface_divisions_spin, row, 1)
+
+        self.close_checkbox = QCheckBox("Close")
+        layout.addWidget(self.close_checkbox, row, 2)
         row += 1
 
         h_line = extra_widgets.HorizontalSeparator()
@@ -602,6 +602,17 @@ class MainWindow(BaseMainWindow):
         cmds.select(result, r=True)
         logger.info(f"Created loft surface: {result}")
 
+    def showEvent(self, event):
+        """Handle window show event.
+
+        Args:
+            event: Show event
+        """
+        super().showEvent(event)
+        # Set minimum height on first show
+        if not event.spontaneous():
+            self.resize(self.width(), self.minimumSizeHint().height())
+
     def closeEvent(self, event):
         """Handle window close event.
 
@@ -631,7 +642,6 @@ def show_ui():
     # Create new instance
     parent = get_maya_main_window()
     _instance = MainWindow(parent)
-    _instance.adjustSize()
     _instance.show()
     return _instance
 
