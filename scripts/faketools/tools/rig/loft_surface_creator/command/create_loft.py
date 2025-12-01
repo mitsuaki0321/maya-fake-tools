@@ -18,7 +18,7 @@ from .constants import (
     VALID_WEIGHT_METHODS,
     WEIGHT_METHOD_LINEAR,
 )
-from .helpers import get_joint_chains_from_roots, validate_root_joints
+from .helpers import validate_joint_chains
 from .weight_setting import LoftWeightSetting
 
 logger = getLogger(__name__)
@@ -31,18 +31,19 @@ class CreateLoftSurface:
     Used for creating weight transfer sources for skirts, belts, etc.
     """
 
-    def __init__(self, root_joints: list[str]):
+    def __init__(self, joint_chains: list[list[str]]):
         """Initialize the CreateLoftSurface class.
 
         Args:
-            root_joints (list[str]): List of root joint names. At least 2 required.
+            joint_chains (list[list[str]]): List of joint chains.
+                Each chain is a list of joint names from root to end.
+                At least 2 chains required, each with at least 3 joints.
 
         Raises:
-            ValueError: If root_joints is invalid.
+            ValueError: If joint_chains is invalid.
         """
-        validate_root_joints(root_joints)
-        self.root_joints = root_joints
-        self.joint_chains: list[list[str]] = []
+        validate_joint_chains(joint_chains)
+        self.joint_chains = joint_chains
 
     def execute(
         self,
@@ -51,7 +52,6 @@ class CreateLoftSurface:
         surface_divisions: int = 0,
         center: bool = False,
         curve_divisions: int = 0,
-        skip: int = 0,
         is_bind: bool = False,
         weight_method: str = WEIGHT_METHOD_LINEAR,
         smooth_iterations: int = 0,
@@ -68,7 +68,6 @@ class CreateLoftSurface:
                 0 means no additional divisions (default).
             center (bool): Whether to center cubic curves.
             curve_divisions (int): Number of CVs to insert between joint positions.
-            skip (int): Number of joints to skip in each chain.
             is_bind (bool): Whether to create skin cluster and apply weights.
             weight_method (str): Weight calculation method. One of: 'linear', 'ease', 'step'.
             smooth_iterations (int): Number of weight smoothing iterations.
@@ -87,7 +86,7 @@ class CreateLoftSurface:
         if output_type not in VALID_OUTPUT_TYPES:
             raise ValueError(f"Invalid output type '{output_type}'. Valid options are: {VALID_OUTPUT_TYPES}")
 
-        if close and len(self.root_joints) < MIN_CHAINS_FOR_CLOSE:
+        if close and len(self.joint_chains) < MIN_CHAINS_FOR_CLOSE:
             raise ValueError(f"At least {MIN_CHAINS_FOR_CLOSE} joint chains are required for closed loft.")
 
         if surface_divisions < 0:
@@ -95,9 +94,6 @@ class CreateLoftSurface:
 
         if is_bind and weight_method not in VALID_WEIGHT_METHODS:
             raise ValueError(f"Invalid weight method '{weight_method}'. Valid options are: {VALID_WEIGHT_METHODS}")
-
-        # Get joint chains from root joints
-        self.joint_chains = get_joint_chains_from_roots(self.root_joints, skip)
 
         # Create curves from joint chains
         curves = self._create_curves_from_chains(
@@ -121,7 +117,7 @@ class CreateLoftSurface:
             weight_setter = LoftWeightSetting(
                 geometry=result,
                 joint_chains=self.joint_chains,
-                num_chains=len(self.root_joints),
+                num_chains=len(self.joint_chains),
                 surface_divisions=surface_divisions,
                 curve_divisions=curve_divisions,
                 is_closed=close,

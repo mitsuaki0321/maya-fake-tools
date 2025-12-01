@@ -31,20 +31,22 @@ Curve/Surface Creator に似ているツールだがこちらのほうが少し�
 - [x] メッシュ: 重複頂点行の処理（vtx[0]とvtx[12]が同位置）
 - [x] NURBS: CVインデックスオフセット（v=0→最後のチェーン、v=1→最初のチェーン）
 
-### Phase 4: 追加ウェイト処理 ⏳ 未着手
+### Phase 4: 追加ウェイト処理 ✅ 完了
 
-- [ ] `weight_method="ease"` - イーズイン/アウト補間
-- [ ] `weight_method="step"` - ステップ補間（最も近いジョイント100%）
-- [ ] `smooth_iterations` - ウェイトスムージング（NURBS対応）
-- [ ] `parent_influence_ratio` - 親ジョイントへの影響比率
-- [ ] `remove_end` - 末端ジョイントのウェイトを親にマージ
+- [x] `weight_method="ease"` - イーズイン/アウト補間
+- [x] `weight_method="step"` - ステップ補間（最も近いジョイント100%）
+- [x] `smooth_iterations` - ウェイトスムージング（カーブ方向のみ）
+- [x] `parent_influence_ratio` - 親ジョイントへの影響比率
+- [x] `remove_end` - 末端ジョイントのウェイトを親にマージ
+- [x] `loft_weight_method` - ロフト方向のウェイト分配方法（index/distance/projection）
+- [x] `to_skin_cage` - スキンケージへの変換
 
-### Phase 5: UI ⏳ 未着手
+### Phase 5: UI ✅ 完了
 
-- [ ] ui.py の作成
-- [ ] ジョイント選択UI
-- [ ] パラメータ設定UI
-- [ ] プリセット保存/読み込み
+- [x] ui.py の作成
+- [x] ジョイント選択UI（リスト + Add/Remove/Clear）
+- [x] パラメータ設定UI
+- [x] プリセット保存/読み込み（PresetMenuManager）
 
 ---
 
@@ -53,6 +55,7 @@ Curve/Surface Creator に似ているツールだがこちらのほうが少し�
 ```
 scripts/faketools/tools/rig/loft_surface_creator/
 ├── __init__.py              # TOOL_CONFIG定義
+├── ui.py                    # UI（MainWindow, show_ui）
 └── command/
     ├── __init__.py          # main() エントリーポイント
     ├── constants.py         # 定数定義
@@ -67,17 +70,18 @@ scripts/faketools/tools/rig/loft_surface_creator/
 
 ### main() 関数
 
+ジョイントチェーンを直接受け取るメインエントリーポイント。
+
 ```python
 from faketools.tools.rig.loft_surface_creator import command
 
 result, skin = command.main(
-    root_joints: list[str],           # ルートジョイントのリスト（2本以上必須）
+    joint_chains: list[list[str]],    # ジョイントチェーンのリスト（2本以上必須、各3ジョイント以上）
     close: bool = False,              # 環状にするか（True時は3本以上必須）
     output_type: str = "nurbsSurface", # 出力タイプ: "nurbsSurface" | "mesh"
     surface_divisions: int = 0,       # カーブ間の追加分割数（0=追加分割なし）
     center: bool = False,             # カーブのCV位置を中央に調整
     curve_divisions: int = 0,         # ジョイント間に挿入するCV数
-    skip: int = 0,                    # スキップするジョイント数
     is_bind: bool = False,            # スキンクラスターを作成するか
     weight_method: str = "linear",    # ウェイト計算方法: "linear" | "ease" | "step"
     smooth_iterations: int = 0,       # スムージング回数
@@ -89,18 +93,51 @@ result, skin = command.main(
 ) -> tuple[str, Optional[str]]        # (ジオメトリ名, スキンクラスター名)
 ```
 
+### create_from_root_joints() 関数
+
+ルートジョイントからジョイントチェーンを自動展開するラッパー関数。
+
+```python
+result, skin = command.create_from_root_joints(
+    root_joints: list[str],           # ルートジョイントのリスト（2本以上必須）
+    skip: int = 0,                    # スキップするジョイント数
+    # ... その他のパラメータは main() と同じ
+)
+```
+
+### create_from_parallel_joints() 関数
+
+並列ジョイント行（同じ階層レベルのジョイント）を転置してチェーンを作成するラッパー関数。
+
+```python
+result, skin = command.create_from_parallel_joints(
+    parallel_rows: list[list[str]],   # 並列ジョイント行のリスト
+    # ... その他のパラメータは main() と同じ
+)
+```
+
 ### 使用例
 
 ```python
-# 基本使用例（オープン）
+# 直接チェーンを指定（main関数）
 result, skin = command.main(
+    joint_chains=[
+        ["jointA1", "jointA2", "jointA3"],
+        ["jointB1", "jointB2", "jointB3"],
+    ],
+    output_type="mesh",
+    is_bind=True,
+)
+
+# ルートジョイントから自動展開（create_from_root_joints）
+result, skin = command.create_from_root_joints(
     root_joints=["jointA1", "jointB1"],
     output_type="mesh",
     is_bind=True,
 )
 
 # 環状メッシュ（スカート用）
-result, skin = command.main(
+result, skin = command.create_from_root_joints(
     root_joints=["jointA1", "jointB1", "jointC1"],
     close=True,
     output_type="mesh",
@@ -108,7 +145,7 @@ result, skin = command.main(
 )
 
 # 環状NURBSサーフェス
-result, skin = command.main(
+result, skin = command.create_from_root_joints(
     root_joints=["jointA1", "jointB1", "jointC1"],
     close=True,
     output_type="nurbsSurface",
@@ -116,12 +153,26 @@ result, skin = command.main(
 )
 
 # スキンケージに変換（nurbsSurface + is_bind=True時のみ）
-result, skin = command.main(
+result, skin = command.create_from_root_joints(
     root_joints=["jointA1", "jointB1"],
     output_type="nurbsSurface",
     is_bind=True,
     to_skin_cage=True,
     skin_cage_division_levels=2,
+)
+
+# 並列ジョイントからチェーンを作成（create_from_parallel_joints）
+# Row 0: [jointAA, jointBA, jointCA] <- 同じ階層レベル（ルート）
+# Row 1: [jointAB, jointBB, jointCB] <- 同じ階層レベル（子1）
+# Row 2: [jointAC, jointBC, jointCC] <- 同じ階層レベル（子2）
+result, skin = command.create_from_parallel_joints(
+    parallel_rows=[
+        ["jointAA", "jointBA", "jointCA"],
+        ["jointAB", "jointBB", "jointCB"],
+        ["jointAC", "jointBC", "jointCC"],
+    ],
+    close=True,
+    is_bind=True,
 )
 ```
 
@@ -201,7 +252,7 @@ B-spline基底関数の特性により、degree=3では中間CVのウェイト�
 - ~~Degree~~ → 削除（常にdegree=3を使用）
 - Center
 - Divisions (curve_divisions)
-- Skip
+- Skip（create_from_root_joints のみ）
 
 ### Surface 作成時のオプション
 
