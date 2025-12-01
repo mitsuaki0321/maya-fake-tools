@@ -47,7 +47,7 @@ class CreateLoftSurface:
         self,
         close: bool = False,
         output_type: str = OUTPUT_NURBS_SURFACE,
-        surface_divisions: int = 1,
+        surface_divisions: int = 0,
         center: bool = False,
         curve_divisions: int = 0,
         skip: int = 0,
@@ -62,7 +62,8 @@ class CreateLoftSurface:
         Args:
             close (bool): Whether to close the loft loop (connect last chain to first).
             output_type (str): Type of output geometry. One of: 'nurbsSurface', 'mesh'.
-            surface_divisions (int): Number of divisions between curves in loft direction.
+            surface_divisions (int): Number of additional divisions between curves in loft direction.
+                0 means no additional divisions (default).
             center (bool): Whether to center cubic curves.
             curve_divisions (int): Number of CVs to insert between joint positions.
             skip (int): Number of joints to skip in each chain.
@@ -85,8 +86,8 @@ class CreateLoftSurface:
         if close and len(self.root_joints) < MIN_CHAINS_FOR_CLOSE:
             raise ValueError(f"At least {MIN_CHAINS_FOR_CLOSE} joint chains are required for closed loft.")
 
-        if surface_divisions < 1:
-            raise ValueError(f"Invalid surface divisions ({surface_divisions}). Must be >= 1.")
+        if surface_divisions < 0:
+            raise ValueError(f"Invalid surface divisions ({surface_divisions}). Must be >= 0.")
 
         if is_bind and weight_method not in VALID_WEIGHT_METHODS:
             raise ValueError(f"Invalid weight method '{weight_method}'. Valid options are: {VALID_WEIGHT_METHODS}")
@@ -234,6 +235,10 @@ class CreateLoftSurface:
         if len(curves) < 2:
             raise ValueError("At least 2 curves are required for lofting.")
 
+        # Convert surface_divisions to Maya's ss parameter (ss = surface_divisions + 1)
+        # surface_divisions=0 means no additional divisions, which is ss=1 in Maya
+        maya_ss = surface_divisions + 1
+
         if output_type == OUTPUT_NURBS_SURFACE:
             # NURBS Surface: use degree 3 for loft direction
             # rsn=True to reverse surface normals (face outward)
@@ -244,7 +249,7 @@ class CreateLoftSurface:
                 c=close,
                 ar=True,
                 d=CURVE_DEGREE,
-                ss=surface_divisions,
+                ss=maya_ss,
                 rn=False,
                 po=0,
                 rsn=True,
@@ -260,7 +265,7 @@ class CreateLoftSurface:
                 c=close,
                 ar=True,
                 d=1,  # Linear for mesh output
-                ss=surface_divisions,
+                ss=maya_ss,
                 rn=False,
                 po=1,
                 rsn=False,

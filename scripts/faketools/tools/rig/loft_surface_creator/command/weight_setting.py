@@ -41,7 +41,8 @@ class LoftWeightSetting:
             geometry (str): Surface or mesh transform name.
             joint_chains (list[list[str]]): List of joint chains used for lofting.
             num_chains (int): Number of joint chains (curves) used in lofting.
-            surface_divisions (int): Number of divisions between curves in loft direction.
+            surface_divisions (int): Number of additional divisions between curves in loft direction.
+                0 means no additional divisions.
             curve_divisions (int): Number of CVs inserted between joint positions.
             is_closed (bool): Whether the loft is closed (cylinder shape).
 
@@ -144,12 +145,14 @@ class LoftWeightSetting:
         Returns:
             int: Number of vertices in loft direction.
         """
+        # surface_divisions=0 means no additional divisions
+        # Maya's ss = surface_divisions + 1
         if self.is_closed:
             # For closed loft, seam vertices are merged
-            # Formula: num_chains * surface_divisions
-            return self.num_chains * self.surface_divisions
+            # Formula: num_chains * (surface_divisions + 1)
+            return self.num_chains * (self.surface_divisions + 1)
         else:
-            return self.num_chains + (self.num_chains - 1) * (self.surface_divisions - 1)
+            return self.num_chains + (self.num_chains - 1) * self.surface_divisions
 
     def _calculate_joint_lengths(self) -> None:
         """Pre-calculate cumulative lengths for each joint chain.
@@ -220,29 +223,32 @@ class LoftWeightSetting:
         logger.info(f"Created skin cluster: {skin_cluster}")
 
         # Calculate and apply weights
-        self._apply_weights(skin_cluster, method, parent_influence_ratio, remove_end)
-
-        # Apply smoothing if requested
-        if smooth_iterations > 0:
-            self._smooth_weights(skin_cluster, smooth_iterations)
+        self._apply_weights(skin_cluster, method, smooth_iterations, parent_influence_ratio, remove_end)
 
         logger.info(f"Applied weights to {self.geometry}")
 
         return skin_cluster
 
-    def _apply_weights(self, skin_cluster: str, method: str, parent_influence_ratio: float, remove_end: bool) -> None:
+    def _apply_weights(
+        self, skin_cluster: str, method: str, smooth_iterations: int, parent_influence_ratio: float, remove_end: bool
+    ) -> None:
         """Apply weights to geometry.
 
         Args:
             skin_cluster (str): Skin cluster name.
             method (str): Weight calculation method.
+            smooth_iterations (int): Number of smoothing iterations.
             parent_influence_ratio (float): Ratio of influence from parent joint.
             remove_end (bool): Whether to merge end joint weights to parent.
         """
         # Step 1: Calculate weights for each chain position (curve direction)
         chain_position_weights = self._calculate_chain_position_weights(method, parent_influence_ratio, remove_end)
 
-        # Step 2: Apply weights to all CVs/vertices
+        # Step 2: Apply smoothing to chain position weights (curve direction only)
+        if smooth_iterations > 0:
+            chain_position_weights = self._smooth_chain_weights(chain_position_weights, smooth_iterations)
+
+        # Step 3: Apply weights to all CVs/vertices (interpolate in loft direction)
         cmds.skinCluster(skin_cluster, e=True, normalizeWeights=0)
 
         if self.shape_type == "nurbsSurface":
@@ -446,13 +452,17 @@ class LoftWeightSetting:
         Returns:
             list[int]: V indices for each chain position.
         """
+        # surface_divisions=0 means no additional divisions
+        # Maya's ss = surface_divisions + 1
+        maya_ss = self.surface_divisions + 1
+
         if self.is_closed:
             # For closed NURBS (periodic), CV indices follow a specific pattern:
             # - First chain (A) is always at v=1 (offset by 1)
-            # - Subsequent chains are spaced by surface_divisions
-            # Example (3 chains, surface_divisions=2, num_cvs_v=6):
+            # - Subsequent chains are spaced by maya_ss (surface_divisions + 1)
+            # Example (3 chains, surface_divisions=1, maya_ss=2, num_cvs_v=6):
             #   chain 0 -> v=1, chain 1 -> v=3, chain 2 -> v=5
-            return [(1 + chain_idx * self.surface_divisions) % self.num_cvs_v for chain_idx in range(self.num_chains)]
+            return [(1 + chain_idx * maya_ss) % self.num_cvs_v for chain_idx in range(self.num_chains)]
         else:
             # For open NURBS, chains are at evenly spaced V positions
             if self.num_chains == 1:
@@ -466,11 +476,15 @@ class LoftWeightSetting:
         Returns:
             list[int]: Row indices for each chain position.
         """
+        # surface_divisions=0 means no additional divisions
+        # Maya's ss = surface_divisions + 1
+        maya_ss = self.surface_divisions + 1
+
         if self.is_closed:
             # For closed mesh (after seam merge):
-            # Chains are evenly spaced with surface_divisions between each
-            # Chain 0 at row 0, chain 1 at row surface_divisions, etc.
-            return [i * self.surface_divisions for i in range(self.num_chains)]
+            # Chains are evenly spaced with maya_ss (surface_divisions + 1) between each
+            # Chain 0 at row 0, chain 1 at row maya_ss, etc.
+            return [i * maya_ss for i in range(self.num_chains)]
         else:
             # For open mesh, chains are at evenly spaced row positions
             if self.num_chains == 1:
@@ -679,20 +693,72 @@ class LoftWeightSetting:
             return [w / total for w in weights]
         return weights
 
-    def _smooth_weights(self, skin_cluster: str, iterations: int) -> None:
-        """Apply weight smoothing.
+    def _smooth_chain_weights(
+        self, chain_position_weights: list[list[list[float]]], iterations: int
+    ) -> list[list[list[float]]]:
+        """Smooth weights in curve direction only for each chain.
+
+        Uses distance-weighted averaging to blend weights with neighbors,
+        similar to CurveWeightSetting._smooth_weights.
+        Only smooths in curve direction (along joints), not in loft direction (between chains).
 
         Args:
-            skin_cluster (str): Skin cluster name.
+            chain_position_weights (list): Weights for each chain, each CV position.
+                Shape: [num_chains][num_cvs_in_curve_direction][num_influences]
             iterations (int): Number of smoothing iterations.
-        """
-        if self.shape_type == "mesh":
-            cmds.select(f"{self.geometry}.vtx[*]")
-            for _ in range(iterations):
-                cmds.skinCluster(skin_cluster, e=True, smoothWeights=0.5)
-            cmds.select(cl=True)
 
-        logger.debug(f"Smoothed weights {iterations} times")
+        Returns:
+            list: Smoothed weights with same shape as input.
+        """
+        num_influences = len(self.all_influences)
+        smoothed_weights = []
+
+        for chain_idx, chain_weights in enumerate(chain_position_weights):
+            num_cvs = len(chain_weights)
+
+            # Get total length for this chain (for distance calculation)
+            total_length = self.chain_total_lengths[chain_idx]
+
+            # Calculate CV length positions
+            cv_lengths = self._calculate_cv_lengths(num_cvs, total_length)
+
+            # Calculate distances between adjacent CVs
+            distances = []
+            for i in range(num_cvs - 1):
+                distances.append(cv_lengths[i + 1] - cv_lengths[i])
+
+            # Perform smoothing iterations
+            current_weights = [w[:] for w in chain_weights]
+
+            for _ in range(iterations):
+                new_weights = [w[:] for w in current_weights]
+
+                for i in range(num_cvs):
+                    # Skip endpoints (no smoothing for first and last CV)
+                    if i == 0 or i == num_cvs - 1:
+                        continue
+
+                    # Get neighbors: prev, self, next
+                    neighbor_indices = [i - 1, i, i + 1]
+                    neighbor_distances = [distances[i - 1], 1.0, distances[i]]
+
+                    # Calculate distance-weighted average
+                    total_inv_dist = sum(1.0 / d for d in neighbor_distances)
+                    weighted_sum = [0.0] * num_influences
+
+                    for idx, dist in zip(neighbor_indices, neighbor_distances):
+                        inv_dist = 1.0 / dist
+                        for j in range(num_influences):
+                            weighted_sum[j] += current_weights[idx][j] * inv_dist
+
+                    new_weights[i] = [w / total_inv_dist for w in weighted_sum]
+
+                current_weights = new_weights
+
+            smoothed_weights.append(current_weights)
+
+        logger.debug(f"Smoothed chain weights {iterations} times (curve direction only)")
+        return smoothed_weights
 
 
 __all__ = ["LoftWeightSetting"]

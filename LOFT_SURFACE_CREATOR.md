@@ -74,7 +74,7 @@ result, skin = command.main(
     root_joints: list[str],           # ルートジョイントのリスト（2本以上必須）
     close: bool = False,              # 環状にするか（True時は3本以上必須）
     output_type: str = "nurbsSurface", # 出力タイプ: "nurbsSurface" | "mesh"
-    surface_divisions: int = 1,       # カーブ間の分割数
+    surface_divisions: int = 0,       # カーブ間の追加分割数（0=追加分割なし）
     center: bool = False,             # カーブのCV位置を中央に調整
     curve_divisions: int = 0,         # ジョイント間に挿入するCV数
     skip: int = 0,                    # スキップするジョイント数
@@ -83,6 +83,8 @@ result, skin = command.main(
     smooth_iterations: int = 0,       # スムージング回数
     parent_influence_ratio: float = 0.0,  # 親ジョイントの影響比率
     remove_end: bool = False,         # 末端ジョイントのウェイトを親にマージ
+    to_skin_cage: bool = False,       # スキンケージに変換（nurbsSurface + is_bind=True時のみ）
+    skin_cage_division_levels: int = 1, # スキンケージの分割レベル
 ) -> tuple[str, Optional[str]]        # (ジオメトリ名, スキンクラスター名)
 ```
 
@@ -110,6 +112,15 @@ result, skin = command.main(
     close=True,
     output_type="nurbsSurface",
     is_bind=True,
+)
+
+# スキンケージに変換（nurbsSurface + is_bind=True時のみ）
+result, skin = command.main(
+    root_joints=["jointA1", "jointB1"],
+    output_type="nurbsSurface",
+    is_bind=True,
+    to_skin_cage=True,
+    skin_cage_division_levels=2,
 )
 ```
 
