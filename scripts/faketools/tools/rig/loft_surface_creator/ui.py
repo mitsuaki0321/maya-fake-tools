@@ -154,9 +154,11 @@ class MainWindow(BaseMainWindow):
         self.surface_divisions_spin.setValue(0)
         self.surface_divisions_spin.setToolTip("Additional divisions between curves in loft direction")
         layout.addWidget(self.surface_divisions_spin, row, 1)
+        row += 1
 
+        # Close checkbox (below Surface Div)
         self.close_checkbox = QCheckBox("Close")
-        layout.addWidget(self.close_checkbox, row, 2)
+        layout.addWidget(self.close_checkbox, row, 1)
         row += 1
 
         h_line = extra_widgets.HorizontalSeparator()
@@ -217,7 +219,7 @@ class MainWindow(BaseMainWindow):
         row += 1
 
         # Smooth Iterations
-        self.smooth_label = QLabel("Smooth Iter:", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        self.smooth_label = QLabel("Smooth Levels:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(self.smooth_label, row, 0)
 
         self.smooth_spin = QSpinBox()
@@ -260,7 +262,7 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(self.to_skin_cage_checkbox, row, 1)
         row += 1
 
-        self.skin_cage_div_label = QLabel("Cage Div Levels:", alignment=Qt.AlignRight | Qt.AlignVCenter)
+        self.skin_cage_div_label = QLabel("Division Levels:", alignment=Qt.AlignRight | Qt.AlignVCenter)
         layout.addWidget(self.skin_cage_div_label, row, 0)
 
         self.skin_cage_div_spin = QSpinBox()

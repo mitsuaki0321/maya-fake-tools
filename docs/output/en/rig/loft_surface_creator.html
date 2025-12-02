@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loft Surface Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Tool for creating lofted surfaces from multiple joint chains">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/loft_surface_creator.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#root-joints-mode"
+                    id="toc-root-joints-mode">Root Joints Mode</a></li>
+                    <li><a href="#direct-chains-mode"
+                    id="toc-direct-chains-mode">Direct Chains
+                    Mode</a></li>
+                    </ul></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#input-mode-options"
+                    id="toc-input-mode-options">Input Mode
+                    Options</a></li>
+                    <li><a href="#surface-options"
+                    id="toc-surface-options">Surface Options</a></li>
+                    <li><a href="#curve-options"
+                    id="toc-curve-options">Curve Options</a></li>
+                    <li><a href="#bind-options"
+                    id="toc-bind-options">Bind Options</a></li>
+                    <li><a href="#skin-cage-options"
+                    id="toc-skin-cage-options">Skin Cage
+                    Options</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Loft Surface Creator</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Creates curves from multiple joint chains and lofts
+                them into a NURBS surface or mesh. This tool is ideal
+                for creating weight transfer sources for parts composed
+                of multiple joint chains, such as skirts or belts.</p>
+                <p>The created object can optionally have a skin cluster
+                automatically applied.</p>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image000.png"
+                alt="image000" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or using the
+                following command:</p>
+                <pre class="python"><code>from faketools.tools.rig.loft_surface_creator import ui
+ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image001.png"
+                alt="image001" /></p>
+                <h2 id="usage">Usage</h2>
+                <p>Surfaces are lofted in the order of the registered
+                joint chains. There are two modes for registering joint
+                chains. Each joint chain must have the same number of
+                joints.</p>
+                <h3 id="root-joints-mode">Root Joints Mode</h3>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image002.png"
+                alt="image002" /></p>
+                <ol type="1">
+                <li>Select <code>Root Joints</code> in
+                <code>Input Mode</code>.</li>
+                <li>Select the root joint of each joint chain and add it
+                using the <code>Add Selected</code> button.</li>
+                <li>Configure the options.</li>
+                <li>Press the <code>Create</code> button to create the
+                surface or mesh.</li>
+                </ol>
+                <h3 id="direct-chains-mode">Direct Chains Mode</h3>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image003.png"
+                alt="image003" /></p>
+                <ol type="1">
+                <li>Select <code>Direct Chains</code> in
+                <code>Input Mode</code>.</li>
+                <li>Select the joints that compose a chain and add them
+                using the <code>Add Chain</code> button.</li>
+                <li>Add subsequent chains with the same number of
+                joints.</li>
+                <li>Configure the options.</li>
+                <li>Press the <code>Create</code> button to create the
+                surface or mesh.</li>
+                </ol>
+                <h2 id="options">Options</h2>
+                <p>The main options are divided into the following
+                categories:</p>
+                <ul>
+                <li>Input Mode Options</li>
+                <li>Surface Options</li>
+                <li>Curve Options</li>
+                <li>Bind Options</li>
+                <li>Skin Cage Options</li>
+                </ul>
+                <h3 id="input-mode-options">Input Mode Options</h3>
+                <ul>
+                <li><strong>Input Mode</strong>
+                <ul>
+                <li>Specifies the joint input method.
+                <ul>
+                <li><code>Root Joints</code>: Specify root joints and
+                automatically expand joint chains.</li>
+                <li><code>Direct Chains</code>: Directly specify joints
+                for each chain.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Joints</strong>
+                <ul>
+                <li>Displays the list of registered joints.</li>
+                <li><code>Add Selected</code> / <code>Add Chain</code>:
+                Adds the selected joints.</li>
+                <li><code>Remove</code>: Removes selected items from the
+                list.</li>
+                <li><code>Clear</code>: Clears all items.</li>
+                </ul></li>
+                <li><strong>Skip</strong> (Root Joints mode only)
+                <ul>
+                <li>Specifies the number of joints to skip within each
+                joint chain.</li>
+                <li>Example: With <code>Skip=1</code>, every other joint
+                is used.</li>
+                </ul></li>
+                </ul>
+                <h3 id="surface-options">Surface Options</h3>
+                <ul>
+                <li><strong>Output</strong>
+                <ul>
+                <li>Specifies the type of object to create.
+                <ul>
+                <li><code>NURBS Surface</code>: Creates a NURBS
+                surface.</li>
+                <li><code>Mesh</code>: Creates a mesh.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Surface Div</strong>
+                <ul>
+                <li>Specifies the number of additional divisions in the
+                loft direction (between chains).</li>
+                <li>If 0, minimal divisions based on the number of
+                chains without additional divisions.</li>
+                </ul></li>
+                <li><strong>Close</strong>
+                <ul>
+                <li>When enabled, connects the last chain to the first
+                chain to create a closed shape.</li>
+                <li>Used when creating circular shapes such as
+                skirts.</li>
+                <li>Requires 3 or more chains.</li>
+                </ul></li>
+                </ul>
+                <h3 id="curve-options">Curve Options</h3>
+                <p>Options for creating curves from each joint
+                chain.</p>
+                <ul>
+                <li><strong>Curve Div</strong>
+                <ul>
+                <li>Specifies the number of additional CVs to insert
+                between joints.</li>
+                <li>Used to make curves smoother.</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>When enabled, creates the curve so its center passes
+                through the center of the joints.</li>
+                </ul></li>
+                </ul>
+                <h3 id="bind-options">Bind Options</h3>
+                <p>Options for setting up a skin cluster on the created
+                object.</p>
+                <ul>
+                <li><strong>Is Bind</strong>
+                <ul>
+                <li>When enabled, applies a skin cluster to the created
+                object.</li>
+                </ul></li>
+                <li><strong>Weight Method</strong>
+                <ul>
+                <li>Specifies the weight calculation method.
+                <ul>
+                <li><code>Linear</code>: Sets weights using linear
+                interpolation.</li>
+                <li><code>Ease</code>: Sets weights using ease-in/out
+                interpolation.</li>
+                <li><code>Step</code>: Sets 100% weight to the nearest
+                joint.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Loft Weight</strong>
+                <ul>
+                <li>Specifies the weight distribution method in the loft
+                direction (between chains).
+                <ul>
+                <li><code>Index</code>: Index-based linear
+                interpolation. Suitable for evenly distributed CVs.</li>
+                <li><code>Distance</code>: Interpolation based on
+                cumulative distance along U=0 CV row. Effective when CV
+                spacing is uneven.</li>
+                <li><code>Projection</code>: Calculates interpolation
+                factor by projecting points onto AB line segment.
+                Enables natural interpolation based on geometry
+                shape.</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Smooth Levels</strong>
+                <ul>
+                <li>Specifies the number of weight smoothing
+                iterations.</li>
+                <li>Applied only in the curve direction (between
+                joints).</li>
+                </ul></li>
+                <li><strong>Parent Influence</strong>
+                <ul>
+                <li>Specifies the influence ratio to parent joints
+                (0.0-1.0).</li>
+                <li>Higher values increase the parent joint’s
+                influence.</li>
+                </ul></li>
+                <li><strong>Remove End</strong>
+                <ul>
+                <li>When enabled, merges end joint weights to the parent
+                joint.</li>
+                <li>Only effective when <code>Close</code> is
+                disabled.</li>
+                </ul></li>
+                </ul>
+                <h3 id="skin-cage-options">Skin Cage Options</h3>
+                <p>Options for converting NURBS surfaces to skin cage
+                meshes. Only available when <code>Output</code> is
+                <code>NURBS Surface</code> and <code>Is Bind</code> is
+                enabled.</p>
+                <ul>
+                <li><strong>To Skin Cage</strong>
+                <ul>
+                <li>When enabled, converts the created NURBS surface to
+                a skin cage mesh.</li>
+                <li>The original NURBS surface is deleted.</li>
+                </ul></li>
+                <li><strong>Division Levels</strong>
+                <ul>
+                <li>Specifies the skin cage subdivision level.</li>
+                <li>Higher values result in finer meshes.</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

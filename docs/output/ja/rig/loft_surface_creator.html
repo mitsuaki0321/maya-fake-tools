@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loft Surface Creator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="複数のジョイントチェーンからロフトサーフェスを作成するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/loft_surface_creator.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#root-joints-モード"
+                    id="toc-root-joints-モード">Root Joints
+                    モード</a></li>
+                    <li><a href="#direct-chains-モード"
+                    id="toc-direct-chains-モード">Direct Chains
+                    モード</a></li>
+                    </ul></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#入力モードオプション"
+                    id="toc-入力モードオプション">入力モードオプション</a></li>
+                    <li><a href="#サーフェースオプション"
+                    id="toc-サーフェースオプション">サーフェースオプション</a></li>
+                    <li><a href="#カーブオプション"
+                    id="toc-カーブオプション">カーブオプション</a></li>
+                    <li><a href="#バインドオプション"
+                    id="toc-バインドオプション">バインドオプション</a></li>
+                    <li><a href="#スキンケージオプション"
+                    id="toc-スキンケージオプション">スキンケージオプション</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Loft Surface Creator</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>複数のジョイントチェーンから
+                カーブを作成しそのカーブを NURBS
+                サーフェスまたはメッシュをロフトで作成します。スカートやベルトなど、複数のジョイントチェーンで構成される部位のウェイト転送元を作成するのに適しています。</p>
+                <p>作成されたオブジェクトには、オプションによりスキンクラスターを自動で設定できます。</p>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image000.png"
+                alt="image000" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>from faketools.tools.rig.loft_surface_creator import ui
+ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <p>サーフェースは、登録したジョイントチェーンの順序でロフトされます。ジョイントチェーンの登録方法には、以下の2つのモードがあります。
+                登録するジョイントチェーンの各ジョイント数は、すべて同じである必要があります。</p>
+                <h3 id="root-joints-モード">Root Joints モード</h3>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image002.png"
+                alt="image002" /></p>
+                <ol type="1">
+                <li><code>Input Mode</code> で <code>Root Joints</code>
+                を選択します。</li>
+                <li>各ジョイントチェーンのルートジョイントを選択し、<code>Add Selected</code>
+                ボタンで追加します。</li>
+                <li>オプションを設定します。</li>
+                <li><code>Create</code>
+                ボタンを押すとサーフェスまたはメッシュが作成されます。</li>
+                </ol>
+                <h3 id="direct-chains-モード">Direct Chains モード</h3>
+                <p><img
+                src="../../images/rig/loft_surface_creator/image003.png"
+                alt="image003" /></p>
+                <ol type="1">
+                <li><code>Input Mode</code> で
+                <code>Direct Chains</code> を選択します。</li>
+                <li>チェーンを構成するジョイントを選択し、<code>Add Chain</code>
+                ボタンで追加します。</li>
+                <li>同じジョイント数で2つ目以降のチェーンを追加します。</li>
+                <li>オプションを設定します。</li>
+                <li><code>Create</code>
+                ボタンを押すとサーフェスまたはメッシュが作成されます。</li>
+                </ol>
+                <h2 id="オプション">オプション</h2>
+                <p>主なオプションは、以下の項目に分かれます。</p>
+                <ul>
+                <li>入力モードオプション</li>
+                <li>サーフェースオプション</li>
+                <li>カーブオプション</li>
+                <li>バインドオプション</li>
+                <li>スキンケージオプション</li>
+                </ul>
+                <h3 id="入力モードオプション">入力モードオプション</h3>
+                <ul>
+                <li><strong>Input Mode</strong>
+                <ul>
+                <li>ジョイントの入力方法を指定します。
+                <ul>
+                <li><code>Root Joints</code> :
+                ルートジョイントを指定し、自動でジョイントチェーンを展開します。</li>
+                <li><code>Direct Chains</code> :
+                各チェーンのジョイントを直接指定します。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Joints</strong>
+                <ul>
+                <li>登録されたジョイントのリストを表示します。</li>
+                <li><code>Add Selected</code> / <code>Add Chain</code> :
+                選択したジョイントを追加します。</li>
+                <li><code>Remove</code> :
+                選択した項目をリストから削除します。</li>
+                <li><code>Clear</code> :
+                すべての項目をクリアします。</li>
+                </ul></li>
+                <li><strong>Skip</strong> (Root Joints モードのみ)
+                <ul>
+                <li>ジョイントチェーン内でスキップするジョイント数を指定します。</li>
+                <li>例: <code>Skip=1</code>
+                の場合、1つおきにジョイントを使用します。</li>
+                </ul></li>
+                </ul>
+                <h3
+                id="サーフェースオプション">サーフェースオプション</h3>
+                <ul>
+                <li><strong>Output</strong>
+                <ul>
+                <li>作成するオブジェクトの種類を指定します。
+                <ul>
+                <li><code>NURBS Surface</code> :
+                NURBSサーフェスを作成します。</li>
+                <li><code>Mesh</code> : メッシュを作成します。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Surface Div</strong>
+                <ul>
+                <li>ロフト方向（チェーン間）の追加分割数を指定します。</li>
+                <li>0
+                の場合、追加分割なしでチェーン数に基づいた最小限の分割になります。</li>
+                </ul></li>
+                <li><strong>Close</strong>
+                <ul>
+                <li>オンの場合、最後のチェーンと最初のチェーンを接続して閉じた形状を作成します。</li>
+                <li>スカートなど環状の形状を作成する際に使用します。</li>
+                <li>3本以上のチェーンが必要です。</li>
+                </ul></li>
+                </ul>
+                <h3 id="カーブオプション">カーブオプション</h3>
+                <p>各ジョイントチェーンからカーブを作成する際のオプションです。</p>
+                <ul>
+                <li><strong>Curve Div</strong>
+                <ul>
+                <li>ジョイント間に挿入する追加CVの数を指定します。</li>
+                <li>カーブをより滑らかにする場合に使用します。</li>
+                </ul></li>
+                <li><strong>Center</strong>
+                <ul>
+                <li>オンの場合、カーブの中心位置をジョイントの中心をとおるように作成します。</li>
+                </ul></li>
+                </ul>
+                <h3 id="バインドオプション">バインドオプション</h3>
+                <p>作成したオブジェクトにスキンクラスターを設定する際のオプションです。</p>
+                <ul>
+                <li><strong>Is Bind</strong>
+                <ul>
+                <li>オンの場合、作成されたオブジェクトにスキンクラスターを設定します。</li>
+                </ul></li>
+                <li><strong>Weight Method</strong>
+                <ul>
+                <li>ウェイト計算の方法を指定します。
+                <ul>
+                <li><code>Linear</code> :
+                リニア補間でウェイトを設定します。</li>
+                <li><code>Ease</code> :
+                イーズイン/アウト補間でウェイトを設定します。</li>
+                <li><code>Step</code> :
+                最も近いジョイントに100%のウェイトを設定します。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Loft Weight</strong>
+                <ul>
+                <li>ロフト方向（チェーン間）のウェイト分配方法を指定します。
+                <ul>
+                <li><code>Index</code> :
+                インデックスベースの線形補間。均等なCV配置に適しています。</li>
+                <li><code>Distance</code> :
+                U=0のCV列に沿った累積距離に基づく補間。CV間の距離が不均等な場合に有効です。</li>
+                <li><code>Projection</code> :
+                点をAB線分に投影して補間係数を計算。ジオメトリの形状に基づいた自然な補間が可能です。</li>
+                </ul></li>
+                </ul></li>
+                <li><strong>Smooth Levels</strong>
+                <ul>
+                <li>ウェイトスムージングの反復回数を指定します。</li>
+                <li>カーブ方向（ジョイント間）のみに適用されます。</li>
+                </ul></li>
+                <li><strong>Parent Influence</strong>
+                <ul>
+                <li>親ジョイントへの影響比率を指定します（0.0〜1.0）。</li>
+                <li>値が大きいほど親ジョイントの影響が強くなります。</li>
+                </ul></li>
+                <li><strong>Remove End</strong>
+                <ul>
+                <li>オンの場合、末端ジョイントのウェイトを親ジョイントにマージします。</li>
+                <li><code>Close</code> がオフの場合のみ有効です。</li>
+                </ul></li>
+                </ul>
+                <h3
+                id="スキンケージオプション">スキンケージオプション</h3>
+                <p>NURBSサーフェスをスキンケージメッシュに変換する際のオプションです。
+                <code>Output</code> が <code>NURBS Surface</code> かつ
+                <code>Is Bind</code> がオンの場合のみ有効です。</p>
+                <ul>
+                <li><strong>To Skin Cage</strong>
+                <ul>
+                <li>オンの場合、作成されたNURBSサーフェスをスキンケージメッシュに変換します。</li>
+                <li>元のNURBSサーフェスは削除されます。</li>
+                </ul></li>
+                <li><strong>Division Levels</strong>
+                <ul>
+                <li>スキンケージの分割レベルを指定します。</li>
+                <li>値が大きいほど細かいメッシュになります。</li>
+                </ul></li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
