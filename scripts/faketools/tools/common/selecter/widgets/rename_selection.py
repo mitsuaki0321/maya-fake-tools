@@ -81,7 +81,13 @@ class RenameSelectionWidget(QWidget):
             cmds.error("No new name specified.")
 
         start_alpha = self.start_alpha_field.text()
-        start_number = self.start_number_field.text()
+        start_number_text = self.start_number_field.text()
+
+        # Convert start_number to integer
+        try:
+            start_number = int(start_number_text) if start_number_text else 1
+        except ValueError:
+            cmds.error(f"Invalid start number: {start_number_text}")
 
         nodes = cmds.ls(sl=True, fl=True)
         if not nodes:

@@ -20,6 +20,8 @@ from .widgets import (
 
 logger = logging.getLogger(__name__)
 
+_instance = None  # Global instance for settings save before recreation
+
 
 class DockableWidget(MayaQWidgetDockableMixin, QWidget):
     """Selecter Dockable Widget."""
@@ -159,6 +161,20 @@ def show_ui():
     Returns:
         DockableWidget: The main window instance.
     """
+    global _instance
+
+    # Save settings from existing instance before recreation
+    # (closeEvent may not be called when using deleteUI on workspace controls)
+    if _instance is not None:
+        try:
+            _instance._save_settings()
+            logger.debug("Saved settings from existing instance before recreation")
+        except RuntimeError:
+            # Widget already deleted
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to save settings from existing instance: {e}")
+
     # Delete the workspace control if it exists
     workspace_control_name = f"{__name__}MainWindowWorkspaceControl"
 
@@ -175,6 +191,9 @@ def show_ui():
     # Dock below the shelf
     cmds.workspaceControl(workspace_control_name, e=True, dockToControl=("Shelf", "bottom"), tabToControl=("Shelf", -1))
     cmds.workspaceControl(workspace_control_name, e=True, actLikeMayaUIElement=True)
+
+    # Store instance for settings save on next show_ui call
+    _instance = main_window
 
     return main_window
 
