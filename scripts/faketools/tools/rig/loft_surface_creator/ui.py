@@ -516,33 +516,38 @@ class MainWindow(BaseMainWindow):
         settings_data = self._collect_settings()
         self.settings.save_settings(settings_data, "default")
 
+    def _get_common_options(self) -> dict:
+        """Collect common options from UI widgets.
+
+        Returns:
+            dict: Common options for loft surface creation.
+        """
+        output_type_map = {0: "nurbsSurface", 1: "mesh"}
+        weight_method_map = {0: "linear", 1: "ease", 2: "step"}
+        loft_weight_method_map = {0: "index", 1: "distance", 2: "projection"}
+
+        return {
+            "output_type": output_type_map[self.output_type_combo.currentIndex()],
+            "close": self.close_checkbox.isChecked(),
+            "surface_divisions": self.surface_divisions_spin.value(),
+            "curve_divisions": self.curve_divisions_spin.value(),
+            "center": self.center_checkbox.isChecked(),
+            "is_bind": self.is_bind_checkbox.isChecked(),
+            "weight_method": weight_method_map[self.weight_method_combo.currentIndex()],
+            "loft_weight_method": loft_weight_method_map[self.loft_weight_method_combo.currentIndex()],
+            "smooth_iterations": self.smooth_spin.value(),
+            "parent_influence_ratio": self.parent_influence_spin.value(),
+            "remove_end": self.remove_end_checkbox.isChecked(),
+            "to_skin_cage": self.to_skin_cage_checkbox.isChecked(),
+            "skin_cage_division_levels": self.skin_cage_div_spin.value(),
+        }
+
     @error_handler
     @undo_chunk("Create Loft Surface")
     def create_loft_surface(self):
         """Create a lofted surface based on UI settings."""
         mode = self.input_mode_combo.currentIndex()
-
-        # Get common options
-        output_type_map = {0: "nurbsSurface", 1: "mesh"}
-        output_type = output_type_map[self.output_type_combo.currentIndex()]
-
-        close = self.close_checkbox.isChecked()
-        surface_divisions = self.surface_divisions_spin.value()
-        curve_divisions = self.curve_divisions_spin.value()
-        center = self.center_checkbox.isChecked()
-        is_bind = self.is_bind_checkbox.isChecked()
-
-        weight_method_map = {0: "linear", 1: "ease", 2: "step"}
-        weight_method = weight_method_map[self.weight_method_combo.currentIndex()]
-
-        loft_weight_method_map = {0: "index", 1: "distance", 2: "projection"}
-        loft_weight_method = loft_weight_method_map[self.loft_weight_method_combo.currentIndex()]
-
-        smooth_iterations = self.smooth_spin.value()
-        parent_influence_ratio = self.parent_influence_spin.value()
-        remove_end = self.remove_end_checkbox.isChecked()
-        to_skin_cage = self.to_skin_cage_checkbox.isChecked()
-        skin_cage_division_levels = self.skin_cage_div_spin.value()
+        options = self._get_common_options()
 
         # Create based on mode
         if mode == MODE_ROOT_JOINTS:
@@ -552,24 +557,10 @@ class MainWindow(BaseMainWindow):
                 cmds.error("At least 2 root joints are required.")
                 return
 
-            skip = self.skip_spin.value()
-
             result, skin_cluster = command.create_from_root_joints(
                 root_joints=valid_joints,
-                skip=skip,
-                close=close,
-                output_type=output_type,
-                surface_divisions=surface_divisions,
-                center=center,
-                curve_divisions=curve_divisions,
-                is_bind=is_bind,
-                weight_method=weight_method,
-                smooth_iterations=smooth_iterations,
-                parent_influence_ratio=parent_influence_ratio,
-                remove_end=remove_end,
-                loft_weight_method=loft_weight_method,
-                to_skin_cage=to_skin_cage,
-                skin_cage_division_levels=skin_cage_division_levels,
+                skip=self.skip_spin.value(),
+                **options,
             )
         else:
             # Validate joint chains
@@ -584,19 +575,7 @@ class MainWindow(BaseMainWindow):
 
             result, skin_cluster = command.main(
                 joint_chains=self._joint_chains,
-                close=close,
-                output_type=output_type,
-                surface_divisions=surface_divisions,
-                center=center,
-                curve_divisions=curve_divisions,
-                is_bind=is_bind,
-                weight_method=weight_method,
-                smooth_iterations=smooth_iterations,
-                parent_influence_ratio=parent_influence_ratio,
-                remove_end=remove_end,
-                loft_weight_method=loft_weight_method,
-                to_skin_cage=to_skin_cage,
-                skin_cage_division_levels=skin_cage_division_levels,
+                **options,
             )
 
         cmds.select(result, r=True)
