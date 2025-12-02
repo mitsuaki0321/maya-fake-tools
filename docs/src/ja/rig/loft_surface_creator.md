@@ -9,9 +9,11 @@ order: 51
 
 ## 概要
 
-複数のジョイントチェーンから NURBS サーフェスまたはメッシュをロフトで作成します。スカートやベルトなど、複数のジョイントチェーンで構成される部位のウェイト転送元を作成するのに適しています。
+複数のジョイントチェーンから カーブを作成しそのカーブを NURBS サーフェスまたはメッシュをロフトで作成します。スカートやベルトなど、複数のジョイントチェーンで構成される部位のウェイト転送元を作成するのに適しています。
 
 作成されたオブジェクトには、オプションによりスキンクラスターを自動で設定できます。
+
+![image000](../../images/rig/loft_surface_creator/image000.png)
 
 ## 起動方法
 
@@ -22,9 +24,16 @@ from faketools.tools.rig.loft_surface_creator import ui
 ui.show_ui()
 ```
 
+![image001](../../images/rig/loft_surface_creator/image001.png)
+
 ## 使用方法
 
+サーフェースは、登録したジョイントチェーンの順序でロフトされます。ジョイントチェーンの登録方法には、以下の2つのモードがあります。
+登録するジョイントチェーンの各ジョイント数は、すべて同じである必要があります。
+
 ### Root Joints モード
+
+![image002](../../images/rig/loft_surface_creator/image002.png)
 
 1. `Input Mode` で `Root Joints` を選択します。
 2. 各ジョイントチェーンのルートジョイントを選択し、`Add Selected` ボタンで追加します。
@@ -33,11 +42,14 @@ ui.show_ui()
 
 ### Direct Chains モード
 
+![image003](../../images/rig/loft_surface_creator/image003.png)
+
 1. `Input Mode` で `Direct Chains` を選択します。
 2. チェーンを構成するジョイントを選択し、`Add Chain` ボタンで追加します。
 3. 同じジョイント数で2つ目以降のチェーンを追加します。
 4. オプションを設定します。
 5. `Create` ボタンを押すとサーフェスまたはメッシュが作成されます。
+
 
 ## オプション
 
@@ -91,7 +103,7 @@ ui.show_ui()
   * カーブをより滑らかにする場合に使用します。
 
 * **Center**
-  * オンの場合、カーブのCV位置を中央に調整します。
+  * オンの場合、カーブの中心位置をジョイントの中心をとおるように作成します。
 
 ### バインドオプション
 
@@ -112,7 +124,7 @@ ui.show_ui()
     * `Distance` : U=0のCV列に沿った累積距離に基づく補間。CV間の距離が不均等な場合に有効です。
     * `Projection` : 点をAB線分に投影して補間係数を計算。ジオメトリの形状に基づいた自然な補間が可能です。
 
-* **Smooth Iter**
+* **Smooth Levels**
   * ウェイトスムージングの反復回数を指定します。
   * カーブ方向（ジョイント間）のみに適用されます。
 
@@ -133,40 +145,6 @@ NURBSサーフェスをスキンケージメッシュに変換する際のオプ
   * オンの場合、作成されたNURBSサーフェスをスキンケージメッシュに変換します。
   * 元のNURBSサーフェスは削除されます。
 
-* **Cage Div Levels**
+* **Division Levels**
   * スキンケージの分割レベルを指定します。
   * 値が大きいほど細かいメッシュになります。
-
-## プリセット機能
-
-ツールウィンドウの `Presets` メニューから、現在の設定をプリセットとして保存・読み込みできます。
-
-* **Save Preset** : 現在の設定を名前を付けて保存します。
-* **Load Preset** : 保存されたプリセットを読み込みます。
-* **Delete Preset** : プリセットを削除します。
-* **Export Preset** : プリセットを外部ファイルにエクスポートします。
-* **Import Preset** : 外部ファイルからプリセットをインポートします。
-
-## スクリプトからの使用
-
-```python
-from faketools.tools.rig.loft_surface_creator import command
-
-# ルートジョイントから作成
-result, skin = command.create_from_root_joints(
-    root_joints=["joint_A1", "joint_B1", "joint_C1"],
-    close=True,
-    output_type="mesh",
-    is_bind=True,
-)
-
-# ジョイントチェーンを直接指定
-result, skin = command.main(
-    joint_chains=[
-        ["joint_A1", "joint_A2", "joint_A3"],
-        ["joint_B1", "joint_B2", "joint_B3"],
-    ],
-    output_type="nurbsSurface",
-    is_bind=True,
-)
-```
