@@ -244,7 +244,7 @@ def import_transform_position(input_file_path: str, create_new: bool = False, is
         if not_transform_nodes:
             raise ValueError(f"Target transforms are not transform nodes: {not_transform_nodes}")
 
-        not_unique_nodes = [transform for transform in target_transforms if cmds.ls(transform) > 1]
+        not_unique_nodes = [transform for transform in target_transforms if len(cmds.ls(transform)) > 1]
         if not_unique_nodes:
             raise ValueError(f"Target transform nodes are not unique: {not_unique_nodes}")
 
