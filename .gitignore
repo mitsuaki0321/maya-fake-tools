@@ -210,5 +210,11 @@ __marimo__/
 .vscode/settings.json
 main.py
 .claude
-CLAUDE.md
 tests/*
+
+# Project-internal documentation (not for public)
+CLAUDE.md
+DEVELOP.md
+LOGGING_USAGE.md
+SETTINGS_USAGE.md
+PIE_MENU_USAGE.md
