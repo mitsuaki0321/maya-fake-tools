@@ -218,3 +218,8 @@ DEVELOP.md
 LOGGING_USAGE.md
 SETTINGS_USAGE.md
 PIE_MENU_USAGE.md
+
+# Development tools (uv, ruff, mypy config)
+pyproject.toml
+uv.lock
+.python-version
