@@ -1,7 +1,8 @@
 # Maya Fake Tools
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/mitsuaki0321/maya-fake-tools)](https://github.com/mitsuaki0321/maya-fake-tools/releases)
+
+English | [日本語](README_JP.md)
 
 A collection of production-ready tools for Autodesk Maya, featuring rigging, modeling, and animation utilities with a plugin-based architecture.
 
