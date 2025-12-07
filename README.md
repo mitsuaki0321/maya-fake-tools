@@ -4,7 +4,7 @@
 
 English | [日本語](README_JP.md)
 
-A collection of production-ready tools for Autodesk Maya, featuring rigging, modeling, and animation utilities with a plugin-based architecture.
+A collection of production-ready tools for Autodesk Maya, featuring rigging, modeling, and animation utilities.
 
 ## Features
 
@@ -47,12 +47,11 @@ Available in:
 
 ## Requirements
 
-- Autodesk Maya 2022 or later
-- Python 3.11+ (included in Maya)
-- numpy (included in Maya 2022+)
-- scipy (included in Maya 2022+)
+- Autodesk Maya 2023 or later
+- Python 3.9+ (included in Maya)
 
-**Note**: numpy and scipy are included by default in Maya 2022 and later versions.
+**Optional dependencies:**
+- numpy, scipy - Required for some modeling tools
 
 ## License
 
