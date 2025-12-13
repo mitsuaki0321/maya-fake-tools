@@ -9,6 +9,7 @@ This module provides convenient imports for common UI components:
 - ToolDataManager: Per-tool data directory management
 - PresetMenuManager: Preset menu manager using composition pattern
 - PieMenu: Directional pie menu widget (2, 4, or 8 segments)
+- FloatSlider: Float slider widget with label and spinbox
 - Maya UI decorators: error_handler, undo_chunk, disable_undo, repeatable
 - Maya dialog helpers: show_error_dialog, show_warning_dialog, show_info_dialog, confirm_dialog
 - Maya UI functions: get_channels, get_modifiers
@@ -29,6 +30,7 @@ from .qt_compat import QT_BINDING, QT_VERSION, QT_VERSION_MAJOR, get_open_file_n
 from .tool_data import ToolDataManager
 from .tool_settings import ToolSettingsManager
 from .ui_utils import get_default_button_size, get_line_height, get_relative_size, get_text_width, scale_by_dpi
+from .widgets import FloatSlider, unify_slider_widths
 
 __all__ = [
     # Base window classes
@@ -42,6 +44,8 @@ __all__ = [
     # Widgets
     "PieMenu",
     "PieMenuButton",
+    "FloatSlider",
+    "unify_slider_widths",
     # Maya UI decorators
     "error_handler",
     "undo_chunk",
