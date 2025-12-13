@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robust Weight Transfer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Skin weight transfer tool based on SIGGRAPH Asia 2023 algorithm">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/robust_weight_transfer.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a>
+                    <ul>
+                    <li><a href="#basic-operation"
+                    id="toc-basic-operation">Basic Operation</a></li>
+                    </ul></li>
+                    <li><a href="#launch"
+                    id="toc-launch">Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#standard-weight-transfer"
+                    id="toc-standard-weight-transfer">1. Standard Weight
+                    Transfer</a></li>
+                    <li><a href="#partial-transfer"
+                    id="toc-partial-transfer">2. Partial
+                    Transfer</a></li>
+                    <li><a href="#matching-verification"
+                    id="toc-matching-verification">3. Matching
+                    Verification</a></li>
+                    <li><a href="#garment-seam-processing"
+                    id="toc-garment-seam-processing">4. Garment Seam
+                    Processing</a></li>
+                    </ul></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#source"
+                    id="toc-source">Source</a></li>
+                    <li><a href="#targets"
+                    id="toc-targets">Targets</a></li>
+                    <li><a href="#settings"
+                    id="toc-settings">Settings</a></li>
+                    <li><a href="#deform-options"
+                    id="toc-deform-options">Deform Options</a></li>
+                    <li><a href="#smoothing"
+                    id="toc-smoothing">Smoothing</a></li>
+                    <li><a href="#seam-averaging"
+                    id="toc-seam-averaging">Seam Averaging</a></li>
+                    <li><a href="#status"
+                    id="toc-status">Status</a></li>
+                    <li><a href="#action-buttons"
+                    id="toc-action-buttons">Action Buttons</a></li>
+                    </ul></li>
+                    <li><a href="#basic-workflow"
+                    id="toc-basic-workflow">Basic Workflow</a></li>
+                    <li><a href="#preset-menu"
+                    id="toc-preset-menu">Preset Menu</a></li>
+                    <li><a href="#technical-details"
+                    id="toc-technical-details">Technical Details</a>
+                    <ul>
+                    <li><a href="#weight-inpainting-algorithm"
+                    id="toc-weight-inpainting-algorithm">Weight
+                    Inpainting Algorithm</a></li>
+                    <li><a href="#dependencies"
+                    id="toc-dependencies">Dependencies</a></li>
+                    </ul></li>
+                    <li><a href="#troubleshooting"
+                    id="toc-troubleshooting">Troubleshooting</a>
+                    <ul>
+                    <li><a href="#low-match-rate"
+                    id="toc-low-match-rate">Low Match Rate</a></li>
+                    <li><a href="#weights-not-smooth"
+                    id="toc-weights-not-smooth">Weights Not
+                    Smooth</a></li>
+                    <li><a href="#issues-with-deformed-state"
+                    id="toc-issues-with-deformed-state">Issues with
+                    Deformed State</a></li>
+                    <li><a href="#seam-averaging-not-working"
+                    id="toc-seam-averaging-not-working">Seam Averaging
+                    Not Working</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Robust Weight Transfer</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Robust Weight Transfer is a skin weight transfer tool
+                based on the SIGGRAPH Asia 2023 paper “Robust Skin
+                Weights Transfer via Weight Inpainting”.</p>
+                <p>Unlike conventional weight transfer tools, it can
+                robustly transfer weights even when the source and
+                target mesh shapes do not perfectly match. For unmatched
+                vertices, the “Weight Inpainting” algorithm estimates
+                appropriate weights from surrounding weight
+                information.</p>
+                <h3 id="basic-operation">Basic Operation</h3>
+                <ol type="1">
+                <li>Find the closest point on the source mesh for each
+                target vertex.</li>
+                <li>Perform matching based on distance and normal angle
+                thresholds. Vertices that don’t match due to thresholds
+                become candidates for Weight Inpainting.</li>
+                <li>Transfer source weights directly to matched
+                vertices, and assign Weight Inpainting estimated weights
+                to unmatched vertices.</li>
+                <li>Apply smoothing if needed (optional).</li>
+                <li>Seam vertices normally have separate weights, but
+                you can optionally average weights of vertices at the
+                same position (optional).</li>
+                </ol>
+                <h2 id="launch">Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.robust_weight_transfer.ui
+faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image001.png"
+                alt="image" /></p>
+                <h2 id="usage">Usage</h2>
+                <h3 id="standard-weight-transfer">1. Standard Weight
+                Transfer</h3>
+                <ol type="1">
+                <li>Select the source mesh (with skinCluster) and click
+                <code>Set</code></li>
+                <li>Select the target mesh and click
+                <code>Add Selected</code></li>
+                <li>Click <code>Transfer</code></li>
+                </ol>
+                <h3 id="partial-transfer">2. Partial Transfer</h3>
+                <ol type="1">
+                <li>Set the source mesh</li>
+                <li>Select the vertices you want to transfer on the
+                target mesh</li>
+                <li>Click <code>Add Selected</code> (displayed in blue
+                in the list)</li>
+                <li>Click <code>Transfer</code></li>
+                </ol>
+                <h3 id="matching-verification">3. Matching
+                Verification</h3>
+                <ol type="1">
+                <li>Set source and target</li>
+                <li>Click <code>Search</code> to verify matching
+                results</li>
+                <li>Click <code>Select Unmatched</code> to check
+                unmatched vertices</li>
+                <li>Adjust Distance Ratio or Angle as needed</li>
+                <li>Click <code>Transfer</code></li>
+                </ol>
+                <h3 id="garment-seam-processing">4. Garment Seam
+                Processing</h3>
+                <ol type="1">
+                <li>Add all clothing parts (body, collar, sleeves, etc.)
+                to targets</li>
+                <li>Turn on <code>Average Seam Weights</code></li>
+                <li>Click <code>Transfer</code></li>
+                </ol>
+                <h2 id="options">Options</h2>
+                <h3 id="source">Source</h3>
+                <p>Set the mesh to transfer weights from.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image002.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li>Select a mesh with skinCluster</li>
+                <li>Click the <code>Set</code> button</li>
+                </ol>
+                <h3 id="targets">Targets</h3>
+                <p>Set the meshes or vertices to transfer weights
+                to.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image003.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Add Selected</strong>: Add selected meshes
+                or vertices to the list</li>
+                <li><strong>Remove</strong>: Remove selected items from
+                the list</li>
+                <li><strong>Clear</strong>: Clear all targets</li>
+                <li><strong>Select</strong>: Select the target in the
+                viewport</li>
+                </ul>
+                <p><strong>About Partial Transfer:</strong> When you add
+                selected vertices, weights are transferred only to those
+                vertices. They are displayed in blue in the list, with
+                the vertex count shown as <code>[123 vtx]</code>.</p>
+                <h3 id="settings">Settings</h3>
+                <p>Configure matching parameters.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image004.png"
+                alt="image" /></p>
+                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 39%" />
+                <col style="width: 27%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+                <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Distance Ratio</td>
+                <td>Ratio of distance threshold to bounding box
+                diagonal</td>
+                <td>0.05</td>
+                </tr>
+                <tr>
+                <td>Angle (degrees)</td>
+                <td>Normal angle threshold (degrees)</td>
+                <td>30.0</td>
+                </tr>
+                <tr>
+                <td>Flip Normals</td>
+                <td>Allow matching with flipped normals</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Fast Mode (KDTree)</td>
+                <td>Fast (slightly less accurate) matching using
+                KDTree</td>
+                <td>OFF</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>About Distance Ratio:</strong> Smaller values
+                result in stricter matching. 0.05 means matching within
+                5% of the diagonal length.</p>
+                <p><strong>About Flip Normals:</strong> Turn this on
+                when normals are flipped between source and target
+                (e.g., clothing lining).</p>
+                <h3 id="deform-options">Deform Options</h3>
+                <p>Options for weight transfer in deformed state.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image005.png"
+                alt="image" /></p>
+                <table>
+                <thead>
+                <tr>
+                <th>Option</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Use Deformed Source</td>
+                <td>Evaluate source mesh at current pose</td>
+                </tr>
+                <tr>
+                <td>Use Deformed Target</td>
+                <td>Evaluate target mesh at current pose</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>Use when transferring weights in a pose other than
+                bind pose. With both enabled, matching is performed
+                based on the current pose shapes.</p>
+                <h3 id="smoothing">Smoothing</h3>
+                <p>Weight smoothing options after transfer.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image006.png"
+                alt="image" /></p>
+                <table>
+                <thead>
+                <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+                <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Enable Smoothing</td>
+                <td>Enable smoothing</td>
+                <td>ON</td>
+                </tr>
+                <tr>
+                <td>Iterations</td>
+                <td>Number of smoothing iterations</td>
+                <td>10</td>
+                </tr>
+                <tr>
+                <td>Alpha</td>
+                <td>Smoothing strength (0.01-1.0)</td>
+                <td>0.2</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>Smooths weights estimated by Weight Inpainting for
+                more natural results.</p>
+                <h3 id="seam-averaging">Seam Averaging</h3>
+                <p>Options for averaging seam vertex weights.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image007.png"
+                alt="image" /></p>
+                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 39%" />
+                <col style="width: 27%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Parameter</th>
+                <th>Description</th>
+                <th>Default</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Average Seam Weights</td>
+                <td>Enable seam averaging</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Include Internal Seams</td>
+                <td>Also average seams within the same mesh</td>
+                <td>ON</td>
+                </tr>
+                <tr>
+                <td>Position Tolerance</td>
+                <td>Distance tolerance for considering vertices at the
+                same position</td>
+                <td>0.0001</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>Use Cases:</strong> - When clothing collar
+                and body are separate meshes with seam vertices at the
+                same position - When vertices are split at UV seams but
+                at the same position</p>
+                <p><strong>About Include Internal Seams:</strong> When
+                enabled, vertices at the same position within the same
+                mesh (such as UV seams) are also averaged.</p>
+                <h3 id="status">Status</h3>
+                <p>Displays matching results.</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image008.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Matched</strong>: Number and percentage of
+                matched vertices</li>
+                <li><strong>Unmatched</strong>: Number and percentage of
+                unmatched vertices (estimated by Weight Inpainting)</li>
+                </ul>
+                <h3 id="action-buttons">Action Buttons</h3>
+                <table>
+                <thead>
+                <tr>
+                <th>Button</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Search</td>
+                <td>Execute matching search (results displayed in
+                Status)</td>
+                </tr>
+                <tr>
+                <td>Select Unmatched</td>
+                <td>Select unmatched vertices in viewport</td>
+                </tr>
+                <tr>
+                <td>Transfer</td>
+                <td>Execute weight transfer</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="basic-workflow">Basic Workflow</h2>
+                <h2 id="preset-menu">Preset Menu</h2>
+                <p>Save and load settings as presets.</p>
+                <ul>
+                <li><strong>Save Settings…</strong>: Save current
+                settings as a preset</li>
+                <li><strong>Edit Settings…</strong>: Edit or delete
+                presets</li>
+                <li><strong>Reset Settings…</strong>: Reset all settings
+                to defaults</li>
+                <li><strong>Preset name</strong>: Load a saved
+                preset</li>
+                </ul>
+                <p><strong>Note:</strong> Source and Targets are not
+                included in presets.</p>
+                <h2 id="technical-details">Technical Details</h2>
+                <h3 id="weight-inpainting-algorithm">Weight Inpainting
+                Algorithm</h3>
+                <p>Weights for unmatched vertices are solved as an
+                optimization problem using a Laplacian matrix. This
+                computes smoothly interpolated weights from surrounding
+                weight information.</p>
+                <h3 id="dependencies">Dependencies</h3>
+                <ul>
+                <li><strong>numpy</strong>: Numerical computation
+                (included in Maya 2022+)</li>
+                <li><strong>scipy</strong>: Sparse matrix operations
+                (included in Maya 2022+)</li>
+                <li><strong>robust-laplacian</strong>: Fast Laplacian
+                computation (optional, fallback implementation
+                available)</li>
+                </ul>
+                <p>If <code>robust-laplacian</code> is not installed,
+                the built-in fallback implementation is used.</p>
+                <h2 id="troubleshooting">Troubleshooting</h2>
+                <h3 id="low-match-rate">Low Match Rate</h3>
+                <ul>
+                <li>Increase Distance Ratio (e.g., 0.05 → 0.1)</li>
+                <li>Increase Angle (e.g., 30 → 45)</li>
+                <li>Try turning on Flip Normals</li>
+                </ul>
+                <h3 id="weights-not-smooth">Weights Not Smooth</h3>
+                <ul>
+                <li>Increase Smoothing Iterations</li>
+                <li>Increase Smoothing Alpha</li>
+                </ul>
+                <h3 id="issues-with-deformed-state">Issues with Deformed
+                State</h3>
+                <ul>
+                <li>Turn on both Use Deformed Source and Use Deformed
+                Target</li>
+                <li>Or return to bind pose before transfer</li>
+                </ul>
+                <h3 id="seam-averaging-not-working">Seam Averaging Not
+                Working</h3>
+                <ul>
+                <li>Increase Position Tolerance (e.g., 0.0001 →
+                0.001)</li>
+                <li>Verify vertices are actually at the same
+                position</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

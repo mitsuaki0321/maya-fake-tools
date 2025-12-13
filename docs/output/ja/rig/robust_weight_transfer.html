@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robust Weight Transfer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="SIGGRAPH Asia 2023 アルゴリズムに基づくスキンウェイト転送ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/robust_weight_transfer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a>
+                    <ul>
+                    <li><a href="#基本的な動作"
+                    id="toc-基本的な動作">基本的な動作</a></li>
+                    </ul></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#標準的なウェイト転送"
+                    id="toc-標準的なウェイト転送">1.
+                    標準的なウェイト転送</a></li>
+                    <li><a href="#部分転送" id="toc-部分転送">2.
+                    部分転送</a></li>
+                    <li><a href="#マッチング確認"
+                    id="toc-マッチング確認">3. マッチング確認</a></li>
+                    <li><a href="#衣服のシーム処理"
+                    id="toc-衣服のシーム処理">4.
+                    衣服のシーム処理</a></li>
+                    </ul></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#source"
+                    id="toc-source">Source</a></li>
+                    <li><a href="#targets"
+                    id="toc-targets">Targets</a></li>
+                    <li><a href="#settings"
+                    id="toc-settings">Settings</a></li>
+                    <li><a href="#deform-options"
+                    id="toc-deform-options">Deform Options</a></li>
+                    <li><a href="#smoothing"
+                    id="toc-smoothing">Smoothing</a></li>
+                    <li><a href="#seam-averaging"
+                    id="toc-seam-averaging">Seam Averaging</a></li>
+                    <li><a href="#status"
+                    id="toc-status">Status</a></li>
+                    <li><a href="#action-buttons"
+                    id="toc-action-buttons">Action Buttons</a></li>
+                    </ul></li>
+                    <li><a href="#基本的なワークフロー"
+                    id="toc-基本的なワークフロー">基本的なワークフロー</a></li>
+                    <li><a href="#preset-メニュー"
+                    id="toc-preset-メニュー">Preset メニュー</a></li>
+                    <li><a href="#技術的な詳細"
+                    id="toc-技術的な詳細">技術的な詳細</a>
+                    <ul>
+                    <li><a href="#weight-inpainting-アルゴリズム"
+                    id="toc-weight-inpainting-アルゴリズム">Weight
+                    Inpainting アルゴリズム</a></li>
+                    <li><a href="#依存ライブラリ"
+                    id="toc-依存ライブラリ">依存ライブラリ</a></li>
+                    </ul></li>
+                    <li><a href="#トラブルシューティング"
+                    id="toc-トラブルシューティング">トラブルシューティング</a>
+                    <ul>
+                    <li><a href="#マッチ率が低い場合"
+                    id="toc-マッチ率が低い場合">マッチ率が低い場合</a></li>
+                    <li><a href="#ウェイトが滑らかでない場合"
+                    id="toc-ウェイトが滑らかでない場合">ウェイトが滑らかでない場合</a></li>
+                    <li><a href="#変形状態でうまくいかない場合"
+                    id="toc-変形状態でうまくいかない場合">変形状態でうまくいかない場合</a></li>
+                    <li><a href="#シーム平均化が効かない場合"
+                    id="toc-シーム平均化が効かない場合">シーム平均化が効かない場合</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Robust Weight Transfer</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Robust Weight Transfer は、SIGGRAPH Asia 2023
+                の論文「Robust Skin Weights Transfer via Weight
+                Inpainting」に基づいたスキンウェイト転送ツールです。</p>
+                <p>従来のウェイト転送ツールとは異なり、ソースメッシュとターゲットメッシュの形状が完全に一致していなくても、ロバストにウェイトを転送できます。マッチしない頂点には「Weight
+                Inpainting」アルゴリズムにより、周囲のウェイト情報から適切なウェイトが推定されます。</p>
+                <h3 id="基本的な動作">基本的な動作</h3>
+                <ol type="1">
+                <li>ターゲット頂点ごとのソースメッシュの最近点を探します。</li>
+                <li>距離と法線角度の閾値に基づいてマッチングを行います。閾値によりマッチしなかった頂点は
+                Weight Inpainting の対象となります。</li>
+                <li>マッチした頂点にはソースのウェイトを直接転送し、マッチしなかった頂点には
+                Weight Inpainting
+                により推定されたウェイトを割り当てます。</li>
+                <li>必要に応じてスムージングを行います
+                (オプション)。</li>
+                <li>シーム（縫い目）部分の頂点ウェイトは本来別々のウエイトが割り当てられますが、同じ位置にある頂点のウェイトを平均化することも可能です
+                (オプション)。</li>
+                </ol>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.robust_weight_transfer.ui
+faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image001.png"
+                alt="image" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <h3 id="標準的なウェイト転送">1.
+                標準的なウェイト転送</h3>
+                <ol type="1">
+                <li>ソースメッシュ（skinCluster
+                付き）を選択し、<code>Set</code> をクリック</li>
+                <li>ターゲットメッシュを選択し、<code>Add Selected</code>
+                をクリック</li>
+                <li><code>Transfer</code> をクリック</li>
+                </ol>
+                <h3 id="部分転送">2. 部分転送</h3>
+                <ol type="1">
+                <li>ソースメッシュを設定</li>
+                <li>ターゲットメッシュの転送したい頂点を選択</li>
+                <li><code>Add Selected</code>
+                をクリック（リストに青色で表示される）</li>
+                <li><code>Transfer</code> をクリック</li>
+                </ol>
+                <h3 id="マッチング確認">3. マッチング確認</h3>
+                <ol type="1">
+                <li>ソースとターゲットを設定</li>
+                <li><code>Search</code>
+                をクリックしてマッチング結果を確認</li>
+                <li><code>Select Unmatched</code>
+                でマッチしなかった頂点を確認</li>
+                <li>必要に応じて Distance Ratio や Angle を調整</li>
+                <li><code>Transfer</code> をクリック</li>
+                </ol>
+                <h3 id="衣服のシーム処理">4. 衣服のシーム処理</h3>
+                <ol type="1">
+                <li>服のパーツ（本体、襟、袖など）をすべてターゲットに追加</li>
+                <li><code>Average Seam Weights</code> をオン</li>
+                <li><code>Transfer</code> をクリック</li>
+                </ol>
+                <h2 id="オプション">オプション</h2>
+                <h3 id="source">Source</h3>
+                <p>ウェイトの転送元となるメッシュを設定します。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image002.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li>skinCluster が設定されたメッシュを選択</li>
+                <li><code>Set</code> ボタンをクリック</li>
+                </ol>
+                <h3 id="targets">Targets</h3>
+                <p>ウェイトの転送先となるメッシュまたは頂点を設定します。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image003.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Add Selected</strong>:
+                選択中のメッシュまたは頂点をリストに追加</li>
+                <li><strong>Remove</strong>:
+                リストで選択したアイテムを削除</li>
+                <li><strong>Clear</strong>:
+                すべてのターゲットをクリア</li>
+                <li><strong>Select</strong>:
+                リストで選択したターゲットをビューポートで選択</li>
+                </ul>
+                <p><strong>部分転送について:</strong>
+                頂点を選択して追加すると、その頂点のみにウェイトが転送されます。リスト内で青色で表示され、頂点数が
+                <code>[123 vtx]</code> の形式で表示されます。</p>
+                <h3 id="settings">Settings</h3>
+                <p>マッチングのパラメータを設定します。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image004.png"
+                alt="image" /></p>
+                <table>
+                <colgroup>
+                <col style="width: 39%" />
+                <col style="width: 21%" />
+                <col style="width: 39%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>パラメータ</th>
+                <th>説明</th>
+                <th>デフォルト</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Distance Ratio</td>
+                <td>バウンディングボックス対角線に対する距離閾値の比率</td>
+                <td>0.05</td>
+                </tr>
+                <tr>
+                <td>Angle (degrees)</td>
+                <td>法線角度の閾値（度）</td>
+                <td>30.0</td>
+                </tr>
+                <tr>
+                <td>Flip Normals</td>
+                <td>反転した法線でのマッチングを許可</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Fast Mode (KDTree)</td>
+                <td>KDTree による高速（やや低精度）なマッチング</td>
+                <td>OFF</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>Distance Ratio について:</strong>
+                値が小さいほど厳密なマッチングになります。0.05
+                は対角線の 5%
+                以内の距離でマッチングすることを意味します。</p>
+                <p><strong>Flip Normals について:</strong>
+                ソースとターゲットで法線が反転している場合（例：服の裏地）にオンにします。</p>
+                <h3 id="deform-options">Deform Options</h3>
+                <p>変形状態でのウェイト転送オプションです。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image005.png"
+                alt="image" /></p>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Use Deformed Source</td>
+                <td>ソースメッシュを現在のポーズで評価</td>
+                </tr>
+                <tr>
+                <td>Use Deformed Target</td>
+                <td>ターゲットメッシュを現在のポーズで評価</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>バインドポーズ以外のポーズでウェイトを転送する場合に使用します。両方をオンにすることで、現在のポーズでの形状に基づいてマッチングが行われます。</p>
+                <h3 id="smoothing">Smoothing</h3>
+                <p>転送後のウェイトスムージングオプションです。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image006.png"
+                alt="image" /></p>
+                <table>
+                <thead>
+                <tr>
+                <th>パラメータ</th>
+                <th>説明</th>
+                <th>デフォルト</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Enable Smoothing</td>
+                <td>スムージングを有効化</td>
+                <td>ON</td>
+                </tr>
+                <tr>
+                <td>Iterations</td>
+                <td>スムージングの反復回数</td>
+                <td>10</td>
+                </tr>
+                <tr>
+                <td>Alpha</td>
+                <td>スムージングの強度（0.01-1.0）</td>
+                <td>0.2</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>Weight Inpainting
+                で推定されたウェイトをスムージングして、より自然な結果を得ます。</p>
+                <h3 id="seam-averaging">Seam Averaging</h3>
+                <p>シーム（縫い目）の頂点ウェイト平均化オプションです。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image007.png"
+                alt="image" /></p>
+                <table>
+                <thead>
+                <tr>
+                <th>パラメータ</th>
+                <th>説明</th>
+                <th>デフォルト</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Average Seam Weights</td>
+                <td>シーム平均化を有効化</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Include Internal Seams</td>
+                <td>同一メッシュ内のシームも平均化</td>
+                <td>ON</td>
+                </tr>
+                <tr>
+                <td>Position Tolerance</td>
+                <td>同一位置とみなす距離の許容値</td>
+                <td>0.0001</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>使用例:</strong> -
+                服の襟と本体が別メッシュで、縫い目部分の頂点が同じ位置にある場合
+                - UV
+                シームで頂点が分割されているが、同じ位置にある場合</p>
+                <p><strong>Include Internal Seams について:</strong>
+                オンにすると、同じメッシュ内で同じ位置にある頂点（UV
+                シームなど）も平均化されます。</p>
+                <h3 id="status">Status</h3>
+                <p>マッチング結果を表示します。</p>
+                <p><img
+                src="../../images/rig/robust_weight_transfer/image008.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Matched</strong>:
+                マッチした頂点数と割合</li>
+                <li><strong>Unmatched</strong>:
+                マッチしなかった頂点数と割合（Weight Inpainting
+                で推定される）</li>
+                </ul>
+                <h3 id="action-buttons">Action Buttons</h3>
+                <table>
+                <thead>
+                <tr>
+                <th>ボタン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Search</td>
+                <td>マッチング検索を実行（結果を Status に表示）</td>
+                </tr>
+                <tr>
+                <td>Select Unmatched</td>
+                <td>マッチしなかった頂点をビューポートで選択</td>
+                </tr>
+                <tr>
+                <td>Transfer</td>
+                <td>ウェイト転送を実行</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="基本的なワークフロー">基本的なワークフロー</h2>
+                <h2 id="preset-メニュー">Preset メニュー</h2>
+                <p>設定をプリセットとして保存・読み込みできます。</p>
+                <ul>
+                <li><strong>Save Settings…</strong>:
+                現在の設定をプリセットとして保存</li>
+                <li><strong>Edit Settings…</strong>:
+                プリセットの編集・削除</li>
+                <li><strong>Reset Settings…</strong>:
+                すべての設定をデフォルトにリセット</li>
+                <li><strong>プリセット名</strong>:
+                保存したプリセットを読み込み</li>
+                </ul>
+                <p><strong>注意:</strong> Source と Targets
+                はプリセットに含まれません。</p>
+                <h2 id="技術的な詳細">技術的な詳細</h2>
+                <h3 id="weight-inpainting-アルゴリズム">Weight
+                Inpainting アルゴリズム</h3>
+                <p>マッチしなかった頂点のウェイトは、ラプラシアン行列を使用した最適化問題として解かれます。これにより、周囲のウェイト情報から滑らかに補間されたウェイトが計算されます。</p>
+                <h3 id="依存ライブラリ">依存ライブラリ</h3>
+                <ul>
+                <li><strong>numpy</strong>: 数値計算（Maya 2022+
+                に含まれる）</li>
+                <li><strong>scipy</strong>: 疎行列演算（Maya 2022+
+                に含まれる）</li>
+                <li><strong>robust-laplacian</strong>:
+                高速なラプラシアン計算（オプション、フォールバック実装あり）</li>
+                </ul>
+                <p><code>robust-laplacian</code>
+                がインストールされていない場合でも、内蔵のフォールバック実装が使用されます。</p>
+                <h2
+                id="トラブルシューティング">トラブルシューティング</h2>
+                <h3 id="マッチ率が低い場合">マッチ率が低い場合</h3>
+                <ul>
+                <li>Distance Ratio を大きくする（例: 0.05 → 0.1）</li>
+                <li>Angle を大きくする（例: 30 → 45）</li>
+                <li>Flip Normals をオンにしてみる</li>
+                </ul>
+                <h3
+                id="ウェイトが滑らかでない場合">ウェイトが滑らかでない場合</h3>
+                <ul>
+                <li>Smoothing の Iterations を増やす</li>
+                <li>Smoothing の Alpha を大きくする</li>
+                </ul>
+                <h3
+                id="変形状態でうまくいかない場合">変形状態でうまくいかない場合</h3>
+                <ul>
+                <li>Use Deformed Source と Use Deformed Target
+                の両方をオンにする</li>
+                <li>または、バインドポーズに戻してから転送する</li>
+                </ul>
+                <h3
+                id="シーム平均化が効かない場合">シーム平均化が効かない場合</h3>
+                <ul>
+                <li>Position Tolerance を大きくする（例: 0.0001 →
+                0.001）</li>
+                <li>頂点が本当に同じ位置にあるか確認する</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
