@@ -413,6 +413,14 @@ def transfer_weights(
         result["unmatched_count"] = int(unmatched_count)
         result["total_vertices"] = int(total_verts)
 
+        # Early check: No matched vertices means inpainting cannot proceed
+        if matched_count == 0:
+            raise ValueError(
+                "No matched vertices found. "
+                "Try adjusting the Distance Threshold or Angle Threshold parameters, "
+                "or enable 'Flip Normals' if the mesh normals are inverted."
+            )
+
         if progress_callback:
             progress_callback(f"Stage 1 complete: {matched_count}/{total_verts} matched", 33)
 
