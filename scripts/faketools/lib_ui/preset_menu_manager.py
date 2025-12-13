@@ -33,7 +33,7 @@ from functools import partial
 import logging
 from typing import Callable
 
-from .maya_dialog import confirm_dialog, show_info_dialog
+from .maya_dialog import show_info_dialog
 from .preset_edit_dialog import PresetEditDialog
 from .preset_save_dialog import PresetSaveDialog
 from .qt_compat import QMenu, QTimer, shiboken
@@ -245,12 +245,9 @@ class PresetMenuManager:
 
     def _on_reset_settings(self):
         """Handle Reset Settings menu action."""
-        result = confirm_dialog(title="Reset Settings", message="Reset all settings to default values?")
-
-        if result:
-            # Apply empty settings to reset to defaults
-            self.apply_callback({})
-            logger.info("Settings reset to defaults")
+        # Apply empty settings to reset to defaults
+        self.apply_callback({})
+        logger.info("Settings reset to defaults")
 
     def _on_load_preset(self, preset_name: str):
         """

@@ -87,10 +87,9 @@ class PresetEditDialog(QDialog):
 
         presets = self.settings_manager.list_presets()
 
-        # Ensure "default" is always first
+        # Exclude "default" from list (cannot be deleted)
         if ToolSettingsManager.DEFAULT_PRESET_NAME in presets:
             presets.remove(ToolSettingsManager.DEFAULT_PRESET_NAME)
-            presets.insert(0, ToolSettingsManager.DEFAULT_PRESET_NAME)
 
         self.preset_list.addItems(presets)
         logger.debug(f"Preset list refreshed: {len(presets)} presets")

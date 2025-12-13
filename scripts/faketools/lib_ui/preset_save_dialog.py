@@ -113,6 +113,11 @@ class PresetSaveDialog(QDialog):
             show_error_dialog("Invalid Name", "Preset name cannot be empty.")
             return
 
+        # Disallow overwriting "default" preset
+        if preset_name.lower() == "default":
+            show_error_dialog("Reserved Name", "'default' is a reserved preset name.")
+            return
+
         try:
             # Validate preset name
             self.settings_manager._validate_preset_name(preset_name)
