@@ -55,6 +55,8 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()
 4. Adjust Distance Ratio or Angle as needed
 5. Click `Transfer`
 
+※ If all target geometry and vertices are unmatched, weight transfer will not be performed.
+
 ### 4. Garment Seam Processing
 
 1. Add all clothing parts (body, collar, sleeves, etc.) to targets

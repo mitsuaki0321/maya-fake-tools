@@ -55,6 +55,8 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()
 4. 必要に応じて Distance Ratio や Angle を調整
 5. `Transfer` をクリック
 
+※ 対象のジオメトリ及び頂点がすべて unmatched（マッチしなかった）場合、ウエイト転送は行われません。
+
 ### 4. 衣服のシーム処理
 
 1. 服のパーツ（本体、襟、袖など）をすべてターゲットに追加
