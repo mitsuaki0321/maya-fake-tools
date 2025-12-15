@@ -110,6 +110,7 @@ def search_matches(
     vertex_indices: Optional[list[int]],
     distance_ratio: float,
     angle_degrees: float,
+    expand_boundary: int,
     flip_normals: bool,
     use_kdtree: bool,
     use_deformed_source: bool,
@@ -123,6 +124,7 @@ def search_matches(
         vertex_indices: List of vertex indices to process, or None for all.
         distance_ratio: Distance threshold as ratio of bounding box diagonal.
         angle_degrees: Angle threshold in degrees.
+        expand_boundary: Number of edge rings to expand unmatched region (0 = no expansion).
         flip_normals: Whether to allow matching with inverted normals.
         use_kdtree: Whether to use KDTree for faster (but less accurate) matching.
         use_deformed_source: Whether to use deformed source mesh.
@@ -140,6 +142,7 @@ def search_matches(
         use_kdtree=use_kdtree,
         use_deformed_source=use_deformed_source,
         use_deformed_target=use_deformed_target,
+        expand_boundary=expand_boundary,
     )
 
     # Filter for partial selection
@@ -157,6 +160,7 @@ def transfer_weights(
     vertex_indices: Optional[list[int]],
     distance_ratio: float,
     angle_degrees: float,
+    expand_boundary: int,
     flip_normals: bool,
     use_kdtree: bool,
     use_deformed_source: bool,
@@ -174,6 +178,7 @@ def transfer_weights(
         vertex_indices: List of vertex indices to process, or None for all.
         distance_ratio: Distance threshold as ratio of bounding box diagonal.
         angle_degrees: Angle threshold in degrees.
+        expand_boundary: Number of edge rings to expand unmatched region (0 = no expansion).
         flip_normals: Whether to allow matching with inverted normals.
         use_kdtree: Whether to use KDTree for faster matching.
         use_deformed_source: Whether to use deformed source mesh.
@@ -204,6 +209,7 @@ def transfer_weights(
         use_deformed_target=use_deformed_target,
         progress_callback=progress_callback,
         vertex_indices=vertex_indices,
+        expand_boundary=expand_boundary,
     )
 
     return result

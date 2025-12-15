@@ -33,6 +33,7 @@ def find_matches(
     use_kdtree: bool = False,
     use_deformed_source: bool = False,
     use_deformed_target: bool = False,
+    expand_boundary: int = 0,
 ) -> tuple[np.ndarray, np.ndarray, dict[str, Any]]:
     """Find high-confidence matches from source mesh to target mesh (Stage 1).
 
@@ -45,6 +46,7 @@ def find_matches(
         use_kdtree: Use KDTree for fast vertex-to-vertex matching (less accurate).
         use_deformed_source: Evaluate source mesh at current deformed state.
         use_deformed_target: Evaluate target mesh at current deformed state.
+        expand_boundary: Number of edge rings to expand unmatched region (0 = no expansion).
 
     Returns:
         Tuple of (matched_mask, matched_weights, closest_data) where:
@@ -151,7 +153,66 @@ def find_matches(
     total_count = len(matched_mask)
     logger.debug(f"find_matches: {matched_count}/{total_count} vertices matched (distance_threshold={distance_threshold:.4f})")
 
+    # Apply boundary expansion if requested
+    if expand_boundary > 0:
+        matched_mask = expand_unmatched_region(target_mesh, matched_mask, expand_boundary)
+
     return matched_mask, matched_weights, closest_data
+
+
+def expand_unmatched_region(
+    target_mesh: str,
+    matched_mask: np.ndarray,
+    expansion_rings: int,
+) -> np.ndarray:
+    """Expand unmatched region by N edge rings.
+
+    This function expands the unmatched vertex region by marking matched vertices
+    that are neighbors of unmatched vertices as also unmatched. This is useful for
+    removing noise at the matched/unmatched boundary for smoother interpolation.
+
+    Args:
+        target_mesh: Target mesh node name.
+        matched_mask: (N,) bool array, True for matched vertices.
+        expansion_rings: Number of edge rings to expand (0 = no expansion).
+
+    Returns:
+        Updated matched_mask with expanded unmatched region.
+
+    Raises:
+        ValueError: If all vertices become unmatched after expansion.
+    """
+    if expansion_rings <= 0:
+        return matched_mask.copy()
+
+    adj_list = mesh_io.get_adjacency_list(target_mesh)
+    expanded_mask = matched_mask.copy()
+
+    for ring in range(expansion_rings):
+        unmatched_indices = np.where(~expanded_mask)[0]
+        neighbors_to_unset = set()
+
+        for idx in unmatched_indices:
+            for neighbor in adj_list[idx]:
+                if expanded_mask[neighbor]:
+                    neighbors_to_unset.add(neighbor)
+
+        for neighbor in neighbors_to_unset:
+            expanded_mask[neighbor] = False
+
+        logger.debug(f"expand_unmatched_region: ring {ring + 1}, expanded {len(neighbors_to_unset)} vertices")
+
+    # Check if all vertices became unmatched
+    if not np.any(expanded_mask):
+        raise ValueError(
+            "All vertices became unmatched after boundary expansion. Try reducing the expand boundary value or adjusting match criteria."
+        )
+
+    original_matched = np.sum(matched_mask)
+    final_matched = np.sum(expanded_mask)
+    logger.debug(f"expand_unmatched_region: {original_matched} -> {final_matched} matched vertices")
+
+    return expanded_mask
 
 
 # =============================================================================
@@ -340,6 +401,7 @@ def transfer_weights(
     use_deformed_target: bool = False,
     progress_callback: Optional[Callable[[str, int], None]] = None,
     vertex_indices: Optional[list[int]] = None,
+    expand_boundary: int = 0,
 ) -> dict[str, Any]:
     """Execute complete weight transfer pipeline.
 
@@ -358,6 +420,7 @@ def transfer_weights(
         use_deformed_target: Evaluate target mesh at current deformed state.
         progress_callback: Callback function(message, percent) for progress updates.
         vertex_indices: List of target vertex indices to transfer. None for all vertices.
+        expand_boundary: Number of edge rings to expand unmatched region (0 = no expansion).
 
     Returns:
         Dictionary containing:
@@ -395,6 +458,7 @@ def transfer_weights(
             use_kdtree=use_kdtree,
             use_deformed_source=use_deformed_source,
             use_deformed_target=use_deformed_target,
+            expand_boundary=expand_boundary,
         )
 
         # Filter for partial selection
@@ -683,6 +747,7 @@ def get_unmatched_vertices(
     use_kdtree: bool = False,
     use_deformed_source: bool = False,
     use_deformed_target: bool = False,
+    expand_boundary: int = 0,
 ) -> tuple[list[int], list[int]]:
     """Get indices of matched and unmatched vertices for preview.
 
@@ -695,6 +760,7 @@ def get_unmatched_vertices(
         use_kdtree: Use KDTree for fast matching (less accurate).
         use_deformed_source: Evaluate source mesh at current deformed state.
         use_deformed_target: Evaluate target mesh at current deformed state.
+        expand_boundary: Number of edge rings to expand unmatched region (0 = no expansion).
 
     Returns:
         Tuple of (matched_indices, unmatched_indices) where each is a list of vertex indices.
@@ -708,6 +774,7 @@ def get_unmatched_vertices(
         use_kdtree=use_kdtree,
         use_deformed_source=use_deformed_source,
         use_deformed_target=use_deformed_target,
+        expand_boundary=expand_boundary,
     )
 
     matched_indices = np.where(matched_mask)[0].tolist()

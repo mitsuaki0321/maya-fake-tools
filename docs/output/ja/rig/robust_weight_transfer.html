@@ -221,6 +221,11 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <td>30.0</td>
                 </tr>
                 <tr>
+                <td>Expand Boundary</td>
+                <td>マッチしなかった頂点の周囲を拡張するエッジリング数</td>
+                <td>0</td>
+                </tr>
+                <tr>
                 <td>Flip Normals</td>
                 <td>反転した法線でのマッチングを許可</td>
                 <td>OFF</td>
@@ -236,6 +241,20 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 値が小さいほど厳密なマッチングになります。0.05
                 は対角線の 5%
                 以内の距離でマッチングすることを意味します。</p>
+                <p><strong>Expand Boundary について:</strong>
+                マッチした頂点とマッチしなかった頂点の境界部分では、閾値ギリギリでマッチした頂点のウェイトがノイズとなる場合があります。この値を
+                1 以上に設定すると、マッチしなかった頂点の周囲 N
+                エッジリング分の頂点も「マッチしなかった」として扱い、Weight
+                Inpainting
+                による補間対象にします。これにより、境界部分のノイズを除去し、よりスムーズなウェイト遷移が得られます。</p>
+                <ul>
+                <li><strong>0</strong>:
+                拡張なし（デフォルト、従来の動作）</li>
+                <li><strong>1-5</strong>:
+                指定したエッジリング数だけ境界を拡張</li>
+                </ul>
+                <p>※
+                拡張により全ての頂点がマッチしなくなった場合はエラーとなります。</p>
                 <p><strong>Flip Normals について:</strong>
                 ソースとターゲットで法線が反転している場合（例：服の裏地）にオンにします。</p>
                 <h3 id="deform-options">Deform Options</h3>

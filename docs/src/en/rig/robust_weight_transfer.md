@@ -98,11 +98,20 @@ Configure matching parameters.
 |-----------|-------------|---------|
 | Distance Ratio | Ratio of distance threshold to bounding box diagonal | 0.05 |
 | Angle (degrees) | Normal angle threshold (degrees) | 30.0 |
+| Expand Boundary | Number of edge rings to expand around unmatched vertices | 0 |
 | Flip Normals | Allow matching with flipped normals | OFF |
 | Fast Mode (KDTree) | Fast (slightly less accurate) matching using KDTree | OFF |
 
 **About Distance Ratio:**
 Smaller values result in stricter matching. 0.05 means matching within 5% of the diagonal length.
+
+**About Expand Boundary:**
+At the boundary between matched and unmatched vertices, weights from vertices that barely passed the threshold can introduce noise. Setting this value to 1 or higher will also treat vertices within N edge rings around unmatched vertices as "unmatched", making them candidates for Weight Inpainting interpolation. This removes noise at the boundary and results in smoother weight transitions.
+
+- **0**: No expansion (default, original behavior)
+- **1-5**: Expand the boundary by the specified number of edge rings
+
+※ An error will occur if expansion causes all vertices to become unmatched.
 
 **About Flip Normals:**
 Turn this on when normals are flipped between source and target (e.g., clothing lining).

@@ -112,6 +112,7 @@ class MainWindow(BaseMainWindow):
     DEFAULT_SETTINGS = {
         "distance_ratio": 0.05,
         "angle_degrees": 30.0,
+        "expand_boundary": 0,
         "flip_normals": False,
         "use_kdtree": False,
         "use_deformed_source": False,
@@ -536,6 +537,7 @@ class MainWindow(BaseMainWindow):
                 vertex_indices=vertex_indices,
                 distance_ratio=settings["distance_ratio"],
                 angle_degrees=settings["angle_degrees"],
+                expand_boundary=settings["expand_boundary"],
                 flip_normals=settings["flip_normals"],
                 use_kdtree=settings["use_kdtree"],
                 use_deformed_source=settings["use_deformed_source"],
@@ -623,6 +625,7 @@ class MainWindow(BaseMainWindow):
                     vertex_indices=vertex_indices,
                     distance_ratio=settings["distance_ratio"],
                     angle_degrees=settings["angle_degrees"],
+                    expand_boundary=settings["expand_boundary"],
                     flip_normals=settings["flip_normals"],
                     use_kdtree=settings["use_kdtree"],
                     use_deformed_source=settings["use_deformed_source"],

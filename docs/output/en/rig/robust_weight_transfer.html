@@ -238,6 +238,12 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <td>30.0</td>
                 </tr>
                 <tr>
+                <td>Expand Boundary</td>
+                <td>Number of edge rings to expand around unmatched
+                vertices</td>
+                <td>0</td>
+                </tr>
+                <tr>
                 <td>Flip Normals</td>
                 <td>Allow matching with flipped normals</td>
                 <td>OFF</td>
@@ -253,6 +259,23 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <p><strong>About Distance Ratio:</strong> Smaller values
                 result in stricter matching. 0.05 means matching within
                 5% of the diagonal length.</p>
+                <p><strong>About Expand Boundary:</strong> At the
+                boundary between matched and unmatched vertices, weights
+                from vertices that barely passed the threshold can
+                introduce noise. Setting this value to 1 or higher will
+                also treat vertices within N edge rings around unmatched
+                vertices as “unmatched”, making them candidates for
+                Weight Inpainting interpolation. This removes noise at
+                the boundary and results in smoother weight
+                transitions.</p>
+                <ul>
+                <li><strong>0</strong>: No expansion (default, original
+                behavior)</li>
+                <li><strong>1-5</strong>: Expand the boundary by the
+                specified number of edge rings</li>
+                </ul>
+                <p>※ An error will occur if expansion causes all
+                vertices to become unmatched.</p>
                 <p><strong>About Flip Normals:</strong> Turn this on
                 when normals are flipped between source and target
                 (e.g., clothing lining).</p>

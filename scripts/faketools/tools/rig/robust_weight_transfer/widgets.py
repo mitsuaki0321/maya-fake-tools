@@ -56,6 +56,17 @@ class SettingsSection(QGroupBox):
         )
         layout.addWidget(self.angle_slider)
 
+        # Expand boundary
+        self.expand_slider = FloatSlider(
+            label="Expand Boundary:",
+            minimum=0,
+            maximum=5,
+            default=self._default_settings.get("expand_boundary", 0),
+            decimals=0,
+        )
+        self.expand_slider.setToolTip("Expand unmatched region by N edge rings for smoother boundary")
+        layout.addWidget(self.expand_slider)
+
         # Checkboxes
         checkbox_layout = QHBoxLayout()
         checkbox_layout.setSpacing(spacing)
@@ -71,7 +82,7 @@ class SettingsSection(QGroupBox):
         layout.addLayout(checkbox_layout)
 
         # Unify slider widths
-        unify_slider_widths([self.distance_slider, self.angle_slider])
+        unify_slider_widths([self.distance_slider, self.angle_slider, self.expand_slider])
 
     def collect_settings(self) -> dict:
         """Collect current settings values.
@@ -82,6 +93,7 @@ class SettingsSection(QGroupBox):
         return {
             "distance_ratio": self.distance_slider.value(),
             "angle_degrees": self.angle_slider.value(),
+            "expand_boundary": int(self.expand_slider.value()),
             "flip_normals": self.flip_normals_cb.isChecked(),
             "use_kdtree": self.use_kdtree_cb.isChecked(),
         }
@@ -95,6 +107,7 @@ class SettingsSection(QGroupBox):
         defaults = self._default_settings
         self.distance_slider.setValue(settings_data.get("distance_ratio", defaults["distance_ratio"]))
         self.angle_slider.setValue(settings_data.get("angle_degrees", defaults["angle_degrees"]))
+        self.expand_slider.setValue(settings_data.get("expand_boundary", defaults.get("expand_boundary", 0)))
         self.flip_normals_cb.setChecked(settings_data.get("flip_normals", defaults["flip_normals"]))
         self.use_kdtree_cb.setChecked(settings_data.get("use_kdtree", defaults["use_kdtree"]))
 
