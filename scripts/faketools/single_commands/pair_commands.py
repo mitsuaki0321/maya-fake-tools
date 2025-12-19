@@ -203,8 +203,8 @@ class ConnectShapeCommand(PairCommand):
             logger.warning(f"Skip copy transform. Not a transform node: {source_node}, {target_node}")
             return
 
-        shape = cmds.listRelatives(source_node, shapes=True, fullPath=True)
-        target_shape = cmds.listRelatives(target_node, shapes=True, fullPath=True)
+        shape = cmds.listRelatives(source_node, shapes=True, path=True)
+        target_shape = cmds.listRelatives(target_node, shapes=True, path=True)
 
         if not shape or not target_shape:
             logger.warning(f"Skip connect shape. No shape found: {source_node}, {target_node}")
@@ -230,8 +230,8 @@ class CopyShapeCommand(PairCommand):
             logger.warning(f"Skip copy transform. Not a transform node: {source_node}, {target_node}")
             return
 
-        shape = cmds.listRelatives(source_node, shapes=True, fullPath=True)
-        target_shape = cmds.listRelatives(target_node, shapes=True, fullPath=True)
+        shape = cmds.listRelatives(source_node, shapes=True, path=True)
+        target_shape = cmds.listRelatives(target_node, shapes=True, path=True)
 
         if not shape or not target_shape:
             logger.warning(f"Skip copy shape. No shape found: {source_node}, {target_node}")
