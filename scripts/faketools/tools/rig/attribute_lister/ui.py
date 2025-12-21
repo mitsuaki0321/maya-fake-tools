@@ -9,7 +9,7 @@ import maya.cmds as cmds
 from ....lib_ui import maya_decorator
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.qt_compat import QLineEdit
+from ....lib_ui.qt_compat import QLineEdit, QPushButton
 from ....lib_ui.widgets import nodeAttr_widgets
 
 logger = getLogger(__name__)
@@ -35,10 +35,14 @@ class MainWindow(BaseMainWindow):
         self.value_field = QLineEdit()
         self.view.main_layout.addWidget(self.value_field)
 
+        delete_button = QPushButton("Delete Attributes")
+        self.view.main_layout.addWidget(delete_button)
+
         # Signal & Slot
         self.view.attr_list.selectionModel().selectionChanged.connect(self._display_value)
         self.value_field.returnPressed.connect(self._set_value)
         self.view.attr_list.attribute_lock_changed.connect(self._display_value)
+        delete_button.clicked.connect(self.delete_attributes)
 
     def _display_value(self) -> None:
         """Display the value of the selected attribute."""
@@ -123,6 +127,24 @@ class MainWindow(BaseMainWindow):
 
         except (ValueError, SyntaxError, TypeError) as e:
             cmds.error(f"Invalid input value: {value}. \n{str(e)}")
+
+    @maya_decorator.undo_chunk("Delete Attributes")
+    @maya_decorator.error_handler
+    def delete_attributes(self) -> None:
+        """Delete selected attributes."""
+        nodes = self.view.get_selected_nodes()
+        attrs = self.view.get_selected_attributes()
+
+        if not nodes or not attrs:
+            return
+
+        for node in nodes:
+            for attr in attrs:
+                try:
+                    if cmds.attributeQuery(attr, node=node, exists=True):
+                        cmds.deleteAttr(f"{node}.{attr}")
+                except RuntimeError as e:
+                    cmds.error(f"Failed to delete attribute {attr} from node {node}. \n{str(e)}")
 
 
 def show_ui():
