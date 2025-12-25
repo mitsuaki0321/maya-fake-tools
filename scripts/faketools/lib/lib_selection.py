@@ -646,3 +646,295 @@ __all__ = [
     "reorder_outliner",
     "restore_selection",
 ]
+
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class SelectionMode:
+    """Utility class for managing Maya selection modes and selectTypes."""
+
+    # ------------------------------------------------------------------
+    # SelectType definitions
+    # ------------------------------------------------------------------
+
+    @property
+    def object_mode_types(self) -> list[str]:
+        return [
+            "byName",
+            "camera",
+            "cluster",
+            "collisionModel",
+            "curve",
+            "curveOnSurface",
+            "dimension",
+            "dynamicConstraint",
+            "emitter",
+            "field",
+            "fluid",
+            "follicle",
+            "hairSystem",
+            "handle",
+            "ikEndEffector",
+            "ikHandle",
+            "implicitGeometry",
+            "joint",
+            "lattice",
+            "light",
+            "locator",
+            "locatorUV",
+            "locatorXYZ",
+            "nCloth",
+            "nParticleShape",
+            "nRigid",
+            "nonlinear",
+            "nurbsCurve",
+            "nurbsSurface",
+            "orientationLocator",
+            "particleShape",
+            "plane",
+            "polymesh",
+            "rigidBody",
+            "rigidConstraint",
+            "sculpt",
+            "spring",
+            "subdiv",
+            "texture",
+        ]
+
+    @property
+    def component_mode_types(self) -> list[str]:
+        return [
+            "controlVertex",
+            "curveKnot",
+            "curveParameterPoint",
+            "edge",
+            "editPoint",
+            "facet",
+            "hull",
+            "imagePlane",
+            "isoparm",
+            "jointPivot",
+            "latticePoint",
+            "localRotationAxis",
+            "nParticle",
+            "particle",
+            "polymeshEdge",
+            "polymeshFace",
+            "polymeshUV",
+            "polymeshVertex",
+            "polymeshVtxFace",
+            "rotatePivot",
+            "scalePivot",
+            "selectHandle",
+            "springComponent",
+            "subdivMeshEdge",
+            "subdivMeshFace",
+            "subdivMeshPoint",
+            "subdivMeshUV",
+            "surfaceEdge",
+            "surfaceFace",
+            "surfaceKnot",
+            "surfaceParameterPoint",
+            "surfaceRange",
+            "surfaceUV",
+            "vertex",
+        ]
+
+    # ------------------------------------------------------------------
+    # Selection mode (object / component)
+    # ------------------------------------------------------------------
+
+    def get_mode(self) -> str:
+        """Return current selection mode ('object' or 'component')."""
+        if cmds.selectMode(q=True, object=True):
+            return "object"
+        if cmds.selectMode(q=True, component=True):
+            return "component"
+        return "unknown"
+
+    def to_object(self) -> None:
+        """Switch to object selection mode."""
+        cmds.selectMode(object=True)
+
+    def to_component(self) -> None:
+        """Switch to component selection mode."""
+        cmds.selectMode(component=True)
+
+    # ------------------------------------------------------------------
+    # Require (precondition)
+    # ------------------------------------------------------------------
+
+    def require_object_mode(self) -> None:
+        if self.get_mode() != "object":
+            raise RuntimeError("Selection mode must be 'object'.")
+
+    def require_component_mode(self) -> None:
+        if self.get_mode() != "component":
+            raise RuntimeError("Selection mode must be 'component'.")
+
+    # ------------------------------------------------------------------
+    # Object mode: get / list
+    # ------------------------------------------------------------------
+
+    def get_object_mode(self, mode: str) -> bool:
+        """Return True if the object selectType is enabled.
+
+        Returns False if not enabled or if not in object mode.
+        """
+        if not mode:
+            raise ValueError("Mode is not specified.")
+
+        if mode not in self.object_mode_types:
+            raise ValueError(f"Unsupported object mode: {mode}")
+
+        if self.get_mode() != "object":
+            return False
+
+        return bool(cmds.selectType(q=True, **{mode: True}))
+
+    def list_current_object_mode(self) -> list[str]:
+        """List enabled object selectTypes.
+
+        Returns an empty list if not in object mode.
+        """
+        if self.get_mode() != "object":
+            return []
+
+        return [mode for mode in self.object_mode_types if cmds.selectType(q=True, **{mode: True})]
+
+    # ------------------------------------------------------------------
+    # Object mode: set / toggle
+    # ------------------------------------------------------------------
+
+    def set_object_mode(self, mode: str, value: bool = True) -> None:
+        """Enable or disable an object selectType."""
+        if not mode:
+            raise ValueError("Mode is not specified.")
+
+        if mode not in self.object_mode_types:
+            raise ValueError(f"Unsupported object mode: {mode}")
+
+        self.to_object()
+        cmds.selectType(**{mode: value})
+
+        logger.debug("Set object mode: %s -> %s", mode, value)
+
+    def toggle_object_mode(self, modes: list[str]) -> None:
+        """Toggle one or more object selectTypes."""
+        if not modes:
+            raise ValueError("Modes are not specified.")
+
+        self.to_object()
+
+        for mode in modes:
+            if mode not in self.object_mode_types:
+                raise ValueError(f"Unsupported object mode: {mode}")
+
+            current = cmds.selectType(q=True, **{mode: True})
+            cmds.selectType(**{mode: not current})
+
+            logger.debug("Toggle object mode: %s", mode)
+
+    # ------------------------------------------------------------------
+    # Component mode: get / list
+    # ------------------------------------------------------------------
+
+    def get_component_mode(self, mode: str) -> bool:
+        """Return True if the component selectType is enabled.
+
+        Returns False if not enabled or if not in component mode.
+        """
+        if not mode:
+            raise ValueError("Mode is not specified.")
+
+        if mode not in self.component_mode_types:
+            raise ValueError(f"Unsupported component mode: {mode}")
+
+        if self.get_mode() != "component":
+            return False
+
+        return bool(cmds.selectType(q=True, **{mode: True}))
+
+    def list_current_component_mode(self) -> list[str]:
+        """List enabled component selectTypes.
+
+        Returns an empty list if not in component mode.
+        """
+        if self.get_mode() != "component":
+            return []
+
+        return [mode for mode in self.component_mode_types if cmds.selectType(q=True, **{mode: True})]
+
+    # ------------------------------------------------------------------
+    # Component mode: set / toggle
+    # ------------------------------------------------------------------
+
+    def set_component_mode(self, mode: str, value: bool = True) -> None:
+        """Enable or disable a component selectType."""
+        if not mode:
+            raise ValueError("Mode is not specified.")
+
+        if mode not in self.component_mode_types:
+            raise ValueError(f"Unsupported component mode: {mode}")
+
+        self.to_component()
+        cmds.selectType(**{mode: value})
+
+        logger.debug("Set component mode: %s -> %s", mode, value)
+
+    def toggle_component_mode(self, modes: list[str]) -> None:
+        """Toggle one or more component selectTypes."""
+        if not modes:
+            raise ValueError("Modes are not specified.")
+
+        self.to_component()
+
+        for mode in modes:
+            if mode not in self.component_mode_types:
+                raise ValueError(f"Unsupported component mode: {mode}")
+
+            current = cmds.selectType(q=True, **{mode: True})
+            cmds.selectType(**{mode: not current})
+
+            logger.debug("Toggle component mode: %s", mode)
+
+
+class HiliteSelection:
+    """Utility class for managing Maya hilite selection."""
+
+    def list_nodes(self, full_path: bool = False) -> list[str]:
+        """List the hilite nodes.
+
+        Args:
+            full_path (bool): Whether to return the full path. Default is False.
+
+        Returns:
+            list[str]: The hilite nodes.
+        """
+        return cmds.ls(hilite=True, long=full_path)
+
+    def hilite(self, nodes: list[str], replace: bool = True) -> None:
+        """Hilite the nodes.
+
+        Args:
+            nodes (list[str]): The nodes.
+            replace (bool): If True, replace the current hilite. If False, add to the current hilite. Default is True.
+        """
+        if not nodes:
+            raise ValueError("Nodes are not specified.")
+
+        if not isinstance(nodes, list):
+            raise ValueError("Nodes must be a list.")
+
+        cmds.hilite(nodes, replace=replace)
+
+    def clear(self) -> None:
+        """Clear the hilite."""
+        hilite_nodes = self.list_nodes()
+        if not hilite_nodes:
+            return
+
+        cmds.hilite(hilite_nodes, unHilite=True)
