@@ -631,28 +631,6 @@ def restore_selection():
                 cmds.select(cl=True)
 
 
-__all__ = [
-    "is_unique_node",
-    "filter_by_type",
-    "filter_by_regex",
-    "get_parents",
-    "get_all_parents",
-    "get_children",
-    "get_siblings",
-    "get_shapes",
-    "get_hierarchy",
-    "get_leaf_nodes",
-    "get_top_nodes",
-    "reorder_outliner",
-    "restore_selection",
-]
-
-
-import logging
-
-logger = logging.getLogger(__name__)
-
-
 class SelectionMode:
     """Utility class for managing Maya selection modes and selectTypes."""
 
@@ -938,3 +916,22 @@ class HiliteSelection:
             return
 
         cmds.hilite(hilite_nodes, unHilite=True)
+
+
+__all__ = [
+    "is_unique_node",
+    "filter_by_type",
+    "filter_by_regex",
+    "get_parents",
+    "get_all_parents",
+    "get_children",
+    "get_siblings",
+    "get_shapes",
+    "get_hierarchy",
+    "get_leaf_nodes",
+    "get_top_nodes",
+    "reorder_outliner",
+    "restore_selection",
+    "SelectionMode",
+    "HiliteSelection",
+]
