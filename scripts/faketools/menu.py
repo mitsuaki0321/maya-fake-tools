@@ -65,7 +65,7 @@ def add_menu():
         return
 
     # Create menu items by category
-    for category in ["rig", "model", "anim", "common"]:
+    for category in CATEGORY_LABELS:
         if category not in menu_structure:
             continue
 
