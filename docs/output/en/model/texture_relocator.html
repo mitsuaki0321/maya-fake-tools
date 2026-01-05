@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture Relocator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Batch relocate texture file paths in the scene">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/model/texture_relocator.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#copy-relink" id="toc-copy-relink">Copy
+                    &amp; Relink</a></li>
+                    <li><a href="#replace-path"
+                    id="toc-replace-path">Replace Path</a></li>
+                    </ul></li>
+                    <li><a href="#options"
+                    id="toc-options">Options</a></li>
+                    <li><a href="#about-udim-and-image-sequences"
+                    id="toc-about-udim-and-image-sequences">About UDIM
+                    and Image Sequences</a></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Texture Relocator</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool to batch modify texture file paths linked to
+                all file nodes in the scene.</p>
+                <p>Main features:</p>
+                <ul>
+                <li><strong>Copy &amp; Relink</strong>: Copy texture
+                files to a specified directory and update file node
+                paths</li>
+                <li><strong>Replace Path</strong>: Replace file node
+                paths with a specified directory (without copying
+                files)</li>
+                </ul>
+                <p>Supports UDIM textures (<code>&lt;UDIM&gt;</code>)
+                and image sequences (<code>&lt;F&gt;</code>).</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch from the dedicated menu or using the following
+                command:</p>
+                <pre class="python"><code>import faketools.tools.model.texture_relocator.ui
+faketools.tools.model.texture_relocator.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/texture_relocator/image001.png"
+                alt="Texture Relocator UI" /></p>
+                <h2 id="usage">Usage</h2>
+                <h3 id="copy-relink">Copy &amp; Relink</h3>
+                <p>Copies texture files to another directory and updates
+                file node paths in the scene to the new location.</p>
+                <ol type="1">
+                <li><p>Specify the destination directory in
+                <strong>Target Directory</strong>.</p>
+                <ul>
+                <li>Click the <code>...</code> button to browse for a
+                directory.</li>
+                <li>If the specified directory does not exist, you will
+                be prompted to create it.</li>
+                </ul></li>
+                <li><p>Set the <strong>Confirm overwrite</strong> option
+                as needed.</p>
+                <ul>
+                <li>On: Shows a confirmation dialog when files with the
+                same name exist at the destination</li>
+                <li>Off: Overwrites without confirmation</li>
+                </ul></li>
+                <li><p>Click the <strong>Copy &amp; Relink</strong>
+                button.</p></li>
+                <li><p>All texture files in the scene will be copied to
+                the specified directory, and the file node paths will be
+                updated.</p></li>
+                </ol>
+                <h3 id="replace-path">Replace Path</h3>
+                <p>Changes only the file node paths without copying
+                texture files. Use this when texture files with the same
+                names already exist in the target directory.</p>
+                <ol type="1">
+                <li><p>Specify the directory containing the texture
+                files in <strong>Target Directory</strong>.</p></li>
+                <li><p>Click the <strong>Replace Path</strong>
+                button.</p></li>
+                <li><p>All file node paths in the scene will be updated
+                to reference the specified directory.</p></li>
+                </ol>
+                <h2 id="options">Options</h2>
+                <table>
+                <colgroup>
+                <col style="width: 38%" />
+                <col style="width: 61%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Option</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Target Directory</td>
+                <td>Directory path for copying or linking textures</td>
+                </tr>
+                <tr>
+                <td>Confirm overwrite</td>
+                <td>When enabled, shows a confirmation dialog if files
+                with the same name exist at the destination</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="about-udim-and-image-sequences">About UDIM and
+                Image Sequences</h2>
+                <p>This tool supports UDIM textures and image
+                sequences.</p>
+                <ul>
+                <li><strong>UDIM</strong>: Textures with patterns like
+                <code>texture.&lt;UDIM&gt;.png</code> (multiple files:
+                1001, 1002, …)</li>
+                <li><strong>Sequences</strong>: Textures with patterns
+                like <code>texture.&lt;F&gt;.png</code> (frame-numbered
+                sequential files)</li>
+                </ul>
+                <p>All related files for these textures are
+                automatically processed.</p>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>This tool targets all file nodes in the scene. There
+                is no functionality to target specific nodes only.</li>
+                <li>The Replace Path feature assumes that files with the
+                same names exist in the specified directory. If they
+                don’t exist, textures may not load correctly.</li>
+                <li>All operations are undoable.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

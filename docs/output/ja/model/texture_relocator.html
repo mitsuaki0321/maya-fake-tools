@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture Relocator - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="シーン内のテクスチャファイルパスを一括で再配置">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/model/texture_relocator.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#copy-relinkコピーしてリンク"
+                    id="toc-copy-relinkコピーしてリンク">Copy &amp;
+                    Relink（コピーしてリンク）</a></li>
+                    <li><a href="#replace-pathパス置換"
+                    id="toc-replace-pathパス置換">Replace
+                    Path（パス置換）</a></li>
+                    </ul></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a></li>
+                    <li><a href="#udim連番テクスチャについて"
+                    id="toc-udim連番テクスチャについて">UDIM・連番テクスチャについて</a></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Texture Relocator</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>シーン内のすべての file
+                ノードに紐づいたテクスチャファイルのパスを一括で変更するツールです。</p>
+                <p>主な機能:</p>
+                <ul>
+                <li><strong>Copy &amp; Relink</strong>:
+                テクスチャファイルを指定ディレクトリにコピーし、file
+                ノードのパスを更新</li>
+                <li><strong>Replace Path</strong>: file
+                ノードのパスを指定ディレクトリに置き換え（ファイルのコピーは行わない）</li>
+                </ul>
+                <p>UDIM
+                テクスチャ（<code>&lt;UDIM&gt;</code>）および連番テクスチャ（<code>&lt;F&gt;</code>）にも対応しています。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.model.texture_relocator.ui
+faketools.tools.model.texture_relocator.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/texture_relocator/image001.png"
+                alt="Texture Relocator UI" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <h3 id="copy-relinkコピーしてリンク">Copy &amp;
+                Relink（コピーしてリンク）</h3>
+                <p>テクスチャファイルを別のディレクトリにコピーし、シーン内の
+                file ノードのパスを新しい場所に更新します。</p>
+                <ol type="1">
+                <li><p><strong>Target Directory</strong>
+                に、テクスチャのコピー先ディレクトリを指定します。</p>
+                <ul>
+                <li><code>...</code>
+                ボタンでディレクトリを選択できます。</li>
+                <li>指定したディレクトリが存在しない場合、作成するか確認されます。</li>
+                </ul></li>
+                <li><p>必要に応じて <strong>Confirm overwrite</strong>
+                オプションを設定します。</p>
+                <ul>
+                <li>オン:
+                コピー先に同名ファイルが存在する場合、上書き確認ダイアログを表示</li>
+                <li>オフ: 確認なしで上書き</li>
+                </ul></li>
+                <li><p><strong>Copy &amp; Relink</strong>
+                ボタンをクリックします。</p></li>
+                <li><p>シーン内のすべてのテクスチャファイルが指定ディレクトリにコピーされ、file
+                ノードのパスが更新されます。</p></li>
+                </ol>
+                <h3 id="replace-pathパス置換">Replace
+                Path（パス置換）</h3>
+                <p>テクスチャファイルのコピーは行わず、file
+                ノードのパスのみを変更します。指定ディレクトリに同名のテクスチャファイルが既に存在している前提で使用します。</p>
+                <ol type="1">
+                <li><p><strong>Target Directory</strong>
+                に、テクスチャファイルが配置されているディレクトリを指定します。</p></li>
+                <li><p><strong>Replace Path</strong>
+                ボタンをクリックします。</p></li>
+                <li><p>シーン内のすべての file
+                ノードのパスが、指定ディレクトリを参照するように更新されます。</p></li>
+                </ol>
+                <h2 id="オプション">オプション</h2>
+                <table>
+                <colgroup>
+                <col style="width: 64%" />
+                <col style="width: 35%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Target Directory</td>
+                <td>テクスチャのコピー先またはリンク先のディレクトリパス</td>
+                </tr>
+                <tr>
+                <td>Confirm overwrite</td>
+                <td>オンの場合、コピー先に同名ファイルが存在するときに確認ダイアログを表示</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2
+                id="udim連番テクスチャについて">UDIM・連番テクスチャについて</h2>
+                <p>本ツールは UDIM
+                テクスチャと連番テクスチャに対応しています。</p>
+                <ul>
+                <li><strong>UDIM</strong>:
+                <code>texture.&lt;UDIM&gt;.png</code>
+                のようなパターンのテクスチャ（1001, 1002, …
+                の複数ファイル）</li>
+                <li><strong>連番</strong>:
+                <code>texture.&lt;F&gt;.png</code>
+                のようなパターンのテクスチャ（フレーム番号の連番ファイル）</li>
+                </ul>
+                <p>これらのテクスチャは、関連するすべてのファイルが自動的に処理されます。</p>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>本ツールはシーン内のすべての file
+                ノードを対象とします。特定のノードのみを対象とする機能はありません。</li>
+                <li>Replace Path
+                機能は、指定ディレクトリに同名ファイルが存在することを前提としています。存在しない場合、テクスチャが正しく読み込まれなくなる可能性があります。</li>
+                <li>操作は Undo 可能です。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
