@@ -1,11 +1,16 @@
 """Snapshot Capture UI - Maya native window implementation."""
 
+from __future__ import annotations
+
 import logging
 
 import maya.cmds as cmds
 
 from ....lib_ui.qt_compat import QTimer
 from . import command
+from .input_monitor import InputMonitor
+from .input_overlay import draw_click_indicators, draw_cursor, draw_key_overlay
+from .screen_capture import capture_screen_region, get_cursor_screen_position, get_widget_screen_bbox
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,12 @@ _recorded_frames = []
 _record_timer = None
 _countdown_timer = None
 _countdown_value = 0
+
+# Screen capture state
+_input_monitor: InputMonitor | None = None
+_capture_bbox: tuple[int, int, int, int] | None = None
+_show_cursor = True
+_show_keys = False
 
 
 def show_ui():
@@ -186,6 +197,23 @@ def _create_toolbar(parent_layout, init_width, init_height):
     cmds.text(label="Trim:")
     cmds.intField("snapshotCaptureTrim", value=0, width=30, minValue=0, maxValue=10, annotation="Remove frames from end of recording (seconds)")
 
+    cmds.setParent(toolbar_column)
+
+    # === Row 3: Recording overlay options ===
+    cmds.rowLayout(
+        numberOfColumns=4,
+        columnAttach=[
+            (1, "left", 0),
+            (2, "left", 10),
+            (3, "left", 10),
+            (4, "left", 10),
+        ],
+    )
+
+    cmds.text(label="Rec Options:")
+    cmds.checkBox("snapshotCaptureShowCursor", label="Show Cursor", value=True, annotation="Show mouse cursor and click indicators in recording")
+    cmds.checkBox("snapshotCaptureShowKeys", label="Show Keys", value=False, annotation="Show pressed keyboard keys in recording")
+
     cmds.setParent("..")
     cmds.setParent("..")
     cmds.setParent(parent_layout)
@@ -282,7 +310,7 @@ def _set_viewport_size(width: int, height: int):
     cmds.intField("snapshotCaptureHeightField", edit=True, value=height)
 
     # Update window size
-    toolbar_height = 60  # Toolbar height (2 rows)
+    toolbar_height = 80  # Toolbar height (3 rows)
     toolbar_min_width = 550  # Minimum width for toolbar UI (increased for delay/trim fields)
     window_width = max(pane_width, toolbar_min_width)
     window_height = pane_height + toolbar_height
@@ -462,9 +490,8 @@ def _start_recording():
         # Start countdown
         _countdown_value = delay_sec
 
-        # Update button to show countdown
+        # Update button to show countdown (no inViewMessage to avoid overlay in recording)
         cmds.button("snapshotCaptureRecordButton", edit=True, label=str(_countdown_value), backgroundColor=[0.8, 0.6, 0.2])
-        cmds.inViewMessage(message=str(_countdown_value), pos="midCenter", fade=False, fontSize=64)
 
         # Create countdown timer (1 second interval)
         _countdown_timer = QTimer()
@@ -484,9 +511,8 @@ def _on_countdown_tick():
     _countdown_value -= 1
 
     if _countdown_value > 0:
-        # Update countdown display
+        # Update countdown display (button label only)
         cmds.button("snapshotCaptureRecordButton", edit=True, label=str(_countdown_value))
-        cmds.inViewMessage(message=str(_countdown_value), pos="midCenter", fade=False, fontSize=64)
     else:
         # Countdown finished, stop countdown timer and start recording
         if _countdown_timer is not None:
@@ -494,19 +520,42 @@ def _on_countdown_tick():
             _countdown_timer.deleteLater()
             _countdown_timer = None
 
-        cmds.inViewMessage(message="GO!", pos="midCenter", fade=True, fontSize=64)
         _begin_recording()
 
 
 def _begin_recording():
     """Begin actual recording (called after countdown or immediately)."""
     global _is_recording, _recorded_frames, _record_timer, _panel_name
+    global _input_monitor, _capture_bbox, _show_cursor, _show_keys
 
     _is_recording = True
     _recorded_frames = []
 
     # Update button appearance
     cmds.button("snapshotCaptureRecordButton", edit=True, label="Stop", backgroundColor=[0.8, 0.2, 0.2])
+
+    # Get overlay settings from UI
+    _show_cursor = cmds.checkBox("snapshotCaptureShowCursor", query=True, value=True)
+    _show_keys = cmds.checkBox("snapshotCaptureShowKeys", query=True, value=True)
+
+    # Get the Qt widget for the modelEditor (viewport only, not menu/toolbar)
+    from ....lib_ui.maya_qt import qt_widget_from_maya_control
+
+    # Get the modelEditor name from the panel
+    model_editor = cmds.modelPanel(_panel_name, query=True, modelEditor=True)
+    editor_widget = qt_widget_from_maya_control(model_editor)
+
+    if editor_widget:
+        _capture_bbox = get_widget_screen_bbox(editor_widget)
+        logger.debug(f"Capture bbox: {_capture_bbox}")
+    else:
+        logger.warning("Could not get Qt widget for model editor")
+        _capture_bbox = None
+
+    # Start input monitor for cursor/keyboard tracking
+    if editor_widget and (_show_cursor or _show_keys):
+        _input_monitor = InputMonitor(editor_widget)
+        _input_monitor.start()
 
     # Get FPS for timer interval
     fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
@@ -518,23 +567,40 @@ def _begin_recording():
     _record_timer.start(interval_ms)
 
     logger.info(f"Recording started at {fps} FPS (interval: {interval_ms}ms)")
-    cmds.inViewMessage(message="Recording...", pos="midCenter", fade=True)
 
 
 def _on_timer_tick():
-    """Capture frame on timer tick."""
-    global _recorded_frames, _panel_name
+    """Capture frame on timer tick using screen capture."""
+    global _recorded_frames, _capture_bbox, _input_monitor, _show_cursor, _show_keys
 
     if not _is_recording:
         return
 
-    # Get resolution
-    width = cmds.intField("snapshotCaptureWidthField", query=True, value=True)
-    height = cmds.intField("snapshotCaptureHeightField", query=True, value=True)
+    if _capture_bbox is None:
+        logger.error("No capture bbox available")
+        return
 
-    # Capture frame using playblast with offScreen=True
     try:
-        image = command.capture_frame(_panel_name, width, height)
+        # Capture screen region
+        image = capture_screen_region(_capture_bbox)
+
+        # Draw cursor overlay
+        if _show_cursor:
+            cursor_pos = get_cursor_screen_position()
+            image = draw_cursor(image, cursor_pos, _capture_bbox)
+
+            # Draw click indicators
+            if _input_monitor:
+                clicks = _input_monitor.get_recent_clicks()
+                if clicks:
+                    image = draw_click_indicators(image, clicks, _capture_bbox)
+
+        # Draw keyboard overlay
+        if _show_keys and _input_monitor:
+            pressed_keys = _input_monitor.get_pressed_keys()
+            if pressed_keys:
+                image = draw_key_overlay(image, pressed_keys)
+
         _recorded_frames.append(image)
         logger.debug(f"Captured frame ({len(_recorded_frames)} total)")
     except Exception as e:
@@ -543,7 +609,7 @@ def _on_timer_tick():
 
 def _stop_recording():
     """Stop recording and save GIF."""
-    global _is_recording, _recorded_frames, _record_timer
+    global _is_recording, _recorded_frames, _record_timer, _input_monitor, _capture_bbox
 
     _is_recording = False
 
@@ -552,6 +618,14 @@ def _stop_recording():
         _record_timer.stop()
         _record_timer.deleteLater()
         _record_timer = None
+
+    # Stop input monitor
+    if _input_monitor is not None:
+        _input_monitor.stop()
+        _input_monitor = None
+
+    # Clear capture bbox
+    _capture_bbox = None
 
     # Update button appearance
     cmds.button("snapshotCaptureRecordButton", edit=True, label="Rec", backgroundColor=[0.5, 0.5, 0.5])
