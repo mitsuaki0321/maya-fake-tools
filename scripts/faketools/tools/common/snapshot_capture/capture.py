@@ -112,6 +112,10 @@ def capture_frame_range(
     output_base = str(Path(temp_dir) / "snapshot_capture_gif_temp")
 
     try:
+        # Ensure viewport is ready before first capture
+        cmds.currentTime(start_frame)
+        cmds.refresh(force=True)
+
         for frame in range(start_frame, end_frame + 1):
             # Move to frame
             cmds.currentTime(frame)
@@ -131,6 +135,7 @@ def capture_frame_range(
                 filename=output_base,
                 forceOverwrite=True,
                 percent=100,
+                offScreen=True,
                 editorPanelName=panel_name,
             )
 

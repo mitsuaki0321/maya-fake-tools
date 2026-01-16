@@ -63,6 +63,7 @@ def save_gif(
     output_path: str,
     fps: int = 24,
     background_color: tuple[int, int, int] | None = None,
+    loop: bool = True,
 ) -> str:
     """Save images as animated GIF.
 
@@ -71,6 +72,7 @@ def save_gif(
         output_path: Output file path.
         fps: Frames per second for GIF playback.
         background_color: RGB tuple or None for transparent.
+        loop: If True, GIF loops forever. If False, plays once.
 
     Returns:
         Output file path.
@@ -106,6 +108,9 @@ def save_gif(
             gif_images.append(img.convert("P", palette=Image.ADAPTIVE, colors=256))
 
     # Save as animated GIF
+    # loop=0 means loop forever, loop=1 means play once
+    loop_count = 0 if loop else 1
+
     if background_color is None:
         # With transparency
         gif_images[0].save(
@@ -113,7 +118,7 @@ def save_gif(
             save_all=True,
             append_images=gif_images[1:],
             duration=duration,
-            loop=0,
+            loop=loop_count,
             transparency=255,
             disposal=2,  # Restore to background
         )
@@ -124,7 +129,7 @@ def save_gif(
             save_all=True,
             append_images=gif_images[1:],
             duration=duration,
-            loop=0,
+            loop=loop_count,
         )
 
     return output_path

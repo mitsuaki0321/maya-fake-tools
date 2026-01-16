@@ -160,7 +160,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
     end_frame = int(cmds.playbackOptions(query=True, maxTime=True))
 
     cmds.rowLayout(
-        numberOfColumns=12,
+        numberOfColumns=13,
         columnAttach=[
             (1, "left", 0),
             (2, "left", 2),
@@ -168,12 +168,13 @@ def _create_toolbar(parent_layout, init_width, init_height):
             (4, "left", 2),
             (5, "left", 8),
             (6, "left", 2),
-            (7, "left", 15),
-            (8, "left", 2),
-            (9, "left", 8),
-            (10, "left", 2),
-            (11, "left", 8),
-            (12, "left", 2),
+            (7, "left", 8),
+            (8, "left", 15),
+            (9, "left", 2),
+            (10, "left", 8),
+            (11, "left", 2),
+            (12, "left", 8),
+            (13, "left", 2),
         ],
     )
 
@@ -183,6 +184,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
     cmds.intField("snapshotCaptureEndFrame", value=end_frame, width=50)
     cmds.text(label="FPS:")
     cmds.intField("snapshotCaptureFPS", value=24, width=40, minValue=1, maxValue=60)
+    cmds.checkBox("snapshotCaptureLoop", label="Loop", value=True)
 
     # Background color selector
     cmds.text(label="BG:")
@@ -286,49 +288,64 @@ def _set_viewport_size(width: int, height: int):
     """Set viewport size.
 
     Args:
-        width: Target viewport content width.
-        height: Target viewport content height.
+        width: Target viewport content width (modelEditor area).
+        height: Target viewport content height (modelEditor area).
     """
-    global _pane_layout
+    global _pane_layout, _panel_name
 
     if not _pane_layout or not cmds.paneLayout(_pane_layout, exists=True):
         return
 
-    # paneLayout has internal borders that reduce actual content area
-    # Compensate to make actual viewport content match the specified size
-    # Measured: 800x600 paneLayout gives ~796x576 content (4px width, 24px height border)
-    pane_border_width = 4
-    pane_border_height = 24
-    pane_width = width + pane_border_width
-    pane_height = height + pane_border_height
+    if not _panel_name or not cmds.modelPanel(_panel_name, exists=True):
+        return
 
-    # Update pane layout size (larger to compensate for borders)
+    # Get Qt widget for accurate size measurement
+    from ....lib_ui.maya_qt import qt_widget_from_maya_control
+
+    model_editor = cmds.modelPanel(_panel_name, query=True, modelEditor=True)
+    editor_widget = qt_widget_from_maya_control(model_editor)
+
+    if not editor_widget:
+        logger.warning("Could not get Qt widget for viewport size adjustment")
+        return
+
+    # Get current sizes
+    current_editor_width = editor_widget.width()
+    current_editor_height = editor_widget.height()
+    current_window_width = cmds.window(_window_name, query=True, width=True)
+    current_window_height = cmds.window(_window_name, query=True, height=True)
+
+    # Calculate the difference between window size and editor size (UI chrome)
+    chrome_width = current_window_width - current_editor_width
+    chrome_height = current_window_height - current_editor_height
+
+    # Calculate new window size
+    toolbar_min_width = 550  # Minimum width for toolbar UI
+    new_window_width = max(width + chrome_width, toolbar_min_width)
+    new_window_height = height + chrome_height
+
+    # Resize window
+    if cmds.window(_window_name, exists=True):
+        cmds.window(_window_name, edit=True, widthHeight=(new_window_width, new_window_height))
+
+    # Update pane layout to fill the space
+    pane_width = new_window_width
+    pane_height = new_window_height - 80  # Subtract toolbar height
     cmds.paneLayout(_pane_layout, edit=True, width=pane_width, height=pane_height)
 
-    # Update size fields (show target content size, not pane size)
-    cmds.intField("snapshotCaptureWidthField", edit=True, value=width)
-    cmds.intField("snapshotCaptureHeightField", edit=True, value=height)
-
-    # Update window size
-    toolbar_height = 80  # Toolbar height (3 rows)
-    toolbar_min_width = 550  # Minimum width for toolbar UI (increased for delay/trim fields)
-    window_width = max(pane_width, toolbar_min_width)
-    window_height = pane_height + toolbar_height
-
-    # Update viewport container and center the paneLayout
+    # Update viewport container
     viewport_container = "snapshotCaptureViewportContainer"
     if cmds.formLayout(viewport_container, exists=True):
-        # Calculate left offset to center the paneLayout
-        left_offset = max(0, (window_width - pane_width) // 2)
-        cmds.formLayout(viewport_container, edit=True, width=window_width, height=pane_height)
+        cmds.formLayout(viewport_container, edit=True, width=pane_width, height=pane_height)
         cmds.formLayout(
             viewport_container,
             edit=True,
-            attachForm=[(_pane_layout, "top", 0), (_pane_layout, "left", left_offset)],
+            attachForm=[(_pane_layout, "top", 0), (_pane_layout, "left", 0), (_pane_layout, "right", 0), (_pane_layout, "bottom", 0)],
         )
 
-    if cmds.window(_window_name, exists=True):
-        cmds.window(_window_name, edit=True, widthHeight=(window_width, window_height))
+    # Update size fields to show target size
+    cmds.intField("snapshotCaptureWidthField", edit=True, value=width)
+    cmds.intField("snapshotCaptureHeightField", edit=True, value=height)
 
 
 def _get_background_color():
@@ -403,6 +420,7 @@ def _on_capture_gif(*args):
     start_frame = cmds.intField("snapshotCaptureStartFrame", query=True, value=True)
     end_frame = cmds.intField("snapshotCaptureEndFrame", query=True, value=True)
     fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
+    loop = cmds.checkBox("snapshotCaptureLoop", query=True, value=True)
 
     # Get background color
     background_color = _get_background_color()
@@ -441,7 +459,7 @@ def _on_capture_gif(*args):
         images = command.capture_frame_range(_panel_name, start_frame, end_frame, width, height)
 
         cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
-        command.save_gif(images, file_path, fps, background_color)
+        command.save_gif(images, file_path, fps, background_color, loop=loop)
 
         cmds.waitCursor(state=False)
         cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
@@ -624,7 +642,7 @@ def _stop_recording():
         _input_monitor.stop()
         _input_monitor = None
 
-    # Clear capture bbox
+    # Clear capture state
     _capture_bbox = None
 
     # Update button appearance
