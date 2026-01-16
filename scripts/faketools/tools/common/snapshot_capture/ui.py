@@ -33,6 +33,7 @@ _countdown_value = 0
 _input_monitor: InputMonitor | None = None
 _capture_bbox: tuple[int, int, int, int] | None = None
 _show_cursor = True
+_show_clicks = True
 _show_keys = False
 
 # Background color state
@@ -251,17 +252,19 @@ def _create_toolbar(parent_layout, init_width, init_height):
 
     # === Row 3: Recording overlay options ===
     cmds.rowLayout(
-        numberOfColumns=4,
+        numberOfColumns=5,
         columnAttach=[
             (1, "left", 0),
             (2, "left", 10),
             (3, "left", 10),
             (4, "left", 10),
+            (5, "left", 10),
         ],
     )
 
     cmds.text(label="Rec Options:")
-    cmds.checkBox("snapshotCaptureShowCursor", label="Show Cursor", value=True, annotation="Show mouse cursor and click indicators in recording")
+    cmds.checkBox("snapshotCaptureShowCursor", label="Show Cursor", value=True, annotation="Show mouse cursor in recording")
+    cmds.checkBox("snapshotCaptureShowClicks", label="Show Clicks", value=True, annotation="Show click indicators in recording (requires Show Cursor)")
     cmds.checkBox("snapshotCaptureShowKeys", label="Show Keys", value=False, annotation="Show pressed keyboard keys in recording")
 
     cmds.setParent("..")
@@ -685,7 +688,7 @@ def _on_countdown_tick():
 def _begin_recording():
     """Begin actual recording (called after countdown or immediately)."""
     global _is_recording, _recorded_frames, _record_timer, _panel_name
-    global _input_monitor, _capture_bbox, _show_cursor, _show_keys
+    global _input_monitor, _capture_bbox, _show_cursor, _show_clicks, _show_keys
 
     _is_recording = True
     _recorded_frames = []
@@ -695,6 +698,7 @@ def _begin_recording():
 
     # Get overlay settings from UI
     _show_cursor = cmds.checkBox("snapshotCaptureShowCursor", query=True, value=True)
+    _show_clicks = cmds.checkBox("snapshotCaptureShowClicks", query=True, value=True)
     _show_keys = cmds.checkBox("snapshotCaptureShowKeys", query=True, value=True)
 
     # Get the Qt widget for the modelEditor (viewport only, not menu/toolbar)
@@ -730,7 +734,7 @@ def _begin_recording():
 
 def _on_timer_tick():
     """Capture frame on timer tick using screen capture."""
-    global _recorded_frames, _capture_bbox, _input_monitor, _show_cursor, _show_keys
+    global _recorded_frames, _capture_bbox, _input_monitor, _show_cursor, _show_clicks, _show_keys
 
     if not _is_recording:
         return
@@ -743,13 +747,13 @@ def _on_timer_tick():
         # Capture screen region
         image = capture_screen_region(_capture_bbox)
 
-        # Draw cursor overlay
+        # Draw cursor overlay (required for click indicators)
         if _show_cursor:
             cursor_pos = get_cursor_screen_position()
             image = draw_cursor(image, cursor_pos, _capture_bbox)
 
-            # Draw click indicators
-            if _input_monitor:
+            # Draw click indicators (only if both cursor and clicks are enabled)
+            if _show_clicks and _input_monitor:
                 clicks = _input_monitor.get_recent_clicks()
                 if clicks:
                     image = draw_click_indicators(image, clicks, _capture_bbox)

@@ -26,7 +26,8 @@ class InputMonitor(QObject):
     """Monitor mouse and keyboard events for recording overlay.
 
     Uses Qt event filter for cross-platform compatibility.
-    Only monitors events on the target widget.
+    Mouse events are monitored on the target widget.
+    Keyboard events are monitored globally via QApplication.
     """
 
     # How long click indicators remain visible (seconds)
@@ -36,25 +37,41 @@ class InputMonitor(QObject):
         """Initialize input monitor.
 
         Args:
-            target_widget: Qt widget to monitor for events.
+            target_widget: Qt widget to monitor for mouse events.
             parent: Parent QObject.
         """
         super().__init__(parent)
         self._target = target_widget
+        self._app = None  # QApplication for global keyboard monitoring
         self._pressed_keys: set[str] = set()
         self._click_events: list[ClickEvent] = []
         self._is_monitoring = False
 
     def start(self):
         """Start monitoring input events."""
+        from ....lib_ui.qt_compat import QApplication
+
         if not self._is_monitoring:
+            # Install on target widget for mouse events
             self._target.installEventFilter(self)
+
+            # Install on QApplication for global keyboard events
+            self._app = QApplication.instance()
+            if self._app:
+                self._app.installEventFilter(self)
+
             self._is_monitoring = True
 
     def stop(self):
         """Stop monitoring and clear state."""
         if self._is_monitoring:
             self._target.removeEventFilter(self)
+
+            # Remove from QApplication
+            if self._app:
+                self._app.removeEventFilter(self)
+                self._app = None
+
             self._is_monitoring = False
         self._pressed_keys.clear()
         self._click_events.clear()
@@ -80,6 +97,25 @@ class InputMonitor(QObject):
         self._click_events = [click for click in self._click_events if current_time - click.timestamp < self.CLICK_DISPLAY_DURATION]
         return self._click_events.copy()
 
+    def _is_within_target(self, global_pos) -> bool:
+        """Check if global position is within target widget bounds.
+
+        Args:
+            global_pos: Global position (QPoint).
+
+        Returns:
+            True if position is within target widget.
+        """
+        if not self._target:
+            return False
+
+        # Get target widget's global geometry
+        target_pos = self._target.mapToGlobal(self._target.rect().topLeft())
+        target_rect_global = self._target.rect()
+        target_rect_global.moveTo(target_pos)
+
+        return target_rect_global.contains(global_pos)
+
     def eventFilter(self, obj, event):
         """Filter and process input events.
 
@@ -92,7 +128,7 @@ class InputMonitor(QObject):
         """
         event_type = event.type()
 
-        # Keyboard events
+        # Keyboard events (processed globally from QApplication)
         if event_type == QEvent.KeyPress:
             key_name = self._get_key_name(event)
             if key_name and key_name not in self._pressed_keys:
@@ -103,12 +139,14 @@ class InputMonitor(QObject):
             if key_name in self._pressed_keys:
                 self._pressed_keys.discard(key_name)
 
-        # Mouse events
+        # Mouse events (check if click is within target widget bounds)
         elif event_type == QEvent.MouseButtonPress:
-            self._handle_mouse_press(event)
+            if self._is_within_target(event.globalPos()):
+                self._handle_mouse_press(event)
 
         elif event_type == QEvent.MouseButtonDblClick:
-            self._handle_double_click(event)
+            if self._is_within_target(event.globalPos()):
+                self._handle_double_click(event)
 
         # Always allow event propagation
         return False
