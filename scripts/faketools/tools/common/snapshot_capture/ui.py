@@ -158,21 +158,30 @@ def show_ui():
     if cmds.window(_window_name, exists=True):
         cmds.deleteUI(_window_name)
 
+    # Get initial resolution from saved settings
+    init_width = saved["width"]
+    init_height = saved["height"]
+
     # Create Maya window (non-resizable)
-    cmds.window(_window_name, title="Snapshot Capture", sizeable=False)
+    # Initial size will be set after showing
+    cmds.window(
+        _window_name,
+        title="Snapshot Capture",
+        sizeable=False,
+    )
 
     # Main layout (adjustableColumn=True to allow toolbar to stretch)
     main_layout = cmds.columnLayout(adjustableColumn=True)
 
     # === Viewport area ===
-    # Get initial resolution from saved settings
-    init_width = saved["width"]
-    init_height = saved["height"]
+    # Panel menu bar height: ~45px
+    panel_menubar_height = 45
 
     # Viewport container for centering (formLayout allows precise positioning)
     viewport_container = cmds.formLayout("snapshotCaptureViewportContainer")
 
-    _pane_layout = cmds.paneLayout(configuration="single", width=init_width, height=init_height)
+    # paneLayout needs extra height for panel menu bar
+    _pane_layout = cmds.paneLayout(configuration="single", width=init_width, height=init_height + panel_menubar_height)
     _panel_name = cmds.modelPanel(menuBarVisible=True)
 
     # Add Camera menu to panel's menu bar
@@ -203,8 +212,30 @@ def show_ui():
 
     cmds.showWindow(_window_name)
 
-    # Set initial window size to match viewport
-    _set_viewport_size(init_width, init_height)
+    # Force window to target size after showing
+    # First, measure actual chrome by comparing window and editor sizes
+    from ....lib_ui.maya_qt import qt_widget_from_maya_control
+
+    model_editor = cmds.modelPanel(_panel_name, query=True, modelEditor=True)
+    editor_widget = qt_widget_from_maya_control(model_editor)
+
+    if editor_widget:
+        current_editor_width = editor_widget.width()
+        current_editor_height = editor_widget.height()
+        current_window_width = cmds.window(_window_name, query=True, width=True)
+        current_window_height = cmds.window(_window_name, query=True, height=True)
+
+        chrome_width = current_window_width - current_editor_width
+        chrome_height = current_window_height - current_editor_height
+
+        # Resize window to target editor size + chrome
+        window_width = init_width + chrome_width
+        window_height = init_height + chrome_height
+        cmds.window(
+            _window_name,
+            edit=True,
+            widthHeight=(window_width, window_height),
+        )
 
     # Apply initial mode visibility
     _update_toolbar_for_mode(_current_mode)
@@ -755,7 +786,7 @@ def _set_viewport_size(width: int, height: int):
         logger.warning("Could not get Qt widget for viewport size adjustment")
         return
 
-    # Get current sizes
+    # Get current sizes for chrome calculation
     current_editor_width = editor_widget.width()
     current_editor_height = editor_widget.height()
     current_window_width = cmds.window(_window_name, query=True, width=True)
@@ -771,14 +802,16 @@ def _set_viewport_size(width: int, height: int):
     new_window_width = max(width + chrome_width, toolbar_min_width)
     new_window_height = height + chrome_height
 
+    # paneLayout height needs panel menu bar space (~45px)
+    panel_menubar_height = 45
+    pane_width = new_window_width
+    pane_height = height + panel_menubar_height
+
     # Resize window
     if cmds.window(_window_name, exists=True):
         cmds.window(_window_name, edit=True, widthHeight=(new_window_width, new_window_height))
 
-    # Update pane layout to fill the space
-    pane_width = new_window_width
-    # 2-row toolbar height: 24 + 24 + 4 margin = 52
-    pane_height = new_window_height - 52
+    # Update pane layout
     cmds.paneLayout(_pane_layout, edit=True, width=pane_width, height=pane_height)
 
     # Update viewport container
