@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 import maya.cmds as cmds
 
@@ -32,18 +33,96 @@ _countdown_value = 0
 # Screen capture state
 _input_monitor: InputMonitor | None = None
 _capture_bbox: tuple[int, int, int, int] | None = None
-_show_cursor = True
-_show_clicks = True
-_show_keys = False
+_show_cursor: bool = True
+_show_clicks: bool = True
+_show_keys: bool = False
+
+# Current mode: "png", "gif", "rec"
+_current_mode: str = "png"
 
 # Background color state
 _bg_color: tuple[int, int, int] = (128, 128, 128)  # Default gray
 _bg_transparent: bool = False  # Whether to use transparent background
 
 
-def _load_settings():
-    """Load saved settings from optionVar."""
-    global _bg_color, _bg_transparent
+def _get_icon_path(icon_name: str) -> str | None:
+    """Get icon path from module's icons folder.
+
+    Args:
+        icon_name: Icon filename (e.g., "snapshot_save.png").
+
+    Returns:
+        Full path to icon if exists, None otherwise.
+    """
+    module_dir = os.path.dirname(__file__)
+    icon_path = os.path.join(module_dir, "icons", icon_name)
+    return icon_path if os.path.exists(icon_path) else None
+
+
+def _create_icon_button(
+    name: str,
+    icon_name: str,
+    fallback_label: str,
+    width: int = 24,
+    command=None,
+    annotation: str | None = None,
+    bg_color: list | None = None,
+) -> str:
+    """Create icon button with text fallback.
+
+    Args:
+        name: Button name for Maya.
+        icon_name: Icon filename.
+        fallback_label: Text label if icon not found.
+        width: Button width.
+        command: Button command callback.
+        annotation: Tooltip text.
+        bg_color: Background color [r, g, b] (0-1 range).
+
+    Returns:
+        Created button name.
+    """
+    icon_path = _get_icon_path(icon_name)
+    tooltip = annotation or fallback_label
+
+    if icon_path:
+        btn = cmds.iconTextButton(
+            name,
+            style="iconOnly",
+            image=icon_path,
+            width=width,
+            height=20,
+            command=command,
+            annotation=tooltip,
+        )
+        if bg_color:
+            cmds.iconTextButton(btn, edit=True, backgroundColor=bg_color)
+        return btn
+    else:
+        # Fallback to text button
+        btn = cmds.button(
+            name,
+            label=fallback_label,
+            width=max(width, 30),
+            height=20,
+            command=command,
+            annotation=tooltip,
+        )
+        if bg_color:
+            cmds.button(btn, edit=True, backgroundColor=bg_color)
+        return btn
+
+
+def _load_settings() -> dict:
+    """Load saved settings from optionVar.
+
+    Returns:
+        Dictionary of settings for UI initialization.
+    """
+    global _bg_color, _bg_transparent, _current_mode
+
+    # Load mode
+    _current_mode = _settings.read("mode", "png")
 
     # Load background color
     saved_bg = _settings.read("bg_color")
@@ -53,28 +132,27 @@ def _load_settings():
     # Load transparent setting
     _bg_transparent = _settings.read("bg_transparent", False)
 
-    logger.debug(f"Loaded settings: bg_color={_bg_color}, bg_transparent={_bg_transparent}")
-
-
-def _save_settings():
-    """Save current settings to optionVar."""
-    global _bg_color, _bg_transparent
-
-    # Save background color
-    _settings.write("bg_color", list(_bg_color))
-
-    # Save transparent setting
-    _settings.write("bg_transparent", _bg_transparent)
-
-    logger.debug("Settings saved")
+    # Return all settings for UI initialization
+    return {
+        "mode": _current_mode,
+        "width": _settings.read("width", 640),
+        "height": _settings.read("height", 360),
+        "fps": _settings.read("fps", 24),
+        "loop": _settings.read("loop", True),
+        "delay": _settings.read("delay", 3),
+        "trim": _settings.read("trim", 0),
+        "show_cursor": _settings.read("show_cursor", True),
+        "show_clicks": _settings.read("show_clicks", True),
+        "show_keys": _settings.read("show_keys", False),
+    }
 
 
 def show_ui():
     """Show the Snapshot Capture window."""
-    global _panel_name, _pane_layout, _bg_color
+    global _panel_name, _pane_layout
 
     # Load saved settings
-    _load_settings()
+    saved = _load_settings()
 
     # Close existing window
     if cmds.window(_window_name, exists=True):
@@ -83,12 +161,13 @@ def show_ui():
     # Create Maya window (non-resizable)
     cmds.window(_window_name, title="Snapshot Capture", sizeable=False)
 
-    # Main layout
-    main_layout = cmds.columnLayout(adjustableColumn=False)
+    # Main layout (adjustableColumn=True to allow toolbar to stretch)
+    main_layout = cmds.columnLayout(adjustableColumn=True)
 
     # === Viewport area ===
-    # Get initial resolution from default preset
-    init_width, init_height = command.RESOLUTION_PRESETS[command.DEFAULT_RESOLUTION]
+    # Get initial resolution from saved settings
+    init_width = saved["width"]
+    init_height = saved["height"]
 
     # Viewport container for centering (formLayout allows precise positioning)
     viewport_container = cmds.formLayout("snapshotCaptureViewportContainer")
@@ -120,156 +199,477 @@ def show_ui():
     cmds.setParent(main_layout)
 
     # === Toolbar ===
-    _create_toolbar(main_layout, init_width, init_height)
+    _create_toolbar(main_layout, saved)
 
     cmds.showWindow(_window_name)
 
     # Set initial window size to match viewport
     _set_viewport_size(init_width, init_height)
 
+    # Apply initial mode visibility
+    _update_toolbar_for_mode(_current_mode)
+
     logger.info(f"Created window with panel: {_panel_name}")
 
     return _panel_name
 
 
-def _create_toolbar(parent_layout, init_width, init_height):
-    """Create toolbar below viewport.
+def _create_toolbar(parent_layout, saved: dict):
+    """Create 2-row toolbar below viewport.
+
+    Row 1: Mode selector + [BG]* + Option + action buttons (right-aligned)
+           * BG is only visible for PNG/GIF modes
+    Row 2: Resolution fields (right-aligned)
+
+    Uses visibility toggling for mode switching (no tabLayout).
 
     Args:
         parent_layout: Parent layout to attach toolbar.
-        init_width: Initial width value.
-        init_height: Initial height value.
+        saved: Dictionary of saved settings.
     """
-    # Toolbar frame
-    cmds.frameLayout(
-        "snapshotCaptureToolbar",
-        label="",
-        labelVisible=False,
-        borderVisible=False,
-        marginWidth=2,
-        marginHeight=2,
+    # Main toolbar container (2 rows)
+    toolbar_form = cmds.formLayout("snapshotCaptureToolbar")
+
+    # ========== Row 1: Mode + BG + Option + actions ==========
+    row1_form = cmds.formLayout("snapshotCaptureRow1", height=24)
+
+    # Mode selector (left-most)
+    mode_menu = cmds.optionMenu(
+        "snapshotCaptureModeMenu",
+        changeCommand=_on_mode_changed,
+        width=55,
     )
+    cmds.menuItem(label="PNG", parent=mode_menu)
+    cmds.menuItem(label="GIF", parent=mode_menu)
+    cmds.menuItem(label="Rec", parent=mode_menu)
+    mode_label_map = {"png": "PNG", "gif": "GIF", "rec": "Rec"}
+    cmds.optionMenu(mode_menu, edit=True, value=mode_label_map.get(saved["mode"], "PNG"))
 
-    toolbar_column = cmds.columnLayout(adjustableColumn=True)
-
-    # === Row 1: Resolution + Capture buttons ===
-    cmds.rowLayout(
-        numberOfColumns=11,
-        adjustableColumn=1,
-        columnAttach=[
-            (1, "left", 0),
-            (2, "left", 2),
-            (3, "left", 2),
-            (4, "left", 2),
-            (5, "left", 2),
-            (6, "left", 10),
-            (7, "left", 2),
-            (8, "left", 2),
-            (9, "left", 2),
-        ],
-    )
-
-    # Resolution preset
-    resolution_menu = cmds.optionMenu(
-        "snapshotCaptureResolutionMenu",
-        changeCommand=_on_resolution_preset_changed,
-    )
-    for preset_label in command.RESOLUTION_PRESETS:
-        cmds.menuItem(label=preset_label, parent=resolution_menu)
-    # Set default preset
-    cmds.optionMenu(resolution_menu, edit=True, value=command.DEFAULT_RESOLUTION)
-
-    # Width x Height
-    cmds.intField("snapshotCaptureWidthField", value=init_width, width=50)
-    cmds.text(label="x")
-    cmds.intField("snapshotCaptureHeightField", value=init_height, width=50)
-    cmds.button(label="Set", width=35, command=_on_set_custom_resolution)
-
-    # Separator
-    cmds.separator(style="single", horizontal=False, width=10, height=20)
-
-    # Capture buttons
-    cmds.button(label="PNG", width=50, command=_on_capture_png)
-    cmds.button(label="Copy", width=50, command=_on_copy_png_to_clipboard)
-    cmds.button(label="GIF", width=50, command=_on_capture_gif)
-    cmds.button("snapshotCaptureRecordButton", label="Rec", width=50, command=_on_record_toggle, backgroundColor=[0.5, 0.5, 0.5])
-
-    cmds.setParent(toolbar_column)
-
-    # === Row 2: GIF settings + Background ===
-    # Get playback range for defaults
-    start_frame = int(cmds.playbackOptions(query=True, minTime=True))
-    end_frame = int(cmds.playbackOptions(query=True, maxTime=True))
-
-    cmds.rowLayout(
-        numberOfColumns=14,
-        columnAttach=[
-            (1, "left", 0),
-            (2, "left", 2),
-            (3, "left", 8),
-            (4, "left", 2),
-            (5, "left", 8),
-            (6, "left", 2),
-            (7, "left", 8),
-            (8, "left", 15),
-            (9, "left", 2),
-            (10, "left", 2),
-            (11, "left", 8),
-            (12, "left", 2),
-            (13, "left", 8),
-            (14, "left", 2),
-        ],
-    )
-
-    cmds.text(label="Start:")
-    cmds.intField("snapshotCaptureStartFrame", value=start_frame, width=50)
-    cmds.text(label="End:")
-    cmds.intField("snapshotCaptureEndFrame", value=end_frame, width=50)
-    cmds.text(label="FPS:")
-    cmds.intField("snapshotCaptureFPS", value=24, width=40, minValue=1, maxValue=60)
-    cmds.checkBox("snapshotCaptureLoop", label="Loop", value=True)
-
-    # Background color selector (button with color preview)
-    cmds.text(label="BG:")
     bg_button_color = _get_bg_button_color()
-    cmds.button(
+
+    # BG button (PNG/GIF only - visibility controlled by mode)
+    bg_btn = cmds.button(
         "snapshotCaptureBGButton",
         label="",
-        width=40,
+        width=24,
         height=20,
         backgroundColor=bg_button_color,
         command=_on_bg_color_button,
+        annotation="Background Color",
     )
-    cmds.checkBox("snapshotCaptureBGTransparent", label="Transp", value=_bg_transparent, changeCommand=_on_bg_transparent_changed)
 
-    # Recording delay/trim settings
-    cmds.text(label="Delay:")
-    cmds.intField("snapshotCaptureDelay", value=3, width=30, minValue=0, maxValue=10, annotation="Countdown delay before recording starts (seconds)")
-    cmds.text(label="Trim:")
-    cmds.intField("snapshotCaptureTrim", value=0, width=30, minValue=0, maxValue=10, annotation="Remove frames from end of recording (seconds)")
+    # Option button (always visible)
+    option_btn = cmds.iconTextButton(
+        "snapshotCaptureOptionButton",
+        style="iconOnly",
+        image="advancedSettings.png",
+        width=20,
+        height=20,
+        annotation="Options",
+    )
+    cmds.popupMenu(parent=option_btn, button=1, postMenuCommand=_populate_option_menu)
 
-    cmds.setParent(toolbar_column)
+    # Save button (PNG/GIF only)
+    save_btn = _create_icon_button(
+        "snapshotCaptureSaveButton",
+        "snapshot_save.png",
+        "Save",
+        width=24,
+        command=_on_save_button,
+        annotation="Save",
+    )
 
-    # === Row 3: Recording overlay options ===
-    cmds.rowLayout(
+    # Copy button (PNG only)
+    copy_btn = _create_icon_button(
+        "snapshotCaptureCopyButton",
+        "snapshot_copy.png",
+        "Copy",
+        width=24,
+        command=_on_copy_png_to_clipboard,
+        annotation="Copy to Clipboard",
+    )
+
+    # Record button (Rec only) - icon only, state indicated by icon change
+    rec_icon = _get_icon_path("snapshot_rec.png")
+    rec_btn = cmds.iconTextButton(
+        "snapshotCaptureRecordButton",
+        style="iconOnly" if rec_icon else "textOnly",
+        image=rec_icon if rec_icon else "",
+        label="Rec",
+        width=20,
+        height=20,
+        command=_on_record_toggle,
+        annotation="Start Recording",
+    )
+
+    # Attach elements to right edge with formLayout
+    # Layout: [Mode] ... [BG] [Option] [action buttons]
+    # Action buttons: PNG=[Save][Copy], GIF=[Save], Rec=[Rec]
+    cmds.formLayout(
+        row1_form,
+        edit=True,
+        attachForm=[
+            (mode_menu, "left", 2),
+            (mode_menu, "top", 2),
+            (mode_menu, "bottom", 2),
+            (copy_btn, "right", 2),
+            (copy_btn, "top", 2),
+            (save_btn, "top", 2),
+            (rec_btn, "right", 2),
+            (rec_btn, "top", 2),
+            (option_btn, "top", 2),
+            (bg_btn, "top", 2),
+        ],
+        attachControl=[
+            (save_btn, "right", 4, copy_btn),
+            (option_btn, "right", 4, save_btn),
+            (bg_btn, "right", 4, option_btn),
+        ],
+        attachNone=[
+            (copy_btn, "left"),
+            (save_btn, "left"),
+            (rec_btn, "left"),
+            (option_btn, "left"),
+            (bg_btn, "left"),
+        ],
+    )
+    cmds.setParent(toolbar_form)
+
+    # ========== Row 2: Resolution (right-aligned) ==========
+    row2_form = cmds.formLayout("snapshotCaptureRow2", height=24)
+
+    res_row = cmds.rowLayout(
+        "snapshotCaptureResRow",
         numberOfColumns=5,
         columnAttach=[
             (1, "left", 0),
-            (2, "left", 10),
-            (3, "left", 10),
-            (4, "left", 10),
-            (5, "left", 10),
+            (2, "left", 2),
+            (3, "left", 0),
+            (4, "left", 2),
+            (5, "left", 2),
+        ],
+    )
+    cmds.intField(
+        "snapshotCaptureWidthField",
+        value=saved["width"],
+        width=45,
+        changeCommand=lambda v: _settings.write("width", v),
+    )
+    cmds.text(label="x")
+    cmds.intField(
+        "snapshotCaptureHeightField",
+        value=saved["height"],
+        width=45,
+        changeCommand=lambda v: _settings.write("height", v),
+    )
+    cmds.iconTextButton(
+        "snapshotCapturePresetButton",
+        style="iconOnly",
+        image="arrowDown.png",
+        width=16,
+        height=16,
+        annotation="Resolution Presets",
+    )
+    cmds.popupMenu(parent="snapshotCapturePresetButton", button=1)
+    for preset_label in command.RESOLUTION_PRESETS:
+        cmds.menuItem(label=preset_label, command=lambda x, p=preset_label: _on_preset_selected(p))
+
+    _create_icon_button(
+        "snapshotCaptureSetButton",
+        "snapshot_set.png",
+        "Set",
+        width=24,
+        command=_on_set_custom_resolution,
+        annotation="Apply Resolution",
+    )
+    cmds.setParent(row2_form)
+
+    # Attach res_row to right
+    cmds.formLayout(
+        row2_form,
+        edit=True,
+        attachForm=[
+            (res_row, "right", 2),
+            (res_row, "top", 0),
+            (res_row, "bottom", 0),
+        ],
+        attachNone=[(res_row, "left")],
+    )
+    cmds.setParent(toolbar_form)
+
+    # ========== Attach rows to toolbar ==========
+    cmds.formLayout(
+        toolbar_form,
+        edit=True,
+        attachForm=[
+            (row1_form, "left", 0),
+            (row1_form, "right", 0),
+            (row1_form, "top", 0),
+            (row2_form, "left", 0),
+            (row2_form, "right", 0),
+            (row2_form, "bottom", 0),
+        ],
+        attachControl=[
+            (row2_form, "top", 2, row1_form),
         ],
     )
 
-    cmds.text(label="Rec Options:")
-    cmds.checkBox("snapshotCaptureShowCursor", label="Show Cursor", value=True, annotation="Show mouse cursor in recording")
-    cmds.checkBox("snapshotCaptureShowClicks", label="Show Clicks", value=True, annotation="Show click indicators in recording (requires Show Cursor)")
-    cmds.checkBox("snapshotCaptureShowKeys", label="Show Keys", value=False, annotation="Show pressed keyboard keys in recording")
-
-    cmds.setParent("..")
-    cmds.setParent("..")
     cmds.setParent(parent_layout)
+
+
+def _update_toolbar_for_mode(mode: str):
+    """Update toolbar visibility based on mode.
+
+    Args:
+        mode: Current mode ("png", "gif", "rec").
+    """
+    # BG button: PNG/GIF only
+    bg_visible = mode in ["png", "gif"]
+    if cmds.button("snapshotCaptureBGButton", exists=True):
+        cmds.button("snapshotCaptureBGButton", edit=True, visible=bg_visible)
+
+    # Save button: PNG/GIF only
+    save_visible = mode in ["png", "gif"]
+    if cmds.iconTextButton("snapshotCaptureSaveButton", exists=True):
+        cmds.iconTextButton("snapshotCaptureSaveButton", edit=True, visible=save_visible)
+    elif cmds.button("snapshotCaptureSaveButton", exists=True):
+        cmds.button("snapshotCaptureSaveButton", edit=True, visible=save_visible)
+
+    # Copy button: PNG only
+    copy_visible = mode == "png"
+    if cmds.iconTextButton("snapshotCaptureCopyButton", exists=True):
+        cmds.iconTextButton("snapshotCaptureCopyButton", edit=True, visible=copy_visible)
+    elif cmds.button("snapshotCaptureCopyButton", exists=True):
+        cmds.button("snapshotCaptureCopyButton", edit=True, visible=copy_visible)
+
+    # Record button: Rec only
+    rec_visible = mode == "rec"
+    if cmds.iconTextButton("snapshotCaptureRecordButton", exists=True):
+        cmds.iconTextButton("snapshotCaptureRecordButton", edit=True, visible=rec_visible)
+
+    # Update option button attachment based on mode
+    # For PNG/GIF: attach to right of save_btn
+    # For Rec: attach to right of rec_btn
+    row1_form = "snapshotCaptureRow1"
+    option_btn = "snapshotCaptureOptionButton"
+    save_btn = "snapshotCaptureSaveButton"
+    rec_btn = "snapshotCaptureRecordButton"
+
+    if cmds.formLayout(row1_form, exists=True) and cmds.iconTextButton(option_btn, exists=True):
+        if mode == "rec":
+            # Attach option to the left of rec button
+            cmds.formLayout(
+                row1_form,
+                edit=True,
+                attachControl=[(option_btn, "right", 4, rec_btn)],
+            )
+        else:
+            # Attach option to the left of save button
+            cmds.formLayout(
+                row1_form,
+                edit=True,
+                attachControl=[(option_btn, "right", 4, save_btn)],
+            )
+
+
+def _populate_option_menu(popup, *args):
+    """Populate option menu based on current mode.
+
+    Args:
+        popup: Popup menu to populate.
+    """
+    global _current_mode, _bg_transparent
+
+    # Clear existing items
+    cmds.popupMenu(popup, edit=True, deleteAllItems=True)
+
+    # FPS options available
+    fps_options = [10, 12, 15, 24, 30, 50, 60]
+
+    # PNG/GIF: Transparent option
+    if _current_mode in ["png", "gif"]:
+        cmds.menuItem(
+            label="Transparent",
+            checkBox=_bg_transparent,
+            command=_on_transparent_menu_changed,
+            parent=popup,
+        )
+        cmds.menuItem(divider=True, parent=popup)
+
+    # GIF: Loop, FPS submenu
+    if _current_mode == "gif":
+        loop_val = _settings.read("loop", True)
+        cmds.menuItem(
+            label="Loop",
+            checkBox=loop_val,
+            command=_on_loop_menu_changed,
+            parent=popup,
+        )
+
+        # FPS submenu for GIF
+        current_fps = _settings.read("fps", 24)
+        fps_menu = cmds.menuItem(
+            label=f"FPS: {current_fps}",
+            subMenu=True,
+            parent=popup,
+        )
+        for fps in fps_options:
+            cmds.menuItem(
+                label=str(fps),
+                command=lambda x, f=fps: _on_fps_selected(f),
+                parent=fps_menu,
+            )
+        cmds.setParent(popup, menu=True)
+
+    # Rec: FPS, Delay, Trim, Show options
+    elif _current_mode == "rec":
+        # FPS submenu
+        current_fps = _settings.read("fps", 24)
+        fps_menu = cmds.menuItem(
+            label=f"FPS: {current_fps}",
+            subMenu=True,
+            parent=popup,
+        )
+        for fps in fps_options:
+            cmds.menuItem(
+                label=str(fps),
+                command=lambda x, f=fps: _on_fps_selected(f),
+                parent=fps_menu,
+            )
+        cmds.setParent(popup, menu=True)
+
+        # Delay submenu
+        delay_val = _settings.read("delay", 3)
+        delay_menu = cmds.menuItem(
+            label=f"Delay: {delay_val}s",
+            subMenu=True,
+            parent=popup,
+        )
+        for d in [0, 1, 2, 3]:
+            cmds.menuItem(
+                label=f"{d} sec",
+                command=lambda x, dv=d: _on_delay_selected(dv),
+                parent=delay_menu,
+            )
+        cmds.setParent(popup, menu=True)
+
+        # Trim submenu
+        trim_val = _settings.read("trim", 0)
+        trim_menu = cmds.menuItem(
+            label=f"Trim: {trim_val}s",
+            subMenu=True,
+            parent=popup,
+        )
+        for t in [0, 1, 2, 3]:
+            cmds.menuItem(
+                label=f"{t} sec",
+                command=lambda x, tv=t: _on_trim_selected(tv),
+                parent=trim_menu,
+            )
+        cmds.setParent(popup, menu=True)
+
+        cmds.menuItem(divider=True, parent=popup)
+
+        # Show options
+        show_cursor = _settings.read("show_cursor", True)
+        show_clicks = _settings.read("show_clicks", True)
+        show_keys = _settings.read("show_keys", False)
+
+        cmds.menuItem(
+            label="Show Cursor",
+            checkBox=show_cursor,
+            command=lambda v: _settings.write("show_cursor", v),
+            parent=popup,
+        )
+        cmds.menuItem(
+            label="Show Clicks",
+            checkBox=show_clicks,
+            command=lambda v: _settings.write("show_clicks", v),
+            parent=popup,
+        )
+        cmds.menuItem(
+            label="Show Keys",
+            checkBox=show_keys,
+            command=lambda v: _settings.write("show_keys", v),
+            parent=popup,
+        )
+
+
+def _on_fps_selected(fps_value):
+    """Handle FPS value selection from menu."""
+    _settings.write("fps", fps_value)
+    logger.debug(f"FPS set to: {fps_value}")
+
+
+def _on_delay_selected(delay_value):
+    """Handle delay value selection from menu."""
+    _settings.write("delay", delay_value)
+    logger.debug(f"Delay set to: {delay_value}")
+
+
+def _on_mode_changed(mode_label):
+    """Handle mode selector change.
+
+    Args:
+        mode_label: Selected mode label ("PNG", "GIF", "Rec").
+    """
+    global _current_mode
+
+    mode_map = {"PNG": "png", "GIF": "gif", "Rec": "rec"}
+    _current_mode = mode_map.get(mode_label, "png")
+
+    # Save mode
+    _settings.write("mode", _current_mode)
+
+    # Update toolbar visibility
+    _update_toolbar_for_mode(_current_mode)
+
+    logger.debug(f"Mode changed to: {_current_mode}")
+
+
+def _on_preset_selected(preset_label):
+    """Handle resolution preset selection.
+
+    Args:
+        preset_label: Selected preset label.
+    """
+    if preset_label in command.RESOLUTION_PRESETS:
+        width, height = command.RESOLUTION_PRESETS[preset_label]
+        _set_viewport_size(width, height)
+        # Save to settings
+        _settings.write("width", width)
+        _settings.write("height", height)
+        logger.info(f"Selected preset: {preset_label}")
+
+
+def _on_transparent_menu_changed(value):
+    """Handle transparent menu item change."""
+    global _bg_transparent
+    _bg_transparent = value
+    _settings.write("bg_transparent", _bg_transparent)
+    logger.debug(f"Transparent set to: {_bg_transparent}")
+
+
+def _on_loop_menu_changed(value):
+    """Handle loop menu item change."""
+    _settings.write("loop", value)
+    logger.debug(f"Loop set to: {value}")
+
+
+def _on_trim_selected(trim_value):
+    """Handle trim value selection."""
+    _settings.write("trim", trim_value)
+    logger.debug(f"Trim set to: {trim_value}")
+
+
+def _on_save_button(*args):
+    """Handle Save button click - routes to PNG or GIF based on mode."""
+    global _current_mode
+
+    if _current_mode == "png":
+        _on_capture_png()
+    elif _current_mode == "gif":
+        _on_capture_gif()
 
 
 def _create_camera_menu(panel_name):
@@ -308,16 +708,6 @@ def _on_camera_changed(camera):
         logger.info(f"Changed camera to: {camera}")
 
 
-def _on_resolution_preset_changed(preset_label):
-    """Handle resolution preset change."""
-    if preset_label not in command.RESOLUTION_PRESETS:
-        return
-
-    width, height = command.RESOLUTION_PRESETS[preset_label]
-    _set_viewport_size(width, height)
-    logger.info(f"Changed resolution to preset: {preset_label}")
-
-
 def _on_set_custom_resolution(*args):
     """Handle custom resolution set button."""
     width = cmds.intField("snapshotCaptureWidthField", query=True, value=True)
@@ -332,6 +722,11 @@ def _on_set_custom_resolution(*args):
         return
 
     _set_viewport_size(width, height)
+
+    # Save to settings
+    _settings.write("width", width)
+    _settings.write("height", height)
+
     logger.info(f"Set custom resolution: {width}x{height}")
 
 
@@ -371,7 +766,8 @@ def _set_viewport_size(width: int, height: int):
     chrome_height = current_window_height - current_editor_height
 
     # Calculate new window size
-    toolbar_min_width = 550  # Minimum width for toolbar UI
+    # Row 2 minimum: Width(45) + x + Height(45) + Preset(16) + Set(24) + margins
+    toolbar_min_width = 200
     new_window_width = max(width + chrome_width, toolbar_min_width)
     new_window_height = height + chrome_height
 
@@ -381,7 +777,8 @@ def _set_viewport_size(width: int, height: int):
 
     # Update pane layout to fill the space
     pane_width = new_window_width
-    pane_height = new_window_height - 80  # Subtract toolbar height
+    # 2-row toolbar height: 24 + 24 + 4 margin = 52
+    pane_height = new_window_height - 52
     cmds.paneLayout(_pane_layout, edit=True, width=pane_width, height=pane_height)
 
     # Update viewport container
@@ -423,15 +820,6 @@ def _get_bg_button_color():
     return [c / 255.0 for c in _bg_color]
 
 
-def _on_bg_transparent_changed(value):
-    """Handle transparent checkbox change."""
-    global _bg_transparent
-
-    _bg_transparent = value
-    _settings.write("bg_transparent", _bg_transparent)
-    logger.debug(f"Background transparent set to: {_bg_transparent}")
-
-
 def _on_bg_color_button(*args):
     """Handle background color button click - open color picker."""
     global _bg_color
@@ -445,9 +833,10 @@ def _on_bg_color_button(*args):
     if color.isValid():
         _bg_color = (color.red(), color.green(), color.blue())
 
-        # Update button color
+        # Update BG button
         button_color = [c / 255.0 for c in _bg_color]
-        cmds.button("snapshotCaptureBGButton", edit=True, backgroundColor=button_color)
+        if cmds.button("snapshotCaptureBGButton", exists=True):
+            cmds.button("snapshotCaptureBGButton", edit=True, backgroundColor=button_color)
 
         # Save to settings
         _settings.write("bg_color", list(_bg_color))
@@ -560,11 +949,11 @@ def _on_capture_gif(*args):
     width = cmds.intField("snapshotCaptureWidthField", query=True, value=True)
     height = cmds.intField("snapshotCaptureHeightField", query=True, value=True)
 
-    # Get GIF settings
-    start_frame = cmds.intField("snapshotCaptureStartFrame", query=True, value=True)
-    end_frame = cmds.intField("snapshotCaptureEndFrame", query=True, value=True)
-    fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
-    loop = cmds.checkBox("snapshotCaptureLoop", query=True, value=True)
+    # Get GIF settings - use Maya timeline for frame range
+    start_frame = int(cmds.playbackOptions(query=True, minTime=True))
+    end_frame = int(cmds.playbackOptions(query=True, maxTime=True))
+    fps = _settings.read("fps", 24)  # Read from settings (Option menu)
+    loop = _settings.read("loop", True)  # Read from settings (Option menu)
 
     # Get background color
     background_color = _get_background_color()
@@ -626,7 +1015,15 @@ def _on_record_toggle(*args):
         _countdown_timer.deleteLater()
         _countdown_timer = None
         _countdown_value = 0
-        cmds.button("snapshotCaptureRecordButton", edit=True, label="Rec", backgroundColor=[0.5, 0.5, 0.5])
+        # Restore to rec icon
+        rec_icon = _get_icon_path("snapshot_rec.png")
+        cmds.iconTextButton(
+            "snapshotCaptureRecordButton",
+            edit=True,
+            style="iconOnly" if rec_icon else "textOnly",
+            image=rec_icon if rec_icon else "",
+            label="Rec",
+        )
         cmds.inViewMessage(message="Cancelled", pos="midCenter", fade=True)
         logger.info("Recording countdown cancelled")
         return
@@ -645,15 +1042,22 @@ def _start_recording():
         cmds.warning("No panel available for recording")
         return
 
-    # Get delay setting
-    delay_sec = cmds.intField("snapshotCaptureDelay", query=True, value=True)
+    # Get delay setting from settings (Option menu)
+    delay_sec = _settings.read("delay", 3)
 
     if delay_sec > 0:
         # Start countdown
         _countdown_value = delay_sec
 
-        # Update button to show countdown (no inViewMessage to avoid overlay in recording)
-        cmds.button("snapshotCaptureRecordButton", edit=True, label=str(_countdown_value), backgroundColor=[0.8, 0.6, 0.2])
+        # Use countdown icon
+        countdown_icon = _get_icon_path(f"snapshot_countdown_{_countdown_value}.png")
+        cmds.iconTextButton(
+            "snapshotCaptureRecordButton",
+            edit=True,
+            style="iconOnly" if countdown_icon else "textOnly",
+            image=countdown_icon if countdown_icon else "",
+            label=str(_countdown_value),
+        )
 
         # Create countdown timer (1 second interval)
         _countdown_timer = QTimer()
@@ -673,8 +1077,15 @@ def _on_countdown_tick():
     _countdown_value -= 1
 
     if _countdown_value > 0:
-        # Update countdown display (button label only)
-        cmds.button("snapshotCaptureRecordButton", edit=True, label=str(_countdown_value))
+        # Update countdown icon
+        countdown_icon = _get_icon_path(f"snapshot_countdown_{_countdown_value}.png")
+        cmds.iconTextButton(
+            "snapshotCaptureRecordButton",
+            edit=True,
+            style="iconOnly" if countdown_icon else "textOnly",
+            image=countdown_icon if countdown_icon else "",
+            label=str(_countdown_value),
+        )
     else:
         # Countdown finished, stop countdown timer and start recording
         if _countdown_timer is not None:
@@ -688,18 +1099,31 @@ def _on_countdown_tick():
 def _begin_recording():
     """Begin actual recording (called after countdown or immediately)."""
     global _is_recording, _recorded_frames, _record_timer, _panel_name
-    global _input_monitor, _capture_bbox, _show_cursor, _show_clicks, _show_keys
+    global _input_monitor, _capture_bbox
 
     _is_recording = True
     _recorded_frames = []
 
-    # Update button appearance
-    cmds.button("snapshotCaptureRecordButton", edit=True, label="Stop", backgroundColor=[0.8, 0.2, 0.2])
+    # Switch to stop icon
+    stop_icon = _get_icon_path("snapshot_stop.png")
+    cmds.iconTextButton(
+        "snapshotCaptureRecordButton",
+        edit=True,
+        style="iconOnly" if stop_icon else "textOnly",
+        image=stop_icon if stop_icon else "",
+        label="Stop",
+    )
 
-    # Get overlay settings from UI
-    _show_cursor = cmds.checkBox("snapshotCaptureShowCursor", query=True, value=True)
-    _show_clicks = cmds.checkBox("snapshotCaptureShowClicks", query=True, value=True)
-    _show_keys = cmds.checkBox("snapshotCaptureShowKeys", query=True, value=True)
+    # Get overlay settings from settings (Option menu)
+    show_cursor = _settings.read("show_cursor", True)
+    show_clicks = _settings.read("show_clicks", True)
+    show_keys = _settings.read("show_keys", False)
+
+    # Store in module-level for _on_timer_tick
+    global _show_cursor, _show_clicks, _show_keys
+    _show_cursor = show_cursor
+    _show_clicks = show_clicks
+    _show_keys = show_keys
 
     # Get the Qt widget for the modelEditor (viewport only, not menu/toolbar)
     from ....lib_ui.maya_qt import qt_widget_from_maya_control
@@ -720,8 +1144,8 @@ def _begin_recording():
         _input_monitor = InputMonitor(editor_widget)
         _input_monitor.start()
 
-    # Get FPS for timer interval
-    fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
+    # Get FPS for timer interval from settings (Option menu)
+    fps = _settings.read("fps", 24)
     interval_ms = int(1000 / fps)
 
     # Create and start timer
@@ -790,8 +1214,15 @@ def _stop_recording():
     # Clear capture state
     _capture_bbox = None
 
-    # Update button appearance
-    cmds.button("snapshotCaptureRecordButton", edit=True, label="Rec", backgroundColor=[0.5, 0.5, 0.5])
+    # Restore to rec icon
+    rec_icon = _get_icon_path("snapshot_rec.png")
+    cmds.iconTextButton(
+        "snapshotCaptureRecordButton",
+        edit=True,
+        style="iconOnly" if rec_icon else "textOnly",
+        image=rec_icon if rec_icon else "",
+        label="Rec",
+    )
 
     # Check if we have frames
     if not _recorded_frames:
@@ -801,10 +1232,10 @@ def _stop_recording():
     original_count = len(_recorded_frames)
     logger.info(f"Recording stopped - {original_count} frames captured")
 
-    # Apply end trim
-    trim_sec = cmds.intField("snapshotCaptureTrim", query=True, value=True)
+    # Apply end trim (read from settings - Option menu)
+    trim_sec = _settings.read("trim", 0)
     if trim_sec > 0:
-        fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
+        fps = _settings.read("fps", 24)
         frames_to_trim = int(trim_sec * fps)
         if frames_to_trim > 0 and frames_to_trim < len(_recorded_frames):
             _recorded_frames = _recorded_frames[:-frames_to_trim]
@@ -818,9 +1249,9 @@ def _stop_recording():
 
     logger.info(f"Final frame count: {frame_count} (trimmed {original_count - frame_count})")
 
-    # Get settings
-    fps = cmds.intField("snapshotCaptureFPS", query=True, value=True)
-    background_color = _get_background_color()
+    # Get settings (read from settings - Option menu)
+    fps = _settings.read("fps", 24)
+    # Note: No background_color for Rec mode - screen captures are already RGB
 
     # Get save path from user
     file_path = cmds.fileDialog2(
@@ -838,12 +1269,12 @@ def _stop_recording():
     if not file_path.lower().endswith(".gif"):
         file_path += ".gif"
 
-    # Save GIF
+    # Save GIF (no background color - screen captures are RGB)
     try:
         cmds.waitCursor(state=True)
         cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
 
-        command.save_gif(_recorded_frames, file_path, fps, background_color)
+        command.save_gif(_recorded_frames, file_path, fps)
 
         cmds.waitCursor(state=False)
         cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
