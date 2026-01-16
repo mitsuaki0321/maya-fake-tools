@@ -6,13 +6,17 @@ import logging
 
 import maya.cmds as cmds
 
-from ....lib_ui.qt_compat import QTimer
+from ....lib_ui.optionvar import ToolOptionSettings
+from ....lib_ui.qt_compat import QApplication, QColor, QColorDialog, QTimer
 from . import command
 from .input_monitor import InputMonitor
 from .input_overlay import draw_click_indicators, draw_cursor, draw_key_overlay
 from .screen_capture import capture_screen_region, get_cursor_screen_position, get_widget_screen_bbox
 
 logger = logging.getLogger(__name__)
+
+# Settings for persistence
+_settings = ToolOptionSettings("snapshot_capture")
 
 _window_name = "snapshotCaptureWindow"
 _panel_name = None
@@ -31,10 +35,45 @@ _capture_bbox: tuple[int, int, int, int] | None = None
 _show_cursor = True
 _show_keys = False
 
+# Background color state
+_bg_color: tuple[int, int, int] = (128, 128, 128)  # Default gray
+_bg_transparent: bool = False  # Whether to use transparent background
+
+
+def _load_settings():
+    """Load saved settings from optionVar."""
+    global _bg_color, _bg_transparent
+
+    # Load background color
+    saved_bg = _settings.read("bg_color")
+    if saved_bg is not None and isinstance(saved_bg, list) and len(saved_bg) == 3:
+        _bg_color = tuple(saved_bg)
+
+    # Load transparent setting
+    _bg_transparent = _settings.read("bg_transparent", False)
+
+    logger.debug(f"Loaded settings: bg_color={_bg_color}, bg_transparent={_bg_transparent}")
+
+
+def _save_settings():
+    """Save current settings to optionVar."""
+    global _bg_color, _bg_transparent
+
+    # Save background color
+    _settings.write("bg_color", list(_bg_color))
+
+    # Save transparent setting
+    _settings.write("bg_transparent", _bg_transparent)
+
+    logger.debug("Settings saved")
+
 
 def show_ui():
     """Show the Snapshot Capture window."""
-    global _panel_name, _pane_layout
+    global _panel_name, _pane_layout, _bg_color
+
+    # Load saved settings
+    _load_settings()
 
     # Close existing window
     if cmds.window(_window_name, exists=True):
@@ -114,7 +153,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
 
     # === Row 1: Resolution + Capture buttons ===
     cmds.rowLayout(
-        numberOfColumns=10,
+        numberOfColumns=11,
         adjustableColumn=1,
         columnAttach=[
             (1, "left", 0),
@@ -125,6 +164,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
             (6, "left", 10),
             (7, "left", 2),
             (8, "left", 2),
+            (9, "left", 2),
         ],
     )
 
@@ -149,6 +189,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
 
     # Capture buttons
     cmds.button(label="PNG", width=50, command=_on_capture_png)
+    cmds.button(label="Copy", width=50, command=_on_copy_png_to_clipboard)
     cmds.button(label="GIF", width=50, command=_on_capture_gif)
     cmds.button("snapshotCaptureRecordButton", label="Rec", width=50, command=_on_record_toggle, backgroundColor=[0.5, 0.5, 0.5])
 
@@ -160,7 +201,7 @@ def _create_toolbar(parent_layout, init_width, init_height):
     end_frame = int(cmds.playbackOptions(query=True, maxTime=True))
 
     cmds.rowLayout(
-        numberOfColumns=13,
+        numberOfColumns=14,
         columnAttach=[
             (1, "left", 0),
             (2, "left", 2),
@@ -171,10 +212,11 @@ def _create_toolbar(parent_layout, init_width, init_height):
             (7, "left", 8),
             (8, "left", 15),
             (9, "left", 2),
-            (10, "left", 8),
-            (11, "left", 2),
-            (12, "left", 8),
-            (13, "left", 2),
+            (10, "left", 2),
+            (11, "left", 8),
+            (12, "left", 2),
+            (13, "left", 8),
+            (14, "left", 2),
         ],
     )
 
@@ -186,12 +228,18 @@ def _create_toolbar(parent_layout, init_width, init_height):
     cmds.intField("snapshotCaptureFPS", value=24, width=40, minValue=1, maxValue=60)
     cmds.checkBox("snapshotCaptureLoop", label="Loop", value=True)
 
-    # Background color selector
+    # Background color selector (button with color preview)
     cmds.text(label="BG:")
-    bg_menu = cmds.optionMenu("snapshotCaptureBackgroundMenu")
-    for bg_label in command.BACKGROUND_COLORS:
-        cmds.menuItem(label=bg_label, parent=bg_menu)
-    cmds.optionMenu(bg_menu, edit=True, value=command.DEFAULT_BACKGROUND)
+    bg_button_color = _get_bg_button_color()
+    cmds.button(
+        "snapshotCaptureBGButton",
+        label="",
+        width=40,
+        height=20,
+        backgroundColor=bg_button_color,
+        command=_on_bg_color_button,
+    )
+    cmds.checkBox("snapshotCaptureBGTransparent", label="Transp", value=_bg_transparent, changeCommand=_on_bg_transparent_changed)
 
     # Recording delay/trim settings
     cmds.text(label="Delay:")
@@ -349,13 +397,106 @@ def _set_viewport_size(width: int, height: int):
 
 
 def _get_background_color():
-    """Get selected background color from menu.
+    """Get current background color.
 
     Returns:
         RGB tuple or None for transparent.
     """
-    bg_label = cmds.optionMenu("snapshotCaptureBackgroundMenu", query=True, value=True)
-    return command.BACKGROUND_COLORS.get(bg_label)
+    global _bg_color, _bg_transparent
+
+    if _bg_transparent:
+        return None
+
+    return _bg_color
+
+
+def _get_bg_button_color():
+    """Get background color for the BG button display.
+
+    Returns:
+        List of RGB values normalized to 0-1 for Maya button.
+    """
+    global _bg_color
+    return [c / 255.0 for c in _bg_color]
+
+
+def _on_bg_transparent_changed(value):
+    """Handle transparent checkbox change."""
+    global _bg_transparent
+
+    _bg_transparent = value
+    _settings.write("bg_transparent", _bg_transparent)
+    logger.debug(f"Background transparent set to: {_bg_transparent}")
+
+
+def _on_bg_color_button(*args):
+    """Handle background color button click - open color picker."""
+    global _bg_color
+
+    # Get current color for dialog
+    initial_color = QColor(_bg_color[0], _bg_color[1], _bg_color[2])
+
+    # Open color dialog
+    color = QColorDialog.getColor(initial_color, None, "Select Background Color")
+
+    if color.isValid():
+        _bg_color = (color.red(), color.green(), color.blue())
+
+        # Update button color
+        button_color = [c / 255.0 for c in _bg_color]
+        cmds.button("snapshotCaptureBGButton", edit=True, backgroundColor=button_color)
+
+        # Save to settings
+        _settings.write("bg_color", list(_bg_color))
+        logger.debug(f"Background color set to: {_bg_color}")
+
+
+def _on_copy_png_to_clipboard(*args):
+    """Handle PNG copy to clipboard button click."""
+    global _panel_name
+    if not _panel_name or not cmds.modelPanel(_panel_name, exists=True):
+        cmds.warning("No panel available for capture")
+        return
+
+    # Get resolution from size fields
+    width = cmds.intField("snapshotCaptureWidthField", query=True, value=True)
+    height = cmds.intField("snapshotCaptureHeightField", query=True, value=True)
+
+    # Get background color
+    background_color = _get_background_color()
+
+    try:
+        cmds.waitCursor(state=True)
+
+        # Capture frame
+        image = command.capture_frame(_panel_name, width, height)
+        image = command.composite_with_background(image, background_color)
+
+        # Convert to QImage and copy to clipboard
+        from io import BytesIO
+
+        from ....lib_ui.qt_compat import QImage, QPixmap
+
+        # Save to bytes buffer
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        # Load as QImage
+        qimage = QImage()
+        qimage.loadFromData(buffer.read())
+
+        # Copy to clipboard
+        clipboard = QApplication.clipboard()
+        clipboard.setPixmap(QPixmap.fromImage(qimage))
+
+        cmds.waitCursor(state=False)
+        cmds.inViewMessage(message="Copied to clipboard!", pos="midCenter", fade=True)
+        logger.info("PNG copied to clipboard")
+    except Exception as e:
+        cmds.waitCursor(state=False)
+        cmds.warning(f"Failed to copy to clipboard: {e}")
+        logger.error(f"Failed to copy to clipboard: {e}")
 
 
 def _on_capture_png(*args):
