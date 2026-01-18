@@ -223,3 +223,6 @@ PIE_MENU_USAGE.md
 pyproject.toml
 uv.lock
 .python-version
+
+# Development/experimental files
+scripts/faketools/tools/common/snapshot_capture/sample_ui.py
