@@ -918,20 +918,26 @@ class SnapshotCaptureWindow(QMainWindow):
         self._show_clicks = self._get_setting("show_clicks", True)
         self._show_keys = self._get_setting("show_keys", False)
 
-        # Get the Qt widget for the modelEditor
-        model_editor = cmds.modelPanel(self.panel_name, query=True, modelEditor=True)
-        editor_widget = qt_widget_from_maya_control(model_editor)
+        # Get the viewport widget using M3dView (same as _resize_viewport)
+        # This gets the actual 3D viewport without the toolbar
+        viewport_widget = None
+        try:
+            view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
+            if view:
+                viewport_widget = shiboken.wrapInstance(int(view.widget()), QWidget)
+        except Exception as e:
+            logger.warning(f"Failed to get viewport widget: {e}")
 
-        if editor_widget:
-            self._capture_bbox = get_widget_screen_bbox(editor_widget)
+        if viewport_widget:
+            self._capture_bbox = get_widget_screen_bbox(viewport_widget)
             logger.debug(f"Capture bbox: {self._capture_bbox}")
         else:
-            logger.warning("Could not get Qt widget for model editor")
+            logger.warning("Could not get viewport widget for recording")
             self._capture_bbox = None
 
         # Start input monitor for cursor/keyboard tracking
-        if editor_widget and (self._show_cursor or self._show_keys):
-            self._input_monitor = InputMonitor(editor_widget)
+        if viewport_widget and (self._show_cursor or self._show_keys):
+            self._input_monitor = InputMonitor(viewport_widget)
             self._input_monitor.start()
 
         # Get FPS for timer interval
