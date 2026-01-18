@@ -9,7 +9,7 @@ import os
 import maya.api.OpenMayaUI as omui
 import maya.cmds as cmds
 
-from ....lib_ui import ToolSettingsManager, get_maya_main_window
+from ....lib_ui import ToolDataManager, ToolSettingsManager, get_maya_main_window
 from ....lib_ui.maya_qt import qt_widget_from_maya_control
 from ....lib_ui.qt_compat import (
     QApplication,
@@ -19,12 +19,13 @@ from ....lib_ui.qt_compat import (
     QHBoxLayout,
     QIcon,
     QImage,
+    QIntValidator,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMenu,
     QPixmap,
     QPushButton,
-    QSpinBox,
     QTimer,
     QToolButton,
     QVBoxLayout,
@@ -49,6 +50,12 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Settings
         self.settings = ToolSettingsManager(tool_name="snapshot_capture", category="common")
+
+        # Default save directory (using ToolDataManager)
+        tool_data_manager = ToolDataManager("snapshot_capture", "common")
+        tool_data_manager.ensure_data_dir()
+        self._default_save_dir = str(tool_data_manager.get_data_dir())
+        self._last_save_dir: str | None = None  # Tracks last used directory during session
 
         # Window configuration
         self.setObjectName(self._ui_name("MainWindow"))
@@ -81,8 +88,8 @@ class SnapshotCaptureWindow(QMainWindow):
         self.save_button: QPushButton | None = None
         self.copy_button: QPushButton | None = None
         self.record_button: QPushButton | None = None
-        self.width_spinbox: QSpinBox | None = None
-        self.height_spinbox: QSpinBox | None = None
+        self.width_edit: QLineEdit | None = None
+        self.height_edit: QLineEdit | None = None
         self.preset_button: QToolButton | None = None
         self.set_button: QPushButton | None = None
 
@@ -114,6 +121,20 @@ class SnapshotCaptureWindow(QMainWindow):
         icon_path = os.path.join(module_dir, "icons", icon_name)
         return icon_path if os.path.exists(icon_path) else None
 
+    def _get_maya_background_color(self) -> tuple[int, int, int]:
+        """Get Maya's global background color.
+
+        Returns:
+            RGB tuple (0-255).
+        """
+        try:
+            rgb = cmds.displayRGBColor("background", query=True)
+            if rgb and len(rgb) == 3:
+                return (int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+        except Exception as e:
+            logger.warning(f"Failed to get Maya background color: {e}")
+        return (128, 128, 128)  # Fallback gray
+
     def _load_settings(self):
         """Load saved settings from JSON."""
         data = self.settings.load_settings("default")
@@ -121,18 +142,51 @@ class SnapshotCaptureWindow(QMainWindow):
         self._current_mode = data.get("mode", "png")
         bg_color = data.get("bg_color")
         if bg_color and isinstance(bg_color, list) and len(bg_color) == 3:
+            # Use saved color
             self._bg_color = tuple(bg_color)
+        else:
+            # First launch: use Maya's global background color
+            self._bg_color = self._get_maya_background_color()
         self._bg_transparent = data.get("bg_transparent", False)
+
+    def _get_resolution(self) -> tuple[int, int]:
+        """Get current resolution from input fields.
+
+        Returns:
+            Tuple of (width, height).
+        """
+        default_width, default_height = 640, 360
+
+        width_text = self.width_edit.text() if self.width_edit else ""
+        height_text = self.height_edit.text() if self.height_edit else ""
+
+        width = int(width_text) if width_text.isdigit() else default_width
+        height = int(height_text) if height_text.isdigit() else default_height
+
+        return width, height
+
+    def _get_save_directory(self) -> str:
+        """Get the directory to use for save dialogs.
+
+        Returns:
+            Last used directory if available, otherwise default directory.
+        """
+        if self._last_save_dir and os.path.isdir(self._last_save_dir):
+            return self._last_save_dir
+        return self._default_save_dir
+
+    def _update_last_save_dir(self, file_path: str):
+        """Update the last save directory from a file path.
+
+        Args:
+            file_path: Full path to the saved file.
+        """
+        self._last_save_dir = os.path.dirname(file_path)
 
     def _save_settings(self):
         """Save current settings to JSON."""
         # Get viewport size
-        width = 640
-        height = 360
-        if self.width_spinbox:
-            width = self.width_spinbox.value()
-        if self.height_spinbox:
-            height = self.height_spinbox.value()
+        width, height = self._get_resolution()
 
         data = {
             "mode": self._current_mode,
@@ -396,26 +450,26 @@ class SnapshotCaptureWindow(QMainWindow):
         # Stretch to push items to right
         row2_layout.addStretch()
 
-        # Width spinbox
-        self.width_spinbox = QSpinBox()
-        self.width_spinbox.setObjectName(self._ui_name("WidthSpinBox"))
-        self.width_spinbox.setRange(64, 4096)
-        self.width_spinbox.setValue(self._get_setting("width", 640))
-        self.width_spinbox.setFixedWidth(55)
-        row2_layout.addWidget(self.width_spinbox)
+        # Width input
+        self.width_edit = QLineEdit()
+        self.width_edit.setObjectName(self._ui_name("WidthEdit"))
+        self.width_edit.setValidator(QIntValidator(64, 4096))
+        self.width_edit.setText(str(self._get_setting("width", 640)))
+        self.width_edit.setFixedWidth(45)
+        row2_layout.addWidget(self.width_edit)
 
         # "x" label
         x_label = QLabel("x")
         x_label.setObjectName(self._ui_name("XLabel"))
         row2_layout.addWidget(x_label)
 
-        # Height spinbox
-        self.height_spinbox = QSpinBox()
-        self.height_spinbox.setObjectName(self._ui_name("HeightSpinBox"))
-        self.height_spinbox.setRange(64, 4096)
-        self.height_spinbox.setValue(self._get_setting("height", 360))
-        self.height_spinbox.setFixedWidth(55)
-        row2_layout.addWidget(self.height_spinbox)
+        # Height input
+        self.height_edit = QLineEdit()
+        self.height_edit.setObjectName(self._ui_name("HeightEdit"))
+        self.height_edit.setValidator(QIntValidator(64, 4096))
+        self.height_edit.setText(str(self._get_setting("height", 360)))
+        self.height_edit.setFixedWidth(45)
+        row2_layout.addWidget(self.height_edit)
 
         # Preset button
         self.preset_button = QToolButton()
@@ -511,12 +565,17 @@ class SnapshotCaptureWindow(QMainWindow):
         # FPS options
         fps_options = [10, 12, 15, 24, 30, 50, 60]
 
-        # PNG/GIF: Transparent option
+        # PNG/GIF: Transparent option and Maya background color
         if self._current_mode in ["png", "gif"]:
             transparent_action = self.option_menu.addAction("Transparent")
             transparent_action.setCheckable(True)
             transparent_action.setChecked(self._bg_transparent)
             transparent_action.triggered.connect(self._on_transparent_changed)
+
+            # Use Maya background color option
+            maya_bg_action = self.option_menu.addAction("Use Maya Background")
+            maya_bg_action.triggered.connect(self._on_use_maya_background)
+
             self.option_menu.addSeparator()
 
         # GIF: Loop, FPS submenu
@@ -532,8 +591,14 @@ class SnapshotCaptureWindow(QMainWindow):
             for fps in fps_options:
                 fps_menu.addAction(str(fps), lambda checked=False, f=fps: self._on_fps_selected(f))
 
-        # Rec: FPS, Delay, Trim, Show options
+        # Rec: Loop, FPS, Delay, Trim, Show options
         elif self._current_mode == "rec":
+            # Loop option
+            loop_action = self.option_menu.addAction("Loop")
+            loop_action.setCheckable(True)
+            loop_action.setChecked(self._get_setting("loop", True))
+            loop_action.triggered.connect(lambda checked: self._set_setting("loop", checked))
+
             # FPS submenu
             current_fps = self._get_setting("fps", 24)
             fps_menu = self.option_menu.addMenu(f"FPS: {current_fps}")
@@ -592,6 +657,13 @@ class SnapshotCaptureWindow(QMainWindow):
         self._set_setting("bg_transparent", checked)
         logger.debug(f"Transparent set to: {checked}")
 
+    def _on_use_maya_background(self):
+        """Handle 'Use Maya Background' option - set BG color from Maya's global setting."""
+        self._bg_color = self._get_maya_background_color()
+        self._update_bg_button_color()
+        self._set_setting("bg_color", list(self._bg_color))
+        logger.info(f"Background color set to Maya's global: {self._bg_color}")
+
     def _on_fps_selected(self, fps: int):
         """Handle FPS selection.
 
@@ -625,11 +697,10 @@ class SnapshotCaptureWindow(QMainWindow):
 
     def _on_set_custom_resolution(self):
         """Handle custom resolution set button."""
-        if not self.width_spinbox or not self.height_spinbox:
+        if not self.width_edit or not self.height_edit:
             return
 
-        width = self.width_spinbox.value()
-        height = self.height_spinbox.value()
+        width, height = self._get_resolution()
         self._resize_viewport(width, height)
         logger.info(f"Set custom resolution: {width}x{height}")
 
@@ -663,11 +734,11 @@ class SnapshotCaptureWindow(QMainWindow):
             logger.warning(f"Failed to set viewport size: {e}")
             return False
 
-        # Update spinboxes
-        if self.width_spinbox:
-            self.width_spinbox.setValue(width)
-        if self.height_spinbox:
-            self.height_spinbox.setValue(height)
+        # Update input fields
+        if self.width_edit:
+            self.width_edit.setText(str(width))
+        if self.height_edit:
+            self.height_edit.setText(str(height))
 
         return True
 
@@ -717,8 +788,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning("No panel available for capture")
             return
 
-        width = self.width_spinbox.value() if self.width_spinbox else 640
-        height = self.height_spinbox.value() if self.height_spinbox else 360
+        width, height = self._get_resolution()
         background_color = self._get_background_color()
 
         try:
@@ -753,8 +823,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning("No panel available for capture")
             return
 
-        width = self.width_spinbox.value() if self.width_spinbox else 640
-        height = self.height_spinbox.value() if self.height_spinbox else 360
+        width, height = self._get_resolution()
         background_color = self._get_background_color()
 
         # Get save path from user
@@ -763,6 +832,7 @@ class SnapshotCaptureWindow(QMainWindow):
             dialogStyle=2,
             fileMode=0,
             caption="Save Snapshot",
+            startingDirectory=self._get_save_directory(),
         )
 
         if not file_path:
@@ -779,6 +849,7 @@ class SnapshotCaptureWindow(QMainWindow):
             image = command.capture_frame(self.panel_name, width, height)
             command.save_png(image, file_path, background_color)
 
+            self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
             cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
             logger.info(f"Saved snapshot: {file_path}")
@@ -794,8 +865,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning("No panel available for capture")
             return
 
-        width = self.width_spinbox.value() if self.width_spinbox else 640
-        height = self.height_spinbox.value() if self.height_spinbox else 360
+        width, height = self._get_resolution()
 
         # Get GIF settings - use Maya timeline for frame range
         start_frame = int(cmds.playbackOptions(query=True, minTime=True))
@@ -820,6 +890,7 @@ class SnapshotCaptureWindow(QMainWindow):
             dialogStyle=2,
             fileMode=0,
             caption="Save GIF",
+            startingDirectory=self._get_save_directory(),
         )
 
         if not file_path:
@@ -839,6 +910,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
             command.save_gif(images, file_path, fps, background_color, loop=loop)
 
+            self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
             cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
             logger.info(f"Saved GIF: {file_path}")
@@ -1034,6 +1106,7 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Get settings
         fps = self._get_setting("fps", 24)
+        loop = self._get_setting("loop", True)
 
         # Get save path from user
         file_path = cmds.fileDialog2(
@@ -1041,6 +1114,7 @@ class SnapshotCaptureWindow(QMainWindow):
             dialogStyle=2,
             fileMode=0,
             caption="Save Recorded GIF",
+            startingDirectory=self._get_save_directory(),
         )
 
         if not file_path:
@@ -1056,8 +1130,9 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.waitCursor(state=True)
             cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
 
-            command.save_gif(self._recorded_frames, file_path, fps)
+            command.save_gif(self._recorded_frames, file_path, fps, loop=loop)
 
+            self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
             cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
             logger.info(f"Saved recorded GIF: {file_path}")
