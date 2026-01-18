@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snapshot Capture - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="ビューポートからPNGスナップショットやアニメーションGIFをキャプチャ">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/snapshot_capture.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#基本的な使い方"
+                    id="toc-基本的な使い方">基本的な使い方</a>
+                    <ul>
+                    <li><a href="#ビューポートの操作"
+                    id="toc-ビューポートの操作">ビューポートの操作</a></li>
+                    <li><a href="#解像度の設定"
+                    id="toc-解像度の設定">解像度の設定</a></li>
+                    </ul></li>
+                    <li><a href="#png-モード" id="toc-png-モード">PNG
+                    モード</a>
+                    <ul>
+                    <li><a href="#操作方法"
+                    id="toc-操作方法">操作方法</a></li>
+                    <li><a href="#背景色の設定"
+                    id="toc-背景色の設定">背景色の設定</a></li>
+                    </ul></li>
+                    <li><a href="#gif-モード" id="toc-gif-モード">GIF
+                    モード</a>
+                    <ul>
+                    <li><a href="#操作方法-1"
+                    id="toc-操作方法-1">操作方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a></li>
+                    </ul></li>
+                    <li><a href="#rec-モード" id="toc-rec-モード">Rec
+                    モード</a>
+                    <ul>
+                    <li><a href="#操作方法-2"
+                    id="toc-操作方法-2">操作方法</a></li>
+                    <li><a href="#カウントダウン中のキャンセル"
+                    id="toc-カウントダウン中のキャンセル">カウントダウン中のキャンセル</a></li>
+                    <li><a href="#オプション-1"
+                    id="toc-オプション-1">オプション</a></li>
+                    </ul></li>
+                    <li><a href="#設定の保存"
+                    id="toc-設定の保存">設定の保存</a></li>
+                    <li><a href="#保存先について"
+                    id="toc-保存先について">保存先について</a></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Snapshot Capture</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Snapshot Capture は、Maya
+                のビューポートから画像をキャプチャするためのツールです。以下の3つのモードを搭載しています。</p>
+                <table>
+                <colgroup>
+                <col style="width: 57%" />
+                <col style="width: 42%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>PNG</td>
+                <td>現在のフレームを PNG
+                画像として保存またはクリップボードにコピー</td>
+                </tr>
+                <tr>
+                <td>GIF</td>
+                <td>タイムラインの範囲をアニメーション GIF
+                として保存</td>
+                </tr>
+                <tr>
+                <td>Rec</td>
+                <td>ビューポートをリアルタイムで録画し、GIF
+                として保存</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.snapshot_capture.ui
+faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/snapshot_capture/image001.png"
+                alt="image001" /></p>
+                <h2 id="基本的な使い方">基本的な使い方</h2>
+                <h3 id="ビューポートの操作">ビューポートの操作</h3>
+                <p>ツールウィンドウには専用のモデルパネル（ビューポート）が埋め込まれています。通常の
+                Maya
+                ビューポートと同様に、カメラの回転・パン・ズームなどの操作が可能です。</p>
+                <h4 id="カメラの切り替え">カメラの切り替え</h4>
+                <p>メニューバーの <strong>Camera</strong>
+                メニューから、表示するカメラを切り替えることができます。</p>
+                <p>[カメラメニューの画像]</p>
+                <h3 id="解像度の設定">解像度の設定</h3>
+                <p>ツールバー下段で、出力画像の解像度を設定できます。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image002.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><strong>幅・高さ入力欄</strong>:
+                任意の解像度を直接入力</li>
+                <li><strong>プリセットボタン</strong> (▼):
+                以下のプリセットから選択可能
+                <ul>
+                <li>1920x1080 (Full HD)</li>
+                <li>1280x720 (HD)</li>
+                <li>800x600</li>
+                <li>640x480 (VGA)</li>
+                <li>640x360</li>
+                <li>512x512</li>
+                <li>320x240</li>
+                <li>256x256</li>
+                <li>128x128</li>
+                </ul></li>
+                <li><strong>Set ボタン</strong>:
+                入力した解像度をビューポートに適用</li>
+                </ol>
+                <h2 id="png-モード">PNG モード</h2>
+                <p>現在のフレームを PNG 画像としてキャプチャします。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image001.png"
+                alt="image" /></p>
+                <h3 id="操作方法">操作方法</h3>
+                <ol type="1">
+                <li>モードセレクタで <strong>PNG</strong> を選択</li>
+                <li>必要に応じて背景色を設定（後述）</li>
+                <li>以下のいずれかを実行：
+                <ul>
+                <li><strong>Save ボタン</strong> (💾):
+                ファイルダイアログが開き、PNG ファイルとして保存</li>
+                <li><strong>Copy ボタン</strong> (📋):
+                クリップボードに画像をコピー</li>
+                </ul></li>
+                </ol>
+                <h3 id="背景色の設定">背景色の設定</h3>
+                <p><strong>BG
+                ボタン</strong>をクリックすると、カラーピッカーが開き背景色を選択できます。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image003.png"
+                alt="image" /></p>
+                <h4 id="オプションメニュー">オプションメニュー</h4>
+                <p>歯車アイコンのオプションボタンから追加設定にアクセスできます。</p>
+                <ul>
+                <li><strong>Transparent</strong>:
+                背景を透明にします（アルファチャンネル付き PNG）</li>
+                <li><strong>Use Maya Background</strong>: Maya
+                のグローバル背景色を使用</li>
+                </ul>
+                <h2 id="gif-モード">GIF モード</h2>
+                <p>タイムラインの再生範囲をアニメーション GIF
+                としてキャプチャします。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image004.png"
+                alt="image001" /></p>
+                <h3 id="操作方法-1">操作方法</h3>
+                <ol type="1">
+                <li>モードセレクタで <strong>GIF</strong> を選択</li>
+                <li>Maya
+                のタイムラインで開始フレームと終了フレームを設定</li>
+                <li>必要に応じて背景色・オプションを設定</li>
+                <li><strong>Save ボタン</strong> (💾)
+                をクリックしてファイルを保存</li>
+                </ol>
+                <h3 id="オプション">オプション</h3>
+                <p>オプションメニューから以下の設定が可能です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Transparent</td>
+                <td>背景を透明にする</td>
+                </tr>
+                <tr>
+                <td>Use Maya Background</td>
+                <td>Maya のグローバル背景色を使用</td>
+                </tr>
+                <tr>
+                <td>Loop</td>
+                <td>GIF をループ再生する（デフォルト: オン）</td>
+                </tr>
+                <tr>
+                <td>FPS</td>
+                <td>フレームレートを設定（10, 12, 15, 24, 30, 50,
+                60）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="rec-モード">Rec モード</h2>
+                <p>ビューポートをリアルタイムで録画し、GIF
+                として保存します。マウスカーソルやキーボード入力のオーバーレイ表示も可能です。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image005.png"
+                alt="image001" /></p>
+                <h3 id="操作方法-2">操作方法</h3>
+                <ol type="1">
+                <li>モードセレクタで <strong>Rec</strong> を選択</li>
+                <li>オプションメニューで録画設定を行う（後述）</li>
+                <li><strong>Record ボタン</strong> (●)
+                をクリックして録画を開始</li>
+                <li>カウントダウン後、録画が開始されます</li>
+                <li><strong>Stop ボタン</strong> (■)
+                をクリックして録画を停止</li>
+                <li>ファイルダイアログが開き、GIF として保存</li>
+                </ol>
+                <h3
+                id="カウントダウン中のキャンセル">カウントダウン中のキャンセル</h3>
+                <p>カウントダウン中にボタンをクリックすると、録画をキャンセルできます。</p>
+                <h3 id="オプション-1">オプション</h3>
+                <p>オプションメニューから以下の設定が可能です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Loop</td>
+                <td>GIF をループ再生する</td>
+                </tr>
+                <tr>
+                <td>FPS</td>
+                <td>録画のフレームレート（10, 12, 15, 24, 30, 50,
+                60）</td>
+                </tr>
+                <tr>
+                <td>Delay</td>
+                <td>録画開始前のカウントダウン秒数（0, 1, 2, 3）</td>
+                </tr>
+                <tr>
+                <td>Trim</td>
+                <td>録画終了時に末尾からトリムする秒数（0, 1, 2,
+                3）</td>
+                </tr>
+                <tr>
+                <td>Show Cursor</td>
+                <td>マウスカーソルをオーバーレイ表示</td>
+                </tr>
+                <tr>
+                <td>Show Clicks</td>
+                <td>クリック位置をインジケータで表示</td>
+                </tr>
+                <tr>
+                <td>Show Keys</td>
+                <td>押されたキーをオーバーレイ表示</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>マウスクリックについては、左クリック・右クリック・中クリックそれぞれ異なるインジケータが表示されます。</p>
+                <h2 id="設定の保存">設定の保存</h2>
+                <p>ウィンドウを閉じる際、以下の設定が自動的に保存されます。</p>
+                <ul>
+                <li>選択中のモード</li>
+                <li>解像度（幅・高さ）</li>
+                <li>背景色</li>
+                <li>透明設定</li>
+                <li>FPS</li>
+                <li>Loop 設定</li>
+                <li>Delay・Trim 設定</li>
+                <li>カーソル・クリック・キー表示設定</li>
+                </ul>
+                <p>次回起動時に、これらの設定が復元されます。</p>
+                <h2 id="保存先について">保存先について</h2>
+                <ul>
+                <li>初回保存時は、ツール専用のデータディレクトリがデフォルトの保存先として使用されます</li>
+                <li>一度ファイルを保存すると、同セッション内では最後に保存したディレクトリが記憶されます</li>
+                </ul>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>GIF モードでは、最大 500
+                フレームまでキャプチャ可能です</li>
+                <li>Rec
+                モードの録画は、ビューポートの画面キャプチャを使用するため、他のウィンドウがビューポートを覆うとキャプチャに含まれる可能性があります</li>
+                <li>高解像度・高フレームレートでの録画は、メモリ使用量が増加します</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
