@@ -26,6 +26,7 @@ from ....lib_ui.qt_compat import (
     QMenu,
     QPixmap,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -406,13 +407,15 @@ class SnapshotCaptureWindow(QMainWindow):
         # Action buttons stack (mode-specific)
         self.action_stack = QStackedWidget()
         self.action_stack.setObjectName(self._ui_name("ActionStack"))
+        self.action_stack.setContentsMargins(0, 0, 0, 0)  # Remove default margins
+        # Set size policy to only take minimum required width
+        self.action_stack.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
 
         # PNG mode widget (index 0): Save + Copy
         png_widget = QWidget()
         png_layout = QHBoxLayout(png_widget)
         png_layout.setContentsMargins(0, 0, 0, 0)
         png_layout.setSpacing(TOOLBAR_SPACING)
-        png_layout.addStretch()  # Push buttons to right within stack
 
         self.png_save_button = self._create_save_button("PNGSaveButton")
         png_layout.addWidget(self.png_save_button)
@@ -436,8 +439,8 @@ class SnapshotCaptureWindow(QMainWindow):
         gif_layout = QHBoxLayout(gif_widget)
         gif_layout.setContentsMargins(0, 0, 0, 0)
         gif_layout.setSpacing(TOOLBAR_SPACING)
-        gif_layout.addStretch()  # Push buttons to right within stack
 
+        gif_layout.addStretch()  # Push button to right edge
         self.gif_save_button = self._create_save_button("GIFSaveButton")
         gif_layout.addWidget(self.gif_save_button)
 
@@ -448,8 +451,8 @@ class SnapshotCaptureWindow(QMainWindow):
         rec_layout = QHBoxLayout(rec_widget)
         rec_layout.setContentsMargins(0, 0, 0, 0)
         rec_layout.setSpacing(TOOLBAR_SPACING)
-        rec_layout.addStretch()  # Push buttons to right within stack
 
+        rec_layout.addStretch()  # Push button to right edge
         self.record_button = QPushButton()
         self.record_button.setObjectName(self._ui_name("RecordButton"))
         self.record_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
