@@ -26,18 +26,32 @@ from ....lib_ui.qt_compat import (
     QMenu,
     QPixmap,
     QPushButton,
-    QTimer,
+    QStackedWidget,
     QToolButton,
     QVBoxLayout,
     QWidget,
     shiboken,
 )
 from . import command
-from .input_monitor import InputMonitor
-from .input_overlay import draw_click_indicators, draw_cursor, draw_key_overlay
-from .screen_capture import capture_screen_region, get_cursor_screen_position, get_widget_screen_bbox
+from .ui_recording import RecordingController
 
 logger = logging.getLogger(__name__)
+
+# UI Constants
+BUTTON_SIZE = 24
+BUTTON_SIZE_SMALL = 20
+TOOLBAR_SPACING = 4
+TOOLBAR_MARGINS = (4, 4, 4, 4)
+MODE_COMBO_WIDTH = 60
+RESOLUTION_INPUT_WIDTH = 45
+
+# Recording Constants
+MAX_GIF_FRAMES = 500
+
+# Options
+FPS_OPTIONS = [10, 12, 15, 24, 30, 50, 60]
+DELAY_OPTIONS = [0, 1, 2, 3]
+TRIM_OPTIONS = [0, 1, 2, 3]
 
 _instance = None
 
@@ -65,16 +79,13 @@ class SnapshotCaptureWindow(QMainWindow):
         self._current_mode: str = "png"
         self._bg_color: tuple[int, int, int] = (128, 128, 128)
         self._bg_transparent: bool = False
-        self._is_recording: bool = False
-        self._recorded_frames: list = []
-        self._record_timer: QTimer | None = None
-        self._countdown_timer: QTimer | None = None
-        self._countdown_value: int = 0
-        self._input_monitor: InputMonitor | None = None
-        self._capture_bbox: tuple[int, int, int, int] | None = None
-        self._show_cursor: bool = True
-        self._show_clicks: bool = True
-        self._show_keys: bool = False
+
+        # Recording controller
+        self._recording_controller = RecordingController(self)
+        self._recording_controller.recording_started.connect(self._on_recording_started)
+        self._recording_controller.recording_stopped.connect(self._on_recording_stopped)
+        self._recording_controller.countdown_tick.connect(self._on_countdown_tick)
+        self._recording_controller.countdown_cancelled.connect(self._on_countdown_cancelled)
 
         # Maya UI elements (will be created in _create_viewport)
         self.pane_layout_name: str | None = None
@@ -82,12 +93,19 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # UI widgets (will be created in _setup_ui)
         self.mode_combo: QComboBox | None = None
-        self.bg_button: QPushButton | None = None
+        self.bg_button: QPushButton | None = None  # Shared BG button (PNG/GIF only)
+        self.bg_separator: QWidget | None = None  # Separator after BG button (PNG/GIF only)
         self.option_button: QToolButton | None = None
         self.option_menu: QMenu | None = None
-        self.save_button: QPushButton | None = None
-        self.copy_button: QPushButton | None = None
+        self.action_stack: QStackedWidget | None = None  # Mode-specific action buttons
+        # PNG mode action buttons
+        self.png_save_button: QPushButton | None = None
+        self.png_copy_button: QPushButton | None = None
+        # GIF mode action buttons
+        self.gif_save_button: QPushButton | None = None
+        # Rec mode action buttons
         self.record_button: QPushButton | None = None
+        # Resolution controls
         self.width_edit: QLineEdit | None = None
         self.height_edit: QLineEdit | None = None
         self.preset_button: QToolButton | None = None
@@ -248,9 +266,6 @@ class SnapshotCaptureWindow(QMainWindow):
         toolbar_widget = self._create_toolbar()
         main_layout.addWidget(toolbar_widget)
 
-        # Apply initial mode visibility
-        self._update_toolbar_for_mode()
-
     def _create_viewport(self) -> QWidget:
         """Create the embedded viewport.
 
@@ -318,7 +333,7 @@ class SnapshotCaptureWindow(QMainWindow):
         """
         if self.panel_name and cmds.modelPanel(self.panel_name, exists=True):
             cmds.modelPanel(self.panel_name, edit=True, camera=camera)
-            logger.info(f"Changed camera to: {camera}")
+            logger.debug(f"Changed camera to: {camera}")
 
     def _create_toolbar(self) -> QWidget:
         """Create the 2-row toolbar.
@@ -331,8 +346,8 @@ class SnapshotCaptureWindow(QMainWindow):
 
         toolbar_layout = QVBoxLayout(toolbar_widget)
         toolbar_layout.setObjectName(self._ui_name("ToolbarLayout"))
-        toolbar_layout.setContentsMargins(4, 4, 4, 4)
-        toolbar_layout.setSpacing(4)
+        toolbar_layout.setContentsMargins(*TOOLBAR_MARGINS)
+        toolbar_layout.setSpacing(TOOLBAR_SPACING)
 
         # Row 1: Mode + BG + Option + action buttons
         row1_layout = self._create_toolbar_row1()
@@ -347,13 +362,18 @@ class SnapshotCaptureWindow(QMainWindow):
     def _create_toolbar_row1(self) -> QHBoxLayout:
         """Create toolbar row 1 with mode selector and action buttons.
 
+        Layout: [Mode] [stretch] [BG] [ActionStack] [Option]
+        - BG button: shown for PNG/GIF, hidden for Rec
+        - ActionStack: mode-specific action buttons (Save+Copy / Save / Record)
+        - Option button: always visible at rightmost position
+
         Returns:
             Row 1 layout.
         """
         row1_layout = QHBoxLayout()
         row1_layout.setObjectName(self._ui_name("Row1Layout"))
         row1_layout.setContentsMargins(0, 0, 0, 0)
-        row1_layout.setSpacing(4)
+        row1_layout.setSpacing(TOOLBAR_SPACING)
 
         # Mode selector
         self.mode_combo = QComboBox()
@@ -362,7 +382,7 @@ class SnapshotCaptureWindow(QMainWindow):
         mode_label_map = {"png": "PNG", "gif": "GIF", "rec": "Rec"}
         self.mode_combo.setCurrentText(mode_label_map.get(self._current_mode, "PNG"))
         self.mode_combo.currentTextChanged.connect(self._on_mode_changed)
-        self.mode_combo.setFixedWidth(60)
+        self.mode_combo.setFixedWidth(MODE_COMBO_WIDTH)
         row1_layout.addWidget(self.mode_combo)
 
         # Stretch to push remaining items to right
@@ -371,70 +391,141 @@ class SnapshotCaptureWindow(QMainWindow):
         # BG button (PNG/GIF only)
         self.bg_button = QPushButton()
         self.bg_button.setObjectName(self._ui_name("BGButton"))
-        self.bg_button.setFixedSize(24, 24)
+        self.bg_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.bg_button.setToolTip("Background Color")
         self._update_bg_button_color()
         self.bg_button.clicked.connect(self._on_bg_color_button)
+        self.bg_button.setVisible(self._current_mode in ["png", "gif"])
         row1_layout.addWidget(self.bg_button)
 
-        # Option button
+        # Separator after BG button (PNG/GIF only)
+        self.bg_separator = self._create_separator("BGSeparator")
+        self.bg_separator.setVisible(self._current_mode in ["png", "gif"])
+        row1_layout.addWidget(self.bg_separator)
+
+        # Action buttons stack (mode-specific)
+        self.action_stack = QStackedWidget()
+        self.action_stack.setObjectName(self._ui_name("ActionStack"))
+
+        # PNG mode widget (index 0): Save + Copy
+        png_widget = QWidget()
+        png_layout = QHBoxLayout(png_widget)
+        png_layout.setContentsMargins(0, 0, 0, 0)
+        png_layout.setSpacing(TOOLBAR_SPACING)
+        png_layout.addStretch()  # Push buttons to right within stack
+
+        self.png_save_button = self._create_save_button("PNGSaveButton")
+        png_layout.addWidget(self.png_save_button)
+
+        self.png_copy_button = QPushButton()
+        self.png_copy_button.setObjectName(self._ui_name("PNGCopyButton"))
+        self.png_copy_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
+        self.png_copy_button.setToolTip("Copy to Clipboard")
+        copy_icon_path = self._get_icon_path("snapshot_copy.png")
+        if copy_icon_path:
+            self.png_copy_button.setIcon(QIcon(copy_icon_path))
+        else:
+            self.png_copy_button.setText("C")
+        self.png_copy_button.clicked.connect(self._on_copy_png_to_clipboard)
+        png_layout.addWidget(self.png_copy_button)
+
+        self.action_stack.addWidget(png_widget)  # index 0
+
+        # GIF mode widget (index 1): Save
+        gif_widget = QWidget()
+        gif_layout = QHBoxLayout(gif_widget)
+        gif_layout.setContentsMargins(0, 0, 0, 0)
+        gif_layout.setSpacing(TOOLBAR_SPACING)
+        gif_layout.addStretch()  # Push buttons to right within stack
+
+        self.gif_save_button = self._create_save_button("GIFSaveButton")
+        gif_layout.addWidget(self.gif_save_button)
+
+        self.action_stack.addWidget(gif_widget)  # index 1
+
+        # Rec mode widget (index 2): Record
+        rec_widget = QWidget()
+        rec_layout = QHBoxLayout(rec_widget)
+        rec_layout.setContentsMargins(0, 0, 0, 0)
+        rec_layout.setSpacing(TOOLBAR_SPACING)
+        rec_layout.addStretch()  # Push buttons to right within stack
+
+        self.record_button = QPushButton()
+        self.record_button.setObjectName(self._ui_name("RecordButton"))
+        self.record_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
+        self.record_button.setToolTip("Start Recording")
+        self._update_record_button_icon("rec")
+        self.record_button.clicked.connect(self._on_record_toggle)
+        rec_layout.addWidget(self.record_button)
+
+        self.action_stack.addWidget(rec_widget)  # index 2
+
+        # Set initial stack index based on mode
+        mode_index_map = {"png": 0, "gif": 1, "rec": 2}
+        self.action_stack.setCurrentIndex(mode_index_map.get(self._current_mode, 0))
+
+        row1_layout.addWidget(self.action_stack)
+
+        # Separator before Option button
+        option_separator = self._create_separator("OptionSeparator")
+        row1_layout.addWidget(option_separator)
+
+        # Option button (always visible at rightmost position)
         self.option_button = QToolButton()
         self.option_button.setObjectName(self._ui_name("OptionButton"))
-        self.option_button.setFixedSize(24, 24)
+        self.option_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.option_button.setToolTip("Options")
         self.option_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
-        # Try to set icon
         option_icon_path = self._get_icon_path("advancedSettings.png")
         if option_icon_path:
             self.option_button.setIcon(QIcon(option_icon_path))
         else:
-            # Use Maya's built-in icon
             self.option_button.setIcon(QIcon(":/advancedSettings.png"))
 
-        # Create option menu
         self.option_menu = QMenu(self.option_button)
         self.option_menu.setObjectName(self._ui_name("OptionMenu"))
         self.option_menu.aboutToShow.connect(self._populate_option_menu)
         self.option_button.setMenu(self.option_menu)
         row1_layout.addWidget(self.option_button)
 
-        # Save button (PNG/GIF only)
-        self.save_button = QPushButton()
-        self.save_button.setObjectName(self._ui_name("SaveButton"))
-        self.save_button.setFixedSize(24, 24)
-        self.save_button.setToolTip("Save")
+        return row1_layout
+
+    def _create_save_button(self, name: str) -> QPushButton:
+        """Create a save button.
+
+        Args:
+            name: Object name for the button.
+
+        Returns:
+            Configured QPushButton.
+        """
+        button = QPushButton()
+        button.setObjectName(self._ui_name(name))
+        button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
+        button.setToolTip("Save")
         save_icon_path = self._get_icon_path("snapshot_save.png")
         if save_icon_path:
-            self.save_button.setIcon(QIcon(save_icon_path))
+            button.setIcon(QIcon(save_icon_path))
         else:
-            self.save_button.setText("S")
-        self.save_button.clicked.connect(self._on_save_button)
-        row1_layout.addWidget(self.save_button)
+            button.setText("S")
+        button.clicked.connect(self._on_save_button)
+        return button
 
-        # Copy button (PNG only)
-        self.copy_button = QPushButton()
-        self.copy_button.setObjectName(self._ui_name("CopyButton"))
-        self.copy_button.setFixedSize(24, 24)
-        self.copy_button.setToolTip("Copy to Clipboard")
-        copy_icon_path = self._get_icon_path("snapshot_copy.png")
-        if copy_icon_path:
-            self.copy_button.setIcon(QIcon(copy_icon_path))
-        else:
-            self.copy_button.setText("C")
-        self.copy_button.clicked.connect(self._on_copy_png_to_clipboard)
-        row1_layout.addWidget(self.copy_button)
+    def _create_separator(self, name: str) -> QWidget:
+        """Create a vertical separator line.
 
-        # Record button (Rec only)
-        self.record_button = QPushButton()
-        self.record_button.setObjectName(self._ui_name("RecordButton"))
-        self.record_button.setFixedSize(24, 24)
-        self.record_button.setToolTip("Start Recording")
-        self._update_record_button_icon("rec")
-        self.record_button.clicked.connect(self._on_record_toggle)
-        row1_layout.addWidget(self.record_button)
+        Args:
+            name: Object name for the separator.
 
-        return row1_layout
+        Returns:
+            Configured QWidget as separator.
+        """
+        separator = QWidget()
+        separator.setObjectName(self._ui_name(name))
+        separator.setFixedWidth(1)
+        separator.setStyleSheet("background-color: palette(mid);")
+        return separator
 
     def _create_toolbar_row2(self) -> QHBoxLayout:
         """Create toolbar row 2 with resolution controls.
@@ -445,7 +536,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row2_layout = QHBoxLayout()
         row2_layout.setObjectName(self._ui_name("Row2Layout"))
         row2_layout.setContentsMargins(0, 0, 0, 0)
-        row2_layout.setSpacing(4)
+        row2_layout.setSpacing(TOOLBAR_SPACING)
 
         # Stretch to push items to right
         row2_layout.addStretch()
@@ -455,7 +546,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.width_edit.setObjectName(self._ui_name("WidthEdit"))
         self.width_edit.setValidator(QIntValidator(64, 4096))
         self.width_edit.setText(str(self._get_setting("width", 640)))
-        self.width_edit.setFixedWidth(45)
+        self.width_edit.setFixedWidth(RESOLUTION_INPUT_WIDTH)
         row2_layout.addWidget(self.width_edit)
 
         # "x" label
@@ -468,13 +559,13 @@ class SnapshotCaptureWindow(QMainWindow):
         self.height_edit.setObjectName(self._ui_name("HeightEdit"))
         self.height_edit.setValidator(QIntValidator(64, 4096))
         self.height_edit.setText(str(self._get_setting("height", 360)))
-        self.height_edit.setFixedWidth(45)
+        self.height_edit.setFixedWidth(RESOLUTION_INPUT_WIDTH)
         row2_layout.addWidget(self.height_edit)
 
         # Preset button
         self.preset_button = QToolButton()
         self.preset_button.setObjectName(self._ui_name("PresetButton"))
-        self.preset_button.setFixedSize(20, 20)
+        self.preset_button.setFixedSize(BUTTON_SIZE_SMALL, BUTTON_SIZE_SMALL)
         self.preset_button.setToolTip("Resolution Presets")
         self.preset_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         self.preset_button.setIcon(QIcon(":/arrowDown.png"))
@@ -490,7 +581,7 @@ class SnapshotCaptureWindow(QMainWindow):
         # Set button
         self.set_button = QPushButton()
         self.set_button.setObjectName(self._ui_name("SetButton"))
-        self.set_button.setFixedSize(24, 24)
+        self.set_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.set_button.setToolTip("Apply Resolution")
         set_icon_path = self._get_icon_path("snapshot_set.png")
         if set_icon_path:
@@ -535,35 +626,12 @@ class SnapshotCaptureWindow(QMainWindow):
             self.record_button.setIcon(QIcon())
             self.record_button.setText(state.upper() if state in ["rec", "stop"] else state)
 
-    def _update_toolbar_for_mode(self):
-        """Update toolbar visibility based on current mode."""
-        mode = self._current_mode
-
-        # BG button: PNG/GIF only
-        if self.bg_button:
-            self.bg_button.setVisible(mode in ["png", "gif"])
-
-        # Save button: PNG/GIF only
-        if self.save_button:
-            self.save_button.setVisible(mode in ["png", "gif"])
-
-        # Copy button: PNG only
-        if self.copy_button:
-            self.copy_button.setVisible(mode == "png")
-
-        # Record button: Rec only
-        if self.record_button:
-            self.record_button.setVisible(mode == "rec")
-
     def _populate_option_menu(self):
         """Populate option menu based on current mode."""
         if not self.option_menu:
             return
 
         self.option_menu.clear()
-
-        # FPS options
-        fps_options = [10, 12, 15, 24, 30, 50, 60]
 
         # PNG/GIF: Transparent option and Maya background color
         if self._current_mode in ["png", "gif"]:
@@ -588,7 +656,7 @@ class SnapshotCaptureWindow(QMainWindow):
             # FPS submenu
             current_fps = self._get_setting("fps", 24)
             fps_menu = self.option_menu.addMenu(f"FPS: {current_fps}")
-            for fps in fps_options:
+            for fps in FPS_OPTIONS:
                 fps_menu.addAction(str(fps), lambda checked=False, f=fps: self._on_fps_selected(f))
 
         # Rec: Loop, FPS, Delay, Trim, Show options
@@ -602,19 +670,19 @@ class SnapshotCaptureWindow(QMainWindow):
             # FPS submenu
             current_fps = self._get_setting("fps", 24)
             fps_menu = self.option_menu.addMenu(f"FPS: {current_fps}")
-            for fps in fps_options:
+            for fps in FPS_OPTIONS:
                 fps_menu.addAction(str(fps), lambda checked=False, f=fps: self._on_fps_selected(f))
 
             # Delay submenu
             delay_val = self._get_setting("delay", 3)
             delay_menu = self.option_menu.addMenu(f"Delay: {delay_val}s")
-            for d in [0, 1, 2, 3]:
+            for d in DELAY_OPTIONS:
                 delay_menu.addAction(f"{d} sec", lambda checked=False, dv=d: self._set_setting("delay", dv))
 
             # Trim submenu
             trim_val = self._get_setting("trim", 0)
             trim_menu = self.option_menu.addMenu(f"Trim: {trim_val}s")
-            for t in [0, 1, 2, 3]:
+            for t in TRIM_OPTIONS:
                 trim_menu.addAction(f"{t} sec", lambda checked=False, tv=t: self._set_setting("trim", tv))
 
             self.option_menu.addSeparator()
@@ -644,7 +712,19 @@ class SnapshotCaptureWindow(QMainWindow):
         mode_map = {"PNG": "png", "GIF": "gif", "Rec": "rec"}
         self._current_mode = mode_map.get(mode_label, "png")
         self._set_setting("mode", self._current_mode)
-        self._update_toolbar_for_mode()
+
+        # Update BG button and separator visibility (PNG/GIF only)
+        bg_visible = self._current_mode in ["png", "gif"]
+        if self.bg_button:
+            self.bg_button.setVisible(bg_visible)
+        if self.bg_separator:
+            self.bg_separator.setVisible(bg_visible)
+
+        # Switch action stack to show mode-specific buttons
+        if self.action_stack:
+            mode_index_map = {"png": 0, "gif": 1, "rec": 2}
+            self.action_stack.setCurrentIndex(mode_index_map.get(self._current_mode, 0))
+
         logger.debug(f"Mode changed to: {self._current_mode}")
 
     def _on_transparent_changed(self, checked: bool):
@@ -662,7 +742,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self._bg_color = self._get_maya_background_color()
         self._update_bg_button_color()
         self._set_setting("bg_color", list(self._bg_color))
-        logger.info(f"Background color set to Maya's global: {self._bg_color}")
+        logger.debug(f"Background color set to Maya's global: {self._bg_color}")
 
     def _on_fps_selected(self, fps: int):
         """Handle FPS selection.
@@ -693,7 +773,7 @@ class SnapshotCaptureWindow(QMainWindow):
         if preset_label in command.RESOLUTION_PRESETS:
             width, height = command.RESOLUTION_PRESETS[preset_label]
             self._resize_viewport(width, height)
-            logger.info(f"Selected preset: {preset_label}")
+            logger.debug(f"Selected preset: {preset_label}")
 
     def _on_set_custom_resolution(self):
         """Handle custom resolution set button."""
@@ -702,7 +782,7 @@ class SnapshotCaptureWindow(QMainWindow):
 
         width, height = self._get_resolution()
         self._resize_viewport(width, height)
-        logger.info(f"Set custom resolution: {width}x{height}")
+        logger.debug(f"Set custom resolution: {width}x{height}")
 
     def _set_viewport_size(self, width: int, height: int) -> bool:
         """Set viewport size only (without window adjustment).
@@ -880,8 +960,8 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         frame_count = end_frame - start_frame + 1
-        if frame_count > 500:
-            cmds.warning("Frame range too large (max 500 frames)")
+        if frame_count > MAX_GIF_FRAMES:
+            cmds.warning(f"Frame range too large (max {MAX_GIF_FRAMES} frames)")
             return
 
         # Get save path from user
@@ -903,7 +983,7 @@ class SnapshotCaptureWindow(QMainWindow):
         try:
             cmds.waitCursor(state=True)
             cmds.inViewMessage(message="Capturing...", pos="midCenter", fade=False)
-            logger.info(f"Capturing {frame_count} frames...")
+            logger.debug(f"Capturing {frame_count} frames...")
 
             images = command.capture_frame_range(self.panel_name, start_frame, end_frame, width, height)
 
@@ -923,19 +1003,12 @@ class SnapshotCaptureWindow(QMainWindow):
     def _on_record_toggle(self):
         """Toggle recording state."""
         # Check if we're in countdown phase
-        if self._countdown_timer is not None:
-            # Cancel countdown
-            self._countdown_timer.stop()
-            self._countdown_timer.deleteLater()
-            self._countdown_timer = None
-            self._countdown_value = 0
-            self._update_record_button_icon("rec")
-            cmds.inViewMessage(message="Cancelled", pos="midCenter", fade=True)
-            logger.info("Recording countdown cancelled")
+        if self._recording_controller.is_counting_down:
+            self._recording_controller.cancel_countdown()
             return
 
-        if self._is_recording:
-            self._stop_recording()
+        if self._recording_controller.is_recording:
+            self._recording_controller.stop_recording()
         else:
             self._start_recording()
 
@@ -945,53 +1018,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning("No panel available for recording")
             return
 
-        delay_sec = self._get_setting("delay", 3)
-
-        if delay_sec > 0:
-            # Start countdown
-            self._countdown_value = delay_sec
-            self._update_record_button_icon(str(self._countdown_value))
-
-            # Create countdown timer (1 second interval)
-            self._countdown_timer = QTimer(self)
-            self._countdown_timer.timeout.connect(self._on_countdown_tick)
-            self._countdown_timer.start(1000)
-
-            logger.info(f"Recording countdown started: {delay_sec} seconds")
-        else:
-            # No delay, start recording immediately
-            self._begin_recording()
-
-    def _on_countdown_tick(self):
-        """Handle countdown tick."""
-        self._countdown_value -= 1
-
-        if self._countdown_value > 0:
-            self._update_record_button_icon(str(self._countdown_value))
-        else:
-            # Countdown finished
-            if self._countdown_timer is not None:
-                self._countdown_timer.stop()
-                self._countdown_timer.deleteLater()
-                self._countdown_timer = None
-
-            self._begin_recording()
-
-    def _begin_recording(self):
-        """Begin actual recording (called after countdown or immediately)."""
-        self._is_recording = True
-        self._recorded_frames = []
-
-        # Switch to stop icon
-        self._update_record_button_icon("stop")
-
-        # Get overlay settings
-        self._show_cursor = self._get_setting("show_cursor", True)
-        self._show_clicks = self._get_setting("show_clicks", True)
-        self._show_keys = self._get_setting("show_keys", False)
-
-        # Get the viewport widget using M3dView (same as _resize_viewport)
-        # This gets the actual 3D viewport without the toolbar
+        # Get the viewport widget using M3dView
         viewport_widget = None
         try:
             view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
@@ -999,110 +1026,81 @@ class SnapshotCaptureWindow(QMainWindow):
                 viewport_widget = shiboken.wrapInstance(int(view.widget()), QWidget)
         except Exception as e:
             logger.warning(f"Failed to get viewport widget: {e}")
+            return
 
-        if viewport_widget:
-            self._capture_bbox = get_widget_screen_bbox(viewport_widget)
-            logger.debug(f"Capture bbox: {self._capture_bbox}")
-        else:
-            logger.warning("Could not get viewport widget for recording")
-            self._capture_bbox = None
+        if not viewport_widget:
+            cmds.warning("Could not get viewport widget for recording")
+            return
 
-        # Start input monitor for cursor/keyboard tracking
-        if viewport_widget and (self._show_cursor or self._show_keys):
-            self._input_monitor = InputMonitor(viewport_widget)
-            self._input_monitor.start()
-
-        # Get FPS for timer interval
+        # Get settings
         fps = self._get_setting("fps", 24)
-        interval_ms = int(1000 / fps)
+        delay = self._get_setting("delay", 3)
+        show_cursor = self._get_setting("show_cursor", True)
+        show_clicks = self._get_setting("show_clicks", True)
+        show_keys = self._get_setting("show_keys", False)
 
-        # Create and start timer
-        self._record_timer = QTimer(self)
-        self._record_timer.timeout.connect(self._on_timer_tick)
-        self._record_timer.start(interval_ms)
+        # Update button to show countdown (if delay > 0)
+        if delay > 0:
+            self._update_record_button_icon(str(delay))
 
-        logger.info(f"Recording started at {fps} FPS (interval: {interval_ms}ms)")
+        # Start recording via controller
+        self._recording_controller.start_recording(
+            viewport_widget=viewport_widget,
+            fps=fps,
+            delay=delay,
+            show_cursor=show_cursor,
+            show_clicks=show_clicks,
+            show_keys=show_keys,
+        )
 
-    def _on_timer_tick(self):
-        """Capture frame on timer tick using screen capture."""
-        if not self._is_recording:
-            return
+    def _on_countdown_tick(self, remaining: int):
+        """Handle countdown tick from controller.
 
-        if self._capture_bbox is None:
-            logger.error("No capture bbox available")
-            return
+        Args:
+            remaining: Remaining seconds.
+        """
+        self._update_record_button_icon(str(remaining))
 
-        try:
-            # Capture screen region
-            image = capture_screen_region(self._capture_bbox)
+    def _on_countdown_cancelled(self):
+        """Handle countdown cancellation from controller."""
+        self._update_record_button_icon("rec")
+        cmds.inViewMessage(message="Cancelled", pos="midCenter", fade=True)
 
-            # Draw cursor overlay
-            if self._show_cursor:
-                cursor_pos = get_cursor_screen_position()
-                image = draw_cursor(image, cursor_pos, self._capture_bbox)
+    def _on_recording_started(self):
+        """Handle recording start signal from controller."""
+        self._update_record_button_icon("stop")
 
-                # Draw click indicators
-                if self._show_clicks and self._input_monitor:
-                    clicks = self._input_monitor.get_recent_clicks()
-                    if clicks:
-                        image = draw_click_indicators(image, clicks, self._capture_bbox)
+    def _on_recording_stopped(self, frames: list):
+        """Handle recording stop signal from controller.
 
-            # Draw keyboard overlay
-            if self._show_keys and self._input_monitor:
-                pressed_keys = self._input_monitor.get_pressed_keys()
-                if pressed_keys:
-                    image = draw_key_overlay(image, pressed_keys)
-
-            self._recorded_frames.append(image)
-            logger.debug(f"Captured frame ({len(self._recorded_frames)} total)")
-        except Exception as e:
-            logger.error(f"Failed to capture frame: {e}")
-
-    def _stop_recording(self):
-        """Stop recording and save GIF."""
-        self._is_recording = False
-
-        # Stop timer
-        if self._record_timer is not None:
-            self._record_timer.stop()
-            self._record_timer.deleteLater()
-            self._record_timer = None
-
-        # Stop input monitor
-        if self._input_monitor is not None:
-            self._input_monitor.stop()
-            self._input_monitor = None
-
-        # Clear capture state
-        self._capture_bbox = None
-
+        Args:
+            frames: List of captured PIL Image frames.
+        """
         # Restore to rec icon
         self._update_record_button_icon("rec")
 
         # Check if we have frames
-        if not self._recorded_frames:
+        if not frames:
             cmds.warning("No frames recorded")
             return
 
-        original_count = len(self._recorded_frames)
-        logger.info(f"Recording stopped - {original_count} frames captured")
+        original_count = len(frames)
 
         # Apply end trim
         trim_sec = self._get_setting("trim", 0)
         if trim_sec > 0:
             fps = self._get_setting("fps", 24)
             frames_to_trim = int(trim_sec * fps)
-            if frames_to_trim > 0 and frames_to_trim < len(self._recorded_frames):
-                self._recorded_frames = self._recorded_frames[:-frames_to_trim]
-                logger.info(f"Trimmed {frames_to_trim} frames from end ({trim_sec} seconds)")
+            if frames_to_trim > 0 and frames_to_trim < len(frames):
+                frames = frames[:-frames_to_trim]
+                logger.debug(f"Trimmed {frames_to_trim} frames from end ({trim_sec} seconds)")
 
-        frame_count = len(self._recorded_frames)
+        frame_count = len(frames)
         if frame_count == 0:
             cmds.warning("All frames trimmed - nothing to save")
-            self._recorded_frames = []
             return
 
-        logger.info(f"Final frame count: {frame_count} (trimmed {original_count - frame_count})")
+        logger.debug(f"Final frame count: {frame_count} (trimmed {original_count - frame_count})")
 
         # Get settings
         fps = self._get_setting("fps", 24)
@@ -1118,7 +1116,6 @@ class SnapshotCaptureWindow(QMainWindow):
         )
 
         if not file_path:
-            self._recorded_frames = []
             return
 
         file_path = file_path[0]
@@ -1130,7 +1127,7 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.waitCursor(state=True)
             cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
 
-            command.save_gif(self._recorded_frames, file_path, fps, loop=loop)
+            command.save_gif(frames, file_path, fps, loop=loop)
 
             self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
@@ -1141,36 +1138,11 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.inViewMessage(clear="midCenter")
             cmds.warning(f"Failed to save GIF: {e}")
             logger.error(f"Failed to save GIF: {e}")
-        finally:
-            self._recorded_frames = []
-
-    def _stop_recording_cleanup_only(self):
-        """Stop recording without saving (for closeEvent)."""
-        self._is_recording = False
-
-        if self._record_timer is not None:
-            self._record_timer.stop()
-            self._record_timer.deleteLater()
-            self._record_timer = None
-
-        if self._input_monitor is not None:
-            self._input_monitor.stop()
-            self._input_monitor = None
-
-        self._capture_bbox = None
-        self._recorded_frames = []
 
     def closeEvent(self, event):
         """Handle window close - cleanup Maya UI elements."""
-        # Stop recording if active
-        if self._is_recording:
-            self._stop_recording_cleanup_only()
-
-        # Stop countdown timer
-        if self._countdown_timer is not None:
-            self._countdown_timer.stop()
-            self._countdown_timer.deleteLater()
-            self._countdown_timer = None
+        # Clean up recording controller
+        self._recording_controller.cleanup()
 
         # Save current settings
         self._save_settings()
@@ -1215,7 +1187,7 @@ def show_ui():
     def _apply_viewport_size():
         if _instance:
             _instance._set_viewport_size(width, height)
-            logger.info(f"Restored viewport size to: {width}x{height}")
+            logger.debug(f"Restored viewport size to: {width}x{height}")
 
     cmds.evalDeferred(_apply_viewport_size, evaluateNext=True)
 
