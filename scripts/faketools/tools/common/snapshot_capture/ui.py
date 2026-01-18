@@ -35,6 +35,7 @@ from ....lib_ui.qt_compat import (
 )
 from . import command
 from .ui_recording import RecordingController
+from .widgets import IconButton, IconToolButton
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Settings
         self.settings = ToolSettingsManager(tool_name="snapshot_capture", category="common")
+        self._settings_cache: dict = {}  # In-memory cache to avoid frequent file I/O
 
         # Default save directory (using ToolDataManager)
         tool_data_manager = ToolDataManager("snapshot_capture", "common")
@@ -96,21 +98,21 @@ class SnapshotCaptureWindow(QMainWindow):
         self.mode_combo: QComboBox | None = None
         self.bg_button: QPushButton | None = None  # Shared BG button (PNG/GIF only)
         self.bg_separator: QWidget | None = None  # Separator after BG button (PNG/GIF only)
-        self.option_button: QToolButton | None = None
+        self.option_button: IconToolButton | None = None
         self.option_menu: QMenu | None = None
         self.action_stack: QStackedWidget | None = None  # Mode-specific action buttons
         # PNG mode action buttons
-        self.png_save_button: QPushButton | None = None
-        self.png_copy_button: QPushButton | None = None
+        self.png_save_button: IconButton | None = None
+        self.png_copy_button: IconButton | None = None
         # GIF mode action buttons
-        self.gif_save_button: QPushButton | None = None
+        self.gif_save_button: IconButton | None = None
         # Rec mode action buttons
-        self.record_button: QPushButton | None = None
+        self.record_button: IconButton | None = None
         # Resolution controls
         self.width_edit: QLineEdit | None = None
         self.height_edit: QLineEdit | None = None
-        self.preset_button: QToolButton | None = None
-        self.set_button: QPushButton | None = None
+        self.preset_button: IconToolButton | None = None
+        self.set_button: IconButton | None = None
 
         # Load settings and setup UI
         self._load_settings()
@@ -155,18 +157,37 @@ class SnapshotCaptureWindow(QMainWindow):
         return (128, 128, 128)  # Fallback gray
 
     def _load_settings(self):
-        """Load saved settings from JSON."""
+        """Load saved settings from JSON into cache."""
         data = self.settings.load_settings("default")
 
-        self._current_mode = data.get("mode", "png")
-        bg_color = data.get("bg_color")
+        # Populate cache with defaults, then override with saved values
+        self._settings_cache = {
+            "mode": "png",
+            "width": 640,
+            "height": 360,
+            "bg_color": None,  # Will be set below
+            "bg_transparent": False,
+            "fps": 24,
+            "loop": True,
+            "delay": 3,
+            "trim": 0,
+            "show_cursor": True,
+            "show_clicks": True,
+            "show_keys": False,
+        }
+        self._settings_cache.update(data)
+
+        # Set instance variables from cache
+        self._current_mode = self._settings_cache.get("mode", "png")
+        bg_color = self._settings_cache.get("bg_color")
         if bg_color and isinstance(bg_color, list) and len(bg_color) == 3:
             # Use saved color
             self._bg_color = tuple(bg_color)
         else:
             # First launch: use Maya's global background color
             self._bg_color = self._get_maya_background_color()
-        self._bg_transparent = data.get("bg_transparent", False)
+            self._settings_cache["bg_color"] = list(self._bg_color)
+        self._bg_transparent = self._settings_cache.get("bg_transparent", False)
 
     def _get_resolution(self) -> tuple[int, int]:
         """Get current resolution from input fields.
@@ -203,28 +224,20 @@ class SnapshotCaptureWindow(QMainWindow):
         self._last_save_dir = os.path.dirname(file_path)
 
     def _save_settings(self):
-        """Save current settings to JSON."""
-        # Get viewport size
+        """Save cached settings to JSON file."""
+        # Sync instance variables to cache before saving
         width, height = self._get_resolution()
+        self._settings_cache["mode"] = self._current_mode
+        self._settings_cache["width"] = width
+        self._settings_cache["height"] = height
+        self._settings_cache["bg_color"] = list(self._bg_color)
+        self._settings_cache["bg_transparent"] = self._bg_transparent
 
-        data = {
-            "mode": self._current_mode,
-            "width": width,
-            "height": height,
-            "bg_color": list(self._bg_color),
-            "bg_transparent": self._bg_transparent,
-            "fps": self._get_setting("fps", 24),
-            "loop": self._get_setting("loop", True),
-            "delay": self._get_setting("delay", 3),
-            "trim": self._get_setting("trim", 0),
-            "show_cursor": self._get_setting("show_cursor", True),
-            "show_clicks": self._get_setting("show_clicks", True),
-            "show_keys": self._get_setting("show_keys", False),
-        }
-        self.settings.save_settings(data, "default")
+        # Save cache to file
+        self.settings.save_settings(self._settings_cache, "default")
 
     def _get_setting(self, key: str, default):
-        """Get a setting value.
+        """Get a setting value from cache.
 
         Args:
             key: Setting key.
@@ -233,19 +246,16 @@ class SnapshotCaptureWindow(QMainWindow):
         Returns:
             Setting value or default.
         """
-        data = self.settings.load_settings("default")
-        return data.get(key, default)
+        return self._settings_cache.get(key, default)
 
     def _set_setting(self, key: str, value):
-        """Set a setting value.
+        """Set a setting value in cache (no file I/O).
 
         Args:
             key: Setting key.
             value: Value to set.
         """
-        data = self.settings.load_settings("default")
-        data[key] = value
-        self.settings.save_settings(data, "default")
+        self._settings_cache[key] = value
 
     def _setup_ui(self):
         """Setup the complete UI."""
@@ -420,7 +430,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.png_save_button = self._create_save_button("PNGSaveButton")
         png_layout.addWidget(self.png_save_button)
 
-        self.png_copy_button = QPushButton()
+        self.png_copy_button = IconButton()
         self.png_copy_button.setObjectName(self._ui_name("PNGCopyButton"))
         self.png_copy_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.png_copy_button.setToolTip("Copy to Clipboard")
@@ -453,7 +463,7 @@ class SnapshotCaptureWindow(QMainWindow):
         rec_layout.setSpacing(TOOLBAR_SPACING)
 
         rec_layout.addStretch()  # Push button to right edge
-        self.record_button = QPushButton()
+        self.record_button = IconButton()
         self.record_button.setObjectName(self._ui_name("RecordButton"))
         self.record_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.record_button.setToolTip("Start Recording")
@@ -474,7 +484,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row1_layout.addWidget(option_separator)
 
         # Option button (always visible at rightmost position)
-        self.option_button = QToolButton()
+        self.option_button = IconToolButton()
         self.option_button.setObjectName(self._ui_name("OptionButton"))
         self.option_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.option_button.setToolTip("Options")
@@ -494,16 +504,16 @@ class SnapshotCaptureWindow(QMainWindow):
 
         return row1_layout
 
-    def _create_save_button(self, name: str) -> QPushButton:
+    def _create_save_button(self, name: str) -> IconButton:
         """Create a save button.
 
         Args:
             name: Object name for the button.
 
         Returns:
-            Configured QPushButton.
+            Configured IconButton.
         """
-        button = QPushButton()
+        button = IconButton()
         button.setObjectName(self._ui_name(name))
         button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         button.setToolTip("Save")
@@ -566,7 +576,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row2_layout.addWidget(self.height_edit)
 
         # Preset button
-        self.preset_button = QToolButton()
+        self.preset_button = IconToolButton()
         self.preset_button.setObjectName(self._ui_name("PresetButton"))
         self.preset_button.setFixedSize(BUTTON_SIZE_SMALL, BUTTON_SIZE_SMALL)
         self.preset_button.setToolTip("Resolution Presets")
@@ -582,7 +592,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row2_layout.addWidget(self.preset_button)
 
         # Set button
-        self.set_button = QPushButton()
+        self.set_button = IconButton()
         self.set_button.setObjectName(self._ui_name("SetButton"))
         self.set_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.set_button.setToolTip("Apply Resolution")
@@ -1181,10 +1191,9 @@ def show_ui():
     _instance = SnapshotCaptureWindow(get_maya_main_window())
     _instance.show()
 
-    # Restore viewport size with deferred execution
-    data = _instance.settings.load_settings("default")
-    width = data.get("width", 640)
-    height = data.get("height", 360)
+    # Restore viewport size with deferred execution (using cached settings)
+    width = _instance._settings_cache.get("width", 640)
+    height = _instance._settings_cache.get("height", 360)
 
     # First deferred call: Set viewport size (with evaluateNext=True)
     def _apply_viewport_size():
