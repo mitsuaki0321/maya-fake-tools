@@ -600,7 +600,7 @@ class SnapshotCaptureWindow(QMainWindow):
         """Update BG button stylesheet to show current color."""
         if self.bg_button:
             r, g, b = self._bg_color
-            self.bg_button.setStyleSheet(f"background-color: rgb({r}, {g}, {b});")
+            self.bg_button.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #888888;")
 
     def _update_record_button_icon(self, state: str):
         """Update record button icon based on state.
