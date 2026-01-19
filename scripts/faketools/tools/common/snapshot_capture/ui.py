@@ -800,51 +800,6 @@ class SnapshotCaptureWindow(QMainWindow):
 
         width, height = self._get_resolution()
         self._resize_viewport(width, height)
-        logger.debug(f"Set custom resolution: {width}x{height}")
-
-    def _set_viewport_size(self, width: int, height: int) -> bool:
-        """Set viewport size only (without window adjustment).
-
-        Args:
-            width: Target viewport width.
-            height: Target viewport height.
-
-        Returns:
-            True if successful, False otherwise.
-        """
-        if not self.panel_name:
-            return False
-
-        # Reset fixed size to allow resizing (same as sample_ui.py)
-        self.setFixedSize(0, 0)
-
-        # Get M3dView and wrap as QWidget
-        try:
-            view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
-            if not view:
-                logger.warning("Failed to get M3dView from model panel.")
-                return False
-
-            viewport = shiboken.wrapInstance(int(view.widget()), QWidget)
-            viewport.setFixedSize(width, height)
-            logger.debug(f"Set viewport size to: {width}x{height}")
-        except Exception as e:
-            logger.warning(f"Failed to set viewport size: {e}")
-            return False
-
-        # Update input fields
-        if self.width_edit:
-            self.width_edit.setText(str(width))
-        if self.height_edit:
-            self.height_edit.setText(str(height))
-
-        return True
-
-    def _lock_window_size(self):
-        """Lock window size to fit current content."""
-        self.adjustSize()
-        self.setFixedSize(self.size())
-        logger.debug("Locked window size.")
 
     def _resize_viewport(self, width: int, height: int):
         """Resize the embedded viewport and lock window size.
@@ -853,11 +808,35 @@ class SnapshotCaptureWindow(QMainWindow):
             width: Target viewport width.
             height: Target viewport height.
         """
-        if not self._set_viewport_size(width, height):
+        if not self.panel_name:
             return
 
+        # Reset fixed size to allow resizing
+        self.setFixedSize(0, 0)
+
+        # Get M3dView and wrap as QWidget
+        try:
+            view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
+            if not view:
+                logger.warning("Failed to get M3dView from model panel.")
+                return
+
+            viewport = shiboken.wrapInstance(int(view.widget()), QWidget)
+            viewport.setFixedSize(width, height)
+            logger.debug(f"Set viewport size to: {width}x{height}")
+        except Exception as e:
+            logger.warning(f"Failed to set viewport size: {e}")
+            return
+
+        # Update input fields
+        if self.width_edit:
+            self.width_edit.setText(str(width))
+        if self.height_edit:
+            self.height_edit.setText(str(height))
+
         # Fit window to content
-        self._lock_window_size()
+        self.adjustSize()
+        self.setFixedSize(self.size())
 
         # Save settings
         self._set_setting("width", width)
@@ -1275,20 +1254,13 @@ def show_ui():
     width = _instance._settings_cache.get("width", 640)
     height = _instance._settings_cache.get("height", 360)
 
-    # First deferred call: Set viewport size (with evaluateNext=True)
+    # Deferred call: Resize viewport (includes window size adjustment)
     def _apply_viewport_size():
         if _instance:
-            _instance._set_viewport_size(width, height)
+            _instance._resize_viewport(width, height)
             logger.debug(f"Restored viewport size to: {width}x{height}")
 
     cmds.evalDeferred(_apply_viewport_size, evaluateNext=True)
-
-    # Second deferred call: Lock window size (without evaluateNext)
-    def _lock_window():
-        if _instance:
-            _instance._lock_window_size()
-
-    cmds.evalDeferred(_lock_window)
 
     return _instance
 
