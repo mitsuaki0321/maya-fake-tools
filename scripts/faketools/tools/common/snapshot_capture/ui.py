@@ -495,11 +495,9 @@ class SnapshotCaptureWindow(QMainWindow):
         self.option_button.setToolTip("Options")
         self.option_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
-        option_icon_path = self._get_icon_path("advancedSettings.png")
+        option_icon_path = self._get_icon_path("snapshot_options.png")
         if option_icon_path:
             self.option_button.setIcon(QIcon(option_icon_path))
-        else:
-            self.option_button.setIcon(QIcon(":/advancedSettings.png"))
 
         self.option_menu = QMenu(self.option_button)
         self.option_menu.setObjectName(self._ui_name("OptionMenu"))
@@ -586,7 +584,9 @@ class SnapshotCaptureWindow(QMainWindow):
         self.preset_button.setFixedSize(BUTTON_SIZE_SMALL, BUTTON_SIZE_SMALL)
         self.preset_button.setToolTip("Resolution Presets")
         self.preset_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.preset_button.setIcon(QIcon(":/arrowDown.png"))
+        preset_icon_path = self._get_icon_path("snapshot_dropdown.png")
+        if preset_icon_path:
+            self.preset_button.setIcon(QIcon(preset_icon_path))
 
         # Create preset menu
         preset_menu = QMenu(self.preset_button)
