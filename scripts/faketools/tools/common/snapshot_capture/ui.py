@@ -13,6 +13,7 @@ from ....lib_ui import ToolDataManager, ToolSettingsManager, get_maya_main_windo
 from ....lib_ui.maya_qt import qt_widget_from_maya_control
 from ....lib_ui.qt_compat import (
     QApplication,
+    QByteArray,
     QColor,
     QColorDialog,
     QComboBox,
@@ -24,7 +25,7 @@ from ....lib_ui.qt_compat import (
     QLineEdit,
     QMainWindow,
     QMenu,
-    QPixmap,
+    QMimeData,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
@@ -895,12 +896,20 @@ class SnapshotCaptureWindow(QMainWindow):
             buffer = BytesIO()
             image.save(buffer, format="PNG")
             buffer.seek(0)
+            png_data = buffer.read()
 
             qimage = QImage()
-            qimage.loadFromData(buffer.read())
+            qimage.loadFromData(png_data)
+
+            # Set clipboard with multiple formats for compatibility
+            # DIB format for Windows apps (Snipping Tool, etc.)
+            # PNG format for web apps (Gmail, etc.)
+            mime_data = QMimeData()
+            mime_data.setImageData(qimage)
+            mime_data.setData("image/png", QByteArray(png_data))
 
             clipboard = QApplication.clipboard()
-            clipboard.setPixmap(QPixmap.fromImage(qimage))
+            clipboard.setMimeData(mime_data)
 
             cmds.waitCursor(state=False)
             cmds.inViewMessage(message="Copied to clipboard!", pos="midCenter", fade=True)

@@ -16,9 +16,11 @@ try:
     from PySide2 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
     from PySide2.QtCore import (
         QAbstractItemModel,
+        QByteArray,  # noqa: F401
         QEvent,
         QFileSystemWatcher,
         QItemSelectionModel,
+        QMimeData,  # noqa: F401
         QObject,
         QPoint,
         QPointF,
@@ -148,9 +150,11 @@ except ImportError:
     from PySide6 import QtCore, QtGui, QtNetwork, QtOpenGL, QtSvg, QtWidgets
     from PySide6.QtCore import (
         QAbstractItemModel,
+        QByteArray,  # noqa: F401
         QEvent,
         QFileSystemWatcher,
         QItemSelectionModel,
+        QMimeData,  # noqa: F401
         QObject,
         QPoint,
         QPointF,
