@@ -74,6 +74,16 @@ Captures the current frame as a PNG image.
    - **Save button** (💾): Opens file dialog to save as PNG file
    - **Copy button** (📋): Copies image to clipboard
 
+### Edit in External App
+
+Right-click the **Copy button** to display a context menu.
+
+- **Edit in External App**: Opens the captured image in the OS default image application
+
+This feature saves the captured image as a temporary file and immediately opens it in an external application (Windows Photos, Paint, etc.). Useful for quick editing or reviewing images.
+
+> **Note**: This feature is currently available on Windows only.
+
 ### Background Color Settings
 
 Click the **BG button** to open a color picker and select the background color.
