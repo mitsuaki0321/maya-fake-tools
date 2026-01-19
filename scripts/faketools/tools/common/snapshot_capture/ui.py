@@ -29,6 +29,7 @@ from ....lib_ui.qt_compat import (
     QPushButton,
     QSizePolicy,
     QStackedWidget,
+    Qt,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -36,6 +37,7 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.widgets import IconButton, IconButtonStyle, IconToolButton
 from . import command
+from .external_handlers import get_available_handlers
 from .ui_recording import RecordingController
 
 logger = logging.getLogger(__name__)
@@ -434,13 +436,15 @@ class SnapshotCaptureWindow(QMainWindow):
         self.png_copy_button = IconButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.png_copy_button.setObjectName(self._ui_name("PNGCopyButton"))
         self.png_copy_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
-        self.png_copy_button.setToolTip("Copy to Clipboard")
+        self.png_copy_button.setToolTip("Copy to Clipboard (Right-click for more options)")
         copy_icon_path = self._get_icon_path("snapshot_copy.png")
         if copy_icon_path:
             self.png_copy_button.setIcon(QIcon(copy_icon_path))
         else:
             self.png_copy_button.setText("C")
         self.png_copy_button.clicked.connect(self._on_copy_png_to_clipboard)
+        self.png_copy_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.png_copy_button.customContextMenuRequested.connect(self._show_copy_context_menu)
         png_layout.addWidget(self.png_copy_button)
 
         self.action_stack.addWidget(png_widget)  # index 0
@@ -918,6 +922,73 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.waitCursor(state=False)
             cmds.warning(f"Failed to copy to clipboard: {e}")
             logger.error(f"Failed to copy to clipboard: {e}")
+
+    def _show_copy_context_menu(self, pos):
+        """Show context menu for copy button with external app options.
+
+        Args:
+            pos: Position where context menu was requested.
+        """
+        handlers = get_available_handlers()
+        if not handlers:
+            return
+
+        menu = QMenu(self)
+        for handler in handlers:
+            action = menu.addAction(handler.menu_name)
+            action.triggered.connect(lambda checked=False, h=handler: self._open_in_external_app(h))
+        menu.exec_(self.png_copy_button.mapToGlobal(pos))
+
+    def _open_in_external_app(self, handler):
+        """Capture image and open in external application.
+
+        Args:
+            handler: ExternalAppHandler instance to use.
+        """
+        if not self.panel_name or not cmds.modelPanel(self.panel_name, exists=True):
+            cmds.warning("No panel available for capture")
+            return
+
+        width, height = self._get_resolution()
+        background_color = self._get_background_color()
+
+        try:
+            cmds.waitCursor(state=True)
+
+            # Capture frame
+            image = command.capture_frame(self.panel_name, width, height)
+            image = command.composite_with_background(image, background_color)
+
+            # Save to temp file
+            import tempfile
+            import time
+
+            timestamp = int(time.time() * 1000)
+            temp_dir = tempfile.gettempdir()
+            temp_path = os.path.join(temp_dir, f"snapshot_capture_{timestamp}.png")
+            image.save(temp_path, format="PNG")
+
+            # Verify file was saved successfully
+            if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
+                raise OSError(f"Failed to save temp file: {temp_path}")
+
+            cmds.waitCursor(state=False)
+            logger.debug(f"Saved temp file: {temp_path} ({os.path.getsize(temp_path)} bytes)")
+
+            # Open in external app
+            if handler.open_image(temp_path):
+                logger.info(f"Opened in external app: {temp_path}")
+            else:
+                cmds.warning("Failed to open external application")
+                logger.error("Failed to open external application")
+        except FileNotFoundError:
+            cmds.waitCursor(state=False)
+            cmds.warning(f"Application not found: {handler.menu_name}")
+            logger.error(f"Application not found for handler: {handler.menu_name}")
+        except Exception as e:
+            cmds.waitCursor(state=False)
+            cmds.warning(f"Failed to open in external app: {e}")
+            logger.error(f"Failed to open in external app: {e}")
 
     def _on_capture_png(self):
         """Handle PNG capture button click."""

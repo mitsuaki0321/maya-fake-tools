@@ -31,6 +31,7 @@ try:
         Qt,
         QThread,
         QTimer,
+        QUrl,
         Signal,
         Slot,
     )
@@ -38,6 +39,7 @@ try:
         QBrush,
         QColor,
         QCursor,
+        QDesktopServices,
         QDoubleValidator,
         QFont,
         QFontMetrics,
@@ -165,6 +167,7 @@ except ImportError:
         Qt,
         QThread,
         QTimer,
+        QUrl,
         Signal,
         Slot,
     )
@@ -174,6 +177,7 @@ except ImportError:
         QBrush,
         QColor,
         QCursor,
+        QDesktopServices,
         QDoubleValidator,
         QFont,
         QFontMetrics,
@@ -318,7 +322,9 @@ __all__ = [
     "QPointF",
     "QRectF",
     "QFileSystemWatcher",
+    "QUrl",
     # GUI classes
+    "QDesktopServices",
     "QFont",
     "QFontMetrics",
     "QIcon",
