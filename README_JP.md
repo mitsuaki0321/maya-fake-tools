@@ -50,8 +50,19 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 - Autodesk Maya 2023以降
 - Python 3.9+（Mayaに同梱）
 
-**オプション依存:**
-- numpy、scipy - モデリングツールの一部機能で必要
+### サードパーティライブラリ依存
+
+一部のツールは、Maya に標準で含まれていない追加ライブラリを必要とします。
+必要なライブラリがインストールされていない場合、これらのツールは起動しません。
+
+| ツール | カテゴリ | 必要なライブラリ |
+|--------|----------|-----------------|
+| Bounding Box Creator | Model | numpy, scipy |
+| Retarget Mesh | Model | numpy, scipy |
+| Retarget Transforms | Model | numpy |
+| Snapshot Capture | Common | Pillow |
+
+**注:** numpy と scipy は Maya 2022 以降に含まれています。Pillow は別途インストールが必要です。
 
 ## ライセンス
 

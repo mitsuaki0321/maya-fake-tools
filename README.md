@@ -50,8 +50,19 @@ Available in:
 - Autodesk Maya 2023 or later
 - Python 3.9+ (included in Maya)
 
-**Optional dependencies:**
-- numpy, scipy - Required for some modeling tools
+### Third-Party Library Dependencies
+
+Some tools require additional libraries that are not included in Maya by default.
+These tools will not launch if the required libraries are not installed.
+
+| Tool | Category | Required Libraries |
+|------|----------|-------------------|
+| Bounding Box Creator | Model | numpy, scipy |
+| Retarget Mesh | Model | numpy, scipy |
+| Retarget Transforms | Model | numpy |
+| Snapshot Capture | Common | Pillow |
+
+**Note:** numpy and scipy are included in Maya 2022 and later. Pillow must be installed separately.
 
 ## License
 
