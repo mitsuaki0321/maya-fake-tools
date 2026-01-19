@@ -26,7 +26,7 @@ import faketools.tools.common.snapshot_capture.ui
 faketools.tools.common.snapshot_capture.ui.show_ui()
 ```
 
-![image001](../../images/common/snapshot_capture/image001.png)
+![image](../../images/common/snapshot_capture/image001.png)
 
 
 ## 基本的な使い方
@@ -39,7 +39,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 
 メニューバーの **Camera** メニューから、表示するカメラを切り替えることができます。
 
-[カメラメニューの画像]
+![image](../../images/common/snapshot_capture/image006.png)
 
 ### 解像度の設定
 

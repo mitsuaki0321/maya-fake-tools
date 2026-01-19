@@ -39,7 +39,7 @@ The tool window contains an embedded model panel (viewport). You can rotate, pan
 
 You can switch the display camera from the **Camera** menu in the menu bar.
 
-[Camera menu image]
+![image](../../images/common/snapshot_capture/image006.png)
 
 ### Resolution Settings
 
