@@ -811,9 +811,6 @@ class SnapshotCaptureWindow(QMainWindow):
         if not self.panel_name:
             return
 
-        # Reset fixed size to allow resizing
-        self.setFixedSize(0, 0)
-
         # Get M3dView and wrap as QWidget
         try:
             view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
@@ -822,6 +819,15 @@ class SnapshotCaptureWindow(QMainWindow):
                 return
 
             viewport = shiboken.wrapInstance(int(view.widget()), QWidget)
+
+            # Skip if already the same size
+            if viewport.width() == width and viewport.height() == height:
+                logger.debug(f"Viewport already at {width}x{height}, skipping resize")
+                return
+
+            # Reset fixed size to allow resizing
+            self.setFixedSize(0, 0)
+
             viewport.setFixedSize(width, height)
             logger.debug(f"Set viewport size to: {width}x{height}")
         except Exception as e:
