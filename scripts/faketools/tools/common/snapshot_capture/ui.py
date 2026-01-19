@@ -33,9 +33,9 @@ from ....lib_ui.qt_compat import (
     QWidget,
     shiboken,
 )
+from ....lib_ui.widgets import IconButton, IconButtonStyle, IconToolButton
 from . import command
 from .ui_recording import RecordingController
-from .widgets import IconButton, IconToolButton
 
 logger = logging.getLogger(__name__)
 
@@ -430,7 +430,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.png_save_button = self._create_save_button("PNGSaveButton")
         png_layout.addWidget(self.png_save_button)
 
-        self.png_copy_button = IconButton()
+        self.png_copy_button = IconButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.png_copy_button.setObjectName(self._ui_name("PNGCopyButton"))
         self.png_copy_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.png_copy_button.setToolTip("Copy to Clipboard")
@@ -463,7 +463,7 @@ class SnapshotCaptureWindow(QMainWindow):
         rec_layout.setSpacing(TOOLBAR_SPACING)
 
         rec_layout.addStretch()  # Push button to right edge
-        self.record_button = IconButton()
+        self.record_button = IconButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.record_button.setObjectName(self._ui_name("RecordButton"))
         self.record_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.record_button.setToolTip("Start Recording")
@@ -484,7 +484,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row1_layout.addWidget(option_separator)
 
         # Option button (always visible at rightmost position)
-        self.option_button = IconToolButton()
+        self.option_button = IconToolButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.option_button.setObjectName(self._ui_name("OptionButton"))
         self.option_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.option_button.setToolTip("Options")
@@ -513,7 +513,7 @@ class SnapshotCaptureWindow(QMainWindow):
         Returns:
             Configured IconButton.
         """
-        button = IconButton()
+        button = IconButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         button.setObjectName(self._ui_name(name))
         button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         button.setToolTip("Save")
@@ -576,7 +576,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row2_layout.addWidget(self.height_edit)
 
         # Preset button
-        self.preset_button = IconToolButton()
+        self.preset_button = IconToolButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.preset_button.setObjectName(self._ui_name("PresetButton"))
         self.preset_button.setFixedSize(BUTTON_SIZE_SMALL, BUTTON_SIZE_SMALL)
         self.preset_button.setToolTip("Resolution Presets")
@@ -592,7 +592,7 @@ class SnapshotCaptureWindow(QMainWindow):
         row2_layout.addWidget(self.preset_button)
 
         # Set button
-        self.set_button = IconButton()
+        self.set_button = IconButton(style_mode=IconButtonStyle.TRANSPARENT, auto_size=False)
         self.set_button.setObjectName(self._ui_name("SetButton"))
         self.set_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.set_button.setToolTip("Apply Resolution")

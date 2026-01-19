@@ -8,7 +8,7 @@ import maya.cmds as cmds
 from ....lib_ui import BaseFramelessWindow, icons, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QCursor, QEvent, QIcon, QPushButton, QSizePolicy, QSlider, Qt, Signal
-from ....lib_ui.widgets import extra_widgets
+from ....lib_ui.widgets import IconButton, extra_widgets
 from .command import SkinWeightsCopyPaste
 
 logger = getLogger(__name__)
@@ -56,7 +56,7 @@ class MainWindow(BaseFramelessWindow):
         self.central_layout.addWidget(separator)
 
         # Paste button
-        self.paste_button = extra_widgets.ToolIconButton("skinWeights_copy_paste_005")
+        self.paste_button = IconButton(icon_name="skinWeights_copy_paste_005")
         self.paste_button.setEnabled(False)
         self.central_layout.addWidget(self.paste_button)
 
@@ -459,7 +459,7 @@ class MethodButton(QPushButton):
         self.setText(self.method_label_map[self._skinWeights_copy_paste.method])
 
 
-class SourceClipboardButton(extra_widgets.ToolIconButton):
+class SourceClipboardButton(IconButton):
     """This button is used to stock the source components for SkinWeightsCopyPaste."""
 
     clear_clipboard_signal = Signal()
@@ -470,7 +470,7 @@ class SourceClipboardButton(extra_widgets.ToolIconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(parent=parent, icon_name="skinWeights_copy_paste_001")
+        super().__init__(icon_name="skinWeights_copy_paste_001", parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
@@ -516,7 +516,7 @@ class SourceClipboardButton(extra_widgets.ToolIconButton):
             cmds.error(str(e))
 
 
-class DestinationClipboardButton(extra_widgets.ToolIconButton):
+class DestinationClipboardButton(IconButton):
     """This button is used to stock the destination components for SkinWeightsCopyPaste."""
 
     stock_clipboard_signal = Signal()
@@ -528,7 +528,7 @@ class DestinationClipboardButton(extra_widgets.ToolIconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(parent=parent, icon_name="skinWeights_copy_paste_003")
+        super().__init__(icon_name="skinWeights_copy_paste_003", parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
@@ -583,7 +583,7 @@ class DestinationClipboardButton(extra_widgets.ToolIconButton):
         logger.debug("Clear the destination components.")
 
 
-class OnlyUnlockInfluencesButton(extra_widgets.ToolIconButton):
+class OnlyUnlockInfluencesButton(IconButton):
     """This button is used to toggle only_unlock_influences mode for SkinWeightsCopyPaste."""
 
     def __init__(self, skinWeights_copy_paste: SkinWeightsCopyPaste, parent=None):
@@ -593,7 +593,7 @@ class OnlyUnlockInfluencesButton(extra_widgets.ToolIconButton):
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
             parent (QWidget, optional): The parent widget. Defaults to None.
         """
-        super().__init__(parent=parent, icon_name="lock-open")
+        super().__init__(icon_name="lock-open", parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
