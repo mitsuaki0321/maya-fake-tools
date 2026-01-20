@@ -301,6 +301,11 @@ class SnapshotCaptureWindow(QMainWindow):
             parent=self.pane_layout_name,
         )
 
+        # Hide the icon bar (toolbar) - native toolbar buttons don't work in embedded Qt windows
+        bar_layout = cmds.modelPanel(self.panel_name, query=True, barLayout=True)
+        if bar_layout:
+            cmds.layout(bar_layout, edit=True, visible=False)
+
         # Add Camera menu to panel's menu bar
         self._create_camera_menu()
 
