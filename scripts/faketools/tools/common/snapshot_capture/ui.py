@@ -85,6 +85,8 @@ class SnapshotCaptureWindow(QMainWindow):
         self._current_mode: str = "png"
         self._bg_color: tuple[int, int, int] = (128, 128, 128)
         self._bg_transparent: bool = False
+        self._viewport_width: int = 640  # Cached viewport size
+        self._viewport_height: int = 360
 
         # Recording controller
         self._recording_controller = RecordingController(self)
@@ -182,6 +184,8 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Set instance variables from cache
         self._current_mode = self._settings_cache.get("mode", "png")
+        self._viewport_width = self._settings_cache.get("width", 640)
+        self._viewport_height = self._settings_cache.get("height", 360)
         bg_color = self._settings_cache.get("bg_color")
         if bg_color and isinstance(bg_color, list) and len(bg_color) == 3:
             # Use saved color
@@ -790,6 +794,8 @@ class SnapshotCaptureWindow(QMainWindow):
         """
         if preset_label in command.RESOLUTION_PRESETS:
             width, height = command.RESOLUTION_PRESETS[preset_label]
+            if width == self._viewport_width and height == self._viewport_height:
+                return
             self._resize_viewport(width, height)
             logger.debug(f"Selected preset: {preset_label}")
 
@@ -799,6 +805,8 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         width, height = self._get_resolution()
+        if width == self._viewport_width and height == self._viewport_height:
+            return
         self._resize_viewport(width, height)
 
     def _resize_viewport(self, width: int, height: int):
@@ -811,6 +819,9 @@ class SnapshotCaptureWindow(QMainWindow):
         if not self.panel_name:
             return
 
+        # Reset fixed size to allow resizing
+        self.setFixedSize(0, 0)
+
         # Get M3dView and wrap as QWidget
         try:
             view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
@@ -819,15 +830,6 @@ class SnapshotCaptureWindow(QMainWindow):
                 return
 
             viewport = shiboken.wrapInstance(int(view.widget()), QWidget)
-
-            # Skip if already the same size
-            if viewport.width() == width and viewport.height() == height:
-                logger.debug(f"Viewport already at {width}x{height}, skipping resize")
-                return
-
-            # Reset fixed size to allow resizing
-            self.setFixedSize(0, 0)
-
             viewport.setFixedSize(width, height)
             logger.debug(f"Set viewport size to: {width}x{height}")
         except Exception as e:
@@ -843,6 +845,10 @@ class SnapshotCaptureWindow(QMainWindow):
         # Fit window to content
         self.adjustSize()
         self.setFixedSize(self.size())
+
+        # Update cached viewport size
+        self._viewport_width = width
+        self._viewport_height = height
 
         # Save settings
         self._set_setting("width", width)
