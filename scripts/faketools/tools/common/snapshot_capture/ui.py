@@ -10,7 +10,7 @@ import maya.api.OpenMayaUI as omui
 import maya.cmds as cmds
 
 from ....lib_ui import ToolDataManager, ToolSettingsManager, get_maya_main_window
-from ....lib_ui.maya_qt import qt_widget_from_maya_control
+from ....lib_ui.maya_qt import qt_widget_from_maya_control, qt_widget_from_maya_layout
 from ....lib_ui.qt_compat import (
     QApplication,
     QByteArray,
@@ -912,7 +912,8 @@ class SnapshotCaptureWindow(QMainWindow):
 
         if not pane_widget and self.pane_layout_name:
             try:
-                pane_widget = qt_widget_from_maya_control(self.pane_layout_name)
+                # Use findLayout instead of findControl for paneLayout
+                pane_widget = qt_widget_from_maya_layout(self.pane_layout_name)
                 if pane_widget and hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
                     pane_widget = None
                 else:

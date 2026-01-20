@@ -39,6 +39,29 @@ def maya_name_from_qt_widget(qt_object: QObject) -> str:
     return omui.MQtUtil.fullName(int(shiboken.getCppPointer(qt_object)[0]))
 
 
+def qt_widget_from_maya_layout(name: str, qt_object: QObject = QWidget) -> QWidget:
+    """Get Qt widget from Maya UI layout name.
+
+    Unlike findControl, findLayout can find paneLayout and other layout types
+    that may not be discoverable via findControl in some environments.
+
+    Args:
+        name: Name of the Maya layout.
+        qt_object: Qt object type to wrap the layout with. Defaults to QWidget.
+
+    Returns:
+        Qt widget wrapping the Maya layout.
+
+    Raises:
+        RuntimeError: If the layout is not found.
+    """
+    ptr = omui.MQtUtil.findLayout(name)
+    if ptr is None:
+        raise RuntimeError(f'Failed to find layout "{name}".')
+
+    return shiboken.wrapInstance(int(ptr), qt_object)
+
+
 def qt_widget_from_maya_window(object_name: str) -> QWidget:
     """Get Qt widget from Maya window name.
 
@@ -72,6 +95,7 @@ def get_maya_main_window() -> Optional[QWidget]:
 
 __all__ = [
     "qt_widget_from_maya_control",
+    "qt_widget_from_maya_layout",
     "maya_name_from_qt_widget",
     "qt_widget_from_maya_window",
     "get_maya_main_window",
