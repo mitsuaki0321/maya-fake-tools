@@ -41,6 +41,18 @@ You can switch the display camera from the **Camera** menu in the menu bar.
 
 ![image](../../images/common/snapshot_capture/image006.png)
 
+#### Isolate Select
+
+You can display only selected objects in the viewport from the **Isolate** menu in the menu bar.
+
+| Menu Item | Description |
+|-----------|-------------|
+| View Selected | Toggle between showing only selected objects / showing all objects |
+| Add Selected | Add currently selected objects to the isolate display |
+| Remove Selected | Remove currently selected objects from the isolate display |
+
+> **Note**: The standard Maya Show > Isolate Select menu does not work in embedded viewports, so this custom menu provides equivalent functionality.
+
 ### Resolution Settings
 
 You can set the output image resolution in the lower toolbar.

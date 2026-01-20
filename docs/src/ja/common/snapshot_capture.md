@@ -41,6 +41,18 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 
 ![image](../../images/common/snapshot_capture/image006.png)
 
+#### Isolate Select
+
+メニューバーの **Isolate** メニューから、選択したオブジェクトのみをビューポートに表示することができます。
+
+| メニュー項目 | 説明 |
+|-------------|------|
+| View Selected | 選択オブジェクトのみ表示 / 全オブジェクト表示を切り替え |
+| Add Selected | 現在選択中のオブジェクトを Isolate 表示に追加 |
+| Remove Selected | 現在選択中のオブジェクトを Isolate 表示から除外 |
+
+> **Note**: 埋め込みビューポートでは Maya 標準の Show > Isolate Select メニューが動作しないため、このカスタムメニューで同等の機能を提供しています。
+
 ### 解像度の設定
 
 ツールバー下段で、出力画像の解像度を設定できます。
