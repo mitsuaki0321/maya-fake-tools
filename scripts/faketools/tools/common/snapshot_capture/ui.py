@@ -306,8 +306,9 @@ class SnapshotCaptureWindow(QMainWindow):
         if bar_layout:
             cmds.layout(bar_layout, edit=True, visible=False)
 
-        # Add Camera menu to panel's menu bar
+        # Add custom menus to panel's menu bar
         self._create_camera_menu()
+        self._create_isolate_menu()
 
         # Configure editor
         cmds.modelEditor(
@@ -357,6 +358,77 @@ class SnapshotCaptureWindow(QMainWindow):
         if self.panel_name and cmds.modelPanel(self.panel_name, exists=True):
             cmds.modelPanel(self.panel_name, edit=True, camera=camera)
             logger.debug(f"Changed camera to: {camera}")
+
+    def _create_isolate_menu(self):
+        """Create Isolate menu in panel's menu bar."""
+        if not self.panel_name:
+            return
+
+        menu_name = self.panel_name + "IsolateMenu"
+
+        # Delete existing menu if present
+        if cmds.menu(menu_name, exists=True):
+            cmds.deleteUI(menu_name)
+
+        # Create Isolate menu in panel's menu bar
+        cmds.menu(menu_name, label="Isolate", parent=self.panel_name)
+
+        # Store menu item name for later access
+        self._isolate_menu_item = cmds.menuItem(
+            label="View Selected",
+            checkBox=False,
+            command=lambda x: self._on_isolate_toggled(x),
+            parent=menu_name,
+        )
+
+        # Add Selected menu item
+        cmds.menuItem(
+            label="Add Selected",
+            command=lambda x: self._on_isolate_add_selected(),
+            parent=menu_name,
+        )
+
+        # Remove Selected menu item
+        cmds.menuItem(
+            label="Remove Selected",
+            command=lambda x: self._on_isolate_remove_selected(),
+            parent=menu_name,
+        )
+
+    def _on_isolate_toggled(self, checked: bool):
+        """Handle isolate select toggle.
+
+        Args:
+            checked: Isolate state.
+        """
+        if not self.panel_name:
+            return
+
+        if checked:
+            # Isolate selected objects
+            cmds.isolateSelect(self.panel_name, state=True)
+            cmds.isolateSelect(self.panel_name, addSelectedObjects=True)
+        else:
+            # Disable isolate
+            cmds.isolateSelect(self.panel_name, state=False)
+
+        logger.debug(f"Isolate select: {checked}")
+
+    def _on_isolate_add_selected(self):
+        """Add selected objects to isolate set."""
+        if not self.panel_name:
+            return
+
+        cmds.isolateSelect(self.panel_name, addSelectedObjects=True)
+        logger.debug("Added selected objects to isolate set")
+
+    def _on_isolate_remove_selected(self):
+        """Remove selected objects from isolate set."""
+        if not self.panel_name:
+            return
+
+        cmds.isolateSelect(self.panel_name, removeSelected=True)
+        logger.debug("Removed selected objects from isolate set")
 
     def _create_toolbar(self) -> QWidget:
         """Create the 2-row toolbar.
