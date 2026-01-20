@@ -27,9 +27,11 @@ from ....lib_ui.qt_compat import (
     QMenu,
     QMimeData,
     QPushButton,
+    QSize,
     QSizePolicy,
     QStackedWidget,
     Qt,
+    QTimer,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -85,8 +87,8 @@ class SnapshotCaptureWindow(QMainWindow):
         self._current_mode: str = "png"
         self._bg_color: tuple[int, int, int] = (128, 128, 128)
         self._bg_transparent: bool = False
-        self._viewport_width: int = 640  # Cached viewport size
-        self._viewport_height: int = 360
+        self._viewport_width: int = command.DEFAULT_WIDTH  # Cached viewport size
+        self._viewport_height: int = command.DEFAULT_HEIGHT
 
         # Recording controller
         self._recording_controller = RecordingController(self)
@@ -98,6 +100,7 @@ class SnapshotCaptureWindow(QMainWindow):
         # Maya UI elements (will be created in _create_viewport)
         self.pane_layout_name: str | None = None
         self.panel_name: str | None = None
+        self.pane_widget: QWidget | None = None
 
         # UI widgets (will be created in _setup_ui)
         self.mode_combo: QComboBox | None = None
@@ -118,6 +121,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.height_edit: QLineEdit | None = None
         self.preset_button: IconToolButton | None = None
         self.set_button: IconButton | None = None
+        self.toolbar_widget: QWidget | None = None
 
         # Load settings and setup UI
         self._load_settings()
@@ -168,8 +172,8 @@ class SnapshotCaptureWindow(QMainWindow):
         # Populate cache with defaults, then override with saved values
         self._settings_cache = {
             "mode": "png",
-            "width": 640,
-            "height": 360,
+            "width": command.DEFAULT_WIDTH,
+            "height": command.DEFAULT_HEIGHT,
             "bg_color": None,  # Will be set below
             "bg_transparent": False,
             "fps": 24,
@@ -184,8 +188,8 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Set instance variables from cache
         self._current_mode = self._settings_cache.get("mode", "png")
-        self._viewport_width = self._settings_cache.get("width", 640)
-        self._viewport_height = self._settings_cache.get("height", 360)
+        self._viewport_width = self._settings_cache.get("width", command.DEFAULT_WIDTH)
+        self._viewport_height = self._settings_cache.get("height", command.DEFAULT_HEIGHT)
         bg_color = self._settings_cache.get("bg_color")
         if bg_color and isinstance(bg_color, list) and len(bg_color) == 3:
             # Use saved color
@@ -202,7 +206,7 @@ class SnapshotCaptureWindow(QMainWindow):
         Returns:
             Tuple of (width, height).
         """
-        default_width, default_height = 640, 360
+        default_width, default_height = command.DEFAULT_WIDTH, command.DEFAULT_HEIGHT
 
         width_text = self.width_edit.text() if self.width_edit else ""
         height_text = self.height_edit.text() if self.height_edit else ""
@@ -282,6 +286,7 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Create toolbar
         toolbar_widget = self._create_toolbar()
+        self.toolbar_widget = toolbar_widget
         main_layout.addWidget(toolbar_widget)
 
     def _create_viewport(self) -> QWidget:
@@ -320,8 +325,8 @@ class SnapshotCaptureWindow(QMainWindow):
         )
 
         # Convert to Qt widget
-        pane_widget = qt_widget_from_maya_control(self.pane_layout_name)
-        return pane_widget
+        self.pane_widget = qt_widget_from_maya_control(self.pane_layout_name)
+        return self.pane_widget
 
     def _create_camera_menu(self):
         """Create Camera menu in panel's menu bar."""
@@ -641,8 +646,8 @@ class SnapshotCaptureWindow(QMainWindow):
         # Width input
         self.width_edit = QLineEdit()
         self.width_edit.setObjectName(self._ui_name("WidthEdit"))
-        self.width_edit.setValidator(QIntValidator(64, 4096))
-        self.width_edit.setText(str(self._get_setting("width", 640)))
+        self.width_edit.setValidator(QIntValidator(command.MIN_RESOLUTION, command.MAX_RESOLUTION))
+        self.width_edit.setText(str(self._get_setting("width", command.DEFAULT_WIDTH)))
         self.width_edit.setFixedWidth(RESOLUTION_INPUT_WIDTH)
         row2_layout.addWidget(self.width_edit)
 
@@ -654,8 +659,8 @@ class SnapshotCaptureWindow(QMainWindow):
         # Height input
         self.height_edit = QLineEdit()
         self.height_edit.setObjectName(self._ui_name("HeightEdit"))
-        self.height_edit.setValidator(QIntValidator(64, 4096))
-        self.height_edit.setText(str(self._get_setting("height", 360)))
+        self.height_edit.setValidator(QIntValidator(command.MIN_RESOLUTION, command.MAX_RESOLUTION))
+        self.height_edit.setText(str(self._get_setting("height", command.DEFAULT_HEIGHT)))
         self.height_edit.setFixedWidth(RESOLUTION_INPUT_WIDTH)
         row2_layout.addWidget(self.height_edit)
 
@@ -896,22 +901,52 @@ class SnapshotCaptureWindow(QMainWindow):
         if not self.panel_name:
             return
 
+        # Use cached pane_widget if valid, otherwise try to re-wrap
+        pane_widget = self.pane_widget
+        if pane_widget and hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
+            pane_widget = None
+        if not pane_widget and self.pane_layout_name:
+            try:
+                pane_widget = qt_widget_from_maya_control(self.pane_layout_name)
+                if hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
+                    pane_widget = None
+            except Exception:
+                pane_widget = None
+
         # Reset fixed size to allow resizing
-        self.setFixedSize(0, 0)
+        self.setMinimumSize(QSize(0, 0))
+        self.setMaximumSize(QSize(16777215, 16777215))
 
         # Get M3dView and wrap as QWidget
+        viewport = None
         try:
             view = omui.M3dView.getM3dViewFromModelPanel(self.panel_name)
             if not view:
                 logger.warning("Failed to get M3dView from model panel.")
                 return
 
-            viewport = shiboken.wrapInstance(int(view.widget()), QWidget)
-            viewport.setFixedSize(width, height)
-            logger.debug(f"Set viewport size to: {width}x{height}")
+            raw_widget = shiboken.wrapInstance(int(view.widget()), QWidget)
+            if hasattr(shiboken, "isValid") and not shiboken.isValid(raw_widget):
+                logger.warning("Viewport widget invalidated before resize.")
+            else:
+                viewport = raw_widget
+                prev_size = viewport.size()
+                viewport.setFixedSize(width, height)
         except Exception as e:
             logger.warning(f"Failed to set viewport size: {e}")
             return
+
+        # Size the paneLayout wrapper (includes menuBar overhead)
+        if pane_widget and viewport:
+            try:
+                prev_pane_size = pane_widget.size()
+                # Calculate overhead (pane size - viewport size)
+                overhead_width = max(0, prev_pane_size.width() - prev_size.width())
+                overhead_height = max(0, prev_pane_size.height() - prev_size.height())
+                pane_widget.setFixedSize(width + overhead_width, height + overhead_height)
+                pane_widget.updateGeometry()
+            except Exception as e:
+                logger.warning(f"Failed to size pane widget: {e}")
 
         # Update input fields
         if self.width_edit:
@@ -919,9 +954,37 @@ class SnapshotCaptureWindow(QMainWindow):
         if self.height_edit:
             self.height_edit.setText(str(height))
 
-        # Fit window to content
-        self.adjustSize()
-        self.setFixedSize(self.size())
+        # Fit window to content after Qt processes the deferred viewport resize
+        def _lock_window_size():
+            try:
+                # Drop invalidated widgets before querying sizes
+                nonlocal pane_widget
+                if pane_widget and hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
+                    pane_widget = None
+
+                QApplication.processEvents()
+                # Compute desired window size explicitly
+                pane_w = width if not pane_widget else pane_widget.size().width() or width
+                pane_h = height if not pane_widget else pane_widget.size().height() or height
+                toolbar_w = self.toolbar_widget.sizeHint().width() if self.toolbar_widget else 0
+                toolbar_h = self.toolbar_widget.sizeHint().height() if self.toolbar_widget else 0
+                desired_w = max(pane_w, toolbar_w)
+                desired_h = pane_h + toolbar_h
+
+                if desired_w > 0 and desired_h > 0:
+                    self.resize(desired_w, desired_h)
+                    self.setFixedSize(desired_w, desired_h)
+                else:
+                    if self.layout():
+                        self.layout().invalidate()
+                        self.layout().activate()
+                    self.adjustSize()
+                    self.resize(self.sizeHint())
+                    self.setFixedSize(self.size())
+            except Exception as e:
+                logger.warning(f"Failed during window lock: {e}")
+
+        QTimer.singleShot(0, _lock_window_size)
 
         # Update cached viewport size
         self._viewport_width = width
@@ -1340,8 +1403,8 @@ def show_ui():
     _instance.show()
 
     # Restore viewport size with deferred execution (using cached settings)
-    width = _instance._settings_cache.get("width", 640)
-    height = _instance._settings_cache.get("height", 360)
+    width = _instance._settings_cache.get("width", command.DEFAULT_WIDTH)
+    height = _instance._settings_cache.get("height", command.DEFAULT_HEIGHT)
 
     # Deferred call: Resize viewport (includes window size adjustment)
     def _apply_viewport_size():

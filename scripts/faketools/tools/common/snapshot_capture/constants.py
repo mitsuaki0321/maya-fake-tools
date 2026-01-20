@@ -56,7 +56,7 @@ DISPLAY_MODE_LABELS = {
     "x_ray": "X-Ray",
 }
 
-# Resolution presets
+# Resolution presets (minimum 256x256)
 RESOLUTION_PRESETS = {
     "1920x1080 (Full HD)": (1920, 1080),
     "1280x720 (HD)": (1280, 720),
@@ -64,13 +64,15 @@ RESOLUTION_PRESETS = {
     "640x480 (VGA)": (640, 480),
     "640x360": (640, 360),
     "512x512": (512, 512),
-    "320x240": (320, 240),
     "256x256": (256, 256),
-    "128x128": (128, 128),
 }
 
-# Default resolution key
+# Default resolution
 DEFAULT_RESOLUTION = "640x360"
+DEFAULT_WIDTH = 640
+DEFAULT_HEIGHT = 360
+MIN_RESOLUTION = 256
+MAX_RESOLUTION = 4096
 
 # Background color options (None means transparent)
 BACKGROUND_COLORS = {
