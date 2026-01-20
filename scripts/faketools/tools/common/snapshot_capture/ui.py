@@ -902,14 +902,21 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         # Use cached pane_widget if valid, otherwise try to re-wrap
-        pane_widget = self.pane_widget
-        if pane_widget and hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
-            pane_widget = None
+        pane_widget = None
+        cached_pane = self.pane_widget
+        if cached_pane is not None:
+            if hasattr(shiboken, "isValid") and shiboken.isValid(cached_pane):
+                pane_widget = cached_pane
+            else:
+                self.pane_widget = None  # Clear invalid reference
+
         if not pane_widget and self.pane_layout_name:
             try:
                 pane_widget = qt_widget_from_maya_control(self.pane_layout_name)
-                if hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
+                if pane_widget and hasattr(shiboken, "isValid") and not shiboken.isValid(pane_widget):
                     pane_widget = None
+                else:
+                    self.pane_widget = pane_widget  # Update cache
             except Exception:
                 pane_widget = None
 
@@ -937,12 +944,20 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         # Size the paneLayout wrapper (includes menuBar overhead)
+        # Base overhead values (at 100% DPI): width=4 (border), height=26 (menuBar)
+        dpi_scale = viewport.devicePixelRatioF() if viewport and hasattr(viewport, "devicePixelRatioF") else 1.0
+        overhead_width = int(4 * dpi_scale)
+        overhead_height = int(26 * dpi_scale)
+
         if pane_widget and viewport:
             try:
                 prev_pane_size = pane_widget.size()
-                # Calculate overhead (pane size - viewport size)
-                overhead_width = max(0, prev_pane_size.width() - prev_size.width())
-                overhead_height = max(0, prev_pane_size.height() - prev_size.height())
+                # Calculate overhead from actual pane size if available
+                calculated_w = max(0, prev_pane_size.width() - prev_size.width())
+                calculated_h = max(0, prev_pane_size.height() - prev_size.height())
+                if calculated_w > 0 or calculated_h > 0:
+                    overhead_width = calculated_w
+                    overhead_height = calculated_h
                 pane_widget.setFixedSize(width + overhead_width, height + overhead_height)
                 pane_widget.updateGeometry()
             except Exception as e:
@@ -964,8 +979,14 @@ class SnapshotCaptureWindow(QMainWindow):
 
                 QApplication.processEvents()
                 # Compute desired window size explicitly
-                pane_w = width if not pane_widget else pane_widget.size().width() or width
-                pane_h = height if not pane_widget else pane_widget.size().height() or height
+                # Use pane_widget size if available, otherwise use viewport size + overhead
+                if pane_widget:
+                    pane_w = pane_widget.size().width() or (width + overhead_width)
+                    pane_h = pane_widget.size().height() or (height + overhead_height)
+                else:
+                    pane_w = width + overhead_width
+                    pane_h = height + overhead_height
+
                 toolbar_w = self.toolbar_widget.sizeHint().width() if self.toolbar_widget else 0
                 toolbar_h = self.toolbar_widget.sizeHint().height() if self.toolbar_widget else 0
                 desired_w = max(pane_w, toolbar_w)
