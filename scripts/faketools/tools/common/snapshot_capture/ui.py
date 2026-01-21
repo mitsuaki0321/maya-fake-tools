@@ -921,6 +921,9 @@ class SnapshotCaptureWindow(QMainWindow):
             except Exception:
                 pane_widget = None
 
+        if pane_widget is None:
+            logger.warning("pane_widget is None - using fallback overhead values for window sizing")
+
         # Reset fixed size to allow resizing
         self.setMinimumSize(QSize(0, 0))
         self.setMaximumSize(QSize(16777215, 16777215))
