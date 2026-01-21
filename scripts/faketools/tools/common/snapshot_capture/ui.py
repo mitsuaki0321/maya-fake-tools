@@ -758,7 +758,8 @@ class SnapshotCaptureWindow(QMainWindow):
 
             self.option_menu.addSeparator()
 
-            # Edit annotations before save
+        # PNG only: Edit annotations before save
+        if self._current_mode == "png":
             edit_annotations_action = self.option_menu.addAction("Edit Annotations")
             edit_annotations_action.setCheckable(True)
             edit_annotations_action.setChecked(self._get_setting("edit_annotations", False))
@@ -844,14 +845,6 @@ class SnapshotCaptureWindow(QMainWindow):
             show_keys_action.setCheckable(True)
             show_keys_action.setChecked(self._get_setting("show_keys", False))
             show_keys_action.triggered.connect(lambda checked: self._set_setting("show_keys", checked))
-
-            self.option_menu.addSeparator()
-
-            # Edit annotations before save
-            edit_annotations_rec_action = self.option_menu.addAction("Edit Annotations")
-            edit_annotations_rec_action.setCheckable(True)
-            edit_annotations_rec_action.setChecked(self._get_setting("edit_annotations_rec", False))
-            edit_annotations_rec_action.triggered.connect(lambda checked: self._set_setting("edit_annotations_rec", checked))
 
     def _on_mode_changed(self, mode_label: str):
         """Handle mode selector change.
@@ -1309,31 +1302,19 @@ class SnapshotCaptureWindow(QMainWindow):
             file_path += ".gif"
             is_gif = True
 
-        edit_annotations = self._get_setting("edit_annotations", False)
-
         try:
             cmds.waitCursor(state=True)
             logger.debug(f"Capturing {frame_count} frames...")
 
             images = command.capture_frame_range(self.panel_name, start_frame, end_frame, width, height)
-            cmds.waitCursor(state=False)
 
-            # Show annotation editor if enabled (uses first frame as reference)
-            annotations = None
-            if edit_annotations and images:
-                annotations = show_annotation_editor(images[0], self, background_color)
-                if annotations is None:
-                    # User cancelled annotation editor
-                    return
-
-            cmds.waitCursor(state=True)
             cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
 
             if is_mp4:
-                command.save_mp4(images, file_path, fps, background_color, loop=loop, quality=quality, annotations=annotations)
+                command.save_mp4(images, file_path, fps, background_color, loop=loop, quality=quality)
                 logger.info(f"Saved MP4: {file_path}")
             else:
-                command.save_gif(images, file_path, fps, background_color, loop=loop, annotations=annotations)
+                command.save_gif(images, file_path, fps, background_color, loop=loop)
                 logger.info(f"Saved GIF: {file_path}")
 
             self._update_last_save_dir(file_path)
@@ -1477,25 +1458,16 @@ class SnapshotCaptureWindow(QMainWindow):
             file_path += ".gif"
             is_gif = True
 
-        # Show annotation editor if enabled (uses first frame as reference)
-        edit_annotations = self._get_setting("edit_annotations_rec", False)
-        annotations = None
-        if edit_annotations and frames:
-            annotations = show_annotation_editor(frames[0], self, background_color)
-            if annotations is None:
-                # User cancelled annotation editor
-                return
-
         # Save animation
         try:
             cmds.waitCursor(state=True)
             cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
 
             if is_mp4:
-                command.save_mp4(frames, file_path, fps, background_color, loop=loop, quality=quality, annotations=annotations)
+                command.save_mp4(frames, file_path, fps, background_color, loop=loop, quality=quality)
                 logger.info(f"Saved recorded MP4: {file_path}")
             else:
-                command.save_gif(frames, file_path, fps, background_color, loop=loop, annotations=annotations)
+                command.save_gif(frames, file_path, fps, background_color, loop=loop)
                 logger.info(f"Saved recorded GIF: {file_path}")
 
             self._update_last_save_dir(file_path)

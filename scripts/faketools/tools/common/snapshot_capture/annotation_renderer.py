@@ -88,7 +88,7 @@ def _render_annotation(image: Image.Image, annotation: AnnotationType) -> Image.
     Returns:
         Image with annotation rendered.
     """
-    from .annotation import ArrowAnnotation, EllipseAnnotation, RectangleAnnotation, TextAnnotation
+    from .annotation import ArrowAnnotation, EllipseAnnotation, LineAnnotation, NumberAnnotation, RectangleAnnotation, TextAnnotation
 
     if isinstance(annotation, TextAnnotation):
         return _render_text(image, annotation)
@@ -98,6 +98,10 @@ def _render_annotation(image: Image.Image, annotation: AnnotationType) -> Image.
         return _render_rectangle(image, annotation)
     elif isinstance(annotation, EllipseAnnotation):
         return _render_ellipse(image, annotation)
+    elif isinstance(annotation, LineAnnotation):
+        return _render_line(image, annotation)
+    elif isinstance(annotation, NumberAnnotation):
+        return _render_number(image, annotation)
     return image
 
 
@@ -298,6 +302,79 @@ def _render_ellipse(image: Image.Image, annotation) -> Image.Image:
         outline=annotation.color,
         width=line_width,
     )
+
+    return image
+
+
+def _render_line(image: Image.Image, annotation) -> Image.Image:
+    """Render line annotation (no arrowhead).
+
+    Args:
+        image: PIL Image to draw on.
+        annotation: LineAnnotation object.
+
+    Returns:
+        Image with line rendered.
+    """
+    from PIL import ImageDraw
+
+    # Convert ratio to pixel positions
+    start_x = int(annotation.start_x * image.width)
+    start_y = int(annotation.start_y * image.height)
+    end_x = int(annotation.end_x * image.width)
+    end_y = int(annotation.end_y * image.height)
+
+    # Scale line width based on image resolution
+    scale_factor = max(image.width / 640, image.height / 360)
+    line_width = max(1, int(annotation.line_width * scale_factor))
+
+    draw = ImageDraw.Draw(image)
+    draw.line([(start_x, start_y), (end_x, end_y)], fill=annotation.color, width=line_width)
+
+    return image
+
+
+def _render_number(image: Image.Image, annotation) -> Image.Image:
+    """Render numbered circle annotation.
+
+    Args:
+        image: PIL Image to draw on.
+        annotation: NumberAnnotation object.
+
+    Returns:
+        Image with numbered circle rendered.
+    """
+    from PIL import ImageDraw
+
+    # Convert ratio to pixel positions
+    cx = int(annotation.x * image.width)
+    cy = int(annotation.y * image.height)
+
+    # Scale size based on image resolution
+    scale_factor = max(image.width / 640, image.height / 360)
+    size = max(16, int(annotation.size * scale_factor))
+    r = size // 2
+
+    draw = ImageDraw.Draw(image)
+
+    # Draw filled circle
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=annotation.color)
+
+    # Draw number text (white)
+    font_size = int(size * 0.65)
+    font = _get_font(font_size)
+    text = str(annotation.number)
+
+    # Get text size for centering
+    text_bbox = draw.textbbox((0, 0), text, font=font)
+    text_width = text_bbox[2] - text_bbox[0]
+    text_height = text_bbox[3] - text_bbox[1]
+
+    # Center text in circle
+    text_x = cx - text_width // 2
+    text_y = cy - text_height // 2 - text_bbox[1]  # Adjust for baseline offset
+
+    draw.text((text_x, text_y), text, fill=(255, 255, 255), font=font)
 
     return image
 

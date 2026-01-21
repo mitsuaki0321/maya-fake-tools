@@ -12,10 +12,12 @@ from typing import TYPE_CHECKING
 
 from ....lib_ui import get_maya_main_window
 from ....lib_ui.qt_compat import (
+    QApplication,
     QBrush,
     QColor,
     QColorDialog,
     QDialog,
+    QFont,
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsLineItem,
@@ -40,8 +42,9 @@ from .annotation import (
     AnnotationLayer,
     ArrowAnnotation,
     EllipseAnnotation,
+    LineAnnotation,
+    NumberAnnotation,
     RectangleAnnotation,
-    TextAnnotation,
 )
 
 if TYPE_CHECKING:
@@ -51,18 +54,28 @@ logger = logging.getLogger(__name__)
 
 # Tool modes
 TOOL_SELECT = "select"
-TOOL_TEXT = "text"
+TOOL_LINE = "line"
 TOOL_ARROW = "arrow"
 TOOL_RECT = "rect"
 TOOL_ELLIPSE = "ellipse"
+TOOL_NUMBER = "number"
 
-# Default colors
-DEFAULT_COLORS = {
-    TOOL_TEXT: (255, 255, 255),
-    TOOL_ARROW: (255, 0, 0),
-    TOOL_RECT: (255, 255, 0),
-    TOOL_ELLIPSE: (0, 255, 0),
-}
+# Color presets (RGB, name)
+COLOR_PRESETS = [
+    ((255, 0, 0), "Red"),
+    ((255, 255, 0), "Yellow"),
+    ((0, 255, 0), "Green"),
+]
+
+# Line width presets (pixels, name)
+LINE_WIDTH_PRESETS = [
+    (2, "Thin"),
+    (4, "Medium"),
+    (6, "Thick"),
+]
+
+# Default number size (diameter)
+DEFAULT_NUMBER_SIZE = 24
 
 
 class AnnotationEditorDialog(QDialog):
@@ -89,8 +102,15 @@ class AnnotationEditorDialog(QDialog):
         self._background_color = background_color
         self._annotation_layer = AnnotationLayer()
         self._current_tool = TOOL_SELECT
-        self._current_color = (255, 0, 0)
-        self._line_width = 3
+        self._current_color = (255, 0, 0)  # Default red
+        self._line_width = 4  # Default medium
+        self._next_number = 1  # Auto-increment for number tool
+
+        # Tool buttons storage for state management
+        self._tool_buttons: dict[str, QToolButton] = {}
+        self._color_buttons: list[QPushButton] = []
+        self._custom_color_btn: QPushButton | None = None
+        self._width_buttons: list[QToolButton] = []
 
         self._setup_ui()
         self._load_image()
@@ -144,33 +164,61 @@ class AnnotationEditorDialog(QDialog):
         layout.setSpacing(4)
 
         # Tool buttons
-        self._select_btn = self._create_tool_button("Select", TOOL_SELECT)
-        self._select_btn.setChecked(True)
-        layout.addWidget(self._select_btn)
+        tools = [
+            ("Select", TOOL_SELECT),
+            ("Line", TOOL_LINE),
+            ("Arrow", TOOL_ARROW),
+            ("Rect", TOOL_RECT),
+            ("Ellipse", TOOL_ELLIPSE),
+            ("Number", TOOL_NUMBER),
+        ]
 
-        self._text_btn = self._create_tool_button("Text", TOOL_TEXT)
-        layout.addWidget(self._text_btn)
+        for text, tool in tools:
+            btn = self._create_tool_button(text, tool)
+            self._tool_buttons[tool] = btn
+            layout.addWidget(btn)
 
-        self._arrow_btn = self._create_tool_button("Arrow", TOOL_ARROW)
-        layout.addWidget(self._arrow_btn)
+        # Set select tool as default
+        self._tool_buttons[TOOL_SELECT].setChecked(True)
 
-        self._rect_btn = self._create_tool_button("Rect", TOOL_RECT)
-        layout.addWidget(self._rect_btn)
+        # Separator
+        layout.addWidget(self._create_separator())
 
-        self._ellipse_btn = self._create_tool_button("Ellipse", TOOL_ELLIPSE)
-        layout.addWidget(self._ellipse_btn)
+        # Color preset buttons (circular)
+        for color, name in COLOR_PRESETS:
+            btn = QPushButton()
+            btn.setFixedSize(20, 20)
+            btn.setToolTip(name)
+            self._update_color_button_style(btn, color, selected=(color == self._current_color))
+            btn.clicked.connect(lambda checked=False, c=color: self._on_color_preset(c))
+            self._color_buttons.append(btn)
+            layout.addWidget(btn)
 
-        layout.addSpacing(16)
+        # Custom color button (square)
+        self._custom_color_btn = QPushButton()
+        self._custom_color_btn.setFixedSize(20, 20)
+        self._custom_color_btn.setToolTip("Custom Color")
+        self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 1px solid #888;")
+        self._custom_color_btn.clicked.connect(self._on_custom_color)
+        layout.addWidget(self._custom_color_btn)
 
-        # Color button
-        self._color_btn = QPushButton()
-        self._color_btn.setFixedSize(24, 24)
-        self._color_btn.setToolTip("Annotation Color")
-        self._update_color_button()
-        self._color_btn.clicked.connect(self._on_color_button)
-        layout.addWidget(self._color_btn)
+        # Separator
+        layout.addWidget(self._create_separator())
 
-        layout.addSpacing(16)
+        # Line width buttons
+        for width, name in LINE_WIDTH_PRESETS:
+            btn = QToolButton()
+            btn.setText(name[0])  # T, M, T
+            btn.setCheckable(True)
+            btn.setFixedSize(24, 24)
+            btn.setToolTip(f"{name} ({width}px)")
+            btn.setChecked(width == self._line_width)
+            btn.clicked.connect(lambda checked=False, w=width: self._on_line_width(w))
+            self._width_buttons.append(btn)
+            layout.addWidget(btn)
+
+        # Separator
+        layout.addWidget(self._create_separator())
 
         # Delete button
         delete_btn = QPushButton("Delete")
@@ -179,13 +227,24 @@ class AnnotationEditorDialog(QDialog):
         layout.addWidget(delete_btn)
 
         # Clear button
-        clear_btn = QPushButton("Clear All")
+        clear_btn = QPushButton("Clear")
         clear_btn.setToolTip("Clear All Annotations")
         clear_btn.clicked.connect(self._on_clear_all)
         layout.addWidget(clear_btn)
 
         layout.addStretch()
         return toolbar
+
+    def _create_separator(self) -> QWidget:
+        """Create a vertical separator.
+
+        Returns:
+            Separator widget.
+        """
+        sep = QWidget()
+        sep.setFixedWidth(1)
+        sep.setStyleSheet("background-color: palette(mid);")
+        return sep
 
     def _create_tool_button(self, text: str, tool: str) -> QToolButton:
         """Create a tool button.
@@ -204,6 +263,33 @@ class AnnotationEditorDialog(QDialog):
         btn.clicked.connect(lambda: self._on_tool_selected(tool))
         return btn
 
+    def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
+        """Update color button style.
+
+        Args:
+            btn: Button to update.
+            color: RGB color tuple.
+            selected: Whether this color is selected.
+        """
+        r, g, b = color
+        border = "3px solid #fff" if selected else "1px solid #888"
+        btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: {border}; border-radius: 10px;")
+
+    def _update_color_selection(self):
+        """Update color button selection states."""
+        # Update preset buttons
+        for btn, (color, _) in zip(self._color_buttons, COLOR_PRESETS):
+            self._update_color_button_style(btn, color, selected=(color == self._current_color))
+
+        # Update custom button if current color is not a preset
+        is_preset = any(color == self._current_color for color, _ in COLOR_PRESETS)
+        if self._custom_color_btn:
+            r, g, b = self._current_color
+            if is_preset:
+                self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 1px solid #888;")
+            else:
+                self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 3px solid #fff;")
+
     def _on_tool_selected(self, tool: str):
         """Handle tool selection.
 
@@ -214,32 +300,41 @@ class AnnotationEditorDialog(QDialog):
         self._view.set_tool(tool)
 
         # Update button states
-        self._select_btn.setChecked(tool == TOOL_SELECT)
-        self._text_btn.setChecked(tool == TOOL_TEXT)
-        self._arrow_btn.setChecked(tool == TOOL_ARROW)
-        self._rect_btn.setChecked(tool == TOOL_RECT)
-        self._ellipse_btn.setChecked(tool == TOOL_ELLIPSE)
+        for t, btn in self._tool_buttons.items():
+            btn.setChecked(t == tool)
 
-        # Update color to tool default
-        if tool in DEFAULT_COLORS:
-            self._current_color = DEFAULT_COLORS[tool]
-            self._update_color_button()
-            self._view.set_color(self._current_color)
+    def _on_color_preset(self, color: tuple[int, int, int]):
+        """Handle color preset selection.
 
-    def _on_color_button(self):
-        """Handle color button click."""
+        Args:
+            color: Selected RGB color.
+        """
+        self._current_color = color
+        self._update_color_selection()
+        self._view.set_color(color)
+
+    def _on_custom_color(self):
+        """Handle custom color button click."""
         initial_color = QColor(*self._current_color)
         color = QColorDialog.getColor(initial_color, self, "Select Annotation Color")
 
         if color.isValid():
             self._current_color = (color.red(), color.green(), color.blue())
-            self._update_color_button()
+            self._update_color_selection()
             self._view.set_color(self._current_color)
 
-    def _update_color_button(self):
-        """Update color button appearance."""
-        r, g, b = self._current_color
-        self._color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 1px solid #888;")
+    def _on_line_width(self, width: int):
+        """Handle line width selection.
+
+        Args:
+            width: Selected line width.
+        """
+        self._line_width = width
+        self._view.set_line_width(width)
+
+        # Update button states
+        for btn, (w, _) in zip(self._width_buttons, LINE_WIDTH_PRESETS):
+            btn.setChecked(w == width)
 
     def _on_delete_selected(self):
         """Delete selected annotation items."""
@@ -262,6 +357,10 @@ class AnnotationEditorDialog(QDialog):
                     self._scene.removeItem(item._arrowhead)
                 self._scene.removeItem(item)
         self._annotation_layer.clear()
+
+        # Reset number counter
+        self._next_number = 1
+        self._view.set_next_number(1)
 
     def _load_image(self):
         """Load the image into the scene."""
@@ -299,6 +398,11 @@ class AnnotationEditorDialog(QDialog):
         """
         self._annotation_layer.add(annotation)
 
+        # Update next number if this was a number annotation
+        if isinstance(annotation, NumberAnnotation):
+            self._next_number = annotation.number + 1
+            self._view.set_next_number(self._next_number)
+
     def get_annotations(self) -> AnnotationLayer:
         """Get the annotation layer.
 
@@ -334,14 +438,19 @@ class AnnotationGraphicsView(QGraphicsView):
         super().__init__(scene, parent)
         self._current_tool = TOOL_SELECT
         self._current_color = (255, 0, 0)
-        self._line_width = 3
+        self._line_width = 4
+        self._next_number = 1
 
         self._drawing = False
         self._start_pos = None
         self._current_item = None
+        self._shift_pressed = False
 
         # Custom signal
         self.annotation_created = self._Signal()
+
+        # Set initial cursor
+        self._update_cursor()
 
     def set_tool(self, tool: str):
         """Set the current drawing tool.
@@ -354,6 +463,7 @@ class AnnotationGraphicsView(QGraphicsView):
             self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         else:
             self.setDragMode(QGraphicsView.DragMode.NoDrag)
+        self._update_cursor()
 
     def set_color(self, color: tuple[int, int, int]):
         """Set the current drawing color.
@@ -362,6 +472,49 @@ class AnnotationGraphicsView(QGraphicsView):
             color: RGB tuple.
         """
         self._current_color = color
+
+    def set_line_width(self, width: int):
+        """Set the current line width.
+
+        Args:
+            width: Line width in pixels.
+        """
+        self._line_width = width
+
+    def set_next_number(self, num: int):
+        """Set the next number for number tool.
+
+        Args:
+            num: Next number to use.
+        """
+        self._next_number = num
+
+    def _update_cursor(self):
+        """Update cursor based on current tool."""
+        if self._current_tool == TOOL_SELECT:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+        else:
+            self.setCursor(Qt.CursorShape.CrossCursor)
+
+    def keyPressEvent(self, event):
+        """Handle key press events.
+
+        Args:
+            event: Key event.
+        """
+        if event.key() == Qt.Key.Key_Shift:
+            self._shift_pressed = True
+        super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        """Handle key release events.
+
+        Args:
+            event: Key event.
+        """
+        if event.key() == Qt.Key.Key_Shift:
+            self._shift_pressed = False
+        super().keyReleaseEvent(event)
 
     def mousePressEvent(self, event):
         """Handle mouse press events.
@@ -376,7 +529,13 @@ class AnnotationGraphicsView(QGraphicsView):
         if event.button() == Qt.MouseButton.LeftButton:
             self._drawing = True
             self._start_pos = self.mapToScene(event.pos())
-            self._create_preview_item()
+
+            # Number tool creates on click
+            if self._current_tool == TOOL_NUMBER:
+                self._create_number_annotation()
+                self._drawing = False
+            else:
+                self._create_preview_item()
 
     def mouseMoveEvent(self, event):
         """Handle mouse move events.
@@ -407,6 +566,55 @@ class AnnotationGraphicsView(QGraphicsView):
             end_pos = self.mapToScene(event.pos())
             self._finalize_item(end_pos)
 
+    def _snap_to_angle(self, start_x: float, start_y: float, end_x: float, end_y: float) -> tuple[float, float]:
+        """Snap line to 45-degree increments.
+
+        Args:
+            start_x: Start X position.
+            start_y: Start Y position.
+            end_x: End X position.
+            end_y: End Y position.
+
+        Returns:
+            Snapped (end_x, end_y) tuple.
+        """
+        dx = end_x - start_x
+        dy = end_y - start_y
+        length = math.sqrt(dx * dx + dy * dy)
+
+        if length < 1:
+            return end_x, end_y
+
+        # Calculate angle and snap to nearest 45 degrees
+        angle = math.atan2(dy, dx)
+        snap_angle = round(angle / (math.pi / 4)) * (math.pi / 4)
+
+        # Calculate new end point
+        new_end_x = start_x + length * math.cos(snap_angle)
+        new_end_y = start_y + length * math.sin(snap_angle)
+
+        return new_end_x, new_end_y
+
+    def _constrain_to_square(self, x1: float, y1: float, x2: float, y2: float) -> tuple[float, float]:
+        """Constrain rectangle to square.
+
+        Args:
+            x1, y1: Start position.
+            x2, y2: Current end position.
+
+        Returns:
+            Constrained (x2, y2) tuple.
+        """
+        dx = x2 - x1
+        dy = y2 - y1
+        size = max(abs(dx), abs(dy))
+
+        # Preserve direction
+        new_x2 = x1 + size * (1 if dx >= 0 else -1)
+        new_y2 = y1 + size * (1 if dy >= 0 else -1)
+
+        return new_x2, new_y2
+
     def _create_preview_item(self):
         """Create a preview item for the current tool."""
         pen = QPen(QColor(*self._current_color))
@@ -414,7 +622,7 @@ class AnnotationGraphicsView(QGraphicsView):
 
         x, y = self._start_pos.x(), self._start_pos.y()
 
-        if self._current_tool == TOOL_ARROW:
+        if self._current_tool in (TOOL_LINE, TOOL_ARROW):
             self._current_item = QGraphicsLineItem(x, y, x, y)
             self._current_item.setPen(pen)
             self.scene().addItem(self._current_item)
@@ -431,10 +639,6 @@ class AnnotationGraphicsView(QGraphicsView):
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene().addItem(self._current_item)
 
-        elif self._current_tool == TOOL_TEXT:
-            # For text, show input dialog on click
-            self._current_item = None
-
     def _update_preview_item(self, current_pos):
         """Update the preview item during drag.
 
@@ -447,19 +651,18 @@ class AnnotationGraphicsView(QGraphicsView):
         x1, y1 = self._start_pos.x(), self._start_pos.y()
         x2, y2 = current_pos.x(), current_pos.y()
 
-        if self._current_tool == TOOL_ARROW:
+        # Check for modifiers
+        modifiers = QApplication.keyboardModifiers() if hasattr(self, "_shift_pressed") else None
+        shift_pressed = bool(modifiers and modifiers & Qt.KeyboardModifier.ShiftModifier) or self._shift_pressed
+
+        if self._current_tool in (TOOL_LINE, TOOL_ARROW):
+            if shift_pressed:
+                x2, y2 = self._snap_to_angle(x1, y1, x2, y2)
             self._current_item.setLine(x1, y1, x2, y2)
 
-        elif self._current_tool == TOOL_RECT:
-            # Calculate normalized rectangle
-            left = min(x1, x2)
-            top = min(y1, y2)
-            width = abs(x2 - x1)
-            height = abs(y2 - y1)
-            self._current_item.setRect(left, top, width, height)
-
-        elif self._current_tool == TOOL_ELLIPSE:
-            # Calculate normalized ellipse
+        elif self._current_tool == TOOL_RECT or self._current_tool == TOOL_ELLIPSE:
+            if shift_pressed:
+                x2, y2 = self._constrain_to_square(x1, y1, x2, y2)
             left = min(x1, x2)
             top = min(y1, y2)
             width = abs(x2 - x1)
@@ -482,6 +685,16 @@ class AnnotationGraphicsView(QGraphicsView):
         x1, y1 = self._start_pos.x(), self._start_pos.y()
         x2, y2 = end_pos.x(), end_pos.y()
 
+        # Check for shift modifier
+        modifiers = QApplication.keyboardModifiers() if hasattr(self, "_shift_pressed") else None
+        shift_pressed = bool(modifiers and modifiers & Qt.KeyboardModifier.ShiftModifier) or self._shift_pressed
+
+        # Apply constraints
+        if self._current_tool in (TOOL_LINE, TOOL_ARROW) and shift_pressed:
+            x2, y2 = self._snap_to_angle(x1, y1, x2, y2)
+        elif self._current_tool in (TOOL_RECT, TOOL_ELLIPSE) and shift_pressed:
+            x2, y2 = self._constrain_to_square(x1, y1, x2, y2)
+
         # Convert to ratios
         ratio_x1 = x1 / width
         ratio_y1 = y1 / height
@@ -490,7 +703,29 @@ class AnnotationGraphicsView(QGraphicsView):
 
         annotation = None
 
-        if self._current_tool == TOOL_ARROW:
+        if self._current_tool == TOOL_LINE:
+            # Require minimum length
+            if abs(x2 - x1) < 10 and abs(y2 - y1) < 10:
+                if self._current_item:
+                    self.scene().removeItem(self._current_item)
+                self._current_item = None
+                return
+
+            annotation = LineAnnotation(
+                start_x=ratio_x1,
+                start_y=ratio_y1,
+                end_x=ratio_x2,
+                end_y=ratio_y2,
+                color=self._current_color,
+                line_width=self._line_width,
+            )
+            if self._current_item:
+                self._current_item.annotation_id = annotation.id
+                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+                # Update line to final position
+                self._current_item.setLine(x1, y1, x2, y2)
+
+        elif self._current_tool == TOOL_ARROW:
             # Require minimum length
             if abs(x2 - x1) < 10 and abs(y2 - y1) < 10:
                 if self._current_item:
@@ -543,6 +778,12 @@ class AnnotationGraphicsView(QGraphicsView):
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
                 self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+                # Update rect to final position
+                left_px = min(x1, x2)
+                top_px = min(y1, y2)
+                w_px = abs(x2 - x1)
+                h_px = abs(y2 - y1)
+                self._current_item.setRect(left_px, top_px, w_px, h_px)
 
         elif self._current_tool == TOOL_ELLIPSE:
             # Require minimum size
@@ -568,48 +809,68 @@ class AnnotationGraphicsView(QGraphicsView):
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
                 self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-
-        elif self._current_tool == TOOL_TEXT:
-            # Create text at click position
-            self._create_text_annotation(ratio_x1, ratio_y1)
-            return
+                # Update ellipse to final position
+                left_px = min(x1, x2)
+                top_px = min(y1, y2)
+                w_px = abs(x2 - x1)
+                h_px = abs(y2 - y1)
+                self._current_item.setRect(left_px, top_px, w_px, h_px)
 
         if annotation:
             self.annotation_created.emit(annotation)
 
         self._current_item = None
 
-    def _create_text_annotation(self, ratio_x: float, ratio_y: float):
-        """Create a text annotation via input dialog.
+    def _create_number_annotation(self):
+        """Create a number annotation at the current position."""
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
 
-        Args:
-            ratio_x: X position ratio.
-            ratio_y: Y position ratio.
-        """
-        from ....lib_ui.qt_compat import QInputDialog
+        if width == 0 or height == 0:
+            return
 
-        text, ok = QInputDialog.getText(self, "Add Text", "Enter annotation text:")
-        if ok and text:
-            annotation = TextAnnotation(
-                text=text,
-                x=ratio_x,
-                y=ratio_y,
-                color=self._current_color,
-            )
+        x = self._start_pos.x()
+        y = self._start_pos.y()
 
-            # Create visual item
-            scene_rect = self.scene().sceneRect()
-            x = ratio_x * scene_rect.width()
-            y = ratio_y * scene_rect.height()
+        # Convert to ratios
+        ratio_x = x / width
+        ratio_y = y / height
 
-            text_item = QGraphicsTextItem(text)
-            text_item.setPos(x, y)
-            text_item.setDefaultTextColor(QColor(*self._current_color))
-            text_item.annotation_id = annotation.id
-            text_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-            self.scene().addItem(text_item)
+        annotation = NumberAnnotation(
+            x=ratio_x,
+            y=ratio_y,
+            number=self._next_number,
+            color=self._current_color,
+            size=DEFAULT_NUMBER_SIZE,
+        )
 
-            self.annotation_created.emit(annotation)
+        # Create visual item (circle with number)
+        size = DEFAULT_NUMBER_SIZE
+        r = size / 2
+
+        # Draw filled circle
+        ellipse_item = QGraphicsEllipseItem(x - r, y - r, size, size)
+        ellipse_item.setBrush(QBrush(QColor(*self._current_color)))
+        ellipse_item.setPen(QPen(Qt.PenStyle.NoPen))
+        ellipse_item.annotation_id = annotation.id
+        ellipse_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.scene().addItem(ellipse_item)
+
+        # Draw number text
+        text_item = QGraphicsTextItem(str(self._next_number))
+        text_item.setDefaultTextColor(QColor(255, 255, 255))
+        font = QFont()
+        font.setPixelSize(int(size * 0.65))
+        font.setBold(True)
+        text_item.setFont(font)
+
+        # Center text in circle
+        text_rect = text_item.boundingRect()
+        text_item.setPos(x - text_rect.width() / 2, y - text_rect.height() / 2)
+        text_item.setParentItem(ellipse_item)  # Make text follow circle
+
+        self.annotation_created.emit(annotation)
 
     def _add_arrowhead(self, line_item: QGraphicsLineItem, x1: float, y1: float, x2: float, y2: float):
         """Add an arrowhead polygon to the scene.

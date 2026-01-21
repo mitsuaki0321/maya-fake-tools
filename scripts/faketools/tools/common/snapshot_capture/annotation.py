@@ -133,8 +133,62 @@ class EllipseAnnotation:
         return "ellipse"
 
 
+@dataclass
+class LineAnnotation:
+    """Line annotation (no arrowhead).
+
+    Attributes:
+        id: Unique identifier.
+        start_x: Start horizontal position (0.0-1.0 ratio).
+        start_y: Start vertical position (0.0-1.0 ratio).
+        end_x: End horizontal position (0.0-1.0 ratio).
+        end_y: End vertical position (0.0-1.0 ratio).
+        color: Line color as RGB tuple.
+        line_width: Line thickness in pixels.
+    """
+
+    start_x: float
+    start_y: float
+    end_x: float
+    end_y: float
+    color: tuple[int, int, int] = (255, 0, 0)
+    line_width: int = 3
+    id: str = field(default_factory=_generate_id)
+
+    @property
+    def annotation_type(self) -> Literal["line"]:
+        """Return annotation type identifier."""
+        return "line"
+
+
+@dataclass
+class NumberAnnotation:
+    """Numbered circle annotation.
+
+    Attributes:
+        id: Unique identifier.
+        x: Center horizontal position (0.0-1.0 ratio).
+        y: Center vertical position (0.0-1.0 ratio).
+        number: Display number.
+        color: Circle fill color as RGB tuple.
+        size: Circle diameter in pixels.
+    """
+
+    x: float
+    y: float
+    number: int = 1
+    color: tuple[int, int, int] = (255, 0, 0)
+    size: int = 24
+    id: str = field(default_factory=_generate_id)
+
+    @property
+    def annotation_type(self) -> Literal["number"]:
+        """Return annotation type identifier."""
+        return "number"
+
+
 # Type alias for any annotation type
-AnnotationType = Union[TextAnnotation, ArrowAnnotation, RectangleAnnotation, EllipseAnnotation]
+AnnotationType = Union[TextAnnotation, ArrowAnnotation, RectangleAnnotation, EllipseAnnotation, LineAnnotation, NumberAnnotation]
 
 
 @dataclass
@@ -208,6 +262,8 @@ DEFAULT_COLORS = {
     "arrow": (255, 0, 0),
     "rectangle": (255, 255, 0),
     "ellipse": (0, 255, 0),
+    "line": (255, 0, 0),
+    "number": (255, 0, 0),
 }
 
 # Default line widths
@@ -215,4 +271,8 @@ DEFAULT_LINE_WIDTHS = {
     "arrow": 3,
     "rectangle": 2,
     "ellipse": 2,
+    "line": 3,
 }
+
+# Default number size (diameter in pixels)
+DEFAULT_NUMBER_SIZE = 24
