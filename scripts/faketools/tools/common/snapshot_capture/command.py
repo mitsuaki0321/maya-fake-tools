@@ -16,7 +16,8 @@ from .constants import (
     MIN_RESOLUTION,
     RESOLUTION_PRESETS,
 )
-from .image import composite_with_background, save_gif, save_png
+from .export_handlers import get_available_handlers, get_handler
+from .image import composite_with_background, save_gif, save_mp4, save_png
 
 __all__ = [
     # constants
@@ -38,4 +39,8 @@ __all__ = [
     "composite_with_background",
     "save_png",
     "save_gif",
+    "save_mp4",
+    # export handlers
+    "get_handler",
+    "get_available_handlers",
 ]

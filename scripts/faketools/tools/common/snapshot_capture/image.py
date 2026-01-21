@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from PIL import Image
 
+    from .annotation import AnnotationLayer
+
 
 def composite_with_background(
     image: Image.Image,
@@ -42,6 +44,7 @@ def save_png(
     image: Image.Image,
     output_path: str,
     background_color: tuple[int, int, int] | None = None,
+    annotations: AnnotationLayer | None = None,
 ) -> str:
     """Save image as PNG.
 
@@ -49,10 +52,17 @@ def save_png(
         image: PIL Image object.
         output_path: Output file path.
         background_color: RGB tuple or None for transparent.
+        annotations: Optional annotation layer to render on image.
 
     Returns:
         Output file path.
     """
+    # Apply annotations if provided
+    if annotations and len(annotations) > 0:
+        from .annotation_renderer import render_annotations
+
+        image = render_annotations(image, annotations)
+
     image = composite_with_background(image, background_color)
     image.save(output_path, "PNG")
     return output_path
@@ -64,8 +74,12 @@ def save_gif(
     fps: int = 24,
     background_color: tuple[int, int, int] | None = None,
     loop: bool = True,
+    annotations: AnnotationLayer | None = None,
 ) -> str:
     """Save images as animated GIF.
+
+    This function delegates to GifExportHandler for the actual export.
+    Kept for backward compatibility.
 
     Args:
         images: List of PIL Image objects.
@@ -73,63 +87,59 @@ def save_gif(
         fps: Frames per second for GIF playback.
         background_color: RGB tuple or None for transparent.
         loop: If True, GIF loops forever. If False, plays once.
+        annotations: Optional annotation layer to render on images.
 
     Returns:
         Output file path.
     """
-    from PIL import Image
+    from .export_handlers import GifExportHandler
 
-    if not images:
-        raise ValueError("No images to save")
+    return GifExportHandler.export(
+        images=images,
+        output_path=output_path,
+        fps=fps,
+        background_color=background_color,
+        loop=loop,
+        annotations=annotations,
+    )
 
-    # Calculate duration per frame in milliseconds
-    duration = int(1000 / fps)
 
-    # Process images
-    gif_images = []
-    for img in images:
-        img = composite_with_background(img, background_color)
+def save_mp4(
+    images: list[Image.Image],
+    output_path: str,
+    fps: int = 24,
+    background_color: tuple[int, int, int] | None = None,
+    loop: bool = True,
+    quality: str = "medium",
+    annotations: AnnotationLayer | None = None,
+) -> str:
+    """Save images as MP4 video.
 
-        if background_color is None:
-            # Transparent GIF: use RGBA and specify transparency
-            if img.mode != "RGBA":
-                img = img.convert("RGBA")
-            # Convert to palette with transparency
-            alpha = img.split()[3]
-            img = img.convert("RGB").convert("P", palette=Image.ADAPTIVE, colors=255)
-            # Set transparent color index for pixels with low alpha
-            mask = Image.eval(alpha, lambda a: 255 if a < 128 else 0)
-            img.paste(255, mask)  # Index 255 will be transparent
-            gif_images.append(img)
-        else:
-            # Solid background: convert to palette
-            if img.mode != "RGB":
-                img = img.convert("RGB")
-            gif_images.append(img.convert("P", palette=Image.ADAPTIVE, colors=256))
+    Requires FFmpeg to be installed and available in PATH.
 
-    # Save as animated GIF
-    # loop=0 means loop forever, loop=1 means play once
-    loop_count = 0 if loop else 1
+    Args:
+        images: List of PIL Image objects.
+        output_path: Output file path.
+        fps: Frames per second.
+        background_color: RGB tuple or None (defaults to black).
+        loop: Ignored for MP4.
+        quality: Quality preset ("high", "medium", "low").
+        annotations: Optional annotation layer to render on images.
 
-    if background_color is None:
-        # With transparency
-        gif_images[0].save(
-            output_path,
-            save_all=True,
-            append_images=gif_images[1:],
-            duration=duration,
-            loop=loop_count,
-            transparency=255,
-            disposal=2,  # Restore to background
-        )
-    else:
-        # Without transparency
-        gif_images[0].save(
-            output_path,
-            save_all=True,
-            append_images=gif_images[1:],
-            duration=duration,
-            loop=loop_count,
-        )
+    Returns:
+        Output file path.
 
-    return output_path
+    Raises:
+        RuntimeError: If FFmpeg is not available.
+    """
+    from .export_handlers import Mp4ExportHandler
+
+    return Mp4ExportHandler.export(
+        images=images,
+        output_path=output_path,
+        fps=fps,
+        background_color=background_color,
+        loop=loop,
+        quality=quality,
+        annotations=annotations,
+    )

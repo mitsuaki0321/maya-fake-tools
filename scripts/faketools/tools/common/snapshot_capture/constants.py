@@ -83,3 +83,15 @@ BACKGROUND_COLORS = {
 }
 
 DEFAULT_BACKGROUND = "Transparent"
+
+# Export format options
+EXPORT_FORMATS = ["gif", "mp4"]
+DEFAULT_EXPORT_FORMAT = "gif"
+
+# MP4 quality presets
+MP4_QUALITY_PRESETS = {
+    "high": "High (Best quality, larger file)",
+    "medium": "Medium (Balanced)",
+    "low": "Low (Smaller file, faster)",
+}
+DEFAULT_MP4_QUALITY = "medium"

@@ -39,7 +39,9 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.widgets import IconButton, IconButtonStyle, IconToolButton
 from . import command
+from .export_handlers import Mp4ExportHandler
 from .external_handlers import get_available_handlers
+from .ui_annotation import show_annotation_editor
 from .ui_recording import RecordingController
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,12 @@ MAX_GIF_FRAMES = 500
 FPS_OPTIONS = [10, 12, 15, 24, 30, 50, 60]
 DELAY_OPTIONS = [0, 1, 2, 3]
 TRIM_OPTIONS = [0, 1, 2, 3]
+QUALITY_OPTIONS = ["high", "medium", "low"]
+QUALITY_LABELS = {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low",
+}
 
 _instance = None
 
@@ -750,7 +758,15 @@ class SnapshotCaptureWindow(QMainWindow):
 
             self.option_menu.addSeparator()
 
-        # GIF: Loop, FPS submenu
+            # Edit annotations before save
+            edit_annotations_action = self.option_menu.addAction("Edit Annotations")
+            edit_annotations_action.setCheckable(True)
+            edit_annotations_action.setChecked(self._get_setting("edit_annotations", False))
+            edit_annotations_action.triggered.connect(lambda checked: self._set_setting("edit_annotations", checked))
+
+            self.option_menu.addSeparator()
+
+        # GIF: Loop, FPS submenu, MP4 quality
         if self._current_mode == "gif":
             loop_action = self.option_menu.addAction("Loop")
             loop_action.setCheckable(True)
@@ -763,7 +779,18 @@ class SnapshotCaptureWindow(QMainWindow):
             for fps in FPS_OPTIONS:
                 fps_menu.addAction(str(fps), lambda checked=False, f=fps: self._on_fps_selected(f))
 
-        # Rec: Loop, FPS, Delay, Trim, Show options
+            # MP4 quality submenu (only if FFmpeg available)
+            if Mp4ExportHandler.is_available():
+                current_quality = self._get_setting("mp4_quality", "medium")
+                quality_label = QUALITY_LABELS.get(current_quality, "Medium")
+                quality_menu = self.option_menu.addMenu(f"MP4 Quality: {quality_label}")
+                for q in QUALITY_OPTIONS:
+                    quality_menu.addAction(
+                        QUALITY_LABELS[q],
+                        lambda checked=False, qv=q: self._set_setting("mp4_quality", qv),
+                    )
+
+        # Rec: Loop, FPS, Delay, Trim, Show options, MP4 quality
         elif self._current_mode == "rec":
             # Loop option
             loop_action = self.option_menu.addAction("Loop")
@@ -776,6 +803,17 @@ class SnapshotCaptureWindow(QMainWindow):
             fps_menu = self.option_menu.addMenu(f"FPS: {current_fps}")
             for fps in FPS_OPTIONS:
                 fps_menu.addAction(str(fps), lambda checked=False, f=fps: self._on_fps_selected(f))
+
+            # MP4 quality submenu (only if FFmpeg available)
+            if Mp4ExportHandler.is_available():
+                current_quality = self._get_setting("mp4_quality", "medium")
+                quality_label = QUALITY_LABELS.get(current_quality, "Medium")
+                quality_menu = self.option_menu.addMenu(f"MP4 Quality: {quality_label}")
+                for q in QUALITY_OPTIONS:
+                    quality_menu.addAction(
+                        QUALITY_LABELS[q],
+                        lambda checked=False, qv=q: self._set_setting("mp4_quality", qv),
+                    )
 
             # Delay submenu
             delay_val = self._get_setting("delay", 3)
@@ -806,6 +844,14 @@ class SnapshotCaptureWindow(QMainWindow):
             show_keys_action.setCheckable(True)
             show_keys_action.setChecked(self._get_setting("show_keys", False))
             show_keys_action.triggered.connect(lambda checked: self._set_setting("show_keys", checked))
+
+            self.option_menu.addSeparator()
+
+            # Edit annotations before save
+            edit_annotations_rec_action = self.option_menu.addAction("Edit Annotations")
+            edit_annotations_rec_action.setCheckable(True)
+            edit_annotations_rec_action.setChecked(self._get_setting("edit_annotations_rec", False))
+            edit_annotations_rec_action.triggered.connect(lambda checked: self._set_setting("edit_annotations_rec", checked))
 
     def _on_mode_changed(self, mode_label: str):
         """Handle mode selector change.
@@ -1072,7 +1118,7 @@ class SnapshotCaptureWindow(QMainWindow):
             clipboard.setMimeData(mime_data)
 
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(message="Copied to clipboard!", pos="midCenter", fade=True)
+            cmds.inViewMessage(amg="Copied to clipboard!", pos="midCenter", fade=True)
             logger.info("PNG copied to clipboard")
         except Exception as e:
             cmds.waitCursor(state=False)
@@ -1154,42 +1200,67 @@ class SnapshotCaptureWindow(QMainWindow):
 
         width, height = self._get_resolution()
         background_color = self._get_background_color()
-
-        # Get save path from user
-        file_path = cmds.fileDialog2(
-            fileFilter="PNG Images (*.png)",
-            dialogStyle=2,
-            fileMode=0,
-            caption="Save Snapshot",
-            startingDirectory=self._get_save_directory(),
-        )
-
-        if not file_path:
-            return
-
-        file_path = file_path[0]
-        if not file_path.lower().endswith(".png"):
-            file_path += ".png"
+        edit_annotations = self._get_setting("edit_annotations", False)
 
         try:
             cmds.waitCursor(state=True)
-            cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
 
+            # Capture image first
             image = command.capture_frame(self.panel_name, width, height)
-            command.save_png(image, file_path, background_color)
+            cmds.waitCursor(state=False)
+
+            # Show annotation editor if enabled
+            annotations = None
+            if edit_annotations:
+                annotations = show_annotation_editor(image, self, background_color)
+                if annotations is None:
+                    # User cancelled annotation editor
+                    return
+
+            # Get save path from user
+            file_path = cmds.fileDialog2(
+                fileFilter="PNG Images (*.png)",
+                dialogStyle=2,
+                fileMode=0,
+                caption="Save Snapshot",
+                startingDirectory=self._get_save_directory(),
+            )
+
+            if not file_path:
+                return
+
+            file_path = file_path[0]
+            if not file_path.lower().endswith(".png"):
+                file_path += ".png"
+
+            cmds.waitCursor(state=True)
+            cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
+
+            command.save_png(image, file_path, background_color, annotations=annotations)
 
             self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
+            cmds.inViewMessage(amg="Saved!", pos="midCenter", fade=True)
             logger.info(f"Saved snapshot: {file_path}")
         except Exception as e:
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(clear="midCenter")
+            cmds.inViewMessage(amg="", pos="midCenter", fade=True, fadeOutTime=0.0)
             cmds.warning(f"Failed to save PNG: {e}")
             logger.error(f"Failed to save: {e}")
 
+    def _get_animation_file_filter(self) -> str:
+        """Build file filter for animation export.
+
+        Returns:
+            File filter string with available formats.
+        """
+        filters = ["GIF Images (*.gif)"]
+        if Mp4ExportHandler.is_available():
+            filters.append("MP4 Video (*.mp4)")
+        return ";;".join(filters)
+
     def _on_capture_gif(self):
-        """Handle GIF capture button click."""
+        """Handle GIF/MP4 capture button click."""
         if not self.panel_name or not cmds.modelPanel(self.panel_name, exists=True):
             cmds.warning("No panel available for capture")
             return
@@ -1202,6 +1273,7 @@ class SnapshotCaptureWindow(QMainWindow):
         fps = self._get_setting("fps", 24)
         loop = self._get_setting("loop", True)
         background_color = self._get_background_color()
+        quality = self._get_setting("mp4_quality", "medium")
 
         # Validate frame range
         if start_frame > end_frame:
@@ -1213,12 +1285,13 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning(f"Frame range too large (max {MAX_GIF_FRAMES} frames)")
             return
 
-        # Get save path from user
+        # Get save path from user (with format selection)
+        file_filter = self._get_animation_file_filter()
         file_path = cmds.fileDialog2(
-            fileFilter="GIF Images (*.gif)",
+            fileFilter=file_filter,
             dialogStyle=2,
             fileMode=0,
-            caption="Save GIF",
+            caption="Save Animation",
             startingDirectory=self._get_save_directory(),
         )
 
@@ -1226,28 +1299,51 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         file_path = file_path[0]
-        if not file_path.lower().endswith(".gif"):
+
+        # Determine format from extension
+        is_mp4 = file_path.lower().endswith(".mp4")
+        is_gif = file_path.lower().endswith(".gif")
+
+        if not is_mp4 and not is_gif:
+            # Default to GIF if no recognized extension
             file_path += ".gif"
+            is_gif = True
+
+        edit_annotations = self._get_setting("edit_annotations", False)
 
         try:
             cmds.waitCursor(state=True)
-            cmds.inViewMessage(message="Capturing...", pos="midCenter", fade=False)
             logger.debug(f"Capturing {frame_count} frames...")
 
             images = command.capture_frame_range(self.panel_name, start_frame, end_frame, width, height)
+            cmds.waitCursor(state=False)
 
-            cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
-            command.save_gif(images, file_path, fps, background_color, loop=loop)
+            # Show annotation editor if enabled (uses first frame as reference)
+            annotations = None
+            if edit_annotations and images:
+                annotations = show_annotation_editor(images[0], self, background_color)
+                if annotations is None:
+                    # User cancelled annotation editor
+                    return
+
+            cmds.waitCursor(state=True)
+            cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
+
+            if is_mp4:
+                command.save_mp4(images, file_path, fps, background_color, loop=loop, quality=quality, annotations=annotations)
+                logger.info(f"Saved MP4: {file_path}")
+            else:
+                command.save_gif(images, file_path, fps, background_color, loop=loop, annotations=annotations)
+                logger.info(f"Saved GIF: {file_path}")
 
             self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
-            logger.info(f"Saved GIF: {file_path}")
+            cmds.inViewMessage(amg="Saved!", pos="midCenter", fade=True)
         except Exception as e:
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(clear="midCenter")
-            cmds.warning(f"Failed to capture GIF: {e}")
-            logger.error(f"Failed to capture GIF: {e}")
+            cmds.inViewMessage(amg="", pos="midCenter", fade=True, fadeOutTime=0.0)
+            cmds.warning(f"Failed to save: {e}")
+            logger.error(f"Failed to save: {e}")
 
     def _on_record_toggle(self):
         """Toggle recording state."""
@@ -1313,7 +1409,7 @@ class SnapshotCaptureWindow(QMainWindow):
     def _on_countdown_cancelled(self):
         """Handle countdown cancellation from controller."""
         self._update_record_button_icon("rec")
-        cmds.inViewMessage(message="Cancelled", pos="midCenter", fade=True)
+        cmds.inViewMessage(amg="Cancelled", pos="midCenter", fade=True)
 
     def _on_recording_started(self):
         """Handle recording start signal from controller."""
@@ -1354,13 +1450,16 @@ class SnapshotCaptureWindow(QMainWindow):
         # Get settings
         fps = self._get_setting("fps", 24)
         loop = self._get_setting("loop", True)
+        quality = self._get_setting("mp4_quality", "medium")
+        background_color = self._get_background_color()
 
-        # Get save path from user
+        # Get save path from user (with format selection)
+        file_filter = self._get_animation_file_filter()
         file_path = cmds.fileDialog2(
-            fileFilter="GIF Images (*.gif)",
+            fileFilter=file_filter,
             dialogStyle=2,
             fileMode=0,
-            caption="Save Recorded GIF",
+            caption="Save Recording",
             startingDirectory=self._get_save_directory(),
         )
 
@@ -1368,25 +1467,45 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         file_path = file_path[0]
-        if not file_path.lower().endswith(".gif"):
-            file_path += ".gif"
 
-        # Save GIF
+        # Determine format from extension
+        is_mp4 = file_path.lower().endswith(".mp4")
+        is_gif = file_path.lower().endswith(".gif")
+
+        if not is_mp4 and not is_gif:
+            # Default to GIF if no recognized extension
+            file_path += ".gif"
+            is_gif = True
+
+        # Show annotation editor if enabled (uses first frame as reference)
+        edit_annotations = self._get_setting("edit_annotations_rec", False)
+        annotations = None
+        if edit_annotations and frames:
+            annotations = show_annotation_editor(frames[0], self, background_color)
+            if annotations is None:
+                # User cancelled annotation editor
+                return
+
+        # Save animation
         try:
             cmds.waitCursor(state=True)
-            cmds.inViewMessage(message="Saving...", pos="midCenter", fade=False)
+            cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
 
-            command.save_gif(frames, file_path, fps, loop=loop)
+            if is_mp4:
+                command.save_mp4(frames, file_path, fps, background_color, loop=loop, quality=quality, annotations=annotations)
+                logger.info(f"Saved recorded MP4: {file_path}")
+            else:
+                command.save_gif(frames, file_path, fps, background_color, loop=loop, annotations=annotations)
+                logger.info(f"Saved recorded GIF: {file_path}")
 
             self._update_last_save_dir(file_path)
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(message="Saved!", pos="midCenter", fade=True)
-            logger.info(f"Saved recorded GIF: {file_path}")
+            cmds.inViewMessage(amg="Saved!", pos="midCenter", fade=True)
         except Exception as e:
             cmds.waitCursor(state=False)
-            cmds.inViewMessage(clear="midCenter")
-            cmds.warning(f"Failed to save GIF: {e}")
-            logger.error(f"Failed to save GIF: {e}")
+            cmds.inViewMessage(amg="", pos="midCenter", fade=True, fadeOutTime=0.0)
+            cmds.warning(f"Failed to save: {e}")
+            logger.error(f"Failed to save: {e}")
 
     def closeEvent(self, event):
         """Handle window close - cleanup Maya UI elements."""
