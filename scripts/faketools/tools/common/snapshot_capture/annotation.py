@@ -169,16 +169,18 @@ class NumberAnnotation:
         id: Unique identifier.
         x: Center horizontal position (0.0-1.0 ratio).
         y: Center vertical position (0.0-1.0 ratio).
+        radius: Circle radius (0.0-1.0 ratio, relative to image width).
         number: Display number.
-        color: Circle fill color as RGB tuple.
-        size: Circle diameter in pixels.
+        color: Circle outline color as RGB tuple.
+        line_width: Line thickness in pixels.
     """
 
     x: float
     y: float
+    radius: float = 0.02  # Default ~20px at 1000px width
     number: int = 1
     color: tuple[int, int, int] = (255, 0, 0)
-    size: int = 24
+    line_width: int = 2
     id: str = field(default_factory=_generate_id)
 
     @property

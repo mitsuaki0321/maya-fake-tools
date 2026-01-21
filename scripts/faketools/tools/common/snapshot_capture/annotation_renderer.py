@@ -1,11 +1,12 @@
-"""Annotation renderer using PIL.
+"""Annotation renderer using aggdraw for antialiased drawing.
 
-Renders annotation objects onto PIL images. Follows the same patterns
-as input_overlay.py for consistent drawing behavior.
+Renders annotation objects onto PIL images with antialiasing support.
+Falls back to PIL ImageDraw if aggdraw is not available.
 """
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING
 
@@ -13,6 +14,17 @@ if TYPE_CHECKING:
     from PIL import Image
 
     from .annotation import AnnotationLayer, AnnotationType
+
+logger = logging.getLogger(__name__)
+
+# Try to import aggdraw for antialiased drawing
+try:
+    import aggdraw
+
+    AGGDRAW_AVAILABLE = True
+except ImportError:
+    AGGDRAW_AVAILABLE = False
+    logger.warning("aggdraw not available, falling back to PIL (no antialiasing)")
 
 
 def render_annotations(
@@ -105,8 +117,25 @@ def _render_annotation(image: Image.Image, annotation: AnnotationType) -> Image.
     return image
 
 
+def _color_to_aggdraw(color: tuple) -> str:
+    """Convert RGB/RGBA tuple to aggdraw color string.
+
+    Args:
+        color: RGB or RGBA tuple.
+
+    Returns:
+        Color string in format suitable for aggdraw.
+    """
+    if len(color) == 3:
+        return f"rgb({color[0]},{color[1]},{color[2]})"
+    else:
+        return f"rgba({color[0]},{color[1]},{color[2]},{color[3]})"
+
+
 def _render_text(image: Image.Image, annotation) -> Image.Image:
     """Render text annotation.
+
+    Note: Text rendering uses PIL ImageDraw as aggdraw has limited text support.
 
     Args:
         image: PIL Image to draw on.
@@ -169,7 +198,7 @@ def _render_text(image: Image.Image, annotation) -> Image.Image:
 
 
 def _render_arrow(image: Image.Image, annotation) -> Image.Image:
-    """Render arrow annotation.
+    """Render arrow annotation with antialiasing.
 
     Args:
         image: PIL Image to draw on.
@@ -178,8 +207,6 @@ def _render_arrow(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with arrow rendered.
     """
-    from PIL import ImageDraw
-
     # Convert ratio to pixel positions
     start_x = int(annotation.start_x * image.width)
     start_y = int(annotation.start_y * image.height)
@@ -190,28 +217,56 @@ def _render_arrow(image: Image.Image, annotation) -> Image.Image:
     scale_factor = max(image.width / 640, image.height / 360)
     line_width = max(1, int(annotation.line_width * scale_factor))
 
-    draw = ImageDraw.Draw(image)
     color = annotation.color
 
-    # Draw main line
-    draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
+        brush = aggdraw.Brush(_color_to_aggdraw(color))
 
-    # Draw arrowhead
-    _draw_arrowhead(draw, start_x, start_y, end_x, end_y, color, line_width)
+        # Draw main line
+        draw.line([start_x, start_y, end_x, end_y], pen)
+
+        # Draw arrowhead
+        _draw_arrowhead_aggdraw(draw, start_x, start_y, end_x, end_y, brush, line_width)
+
+        draw.flush()
+    else:
+        from PIL import ImageDraw
+
+        draw = ImageDraw.Draw(image)
+        draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
+        _draw_arrowhead_pil(draw, start_x, start_y, end_x, end_y, color, line_width)
 
     return image
 
 
-def _draw_arrowhead(
-    draw,
-    start_x: int,
-    start_y: int,
-    end_x: int,
-    end_y: int,
-    color: tuple,
-    line_width: int,
-):
-    """Draw an arrowhead at the end point of a line.
+def _draw_arrowhead_aggdraw(draw, start_x: int, start_y: int, end_x: int, end_y: int, brush, line_width: int):
+    """Draw an arrowhead using aggdraw.
+
+    Args:
+        draw: aggdraw.Draw object.
+        start_x: Line start X.
+        start_y: Line start Y.
+        end_x: Line end X (arrow tip).
+        end_y: Line end Y (arrow tip).
+        brush: aggdraw.Brush for fill.
+        line_width: Line width for scaling.
+    """
+    angle = math.atan2(end_y - start_y, end_x - start_x)
+    arrow_length = line_width * 4
+    arrow_angle = math.pi / 6  # 30 degrees
+
+    left_x = end_x - arrow_length * math.cos(angle - arrow_angle)
+    left_y = end_y - arrow_length * math.sin(angle - arrow_angle)
+    right_x = end_x - arrow_length * math.cos(angle + arrow_angle)
+    right_y = end_y - arrow_length * math.sin(angle + arrow_angle)
+
+    draw.polygon([end_x, end_y, left_x, left_y, right_x, right_y], brush)
+
+
+def _draw_arrowhead_pil(draw, start_x: int, start_y: int, end_x: int, end_y: int, color: tuple, line_width: int):
+    """Draw an arrowhead using PIL (fallback).
 
     Args:
         draw: PIL ImageDraw object.
@@ -222,28 +277,20 @@ def _draw_arrowhead(
         color: Arrow color.
         line_width: Line width for scaling.
     """
-    # Calculate arrow angle
     angle = math.atan2(end_y - start_y, end_x - start_x)
-
-    # Arrowhead parameters (scale with line width)
     arrow_length = line_width * 4
     arrow_angle = math.pi / 6  # 30 degrees
 
-    # Calculate arrowhead points
     left_x = end_x - arrow_length * math.cos(angle - arrow_angle)
     left_y = end_y - arrow_length * math.sin(angle - arrow_angle)
     right_x = end_x - arrow_length * math.cos(angle + arrow_angle)
     right_y = end_y - arrow_length * math.sin(angle + arrow_angle)
 
-    # Draw filled triangle arrowhead
-    draw.polygon(
-        [(end_x, end_y), (left_x, left_y), (right_x, right_y)],
-        fill=color,
-    )
+    draw.polygon([(end_x, end_y), (left_x, left_y), (right_x, right_y)], fill=color)
 
 
 def _render_rectangle(image: Image.Image, annotation) -> Image.Image:
-    """Render rectangle annotation.
+    """Render rectangle annotation with antialiasing.
 
     Args:
         image: PIL Image to draw on.
@@ -252,8 +299,6 @@ def _render_rectangle(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with rectangle rendered.
     """
-    from PIL import ImageDraw
-
     # Convert ratio to pixel positions
     x = int(annotation.x * image.width)
     y = int(annotation.y * image.height)
@@ -264,18 +309,26 @@ def _render_rectangle(image: Image.Image, annotation) -> Image.Image:
     scale_factor = max(image.width / 640, image.height / 360)
     line_width = max(1, int(annotation.line_width * scale_factor))
 
-    draw = ImageDraw.Draw(image)
-    draw.rectangle(
-        [x, y, x + w, y + h],
-        outline=annotation.color,
-        width=line_width,
-    )
+    color = annotation.color
+
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
+
+        # aggdraw rectangle takes [x1, y1, x2, y2]
+        draw.rectangle([x, y, x + w, y + h], pen)
+        draw.flush()
+    else:
+        from PIL import ImageDraw
+
+        draw = ImageDraw.Draw(image)
+        draw.rectangle([x, y, x + w, y + h], outline=color, width=line_width)
 
     return image
 
 
 def _render_ellipse(image: Image.Image, annotation) -> Image.Image:
-    """Render ellipse annotation.
+    """Render ellipse annotation with antialiasing.
 
     Args:
         image: PIL Image to draw on.
@@ -284,8 +337,6 @@ def _render_ellipse(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with ellipse rendered.
     """
-    from PIL import ImageDraw
-
     # Convert ratio to pixel positions
     cx = int(annotation.center_x * image.width)
     cy = int(annotation.center_y * image.height)
@@ -296,18 +347,26 @@ def _render_ellipse(image: Image.Image, annotation) -> Image.Image:
     scale_factor = max(image.width / 640, image.height / 360)
     line_width = max(1, int(annotation.line_width * scale_factor))
 
-    draw = ImageDraw.Draw(image)
-    draw.ellipse(
-        [cx - rx, cy - ry, cx + rx, cy + ry],
-        outline=annotation.color,
-        width=line_width,
-    )
+    color = annotation.color
+
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
+
+        # aggdraw ellipse takes [x1, y1, x2, y2]
+        draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], pen)
+        draw.flush()
+    else:
+        from PIL import ImageDraw
+
+        draw = ImageDraw.Draw(image)
+        draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], outline=color, width=line_width)
 
     return image
 
 
 def _render_line(image: Image.Image, annotation) -> Image.Image:
-    """Render line annotation (no arrowhead).
+    """Render line annotation with antialiasing.
 
     Args:
         image: PIL Image to draw on.
@@ -316,8 +375,6 @@ def _render_line(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with line rendered.
     """
-    from PIL import ImageDraw
-
     # Convert ratio to pixel positions
     start_x = int(annotation.start_x * image.width)
     start_y = int(annotation.start_y * image.height)
@@ -328,14 +385,25 @@ def _render_line(image: Image.Image, annotation) -> Image.Image:
     scale_factor = max(image.width / 640, image.height / 360)
     line_width = max(1, int(annotation.line_width * scale_factor))
 
-    draw = ImageDraw.Draw(image)
-    draw.line([(start_x, start_y), (end_x, end_y)], fill=annotation.color, width=line_width)
+    color = annotation.color
+
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
+
+        draw.line([start_x, start_y, end_x, end_y], pen)
+        draw.flush()
+    else:
+        from PIL import ImageDraw
+
+        draw = ImageDraw.Draw(image)
+        draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
 
     return image
 
 
 def _render_number(image: Image.Image, annotation) -> Image.Image:
-    """Render numbered circle annotation.
+    """Render numbered circle annotation with antialiasing.
 
     Args:
         image: PIL Image to draw on.
@@ -349,32 +417,33 @@ def _render_number(image: Image.Image, annotation) -> Image.Image:
     # Convert ratio to pixel positions
     cx = int(annotation.x * image.width)
     cy = int(annotation.y * image.height)
+    r = int(annotation.radius * image.width)
 
-    # Scale size based on image resolution
+    # Scale line width based on image resolution
     scale_factor = max(image.width / 640, image.height / 360)
-    size = max(16, int(annotation.size * scale_factor))
-    r = size // 2
+    line_width = max(1, int(annotation.line_width * scale_factor))
 
-    draw = ImageDraw.Draw(image)
+    color = annotation.color
 
-    # Draw filled circle
-    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=annotation.color)
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
 
-    # Draw number text (white)
-    font_size = int(size * 0.65)
+        # Draw outline circle
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], pen)
+        draw.flush()
+    else:
+        draw = ImageDraw.Draw(image)
+        draw.ellipse([cx - r, cy - r, cx + r, cy + r], outline=color, width=line_width)
+
+    # Draw number text using PIL (aggdraw has limited text support)
+    pil_draw = ImageDraw.Draw(image)
+    font_size = max(10, int(r * 1.2))
     font = _get_font(font_size)
     text = str(annotation.number)
 
-    # Get text size for centering
-    text_bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = text_bbox[2] - text_bbox[0]
-    text_height = text_bbox[3] - text_bbox[1]
-
-    # Center text in circle
-    text_x = cx - text_width // 2
-    text_y = cy - text_height // 2 - text_bbox[1]  # Adjust for baseline offset
-
-    draw.text((text_x, text_y), text, fill=(255, 255, 255), font=font)
+    # Use anchor="mm" for middle-middle alignment
+    pil_draw.text((cx, cy), text, fill=color, font=font, anchor="mm")
 
     return image
 

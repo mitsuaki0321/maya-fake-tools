@@ -18,6 +18,7 @@ from ....lib_ui.qt_compat import (
     QColorDialog,
     QDialog,
     QFont,
+    QFrame,
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsLineItem,
@@ -60,22 +61,31 @@ TOOL_RECT = "rect"
 TOOL_ELLIPSE = "ellipse"
 TOOL_NUMBER = "number"
 
-# Color presets (RGB, name)
+# Tool icons (Unicode characters)
+TOOL_ICONS = {
+    TOOL_SELECT: "\u25c7",  # ◇
+    TOOL_LINE: "\u2571",  # ╱
+    TOOL_ARROW: "\u2192",  # →
+    TOOL_RECT: "\u25a2",  # ▢
+    TOOL_ELLIPSE: "\u25cb",  # ○
+    TOOL_NUMBER: "\u2460",  # ①
+}
+
+# Color presets (RGB hex, RGB tuple, name)
 COLOR_PRESETS = [
-    ((255, 0, 0), "Red"),
-    ((255, 255, 0), "Yellow"),
-    ((0, 255, 0), "Green"),
+    ("#e53935", (229, 57, 53), "Red"),
+    ("#fdd835", (253, 216, 53), "Yellow"),
+    ("#43a047", (67, 160, 71), "Green"),
+    ("#ffffff", (255, 255, 255), "White"),
+    ("#212121", (33, 33, 33), "Black"),
 ]
 
-# Line width presets (pixels, name)
+# Line width presets (pixels, visual height, name)
 LINE_WIDTH_PRESETS = [
-    (2, "Thin"),
-    (4, "Medium"),
-    (6, "Thick"),
+    (2, 1, "Thin"),
+    (4, 3, "Medium"),
+    (6, 5, "Thick"),
 ]
-
-# Default number size (diameter)
-DEFAULT_NUMBER_SIZE = 24
 
 
 class AnnotationEditorDialog(QDialog):
@@ -102,9 +112,12 @@ class AnnotationEditorDialog(QDialog):
         self._background_color = background_color
         self._annotation_layer = AnnotationLayer()
         self._current_tool = TOOL_SELECT
-        self._current_color = (255, 0, 0)  # Default red
+        self._current_color = (229, 57, 53)  # Default red (#e53935)
         self._line_width = 4  # Default medium
         self._next_number = 1  # Auto-increment for number tool
+
+        # Undo stack for annotation history
+        self._undo_stack: list[tuple] = []
 
         # Tool buttons storage for state management
         self._tool_buttons: dict[str, QToolButton] = {}
@@ -160,108 +173,217 @@ class AnnotationEditorDialog(QDialog):
         """
         toolbar = QWidget()
         layout = QHBoxLayout(toolbar)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(5, 2, 5, 2)
         layout.setSpacing(4)
 
-        # Tool buttons
+        # Tool group container with background
+        tool_group = QWidget()
+        tool_group.setStyleSheet("background: #2e2e2e; border-radius: 5px;")
+        tool_group_layout = QHBoxLayout(tool_group)
+        tool_group_layout.setContentsMargins(2, 1, 2, 1)
+        tool_group_layout.setSpacing(1)
+
+        # Tool buttons with icons
         tools = [
-            ("Select", TOOL_SELECT),
-            ("Line", TOOL_LINE),
-            ("Arrow", TOOL_ARROW),
-            ("Rect", TOOL_RECT),
-            ("Ellipse", TOOL_ELLIPSE),
-            ("Number", TOOL_NUMBER),
+            (TOOL_SELECT, "Select"),
+            (TOOL_LINE, "Line"),
+            (TOOL_ARROW, "Arrow"),
+            (TOOL_RECT, "Rectangle"),
+            (TOOL_ELLIPSE, "Ellipse"),
+            (TOOL_NUMBER, "Number"),
         ]
 
-        for text, tool in tools:
-            btn = self._create_tool_button(text, tool)
+        for tool, tooltip in tools:
+            btn = self._create_tool_button(TOOL_ICONS[tool], tool, tooltip)
             self._tool_buttons[tool] = btn
-            layout.addWidget(btn)
+            tool_group_layout.addWidget(btn)
+
+        layout.addWidget(tool_group)
 
         # Set select tool as default
         self._tool_buttons[TOOL_SELECT].setChecked(True)
+        self._update_tool_button_styles()
 
-        # Separator
-        layout.addWidget(self._create_separator())
+        # Divider
+        layout.addWidget(self._create_divider())
+
+        # Color group
+        color_group = QWidget()
+        color_group_layout = QHBoxLayout(color_group)
+        color_group_layout.setContentsMargins(4, 0, 4, 0)
+        color_group_layout.setSpacing(5)
 
         # Color preset buttons (circular)
-        for color, name in COLOR_PRESETS:
+        for _hex_color, rgb_color, name in COLOR_PRESETS:
             btn = QPushButton()
-            btn.setFixedSize(20, 20)
+            btn.setFixedSize(16, 16)
             btn.setToolTip(name)
-            self._update_color_button_style(btn, color, selected=(color == self._current_color))
-            btn.clicked.connect(lambda checked=False, c=color: self._on_color_preset(c))
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._update_color_button_style(btn, rgb_color, selected=(rgb_color == self._current_color))
+            btn.clicked.connect(lambda checked=False, c=rgb_color: self._on_color_preset(c))
             self._color_buttons.append(btn)
-            layout.addWidget(btn)
+            color_group_layout.addWidget(btn)
 
         # Custom color button (square)
         self._custom_color_btn = QPushButton()
-        self._custom_color_btn.setFixedSize(20, 20)
+        self._custom_color_btn.setFixedSize(16, 16)
         self._custom_color_btn.setToolTip("Custom Color")
-        self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 1px solid #888;")
+        self._custom_color_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._update_custom_color_button()
         self._custom_color_btn.clicked.connect(self._on_custom_color)
-        layout.addWidget(self._custom_color_btn)
+        color_group_layout.addWidget(self._custom_color_btn)
 
-        # Separator
-        layout.addWidget(self._create_separator())
+        layout.addWidget(color_group)
 
-        # Line width buttons
-        for width, name in LINE_WIDTH_PRESETS:
-            btn = QToolButton()
-            btn.setText(name[0])  # T, M, T
-            btn.setCheckable(True)
-            btn.setFixedSize(24, 24)
-            btn.setToolTip(f"{name} ({width}px)")
-            btn.setChecked(width == self._line_width)
-            btn.clicked.connect(lambda checked=False, w=width: self._on_line_width(w))
+        # Divider
+        layout.addWidget(self._create_divider())
+
+        # Stroke width group container with background
+        stroke_group = QWidget()
+        stroke_group.setStyleSheet("background: #2e2e2e; border-radius: 4px;")
+        stroke_group_layout = QHBoxLayout(stroke_group)
+        stroke_group_layout.setContentsMargins(2, 1, 2, 1)
+        stroke_group_layout.setSpacing(1)
+
+        # Line width buttons with visual stroke
+        for width, visual_height, name in LINE_WIDTH_PRESETS:
+            btn = self._create_stroke_button(width, visual_height, name)
             self._width_buttons.append(btn)
-            layout.addWidget(btn)
+            stroke_group_layout.addWidget(btn)
 
-        # Separator
-        layout.addWidget(self._create_separator())
+        layout.addWidget(stroke_group)
 
-        # Delete button
-        delete_btn = QPushButton("Delete")
-        delete_btn.setToolTip("Delete Selected")
-        delete_btn.clicked.connect(self._on_delete_selected)
-        layout.addWidget(delete_btn)
+        # Spacer to push action buttons to the right
+        layout.addStretch()
 
-        # Clear button
+        # Undo button (Maya default style)
+        undo_btn = QPushButton("Undo")
+        undo_btn.setToolTip("Undo Last Action")
+        undo_btn.clicked.connect(self._on_undo)
+        layout.addWidget(undo_btn)
+
+        # Clear button (Maya default style)
         clear_btn = QPushButton("Clear")
         clear_btn.setToolTip("Clear All Annotations")
         clear_btn.clicked.connect(self._on_clear_all)
         layout.addWidget(clear_btn)
 
-        layout.addStretch()
         return toolbar
 
-    def _create_separator(self) -> QWidget:
-        """Create a vertical separator.
+    def _create_divider(self) -> QWidget:
+        """Create a vertical divider between tool groups.
 
         Returns:
-            Separator widget.
+            Divider widget.
         """
-        sep = QWidget()
-        sep.setFixedWidth(1)
-        sep.setStyleSheet("background-color: palette(mid);")
-        return sep
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.VLine)
+        divider.setFixedWidth(1)
+        divider.setFixedHeight(20)
+        divider.setStyleSheet("background-color: #555;")
+        divider.setContentsMargins(6, 0, 6, 0)
+        return divider
 
-    def _create_tool_button(self, text: str, tool: str) -> QToolButton:
-        """Create a tool button.
+    def _create_tool_button(self, icon: str, tool: str, tooltip: str) -> QToolButton:
+        """Create a tool button with icon.
 
         Args:
-            text: Button text.
+            icon: Unicode icon character.
             tool: Tool identifier.
+            tooltip: Tooltip text.
 
         Returns:
             Configured QToolButton.
         """
         btn = QToolButton()
-        btn.setText(text)
+        btn.setText(icon)
         btn.setCheckable(True)
-        btn.setToolTip(f"{text} Tool")
+        btn.setFixedSize(26, 26)
+        btn.setToolTip(f"{tooltip} Tool")
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.clicked.connect(lambda: self._on_tool_selected(tool))
         return btn
+
+    def _update_tool_button_styles(self):
+        """Update tool button styles based on selection state."""
+        for _tool, btn in self._tool_buttons.items():
+            if btn.isChecked():
+                btn.setStyleSheet("QToolButton { background: #505050; color: #fff; border: none; border-radius: 4px; font-size: 13px; }")
+            else:
+                btn.setStyleSheet(
+                    "QToolButton { background: transparent; color: #888; border: none; border-radius: 4px; font-size: 13px; }"
+                    "QToolButton:hover { background: #404040; color: #ccc; }"
+                )
+
+    def _create_stroke_button(self, width: int, visual_height: int, name: str) -> QToolButton:
+        """Create a stroke width button with visual line representation.
+
+        Args:
+            width: Actual line width in pixels.
+            visual_height: Visual height of the stroke indicator.
+            name: Name for tooltip.
+
+        Returns:
+            Configured QToolButton.
+        """
+        btn = QToolButton()
+        btn.setCheckable(True)
+        btn.setFixedSize(26, 26)
+        btn.setToolTip(f"{name} ({width}px)")
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setChecked(width == self._line_width)
+
+        # Store visual height for styling
+        btn.setProperty("visual_height", visual_height)
+        btn.setProperty("line_width", width)
+
+        self._update_stroke_button_style(btn)
+        btn.clicked.connect(lambda checked=False, w=width: self._on_line_width(w))
+        return btn
+
+    def _update_stroke_button_style(self, btn: QToolButton):
+        """Update stroke button style based on state.
+
+        Args:
+            btn: Button to update.
+        """
+        visual_height = btn.property("visual_height")
+        is_selected = btn.isChecked()
+
+        # We'll use text-based visual representation
+        # Using box-drawing characters for stroke visualization
+        if visual_height == 1:
+            stroke_char = "─"  # Thin
+        elif visual_height == 3:
+            stroke_char = "━"  # Medium
+        else:
+            stroke_char = "▬"  # Thick
+
+        btn.setText(stroke_char)
+        if is_selected:
+            btn.setStyleSheet("""
+                QToolButton {
+                    background: #4a4a4a;
+                    color: #fff;
+                    border: none;
+                    border-radius: 3px;
+                    font-size: 14px;
+                }
+            """)
+        else:
+            btn.setStyleSheet("""
+                QToolButton {
+                    background: transparent;
+                    color: #777;
+                    border: none;
+                    border-radius: 3px;
+                    font-size: 14px;
+                }
+                QToolButton:hover {
+                    background: #404040;
+                    color: #bbb;
+                }
+            """)
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
         """Update color button style.
@@ -272,23 +394,35 @@ class AnnotationEditorDialog(QDialog):
             selected: Whether this color is selected.
         """
         r, g, b = color
-        border = "3px solid #fff" if selected else "1px solid #888"
-        btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: {border}; border-radius: 10px;")
+        if selected:
+            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px #333;")
+        else:
+            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 8px;")
+
+    def _update_custom_color_button(self):
+        """Update custom color button to show current color or default gray."""
+        if not self._custom_color_btn:
+            return
+
+        # Check if current color is a preset
+        is_preset = any(rgb_color == self._current_color for _, rgb_color, _ in COLOR_PRESETS)
+
+        if is_preset:
+            # Show gray when a preset is selected (no selection border)
+            self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 2px solid transparent; border-radius: 3px;")
+        else:
+            # Show current custom color with white selection border
+            r, g, b = self._current_color
+            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 3px;")
 
     def _update_color_selection(self):
         """Update color button selection states."""
         # Update preset buttons
-        for btn, (color, _) in zip(self._color_buttons, COLOR_PRESETS):
-            self._update_color_button_style(btn, color, selected=(color == self._current_color))
+        for btn, (_, rgb_color, _) in zip(self._color_buttons, COLOR_PRESETS):
+            self._update_color_button_style(btn, rgb_color, selected=(rgb_color == self._current_color))
 
-        # Update custom button if current color is not a preset
-        is_preset = any(color == self._current_color for color, _ in COLOR_PRESETS)
-        if self._custom_color_btn:
-            r, g, b = self._current_color
-            if is_preset:
-                self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 1px solid #888;")
-            else:
-                self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 3px solid #fff;")
+        # Update custom color button
+        self._update_custom_color_button()
 
     def _on_tool_selected(self, tool: str):
         """Handle tool selection.
@@ -302,6 +436,9 @@ class AnnotationEditorDialog(QDialog):
         # Update button states
         for t, btn in self._tool_buttons.items():
             btn.setChecked(t == tool)
+
+        # Update button styles
+        self._update_tool_button_styles()
 
     def _on_color_preset(self, color: tuple[int, int, int]):
         """Handle color preset selection.
@@ -332,9 +469,43 @@ class AnnotationEditorDialog(QDialog):
         self._line_width = width
         self._view.set_line_width(width)
 
-        # Update button states
-        for btn, (w, _) in zip(self._width_buttons, LINE_WIDTH_PRESETS):
+        # Update button states and styles
+        for btn, (w, _, _) in zip(self._width_buttons, LINE_WIDTH_PRESETS):
             btn.setChecked(w == width)
+            self._update_stroke_button_style(btn)
+
+    def _on_undo(self):
+        """Undo the last annotation creation."""
+        if not self._undo_stack:
+            return
+
+        # Get last created annotation info
+        annotation_id, item = self._undo_stack.pop()
+
+        # Remove from annotation layer
+        self._annotation_layer.remove(annotation_id)
+
+        # Remove from scene
+        if item and item.scene():
+            # Also remove arrowhead if present
+            if hasattr(item, "_arrowhead") and item._arrowhead.scene():
+                self._scene.removeItem(item._arrowhead)
+            self._scene.removeItem(item)
+
+        # If this was a number annotation, recalculate the next number
+        if self._next_number > 1:
+            # Check what numbers are still in use
+            remaining_numbers = set()
+            for ann in self._annotation_layer.annotations:
+                if isinstance(ann, NumberAnnotation):
+                    remaining_numbers.add(ann.number)
+
+            # Find the next available number
+            next_num = 1
+            while next_num in remaining_numbers:
+                next_num += 1
+            self._next_number = next_num
+            self._view.set_next_number(self._next_number)
 
     def _on_delete_selected(self):
         """Delete selected annotation items."""
@@ -342,6 +513,8 @@ class AnnotationEditorDialog(QDialog):
         for item in selected:
             if hasattr(item, "annotation_id"):
                 self._annotation_layer.remove(item.annotation_id)
+                # Remove from undo stack if present
+                self._undo_stack = [(aid, itm) for aid, itm in self._undo_stack if aid != item.annotation_id]
             # Also remove arrowhead if present
             if hasattr(item, "_arrowhead"):
                 self._scene.removeItem(item._arrowhead)
@@ -357,6 +530,9 @@ class AnnotationEditorDialog(QDialog):
                     self._scene.removeItem(item._arrowhead)
                 self._scene.removeItem(item)
         self._annotation_layer.clear()
+
+        # Clear undo stack
+        self._undo_stack.clear()
 
         # Reset number counter
         self._next_number = 1
@@ -398,6 +574,16 @@ class AnnotationEditorDialog(QDialog):
         """
         self._annotation_layer.add(annotation)
 
+        # Find the graphics item for this annotation (for undo support)
+        item = None
+        for scene_item in self._scene.items():
+            if hasattr(scene_item, "annotation_id") and scene_item.annotation_id == annotation.id:
+                item = scene_item
+                break
+
+        # Add to undo stack
+        self._undo_stack.append((annotation.id, item))
+
         # Update next number if this was a number annotation
         if isinstance(annotation, NumberAnnotation):
             self._next_number = annotation.number + 1
@@ -437,7 +623,7 @@ class AnnotationGraphicsView(QGraphicsView):
         """
         super().__init__(scene, parent)
         self._current_tool = TOOL_SELECT
-        self._current_color = (255, 0, 0)
+        self._current_color = (229, 57, 53)  # Default red (#e53935)
         self._line_width = 4
         self._next_number = 1
 
@@ -504,7 +690,21 @@ class AnnotationGraphicsView(QGraphicsView):
         """
         if event.key() == Qt.Key.Key_Shift:
             self._shift_pressed = True
+        elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
+            # Delete selected items
+            self._delete_selected_items()
         super().keyPressEvent(event)
+
+    def _delete_selected_items(self):
+        """Delete currently selected annotation items."""
+        selected = self.scene().selectedItems()
+        for item in selected:
+            if hasattr(item, "annotation_id"):
+                # Notify parent dialog to handle deletion
+                parent = self.parent()
+                if parent and hasattr(parent, "_on_delete_selected"):
+                    parent._on_delete_selected()
+                    return
 
     def keyReleaseEvent(self, event):
         """Handle key release events.
@@ -529,13 +729,7 @@ class AnnotationGraphicsView(QGraphicsView):
         if event.button() == Qt.MouseButton.LeftButton:
             self._drawing = True
             self._start_pos = self.mapToScene(event.pos())
-
-            # Number tool creates on click
-            if self._current_tool == TOOL_NUMBER:
-                self._create_number_annotation()
-                self._drawing = False
-            else:
-                self._create_preview_item()
+            self._create_preview_item()
 
     def mouseMoveEvent(self, event):
         """Handle mouse move events.
@@ -633,7 +827,8 @@ class AnnotationGraphicsView(QGraphicsView):
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene().addItem(self._current_item)
 
-        elif self._current_tool == TOOL_ELLIPSE:
+        elif self._current_tool in (TOOL_ELLIPSE, TOOL_NUMBER):
+            # Both ellipse and number use circle preview (number is always circle)
             self._current_item = QGraphicsEllipseItem(x, y, 0, 0)
             self._current_item.setPen(pen)
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
@@ -668,6 +863,11 @@ class AnnotationGraphicsView(QGraphicsView):
             width = abs(x2 - x1)
             height = abs(y2 - y1)
             self._current_item.setRect(left, top, width, height)
+
+        elif self._current_tool == TOOL_NUMBER:
+            # Number: center at start, radius = distance to cursor (always circle)
+            radius = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            self._current_item.setRect(x1 - radius, y1 - radius, radius * 2, radius * 2)
 
     def _finalize_item(self, end_pos):
         """Finalize the item and create annotation.
@@ -816,61 +1016,62 @@ class AnnotationGraphicsView(QGraphicsView):
                 h_px = abs(y2 - y1)
                 self._current_item.setRect(left_px, top_px, w_px, h_px)
 
+        elif self._current_tool == TOOL_NUMBER:
+            # Number: center at start, radius = distance to cursor
+            radius_px = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+
+            # Require minimum size
+            if radius_px < 10:
+                if self._current_item:
+                    self.scene().removeItem(self._current_item)
+                self._current_item = None
+                return
+
+            # Radius as ratio of width
+            radius_ratio = radius_px / width
+
+            annotation = NumberAnnotation(
+                x=ratio_x1,
+                y=ratio_y1,
+                radius=radius_ratio,
+                number=self._next_number,
+                color=self._current_color,
+                line_width=self._line_width,
+            )
+
+            if self._current_item:
+                self._current_item.annotation_id = annotation.id
+                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+                # Update circle to final position (centered at start)
+                self._current_item.setRect(x1 - radius_px, y1 - radius_px, radius_px * 2, radius_px * 2)
+
+                # Add number text
+                self._add_number_text(self._current_item, x1, y1, radius_px)
+
         if annotation:
             self.annotation_created.emit(annotation)
 
         self._current_item = None
 
-    def _create_number_annotation(self):
-        """Create a number annotation at the current position."""
-        scene_rect = self.scene().sceneRect()
-        width = scene_rect.width()
-        height = scene_rect.height()
+    def _add_number_text(self, ellipse_item: QGraphicsEllipseItem, cx: float, cy: float, radius: float):
+        """Add number text to a number annotation circle.
 
-        if width == 0 or height == 0:
-            return
-
-        x = self._start_pos.x()
-        y = self._start_pos.y()
-
-        # Convert to ratios
-        ratio_x = x / width
-        ratio_y = y / height
-
-        annotation = NumberAnnotation(
-            x=ratio_x,
-            y=ratio_y,
-            number=self._next_number,
-            color=self._current_color,
-            size=DEFAULT_NUMBER_SIZE,
-        )
-
-        # Create visual item (circle with number)
-        size = DEFAULT_NUMBER_SIZE
-        r = size / 2
-
-        # Draw filled circle
-        ellipse_item = QGraphicsEllipseItem(x - r, y - r, size, size)
-        ellipse_item.setBrush(QBrush(QColor(*self._current_color)))
-        ellipse_item.setPen(QPen(Qt.PenStyle.NoPen))
-        ellipse_item.annotation_id = annotation.id
-        ellipse_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
-        self.scene().addItem(ellipse_item)
-
-        # Draw number text
+        Args:
+            ellipse_item: The circle item.
+            cx, cy: Center position.
+            radius: Circle radius in pixels.
+        """
         text_item = QGraphicsTextItem(str(self._next_number))
-        text_item.setDefaultTextColor(QColor(255, 255, 255))
+        text_item.setDefaultTextColor(QColor(*self._current_color))
         font = QFont()
-        font.setPixelSize(int(size * 0.65))
+        font.setPixelSize(max(10, int(radius * 1.2)))
         font.setBold(True)
         text_item.setFont(font)
 
         # Center text in circle
         text_rect = text_item.boundingRect()
-        text_item.setPos(x - text_rect.width() / 2, y - text_rect.height() / 2)
-        text_item.setParentItem(ellipse_item)  # Make text follow circle
-
-        self.annotation_created.emit(annotation)
+        text_item.setPos(cx - text_rect.width() / 2, cy - text_rect.height() / 2)
+        text_item.setParentItem(ellipse_item)
 
     def _add_arrowhead(self, line_item: QGraphicsLineItem, x1: float, y1: float, x2: float, y2: float):
         """Add an arrowhead polygon to the scene.
