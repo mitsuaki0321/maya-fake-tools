@@ -46,7 +46,7 @@ from ....lib_ui.qt_compat import (
     shiboken,
 )
 from ....lib_ui.widgets import IconButton, IconButtonStyle, IconToolButton
-from . import command
+from . import command, viewport_display
 from .export_handlers import Mp4ExportHandler
 from .external_handlers import get_available_handlers
 from .ui_annotation import show_annotation_editor
@@ -330,6 +330,7 @@ class SnapshotCaptureWindow(QMainWindow):
         # Add custom menus to panel's menu bar
         self._create_camera_menu()
         self._create_isolate_menu()
+        self._create_display_menu()
 
         # Configure editor
         cmds.modelEditor(
@@ -450,6 +451,66 @@ class SnapshotCaptureWindow(QMainWindow):
 
         cmds.isolateSelect(self.panel_name, removeSelected=True)
         logger.debug("Removed selected objects from isolate set")
+
+    def _create_display_menu(self):
+        """Create Display menu in panel's menu bar."""
+        if not self.panel_name:
+            return
+
+        menu_name = self.panel_name + "DisplayMenu"
+
+        # Delete existing menu if present
+        if cmds.menu(menu_name, exists=True):
+            cmds.deleteUI(menu_name)
+
+        # Create Display menu in panel's menu bar
+        cmds.menu(menu_name, label="Display", parent=self.panel_name)
+
+        # All - display all elements
+        cmds.menuItem(
+            label="All",
+            command=lambda x: viewport_display.display_all(self.panel_name),
+            parent=menu_name,
+        )
+
+        cmds.menuItem(divider=True, parent=menu_name)
+
+        # Preset items from DISPLAY_PRESETS
+        for preset_name in viewport_display.DISPLAY_PRESETS:
+            cmds.menuItem(
+                label=preset_name,
+                command=lambda x, p=preset_name: viewport_display.apply_display_presets(self.panel_name, p),
+                parent=menu_name,
+            )
+
+        cmds.menuItem(divider=True, parent=menu_name)
+
+        # Toggle items from DISPLAY_TOGGLE with checkboxes
+        for toggle_name, flags in viewport_display.DISPLAY_TOGGLE.items():
+            # Query current state using the first flag in the list
+            first_flag = flags[0]
+            current_state = cmds.modelEditor(self.panel_name, query=True, **{first_flag: True})
+            cmds.menuItem(
+                label=toggle_name,
+                checkBox=current_state,
+                command=lambda state, t=toggle_name: self._on_display_toggle(t, state),
+                parent=menu_name,
+            )
+
+    def _on_display_toggle(self, toggle_name: str, state: bool):
+        """Handle display toggle menu item.
+
+        Args:
+            toggle_name: Name of the toggle (e.g., "HUD", "Grid").
+            state: New state from checkbox.
+        """
+        if not self.panel_name:
+            return
+
+        flags = viewport_display.DISPLAY_TOGGLE.get(toggle_name, [])
+        for flag in flags:
+            cmds.modelEditor(self.panel_name, edit=True, **{flag: state})
+        logger.debug(f"Display toggle {toggle_name}: {state}")
 
     def _create_toolbar(self) -> QWidget:
         """Create the 2-row toolbar.

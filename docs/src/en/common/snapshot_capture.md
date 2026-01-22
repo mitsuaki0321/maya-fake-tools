@@ -55,6 +55,22 @@ You can display only selected objects in the viewport from the **Isolate** menu 
 
 > **Note**: Since Maya's standard Show > Isolate Select menu doesn't work in embedded viewports, this custom menu provides equivalent functionality.
 
+#### Display
+
+You can control which elements are displayed in the viewport from the **Display** menu in the menu bar.
+
+| Menu Item | Description |
+|-----------|-------------|
+| All | Enable all display elements |
+| Mesh | Show only polygon meshes |
+| Geometry | Show only geometry (NURBS surfaces, polygons, subdivisions) |
+| Joint | Show only joints |
+| Controller | Show only controllers and NURBS curves |
+| HUD | Toggle HUD (Heads-Up Display) visibility |
+| Grid | Toggle grid visibility |
+
+> **Note**: Selecting Mesh, Geometry, Joint, or Controller will hide all other display elements and show only the selected elements. HUD and Grid are checkbox-style toggles that can be switched without affecting other display settings.
+
 ### Resolution Settings
 
 You can set the output image resolution in the lower toolbar.
