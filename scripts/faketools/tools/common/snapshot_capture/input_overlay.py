@@ -1,6 +1,7 @@
 """Input overlay drawing for captured images.
 
 Draws cursor, click indicators, and keyboard overlay on captured images.
+All drawing functions modify the image in-place for performance optimization.
 """
 
 from __future__ import annotations
@@ -24,6 +25,9 @@ CLICK_COLORS = {
 CLICK_RADIUS = 20
 CLICK_RING_WIDTH = 3
 
+# Font cache to avoid repeated font loading
+_FONT_CACHE: dict[tuple[str, int], ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
+
 
 def draw_cursor(
     image: Image.Image,
@@ -32,13 +36,15 @@ def draw_cursor(
 ) -> Image.Image:
     """Draw a simple arrow cursor on the image.
 
+    Modifies the image in-place for performance.
+
     Args:
-        image: PIL Image to draw on.
+        image: PIL Image to draw on (modified in-place).
         cursor_screen_pos: Cursor position in screen coordinates (x, y).
         capture_bbox: Capture region bounding box (left, top, right, bottom).
 
     Returns:
-        Image with cursor drawn.
+        The same image with cursor drawn.
     """
     # Calculate cursor position relative to capture region
     rel_x = cursor_screen_pos[0] - capture_bbox[0]
@@ -48,9 +54,7 @@ def draw_cursor(
     if not (0 <= rel_x < image.width and 0 <= rel_y < image.height):
         return image
 
-    # Create copy to avoid modifying original
-    result = image.copy()
-    draw = ImageDraw.Draw(result)
+    draw = ImageDraw.Draw(image)
 
     # Draw simple arrow cursor shape
     # Arrow polygon points (tip at cursor position)
@@ -64,7 +68,7 @@ def draw_cursor(
     # Draw cursor with black outline and white fill
     draw.polygon(cursor_points, fill=(255, 255, 255), outline=(0, 0, 0))
 
-    return result
+    return image
 
 
 def draw_click_indicators(
@@ -74,19 +78,20 @@ def draw_click_indicators(
 ) -> Image.Image:
     """Draw click indicators (circles) on the image.
 
+    Modifies the image in-place for performance.
+
     Args:
-        image: PIL Image to draw on.
+        image: PIL Image to draw on (modified in-place).
         click_events: List of recent click events.
         capture_bbox: Capture region bounding box (left, top, right, bottom).
 
     Returns:
-        Image with click indicators drawn.
+        The same image with click indicators drawn.
     """
     if not click_events:
         return image
 
-    result = image.copy()
-    draw = ImageDraw.Draw(result)
+    draw = ImageDraw.Draw(image)
 
     for click in click_events:
         # Calculate position relative to capture region
@@ -107,7 +112,7 @@ def draw_click_indicators(
             # Single click: one circle
             _draw_ring(draw, rel_x, rel_y, CLICK_RADIUS, CLICK_RING_WIDTH, color)
 
-    return result
+    return image
 
 
 def _draw_ring(draw, cx: int, cy: int, radius: int, width: int, color: tuple):
@@ -129,6 +134,45 @@ def _draw_ring(draw, cx: int, cy: int, radius: int, width: int, color: tuple):
     )
 
 
+def _get_cached_font(path: str | None, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Get a cached font or load and cache it.
+
+    Args:
+        path: Font file path, or None for default font.
+        size: Font size in pixels.
+
+    Returns:
+        Cached or newly loaded font.
+    """
+    key = (path, size)
+    if key not in _FONT_CACHE:
+        if path is None:
+            _FONT_CACHE[key] = ImageFont.load_default()
+        else:
+            _FONT_CACHE[key] = ImageFont.truetype(path, size)
+    return _FONT_CACHE[key]
+
+
+def _get_overlay_font(size: int = 14) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Get font for overlay text with fallback.
+
+    Args:
+        size: Font size in pixels.
+
+    Returns:
+        Font for overlay text.
+    """
+    # Try common font paths
+    font_paths = ["arial.ttf", "/System/Library/Fonts/Helvetica.ttc"]
+    for path in font_paths:
+        try:
+            return _get_cached_font(path, size)
+        except OSError:
+            continue
+    # Fall back to default
+    return _get_cached_font(None, size)
+
+
 def draw_key_overlay(
     image: Image.Image,
     pressed_keys: list[str],
@@ -136,34 +180,27 @@ def draw_key_overlay(
 ) -> Image.Image:
     """Draw pressed keys overlay on image.
 
+    Modifies the image in-place for performance.
+
     Args:
-        image: PIL Image to draw on.
+        image: PIL Image to draw on (modified in-place).
         pressed_keys: List of currently pressed key names.
         position: Overlay position ("bottom_left", "bottom_right", "top_left", "top_right").
 
     Returns:
-        Image with key overlay drawn.
+        The same image with key overlay drawn.
     """
     if not pressed_keys:
         return image
 
-    result = image.copy()
-
     # Build key display text
     key_text = " + ".join(pressed_keys)
 
-    # Try to load a font, fall back to default
-    try:
-        font = ImageFont.truetype("arial.ttf", 14)
-    except OSError:
-        try:
-            # Try common font paths
-            font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 14)
-        except OSError:
-            font = ImageFont.load_default()
+    # Get cached font
+    font = _get_overlay_font(14)
 
     # Calculate text size
-    temp_draw = ImageDraw.Draw(result)
+    temp_draw = ImageDraw.Draw(image)
     text_bbox = temp_draw.textbbox((0, 0), key_text, font=font)
     text_width = text_bbox[2] - text_bbox[0]
     text_height = text_bbox[3] - text_bbox[1]
@@ -199,13 +236,13 @@ def draw_key_overlay(
         fill=(0, 0, 0, 180),
     )
 
-    # Composite overlay onto result
-    if result.mode != "RGBA":
-        result = result.convert("RGBA")
-    result = Image.alpha_composite(result, overlay)
+    # Composite overlay onto image
+    if image.mode != "RGBA":
+        image = image.convert("RGBA")
+    image = Image.alpha_composite(image, overlay)
 
     # Draw text
-    draw = ImageDraw.Draw(result)
+    draw = ImageDraw.Draw(image)
     draw.text(
         (box_x + padding, box_y + padding),
         key_text,
@@ -213,4 +250,4 @@ def draw_key_overlay(
         font=font,
     )
 
-    return result
+    return image

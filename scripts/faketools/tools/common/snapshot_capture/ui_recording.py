@@ -7,7 +7,7 @@ import logging
 from ....lib_ui.qt_compat import QObject, QTimer, QWidget, Signal, shiboken
 from .input_monitor import InputMonitor
 from .input_overlay import draw_click_indicators, draw_cursor, draw_key_overlay
-from .screen_capture import capture_screen_region, get_cursor_screen_position, get_widget_screen_bbox
+from .screen_capture import ScreenCapturer, get_cursor_screen_position, get_widget_screen_bbox
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +51,7 @@ class RecordingController(QObject):
         self._countdown_value: int = 0
         self._input_monitor: InputMonitor | None = None
         self._capture_bbox: tuple[int, int, int, int] | None = None
+        self._screen_capturer: ScreenCapturer | None = None
 
         # Capture settings (set via start_recording)
         self._show_cursor: bool = True
@@ -172,6 +173,9 @@ class RecordingController(QObject):
         self._is_recording = True
         self._recorded_frames = []
 
+        # Create screen capturer (uses mss if available for better performance)
+        self._screen_capturer = ScreenCapturer()
+
         # Start input monitor for cursor/keyboard tracking
         if viewport_widget and (self._show_cursor or self._show_keys):
             self._input_monitor = InputMonitor(viewport_widget)
@@ -199,7 +203,7 @@ class RecordingController(QObject):
 
         try:
             # Capture screen region
-            image = capture_screen_region(self._capture_bbox)
+            image = self._screen_capturer.capture(self._capture_bbox)
 
             # Draw cursor overlay
             if self._show_cursor:
@@ -241,6 +245,11 @@ class RecordingController(QObject):
         if self._input_monitor is not None:
             self._input_monitor.stop()
             self._input_monitor = None
+
+        # Close screen capturer
+        if self._screen_capturer is not None:
+            self._screen_capturer.close()
+            self._screen_capturer = None
 
         # Clear capture state
         self._capture_bbox = None
@@ -287,6 +296,10 @@ class RecordingController(QObject):
         if self._input_monitor is not None:
             self._input_monitor.stop()
             self._input_monitor = None
+
+        if self._screen_capturer is not None:
+            self._screen_capturer.close()
+            self._screen_capturer = None
 
         self._capture_bbox = None
         self._recorded_frames = []
