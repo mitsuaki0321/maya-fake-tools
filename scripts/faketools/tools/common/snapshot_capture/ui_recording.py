@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from ....lib_ui.qt_compat import QObject, QTimer, QWidget, Signal, shiboken
 from .input_monitor import InputMonitor
@@ -45,7 +46,8 @@ class RecordingController(QObject):
         """
         super().__init__(parent)
         self._is_recording: bool = False
-        self._recorded_frames: list = []
+        self._recorded_frames: list = []  # [(Image, timestamp), ...]
+        self._start_time: float = 0.0
         self._record_timer: QTimer | None = None
         self._countdown_timer: QTimer | None = None
         self._countdown_value: int = 0
@@ -172,6 +174,7 @@ class RecordingController(QObject):
         """
         self._is_recording = True
         self._recorded_frames = []
+        self._start_time = time.perf_counter()
 
         # Create screen capturer (uses mss if available for better performance)
         self._screen_capturer = ScreenCapturer()
@@ -222,8 +225,10 @@ class RecordingController(QObject):
                 if pressed_keys:
                     image = draw_key_overlay(image, pressed_keys)
 
-            self._recorded_frames.append(image)
-            logger.debug(f"Captured frame ({len(self._recorded_frames)} total)")
+            # Store frame with timestamp (elapsed time from recording start)
+            timestamp = time.perf_counter() - self._start_time
+            self._recorded_frames.append((image, timestamp))
+            logger.debug(f"Captured frame ({len(self._recorded_frames)} total, t={timestamp:.3f}s)")
         except Exception as e:
             logger.error(f"Failed to capture frame: {e}")
 

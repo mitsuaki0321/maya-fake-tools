@@ -67,7 +67,7 @@ def save_png(
 
 
 def save_gif(
-    images: list[Image.Image],
+    images: list[Image.Image] | list[tuple[Image.Image, float]],
     output_path: str,
     fps: int = 24,
     background_color: tuple[int, int, int] | None = None,
@@ -80,9 +80,10 @@ def save_gif(
     Kept for backward compatibility.
 
     Args:
-        images: List of PIL Image objects.
+        images: List of PIL Image objects, or list of (Image, timestamp) tuples
+            for variable frame timing.
         output_path: Output file path.
-        fps: Frames per second for GIF playback.
+        fps: Frames per second for GIF playback (used for fixed timing or last frame).
         background_color: RGB tuple or None for transparent.
         loop: If True, GIF loops forever. If False, plays once.
         annotations: Optional annotation layer to render on images.
@@ -103,7 +104,7 @@ def save_gif(
 
 
 def save_mp4(
-    images: list[Image.Image],
+    images: list[Image.Image] | list[tuple[Image.Image, float]],
     output_path: str,
     fps: int = 24,
     background_color: tuple[int, int, int] | None = None,
@@ -116,9 +117,10 @@ def save_mp4(
     Requires FFmpeg to be installed and available in PATH.
 
     Args:
-        images: List of PIL Image objects.
+        images: List of PIL Image objects, or list of (Image, timestamp) tuples
+            for timing-aware export.
         output_path: Output file path.
-        fps: Frames per second.
+        fps: Frames per second (overridden by average fps from timestamps if provided).
         background_color: RGB tuple or None (defaults to black).
         loop: Ignored for MP4.
         quality: Quality preset ("high", "medium", "low").

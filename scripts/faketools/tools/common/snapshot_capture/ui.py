@@ -1410,7 +1410,7 @@ class SnapshotCaptureWindow(QMainWindow):
         """Handle recording stop signal from controller.
 
         Args:
-            frames: List of captured PIL Image frames.
+            frames: List of (Image, timestamp) tuples from recording.
         """
         # Restore to rec icon
         self._update_record_button_icon("rec")
@@ -1424,12 +1424,32 @@ class SnapshotCaptureWindow(QMainWindow):
 
         # Apply end trim
         trim_sec = self._get_setting("trim", 0)
-        if trim_sec > 0:
-            fps = self._get_setting("fps", 24)
-            frames_to_trim = int(trim_sec * fps)
-            if frames_to_trim > 0 and frames_to_trim < len(frames):
-                frames = frames[:-frames_to_trim]
-                logger.debug(f"Trimmed {frames_to_trim} frames from end ({trim_sec} seconds)")
+        if trim_sec > 0 and len(frames) > 0:
+            # Check if frames have timestamps (tuple format from RecordingController)
+            has_timestamps = isinstance(frames[0], tuple)
+
+            if has_timestamps:
+                # Use timestamps to find trim point
+                total_duration = frames[-1][1]  # Last frame's timestamp
+                trim_threshold = total_duration - trim_sec
+                if trim_threshold > 0:
+                    # Find the first frame to exclude
+                    trim_index = len(frames)
+                    for i, frame in enumerate(frames):
+                        if frame[1] > trim_threshold:
+                            trim_index = i
+                            break
+                    if trim_index < len(frames):
+                        trimmed_count = len(frames) - trim_index
+                        frames = frames[:trim_index]
+                        logger.debug(f"Trimmed {trimmed_count} frames from end ({trim_sec} seconds by timestamp)")
+            else:
+                # Fallback: use FPS-based trim for frames without timestamps
+                fps = self._get_setting("fps", 24)
+                frames_to_trim = int(trim_sec * fps)
+                if frames_to_trim > 0 and frames_to_trim < len(frames):
+                    frames = frames[:-frames_to_trim]
+                    logger.debug(f"Trimmed {frames_to_trim} frames from end ({trim_sec} seconds)")
 
         frame_count = len(frames)
         if frame_count == 0:

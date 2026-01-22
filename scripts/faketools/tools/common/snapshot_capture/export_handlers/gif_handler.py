@@ -36,7 +36,7 @@ class GifExportHandler(BaseExportHandler):
     @classmethod
     def export(
         cls,
-        images: list[Image.Image],
+        images: list[Image.Image] | list[tuple[Image.Image, float]],
         output_path: str,
         fps: int = 24,
         background_color: tuple[int, int, int] | None = None,
@@ -47,9 +47,10 @@ class GifExportHandler(BaseExportHandler):
         """Export images as animated GIF.
 
         Args:
-            images: List of PIL Image objects.
+            images: List of PIL Image objects, or list of (Image, timestamp) tuples
+                for variable frame timing.
             output_path: Output file path.
-            fps: Frames per second for GIF playback.
+            fps: Frames per second for GIF playback (used for fixed timing or last frame).
             background_color: RGB tuple or None for transparent.
             loop: If True, GIF loops forever. If False, plays once.
             quality: Quality preset (ignored for GIF - always uses adaptive palette).
@@ -67,12 +68,29 @@ class GifExportHandler(BaseExportHandler):
         if not images:
             raise ValueError("No images to save")
 
+        # Check if frames have timestamps (tuple format)
+        has_timestamps = images and isinstance(images[0], tuple)
+
+        if has_timestamps:
+            # Calculate variable durations from timestamps
+            durations = []
+            for i in range(len(images) - 1):
+                delay_sec = images[i + 1][1] - images[i][1]
+                # Convert to milliseconds, minimum 20ms (GIF viewers may ignore smaller values)
+                durations.append(max(20, int(delay_sec * 1000)))
+            # Last frame uses the previous duration or fallback to fps-based
+            durations.append(durations[-1] if durations else int(1000 / fps))
+
+            # Extract images from tuples
+            images = [frame[0] for frame in images]
+            duration = durations  # Variable duration list
+        else:
+            # Fixed duration per frame in milliseconds
+            duration = int(1000 / fps)
+
         # Apply annotations if provided
         if annotations and len(annotations) > 0:
             images = render_annotations_to_frames(images, annotations)
-
-        # Calculate duration per frame in milliseconds
-        duration = int(1000 / fps)
 
         # Process images
         gif_images = []

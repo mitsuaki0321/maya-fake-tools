@@ -105,7 +105,7 @@ class Mp4ExportHandler(BaseExportHandler):
     @classmethod
     def export(
         cls,
-        images: list[Image.Image],
+        images: list[Image.Image] | list[tuple[Image.Image, float]],
         output_path: str,
         fps: int = 24,
         background_color: tuple[int, int, int] | None = None,
@@ -116,9 +116,10 @@ class Mp4ExportHandler(BaseExportHandler):
         """Export images as MP4 video.
 
         Args:
-            images: List of PIL Image objects.
+            images: List of PIL Image objects, or list of (Image, timestamp) tuples
+                for timing-aware export.
             output_path: Output file path.
-            fps: Frames per second.
+            fps: Frames per second (overridden by average fps from timestamps if provided).
             background_color: RGB tuple or None (defaults to black).
             loop: Ignored for MP4 (videos don't loop natively).
             quality: Quality preset ("high", "medium", "low").
@@ -136,6 +137,21 @@ class Mp4ExportHandler(BaseExportHandler):
 
         if not images:
             raise ValueError("No images to save")
+
+        # Check if frames have timestamps (tuple format)
+        has_timestamps = images and isinstance(images[0], tuple)
+
+        if has_timestamps:
+            # Calculate average FPS from actual timestamps
+            if len(images) > 1:
+                total_duration = images[-1][1] - images[0][1]
+                if total_duration > 0:
+                    actual_fps = (len(images) - 1) / total_duration
+                    fps = max(1, min(60, round(actual_fps)))  # Clamp to 1-60 range
+                    logger.debug(f"Using average FPS from timestamps: {fps}")
+
+            # Extract images from tuples
+            images = [frame[0] for frame in images]
 
         # Apply annotations if provided
         if annotations and len(annotations) > 0:
