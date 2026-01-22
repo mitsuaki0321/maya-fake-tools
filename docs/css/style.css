@@ -250,6 +250,21 @@ img {
     margin: 1.5em 0;
 }
 
+/* Inline SVG icons - aligned with text */
+img[src$=".svg"] {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 0.25em;
+    height: 1.2em;
+    width: auto;
+    border-radius: 0;
+}
+
+/* SVG icons in table cells - slightly larger */
+td img[src$=".svg"] {
+    height: 1.5em;
+}
+
 /* Hide figure captions (alt text should not be displayed as caption) */
 figure {
     margin: 1.5em 0;

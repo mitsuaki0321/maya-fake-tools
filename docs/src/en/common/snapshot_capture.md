@@ -1,7 +1,7 @@
 ---
 title: Snapshot Capture
 category: common
-description: Capture PNG snapshots and animated GIFs from viewport
+description: Capture PNG snapshots and animated GIF/MP4 from the viewport
 lang: en
 lang-ref: snapshot_capture
 order: 30
@@ -9,35 +9,37 @@ order: 30
 
 ## Overview
 
-Snapshot Capture is a tool for capturing images from the Maya viewport. It offers three capture modes:
+Snapshot Capture is a tool for capturing images from Maya's viewport. It features the following three modes:
 
 | Mode | Description |
 |------|-------------|
 | PNG | Save the current frame as a PNG image or copy to clipboard |
-| GIF | Save timeline range as an animated GIF |
-| Rec | Record the viewport in real-time and save as GIF |
+| GIF | Save the timeline range as an animated GIF or MP4 |
+| Rec | Record the viewport in real-time and save as GIF or MP4 |
+
+It also includes an **Annotation Editor** feature that allows you to add arrows, shapes, and other annotations to captured images.
 
 ## How to Launch
 
-Launch the tool from the dedicated menu or with the following command:
+Launch the tool from the dedicated menu or using the following command:
 
 ```python
 import faketools.tools.common.snapshot_capture.ui
 faketools.tools.common.snapshot_capture.ui.show_ui()
 ```
 
-![image001](../../images/common/snapshot_capture/image001.png)
+![image](../../images/common/snapshot_capture/image001.png)
 
 
 ## Basic Usage
 
-### Viewport Controls
+### Viewport Operations
 
-The tool window contains an embedded model panel (viewport). You can rotate, pan, and zoom the camera just like in a standard Maya viewport.
+The tool window has an embedded model panel (viewport). You can rotate, pan, and zoom the camera just like a standard Maya viewport.
 
 #### Switching Cameras
 
-You can switch the display camera from the **Camera** menu in the menu bar.
+You can switch the displayed camera from the **Camera** menu in the menu bar.
 
 ![image](../../images/common/snapshot_capture/image006.png)
 
@@ -47,11 +49,11 @@ You can display only selected objects in the viewport from the **Isolate** menu 
 
 | Menu Item | Description |
 |-----------|-------------|
-| View Selected | Toggle between showing only selected objects / showing all objects |
-| Add Selected | Add currently selected objects to the isolate display |
-| Remove Selected | Remove currently selected objects from the isolate display |
+| View Selected | Toggle between showing only selected objects / all objects |
+| Add Selected | Add currently selected objects to the Isolate display |
+| Remove Selected | Remove currently selected objects from the Isolate display |
 
-> **Note**: The standard Maya Show > Isolate Select menu does not work in embedded viewports, so this custom menu provides equivalent functionality.
+> **Note**: Since Maya's standard Show > Isolate Select menu doesn't work in embedded viewports, this custom menu provides equivalent functionality.
 
 ### Resolution Settings
 
@@ -59,8 +61,8 @@ You can set the output image resolution in the lower toolbar.
 
 ![image](../../images/common/snapshot_capture/image002.png)
 
-1. **Width/Height input fields**: Enter custom resolution directly
-2. **Preset button** (▼): Select from available presets:
+1. **Width/Height input fields**: Enter any resolution directly
+2. **Preset button** (▼): Select from the following presets:
    - 1920x1080 (Full HD)
    - 1280x720 (HD)
    - 800x600
@@ -70,21 +72,21 @@ You can set the output image resolution in the lower toolbar.
    - 320x240
    - 256x256
    - 128x128
-3. **Set button**: Apply the entered resolution to the viewport
+3. **Set button (→|)**: Apply the entered resolution to the viewport
 
 ## PNG Mode
 
-Captures the current frame as a PNG image.
+Capture the current frame as a PNG image.
 
 ![image](../../images/common/snapshot_capture/image001.png)
 
 ### How to Use
 
 1. Select **PNG** from the mode selector
-2. Set background color if needed (see below)
-3. Execute one of the following:
-   - **Save button** (💾): Opens file dialog to save as PNG file
-   - **Copy button** (📋): Copies image to clipboard
+2. Set the background color if needed (see below)
+3. Do one of the following:
+   - **Save button** ![image](../../images/common/snapshot_capture/snapshot_save.svg): Opens a file dialog to save as a PNG file
+   - **Copy button** ![image](../../images/common/snapshot_capture/snapshot_copy.svg): Copies the image to clipboard
 
 ### Edit in External App
 
@@ -92,98 +94,196 @@ Right-click the **Copy button** to display a context menu.
 
 - **Edit in External App**: Opens the captured image in the OS default image application
 
-This feature saves the captured image as a temporary file and immediately opens it in an external application (Windows Photos, Paint, etc.). Useful for quick editing or reviewing images.
+This feature saves the captured image as a temporary file and immediately opens it in an external application (Windows Photos, Paint, etc.). Useful for quick editing or previewing.
 
-> **Note**: This feature is currently available on Windows only.
+> **Note**: This feature is currently available only on Windows.
 
 ### Background Color Settings
 
-Click the **BG button** to open a color picker and select the background color.
+Click the **BG button** to open a color picker and select a background color.
 
 ![image](../../images/common/snapshot_capture/image003.png)
 
-#### Options Menu
+![image](../../images/common/snapshot_capture/image007.png)
 
-Access additional settings from the gear icon options button.
+#### Option Menu
 
-- **Transparent**: Makes the background transparent (PNG with alpha channel)
-- **Use Maya Background**: Uses Maya's global background color
+The following settings are available from the option button:
+
+| Option | Description |
+|--------|-------------|
+| Transparent | Make the background transparent (GIF only) |
+| Use Maya Background | Set Maya's global background color as the background |
+| Edit Annotations | Open the annotation editor after capture |
+
 
 ## GIF Mode
 
-Captures the timeline playback range as an animated GIF.
+Capture the timeline playback range as an animated GIF or MP4.
 
-![image001](../../images/common/snapshot_capture/image004.png)
+![image](../../images/common/snapshot_capture/image004.png)
 
 ### How to Use
 
 1. Select **GIF** from the mode selector
 2. Set the start and end frames in Maya's timeline
-3. Configure background color and options as needed
-4. Click the **Save button** (💾) to save the file
+3. Set background color and options as needed
+4. Click the **Save button** ![image](../../images/common/snapshot_capture/snapshot_save.svg) to save the file
 
 ### Options
 
-The following settings are available from the options menu:
+The following settings are available from the option menu:
 
 | Option | Description |
 |--------|-------------|
-| Transparent | Make background transparent |
+| Transparent | Make the background transparent (GIF only) |
 | Use Maya Background | Use Maya's global background color |
-| Loop | Loop GIF playback (default: on) |
-| FPS | Set frame rate (10, 12, 15, 24, 30, 50, 60) |
+| Loop | Loop the GIF playback (default: on) |
+| FPS | Set the frame rate (10, 12, 15, 24, 30, 50, 60) |
+| MP4 Quality | MP4 quality setting (High / Medium / Low) |
+
+### Saving as MP4
+
+If FFmpeg is installed, you can select `.mp4` format in the file dialog to save.
+
+![image](../../images/common/snapshot_capture/image008.png)
+
+#### MP4 Quality Settings
+
+You can select MP4 quality from the **Quality** submenu in the option menu.
+
+| Quality | Description |
+|---------|-------------|
+| High | High quality (CRF 18, encoding speed: slow) |
+| Medium | Standard quality (CRF 23, encoding speed: medium) (default) |
+| Low | Low quality (CRF 28, encoding speed: fast) |
+
+> **Note**: MP4 export requires FFmpeg. Add FFmpeg to PATH or place it in a common installation location (e.g., `C:\ffmpeg\bin`).
 
 ## Rec Mode
 
-Records the viewport in real-time and saves as GIF. Mouse cursor and keyboard input overlays are also available.
+Record the viewport in real-time and save as GIF or MP4. Mouse cursor and keyboard input overlay display is also available.
 
-![image001](../../images/common/snapshot_capture/image005.png)
+![image](../../images/common/snapshot_capture/image005.png)
 
 ### How to Use
 
 1. Select **Rec** from the mode selector
-2. Configure recording settings in the options menu (see below)
-3. Click the **Record button** (●) to start recording
-4. Recording begins after the countdown
-5. Click the **Stop button** (■) to stop recording
-6. File dialog opens to save as GIF
+2. Configure recording settings from the option menu (see below)
+3. Click the **Record button** ![image](../../images/common/snapshot_capture/snapshot_rec.svg) to start recording
+4. Recording starts after the countdown
+5. Click the **Stop button** ![image](../../images/common/snapshot_capture/snapshot_stop.svg) to stop recording
+6. A file dialog opens to save as GIF or MP4
 
-### Cancelling During Countdown
+### Canceling During Countdown
 
-Click the button during countdown to cancel the recording.
+Click the button during the countdown to cancel recording.
 
 ### Options
 
-The following settings are available from the options menu:
+The following settings are available from the option menu:
 
 | Option | Description |
 |--------|-------------|
-| Loop | Loop GIF playback |
+| Loop | Loop the GIF playback |
 | FPS | Recording frame rate (10, 12, 15, 24, 30, 50, 60) |
+| Quality | MP4 quality (High / Medium / Low) |
 | Delay | Countdown seconds before recording starts (0, 1, 2, 3) |
-| Trim | Seconds to trim from the end of recording (0, 1, 2, 3) |
-| Show Cursor | Overlay mouse cursor |
-| Show Clicks | Show click position indicators |
+| Trim | Seconds to trim from the end when recording stops (0, 1, 2, 3) |
+| Show Cursor | Overlay the mouse cursor |
+| Show Clicks | Display click position indicators |
 | Show Keys | Overlay pressed keys |
 
-For mouse clicks, different indicators are displayed for left-click, right-click, and middle-click.
+Different indicators are displayed for left-click, right-click, and middle-click.
 
-## Saving Settings
+## Annotation Editor
 
-The following settings are automatically saved when the window is closed:
+In PNG mode, you can add annotations (arrows, shapes, etc.) to captured images.
+
+![image](../../images/common/snapshot_capture/image009.png)
+
+### Launching the Annotation Editor
+
+After capturing an image in PNG mode, select **Edit Annotations** from the option menu, or Shift+click the Save/Copy button to open the annotation editor.
+
+### Toolbar
+
+The annotation editor toolbar has the following features:
+
+![image](../../images/common/snapshot_capture/image010.png)
+
+#### Drawing Tools
+
+![image](../../images/common/snapshot_capture/image011.png)
+
+| Tool | Icon | Description |
+|------|------|-------------|
+| Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select and move drawn annotations |
+| Line | ![image](../../images/common/snapshot_capture/tool_line.svg) | Draw a straight line |
+| Arrow | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | Draw an arrow |
+| Rectangle | ![image](../../images/common/snapshot_capture/tool_rect.svg) | Draw a rectangle |
+| Ellipse | ![image](../../images/common/snapshot_capture/tool_ellipse.svg) | Draw a circle or ellipse |
+| Number | ![image](../../images/common/snapshot_capture/tool_number.svg) | Draw a numbered circle (auto-increments) |
+
+#### Color Selection
+
+![image](../../images/common/snapshot_capture/image012.png)
+
+You can select from 5 preset colors (red, yellow, green, white, black) and a custom color button.
+
+- **Preset colors**: Click to select
+- **Custom color (BG)**: Click to select, right-click to open color picker and change color
+
+#### Line Width Selection
+
+![image](../../images/common/snapshot_capture/image013.png)
+
+Select from 3 presets (thin, medium, thick).
+
+#### Action Buttons
+
+| Button | Icon | Description |
+|--------|------|-------------|
+| Undo | ![image](../../images/common/snapshot_capture/action_undo.svg) | Undo the last action |
+| Clear All | ![image](../../images/common/snapshot_capture/action_clear.svg) | Delete all annotations |
+
+### Footer Buttons
+
+| Button | Icon | Description |
+|--------|------|-------------|
+| Save | ![image](../../images/common/snapshot_capture/action_apply.svg) | Save the annotated image as a PNG file |
+| Copy | ![image](../../images/common/snapshot_capture/snapshot_copy.svg) | Copy the annotated image to clipboard |
+| Cancel | ![image](../../images/common/snapshot_capture/action_cancel.svg) | Close the annotation editor (without saving or copying) |
+
+### Keyboard Shortcuts
+
+| Key | Description |
+|-----|-------------|
+| Delete / Backspace | Delete the selected annotation |
+| Shift + drag | Snap lines to 45-degree angles, constrain rectangles/ellipses to squares/circles |
+
+### Settings Persistence
+
+The color and line width selected in the annotation editor are automatically saved and restored on the next launch.
+
+## Settings Persistence
+
+The following settings are automatically saved when closing the window:
 
 - Selected mode
 - Resolution (width/height)
 - Background color
-- Transparent setting
+- Transparency setting
 - FPS
 - Loop setting
+- MP4 quality setting
 - Delay/Trim settings
-- Cursor/Clicks/Keys display settings
+- Cursor/Click/Key display settings
+- Annotation editor color/line width settings
 
 These settings are restored on the next launch.
 
-## Save Location
+## About Save Location
 
 - On first save, the tool's dedicated data directory is used as the default save location
 - Once a file is saved, the last saved directory is remembered within the same session
@@ -193,3 +293,5 @@ These settings are restored on the next launch.
 - In GIF mode, up to 500 frames can be captured
 - Rec mode recording uses screen capture of the viewport, so other windows overlapping the viewport may be included in the capture
 - High resolution and high frame rate recording increases memory usage
+- FFmpeg must be installed on your system to save in MP4 format
+- This tool requires the PIL (Pillow) library (included by default in Maya 2022 and later)

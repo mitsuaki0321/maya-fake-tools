@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../css/style.css">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-        <meta name="description" content="Capture PNG snapshots and animated GIFs from viewport">
+        <meta name="description" content="Capture PNG snapshots and animated GIF/MP4 from the viewport">
     </head>
 <body>
     <header class="site-header">
@@ -35,9 +35,9 @@
                     <li><a href="#basic-usage"
                     id="toc-basic-usage">Basic Usage</a>
                     <ul>
-                    <li><a href="#viewport-controls"
-                    id="toc-viewport-controls">Viewport
-                    Controls</a></li>
+                    <li><a href="#viewport-operations"
+                    id="toc-viewport-operations">Viewport
+                    Operations</a></li>
                     <li><a href="#resolution-settings"
                     id="toc-resolution-settings">Resolution
                     Settings</a></li>
@@ -61,22 +61,43 @@
                     id="toc-how-to-use-1">How to Use</a></li>
                     <li><a href="#options"
                     id="toc-options">Options</a></li>
+                    <li><a href="#saving-as-mp4"
+                    id="toc-saving-as-mp4">Saving as MP4</a></li>
                     </ul></li>
                     <li><a href="#rec-mode" id="toc-rec-mode">Rec
                     Mode</a>
                     <ul>
                     <li><a href="#how-to-use-2"
                     id="toc-how-to-use-2">How to Use</a></li>
-                    <li><a href="#cancelling-during-countdown"
-                    id="toc-cancelling-during-countdown">Cancelling
-                    During Countdown</a></li>
+                    <li><a href="#canceling-during-countdown"
+                    id="toc-canceling-during-countdown">Canceling During
+                    Countdown</a></li>
                     <li><a href="#options-1"
                     id="toc-options-1">Options</a></li>
                     </ul></li>
-                    <li><a href="#saving-settings"
-                    id="toc-saving-settings">Saving Settings</a></li>
-                    <li><a href="#save-location"
-                    id="toc-save-location">Save Location</a></li>
+                    <li><a href="#annotation-editor"
+                    id="toc-annotation-editor">Annotation Editor</a>
+                    <ul>
+                    <li><a href="#launching-the-annotation-editor"
+                    id="toc-launching-the-annotation-editor">Launching
+                    the Annotation Editor</a></li>
+                    <li><a href="#toolbar"
+                    id="toc-toolbar">Toolbar</a></li>
+                    <li><a href="#footer-buttons"
+                    id="toc-footer-buttons">Footer Buttons</a></li>
+                    <li><a href="#keyboard-shortcuts"
+                    id="toc-keyboard-shortcuts">Keyboard
+                    Shortcuts</a></li>
+                    <li><a href="#settings-persistence"
+                    id="toc-settings-persistence">Settings
+                    Persistence</a></li>
+                    </ul></li>
+                    <li><a href="#settings-persistence-1"
+                    id="toc-settings-persistence-1">Settings
+                    Persistence</a></li>
+                    <li><a href="#about-save-location"
+                    id="toc-about-save-location">About Save
+                    Location</a></li>
                     <li><a href="#notes" id="toc-notes">Notes</a></li>
                     </ul>
                 </div>
@@ -87,7 +108,8 @@
                 
                 <h2 id="overview">Overview</h2>
                 <p>Snapshot Capture is a tool for capturing images from
-                the Maya viewport. It offers three capture modes:</p>
+                Maya’s viewport. It features the following three
+                modes:</p>
                 <table>
                 <thead>
                 <tr>
@@ -103,30 +125,34 @@
                 </tr>
                 <tr>
                 <td>GIF</td>
-                <td>Save timeline range as an animated GIF</td>
+                <td>Save the timeline range as an animated GIF or
+                MP4</td>
                 </tr>
                 <tr>
                 <td>Rec</td>
-                <td>Record the viewport in real-time and save as
-                GIF</td>
+                <td>Record the viewport in real-time and save as GIF or
+                MP4</td>
                 </tr>
                 </tbody>
                 </table>
+                <p>It also includes an <strong>Annotation
+                Editor</strong> feature that allows you to add arrows,
+                shapes, and other annotations to captured images.</p>
                 <h2 id="how-to-launch">How to Launch</h2>
-                <p>Launch the tool from the dedicated menu or with the
+                <p>Launch the tool from the dedicated menu or using the
                 following command:</p>
                 <pre class="python"><code>import faketools.tools.common.snapshot_capture.ui
 faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <p><img
                 src="../../images/common/snapshot_capture/image001.png"
-                alt="image001" /></p>
+                alt="image" /></p>
                 <h2 id="basic-usage">Basic Usage</h2>
-                <h3 id="viewport-controls">Viewport Controls</h3>
-                <p>The tool window contains an embedded model panel
+                <h3 id="viewport-operations">Viewport Operations</h3>
+                <p>The tool window has an embedded model panel
                 (viewport). You can rotate, pan, and zoom the camera
-                just like in a standard Maya viewport.</p>
+                just like a standard Maya viewport.</p>
                 <h4 id="switching-cameras">Switching Cameras</h4>
-                <p>You can switch the display camera from the
+                <p>You can switch the displayed camera from the
                 <strong>Camera</strong> menu in the menu bar.</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image006.png"
@@ -149,25 +175,25 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <tbody>
                 <tr>
                 <td>View Selected</td>
-                <td>Toggle between showing only selected objects /
-                showing all objects</td>
+                <td>Toggle between showing only selected objects / all
+                objects</td>
                 </tr>
                 <tr>
                 <td>Add Selected</td>
-                <td>Add currently selected objects to the isolate
+                <td>Add currently selected objects to the Isolate
                 display</td>
                 </tr>
                 <tr>
                 <td>Remove Selected</td>
-                <td>Remove currently selected objects from the isolate
+                <td>Remove currently selected objects from the Isolate
                 display</td>
                 </tr>
                 </tbody>
                 </table>
                 <blockquote>
-                <p><strong>Note</strong>: The standard Maya Show &gt;
-                Isolate Select menu does not work in embedded viewports,
-                so this custom menu provides equivalent
+                <p><strong>Note</strong>: Since Maya’s standard Show
+                &gt; Isolate Select menu doesn’t work in embedded
+                viewports, this custom menu provides equivalent
                 functionality.</p>
                 </blockquote>
                 <h3 id="resolution-settings">Resolution Settings</h3>
@@ -178,9 +204,9 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 alt="image" /></p>
                 <ol type="1">
                 <li><strong>Width/Height input fields</strong>: Enter
-                custom resolution directly</li>
-                <li><strong>Preset button</strong> (▼): Select from
-                available presets:
+                any resolution directly</li>
+                <li><strong>Preset button</strong> (▼): Select from the
+                following presets:
                 <ul>
                 <li>1920x1080 (Full HD)</li>
                 <li>1280x720 (HD)</li>
@@ -192,11 +218,11 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>256x256</li>
                 <li>128x128</li>
                 </ul></li>
-                <li><strong>Set button</strong>: Apply the entered
+                <li><strong>Set button (→|)</strong>: Apply the entered
                 resolution to the viewport</li>
                 </ol>
                 <h2 id="png-mode">PNG Mode</h2>
-                <p>Captures the current frame as a PNG image.</p>
+                <p>Capture the current frame as a PNG image.</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image001.png"
                 alt="image" /></p>
@@ -204,13 +230,16 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <ol type="1">
                 <li>Select <strong>PNG</strong> from the mode
                 selector</li>
-                <li>Set background color if needed (see below)</li>
-                <li>Execute one of the following:
+                <li>Set the background color if needed (see below)</li>
+                <li>Do one of the following:
                 <ul>
-                <li><strong>Save button</strong> (💾): Opens file dialog
-                to save as PNG file</li>
-                <li><strong>Copy button</strong> (📋): Copies image to
-                clipboard</li>
+                <li><strong>Save button</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_save.svg"
+                alt="image" />: Opens a file dialog to save as a PNG
+                file</li>
+                <li><strong>Copy button</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_copy.svg"
+                alt="image" />: Copies the image to clipboard</li>
                 </ul></li>
                 </ol>
                 <h3 id="edit-in-external-app">Edit in External App</h3>
@@ -223,45 +252,69 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <p>This feature saves the captured image as a temporary
                 file and immediately opens it in an external application
                 (Windows Photos, Paint, etc.). Useful for quick editing
-                or reviewing images.</p>
+                or previewing.</p>
                 <blockquote>
                 <p><strong>Note</strong>: This feature is currently
-                available on Windows only.</p>
+                available only on Windows.</p>
                 </blockquote>
                 <h3 id="background-color-settings">Background Color
                 Settings</h3>
                 <p>Click the <strong>BG button</strong> to open a color
-                picker and select the background color.</p>
+                picker and select a background color.</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image003.png"
                 alt="image" /></p>
-                <h4 id="options-menu">Options Menu</h4>
-                <p>Access additional settings from the gear icon options
-                button.</p>
-                <ul>
-                <li><strong>Transparent</strong>: Makes the background
-                transparent (PNG with alpha channel)</li>
-                <li><strong>Use Maya Background</strong>: Uses Maya’s
-                global background color</li>
-                </ul>
+                <p><img
+                src="../../images/common/snapshot_capture/image007.png"
+                alt="image" /></p>
+                <h4 id="option-menu">Option Menu</h4>
+                <p>The following settings are available from the option
+                button:</p>
+                <table>
+                <colgroup>
+                <col style="width: 38%" />
+                <col style="width: 61%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Option</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Transparent</td>
+                <td>Make the background transparent (GIF only)</td>
+                </tr>
+                <tr>
+                <td>Use Maya Background</td>
+                <td>Set Maya’s global background color as the
+                background</td>
+                </tr>
+                <tr>
+                <td>Edit Annotations</td>
+                <td>Open the annotation editor after capture</td>
+                </tr>
+                </tbody>
+                </table>
                 <h2 id="gif-mode">GIF Mode</h2>
-                <p>Captures the timeline playback range as an animated
-                GIF.</p>
+                <p>Capture the timeline playback range as an animated
+                GIF or MP4.</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image004.png"
-                alt="image001" /></p>
+                alt="image" /></p>
                 <h3 id="how-to-use-1">How to Use</h3>
                 <ol type="1">
                 <li>Select <strong>GIF</strong> from the mode
                 selector</li>
                 <li>Set the start and end frames in Maya’s timeline</li>
-                <li>Configure background color and options as
-                needed</li>
-                <li>Click the <strong>Save button</strong> (💾) to save
-                the file</li>
+                <li>Set background color and options as needed</li>
+                <li>Click the <strong>Save button</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_save.svg"
+                alt="image" /> to save the file</li>
                 </ol>
                 <h3 id="options">Options</h3>
-                <p>The following settings are available from the options
+                <p>The following settings are available from the option
                 menu:</p>
                 <table>
                 <thead>
@@ -273,7 +326,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <tbody>
                 <tr>
                 <td>Transparent</td>
-                <td>Make background transparent</td>
+                <td>Make the background transparent (GIF only)</td>
                 </tr>
                 <tr>
                 <td>Use Maya Background</td>
@@ -281,42 +334,89 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </tr>
                 <tr>
                 <td>Loop</td>
-                <td>Loop GIF playback (default: on)</td>
+                <td>Loop the GIF playback (default: on)</td>
                 </tr>
                 <tr>
                 <td>FPS</td>
-                <td>Set frame rate (10, 12, 15, 24, 30, 50, 60)</td>
+                <td>Set the frame rate (10, 12, 15, 24, 30, 50, 60)</td>
+                </tr>
+                <tr>
+                <td>MP4 Quality</td>
+                <td>MP4 quality setting (High / Medium / Low)</td>
                 </tr>
                 </tbody>
                 </table>
+                <h3 id="saving-as-mp4">Saving as MP4</h3>
+                <p>If FFmpeg is installed, you can select
+                <code>.mp4</code> format in the file dialog to save.</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image008.png"
+                alt="image" /></p>
+                <h4 id="mp4-quality-settings">MP4 Quality Settings</h4>
+                <p>You can select MP4 quality from the
+                <strong>Quality</strong> submenu in the option menu.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Quality</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>High</td>
+                <td>High quality (CRF 18, encoding speed: slow)</td>
+                </tr>
+                <tr>
+                <td>Medium</td>
+                <td>Standard quality (CRF 23, encoding speed: medium)
+                (default)</td>
+                </tr>
+                <tr>
+                <td>Low</td>
+                <td>Low quality (CRF 28, encoding speed: fast)</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: MP4 export requires FFmpeg.
+                Add FFmpeg to PATH or place it in a common installation
+                location (e.g., <code>C:\ffmpeg\bin</code>).</p>
+                </blockquote>
                 <h2 id="rec-mode">Rec Mode</h2>
-                <p>Records the viewport in real-time and saves as GIF.
-                Mouse cursor and keyboard input overlays are also
-                available.</p>
+                <p>Record the viewport in real-time and save as GIF or
+                MP4. Mouse cursor and keyboard input overlay display is
+                also available.</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image005.png"
-                alt="image001" /></p>
+                alt="image" /></p>
                 <h3 id="how-to-use-2">How to Use</h3>
                 <ol type="1">
                 <li>Select <strong>Rec</strong> from the mode
                 selector</li>
-                <li>Configure recording settings in the options menu
+                <li>Configure recording settings from the option menu
                 (see below)</li>
-                <li>Click the <strong>Record button</strong> (●) to
-                start recording</li>
-                <li>Recording begins after the countdown</li>
-                <li>Click the <strong>Stop button</strong> (■) to stop
-                recording</li>
-                <li>File dialog opens to save as GIF</li>
+                <li>Click the <strong>Record button</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_rec.svg"
+                alt="image" /> to start recording</li>
+                <li>Recording starts after the countdown</li>
+                <li>Click the <strong>Stop button</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_stop.svg"
+                alt="image" /> to stop recording</li>
+                <li>A file dialog opens to save as GIF or MP4</li>
                 </ol>
-                <h3 id="cancelling-during-countdown">Cancelling During
+                <h3 id="canceling-during-countdown">Canceling During
                 Countdown</h3>
-                <p>Click the button during countdown to cancel the
+                <p>Click the button during the countdown to cancel
                 recording.</p>
                 <h3 id="options-1">Options</h3>
-                <p>The following settings are available from the options
+                <p>The following settings are available from the option
                 menu:</p>
                 <table>
+                <colgroup>
+                <col style="width: 38%" />
+                <col style="width: 61%" />
+                </colgroup>
                 <thead>
                 <tr>
                 <th>Option</th>
@@ -326,12 +426,16 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <tbody>
                 <tr>
                 <td>Loop</td>
-                <td>Loop GIF playback</td>
+                <td>Loop the GIF playback</td>
                 </tr>
                 <tr>
                 <td>FPS</td>
                 <td>Recording frame rate (10, 12, 15, 24, 30, 50,
                 60)</td>
+                </tr>
+                <tr>
+                <td>Quality</td>
+                <td>MP4 quality (High / Medium / Low)</td>
                 </tr>
                 <tr>
                 <td>Delay</td>
@@ -340,16 +444,16 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </tr>
                 <tr>
                 <td>Trim</td>
-                <td>Seconds to trim from the end of recording (0, 1, 2,
-                3)</td>
+                <td>Seconds to trim from the end when recording stops
+                (0, 1, 2, 3)</td>
                 </tr>
                 <tr>
                 <td>Show Cursor</td>
-                <td>Overlay mouse cursor</td>
+                <td>Overlay the mouse cursor</td>
                 </tr>
                 <tr>
                 <td>Show Clicks</td>
-                <td>Show click position indicators</td>
+                <td>Display click position indicators</td>
                 </tr>
                 <tr>
                 <td>Show Keys</td>
@@ -357,23 +461,220 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
-                <p>For mouse clicks, different indicators are displayed
-                for left-click, right-click, and middle-click.</p>
-                <h2 id="saving-settings">Saving Settings</h2>
+                <p>Different indicators are displayed for left-click,
+                right-click, and middle-click.</p>
+                <h2 id="annotation-editor">Annotation Editor</h2>
+                <p>In PNG mode, you can add annotations (arrows, shapes,
+                etc.) to captured images.</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image009.png"
+                alt="image" /></p>
+                <h3 id="launching-the-annotation-editor">Launching the
+                Annotation Editor</h3>
+                <p>After capturing an image in PNG mode, select
+                <strong>Edit Annotations</strong> from the option menu,
+                or Shift+click the Save/Copy button to open the
+                annotation editor.</p>
+                <h3 id="toolbar">Toolbar</h3>
+                <p>The annotation editor toolbar has the following
+                features:</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image010.png"
+                alt="image" /></p>
+                <h4 id="drawing-tools">Drawing Tools</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image011.png"
+                alt="image" /></p>
+                <table>
+                <colgroup>
+                <col style="width: 24%" />
+                <col style="width: 24%" />
+                <col style="width: 52%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Tool</th>
+                <th>Icon</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Select</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_select.svg"
+                alt="image" /></td>
+                <td>Select and move drawn annotations</td>
+                </tr>
+                <tr>
+                <td>Line</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_line.svg"
+                alt="image" /></td>
+                <td>Draw a straight line</td>
+                </tr>
+                <tr>
+                <td>Arrow</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_arrow.svg"
+                alt="image" /></td>
+                <td>Draw an arrow</td>
+                </tr>
+                <tr>
+                <td>Rectangle</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_rect.svg"
+                alt="image" /></td>
+                <td>Draw a rectangle</td>
+                </tr>
+                <tr>
+                <td>Ellipse</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_ellipse.svg"
+                alt="image" /></td>
+                <td>Draw a circle or ellipse</td>
+                </tr>
+                <tr>
+                <td>Number</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_number.svg"
+                alt="image" /></td>
+                <td>Draw a numbered circle (auto-increments)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="color-selection">Color Selection</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image012.png"
+                alt="image" /></p>
+                <p>You can select from 5 preset colors (red, yellow,
+                green, white, black) and a custom color button.</p>
+                <ul>
+                <li><strong>Preset colors</strong>: Click to select</li>
+                <li><strong>Custom color (BG)</strong>: Click to select,
+                right-click to open color picker and change color</li>
+                </ul>
+                <h4 id="line-width-selection">Line Width Selection</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image013.png"
+                alt="image" /></p>
+                <p>Select from 3 presets (thin, medium, thick).</p>
+                <h4 id="action-buttons">Action Buttons</h4>
+                <table>
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 22%" />
+                <col style="width: 48%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Button</th>
+                <th>Icon</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Undo</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_undo.svg"
+                alt="image" /></td>
+                <td>Undo the last action</td>
+                </tr>
+                <tr>
+                <td>Clear All</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_clear.svg"
+                alt="image" /></td>
+                <td>Delete all annotations</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="footer-buttons">Footer Buttons</h3>
+                <table>
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 22%" />
+                <col style="width: 48%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Button</th>
+                <th>Icon</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Save</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_apply.svg"
+                alt="image" /></td>
+                <td>Save the annotated image as a PNG file</td>
+                </tr>
+                <tr>
+                <td>Copy</td>
+                <td><img
+                src="../../images/common/snapshot_capture/snapshot_copy.svg"
+                alt="image" /></td>
+                <td>Copy the annotated image to clipboard</td>
+                </tr>
+                <tr>
+                <td>Cancel</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_cancel.svg"
+                alt="image" /></td>
+                <td>Close the annotation editor (without saving or
+                copying)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="keyboard-shortcuts">Keyboard Shortcuts</h3>
+                <table>
+                <colgroup>
+                <col style="width: 27%" />
+                <col style="width: 72%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Key</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Delete / Backspace</td>
+                <td>Delete the selected annotation</td>
+                </tr>
+                <tr>
+                <td>Shift + drag</td>
+                <td>Snap lines to 45-degree angles, constrain
+                rectangles/ellipses to squares/circles</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="settings-persistence">Settings Persistence</h3>
+                <p>The color and line width selected in the annotation
+                editor are automatically saved and restored on the next
+                launch.</p>
+                <h2 id="settings-persistence-1">Settings
+                Persistence</h2>
                 <p>The following settings are automatically saved when
-                the window is closed:</p>
+                closing the window:</p>
                 <ul>
                 <li>Selected mode</li>
                 <li>Resolution (width/height)</li>
                 <li>Background color</li>
-                <li>Transparent setting</li>
+                <li>Transparency setting</li>
                 <li>FPS</li>
                 <li>Loop setting</li>
+                <li>MP4 quality setting</li>
                 <li>Delay/Trim settings</li>
-                <li>Cursor/Clicks/Keys display settings</li>
+                <li>Cursor/Click/Key display settings</li>
+                <li>Annotation editor color/line width settings</li>
                 </ul>
                 <p>These settings are restored on the next launch.</p>
-                <h2 id="save-location">Save Location</h2>
+                <h2 id="about-save-location">About Save Location</h2>
                 <ul>
                 <li>On first save, the tool’s dedicated data directory
                 is used as the default save location</li>
@@ -388,6 +689,10 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 be included in the capture</li>
                 <li>High resolution and high frame rate recording
                 increases memory usage</li>
+                <li>FFmpeg must be installed on your system to save in
+                MP4 format</li>
+                <li>This tool requires the PIL (Pillow) library
+                (included by default in Maya 2022 and later)</li>
                 </ul>
             </main>
         </div>

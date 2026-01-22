@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../css/style.css">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-        <meta name="description" content="ビューポートからPNGスナップショットやアニメーションGIFをキャプチャ">
+        <meta name="description" content="ビューポートからPNGスナップショットやアニメーションGIF/MP4をキャプチャ">
     </head>
 <body>
     <header class="site-header">
@@ -56,6 +56,8 @@
                     id="toc-操作方法-1">操作方法</a></li>
                     <li><a href="#オプション"
                     id="toc-オプション">オプション</a></li>
+                    <li><a href="#mp4-として保存"
+                    id="toc-mp4-として保存">MP4 として保存</a></li>
                     </ul></li>
                     <li><a href="#rec-モード" id="toc-rec-モード">Rec
                     モード</a>
@@ -67,8 +69,22 @@
                     <li><a href="#オプション-1"
                     id="toc-オプション-1">オプション</a></li>
                     </ul></li>
+                    <li><a href="#アノテーションエディター"
+                    id="toc-アノテーションエディター">アノテーションエディター</a>
+                    <ul>
+                    <li><a href="#アノテーションエディターの起動"
+                    id="toc-アノテーションエディターの起動">アノテーションエディターの起動</a></li>
+                    <li><a href="#ツールバー"
+                    id="toc-ツールバー">ツールバー</a></li>
+                    <li><a href="#フッターボタン"
+                    id="toc-フッターボタン">フッターボタン</a></li>
+                    <li><a href="#キーボードショートカット"
+                    id="toc-キーボードショートカット">キーボードショートカット</a></li>
                     <li><a href="#設定の保存"
                     id="toc-設定の保存">設定の保存</a></li>
+                    </ul></li>
+                    <li><a href="#設定の保存-1"
+                    id="toc-設定の保存-1">設定の保存</a></li>
                     <li><a href="#保存先について"
                     id="toc-保存先について">保存先について</a></li>
                     <li><a href="#注意事項"
@@ -102,16 +118,17 @@
                 </tr>
                 <tr>
                 <td>GIF</td>
-                <td>タイムラインの範囲をアニメーション GIF
+                <td>タイムラインの範囲をアニメーション GIF または MP4
                 として保存</td>
                 </tr>
                 <tr>
                 <td>Rec</td>
-                <td>ビューポートをリアルタイムで録画し、GIF
+                <td>ビューポートをリアルタイムで録画し、GIF または MP4
                 として保存</td>
                 </tr>
                 </tbody>
                 </table>
+                <p>また、キャプチャした画像に矢印や図形などのアノテーションを追加できる<strong>アノテーションエディター</strong>機能も搭載しています。</p>
                 <h2 id="起動方法">起動方法</h2>
                 <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
                 <pre class="python"><code>import faketools.tools.common.snapshot_capture.ui
@@ -186,7 +203,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>256x256</li>
                 <li>128x128</li>
                 </ul></li>
-                <li><strong>Set ボタン</strong>:
+                <li><strong>Set ボタン (→|)</strong>:
                 入力した解像度をビューポートに適用</li>
                 </ol>
                 <h2 id="png-モード">PNG モード</h2>
@@ -200,10 +217,13 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>必要に応じて背景色を設定（後述）</li>
                 <li>以下のいずれかを実行：
                 <ul>
-                <li><strong>Save ボタン</strong> (💾):
-                ファイルダイアログが開き、PNG ファイルとして保存</li>
-                <li><strong>Copy ボタン</strong> (📋):
-                クリップボードに画像をコピー</li>
+                <li><strong>Save ボタン</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_save.svg"
+                alt="image" />: ファイルダイアログが開き、PNG
+                ファイルとして保存</li>
+                <li><strong>Copy ボタン</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_copy.svg"
+                alt="image" />: クリップボードに画像をコピー</li>
                 </ul></li>
                 </ol>
                 <h3 id="外部アプリで編集">外部アプリで編集</h3>
@@ -226,28 +246,48 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <p><img
                 src="../../images/common/snapshot_capture/image003.png"
                 alt="image" /></p>
+                <p><img
+                src="../../images/common/snapshot_capture/image007.png"
+                alt="image" /></p>
                 <h4 id="オプションメニュー">オプションメニュー</h4>
-                <p>歯車アイコンのオプションボタンから追加設定にアクセスできます。</p>
-                <ul>
-                <li><strong>Transparent</strong>:
-                背景を透明にします（アルファチャンネル付き PNG）</li>
-                <li><strong>Use Maya Background</strong>: Maya
-                のグローバル背景色を使用</li>
-                </ul>
+                <p>オプションボタンから以下の設定が可能です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Transparent</td>
+                <td>背景を透明にする（GIF のみ）</td>
+                </tr>
+                <tr>
+                <td>Use Maya Background</td>
+                <td>Maya のグローバル背景色を背景色に設定</td>
+                </tr>
+                <tr>
+                <td>Edit Annotations</td>
+                <td>キャプチャ後にアノテーションエディターを起動</td>
+                </tr>
+                </tbody>
+                </table>
                 <h2 id="gif-モード">GIF モード</h2>
-                <p>タイムラインの再生範囲をアニメーション GIF
+                <p>タイムラインの再生範囲をアニメーション GIF または MP4
                 としてキャプチャします。</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image004.png"
-                alt="image001" /></p>
+                alt="image" /></p>
                 <h3 id="操作方法-1">操作方法</h3>
                 <ol type="1">
                 <li>モードセレクタで <strong>GIF</strong> を選択</li>
                 <li>Maya
                 のタイムラインで開始フレームと終了フレームを設定</li>
                 <li>必要に応じて背景色・オプションを設定</li>
-                <li><strong>Save ボタン</strong> (💾)
-                をクリックしてファイルを保存</li>
+                <li><strong>Save ボタン</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_save.svg"
+                alt="image" /> をクリックしてファイルを保存</li>
                 </ol>
                 <h3 id="オプション">オプション</h3>
                 <p>オプションメニューから以下の設定が可能です。</p>
@@ -261,7 +301,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <tbody>
                 <tr>
                 <td>Transparent</td>
-                <td>背景を透明にする</td>
+                <td>背景を透明にする（GIF のみ）</td>
                 </tr>
                 <tr>
                 <td>Use Maya Background</td>
@@ -276,24 +316,70 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <td>フレームレートを設定（10, 12, 15, 24, 30, 50,
                 60）</td>
                 </tr>
+                <tr>
+                <td>MP4 Quality</td>
+                <td>MP4 の品質設定（High / Medium / Low）</td>
+                </tr>
                 </tbody>
                 </table>
+                <h3 id="mp4-として保存">MP4 として保存</h3>
+                <p>FFmpeg
+                がインストールされている場合、ファイルダイアログで
+                <code>.mp4</code> 形式を選択して保存できます。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image008.png"
+                alt="image" /></p>
+                <h4 id="mp4-品質設定">MP4 品質設定</h4>
+                <p>オプションメニューの <strong>Quality</strong>
+                サブメニューから MP4 の品質を選択できます。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>品質</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>High</td>
+                <td>高画質（CRF 18、エンコード速度: 遅い）</td>
+                </tr>
+                <tr>
+                <td>Medium</td>
+                <td>標準画質（CRF 23、エンコード速度:
+                普通）（デフォルト）</td>
+                </tr>
+                <tr>
+                <td>Low</td>
+                <td>低画質（CRF 28、エンコード速度: 速い）</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: MP4 保存には FFmpeg
+                が必要です。FFmpeg は PATH
+                に追加するか、一般的なインストール場所（<code>C:\ffmpeg\bin</code>
+                など）に配置してください。</p>
+                </blockquote>
                 <h2 id="rec-モード">Rec モード</h2>
-                <p>ビューポートをリアルタイムで録画し、GIF
+                <p>ビューポートをリアルタイムで録画し、GIF または MP4
                 として保存します。マウスカーソルやキーボード入力のオーバーレイ表示も可能です。</p>
                 <p><img
                 src="../../images/common/snapshot_capture/image005.png"
-                alt="image001" /></p>
+                alt="image" /></p>
                 <h3 id="操作方法-2">操作方法</h3>
                 <ol type="1">
                 <li>モードセレクタで <strong>Rec</strong> を選択</li>
                 <li>オプションメニューで録画設定を行う（後述）</li>
-                <li><strong>Record ボタン</strong> (●)
-                をクリックして録画を開始</li>
+                <li><strong>Record ボタン</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_rec.svg"
+                alt="image" /> をクリックして録画を開始</li>
                 <li>カウントダウン後、録画が開始されます</li>
-                <li><strong>Stop ボタン</strong> (■)
-                をクリックして録画を停止</li>
-                <li>ファイルダイアログが開き、GIF として保存</li>
+                <li><strong>Stop ボタン</strong> <img
+                src="../../images/common/snapshot_capture/snapshot_stop.svg"
+                alt="image" /> をクリックして録画を停止</li>
+                <li>ファイルダイアログが開き、GIF または MP4
+                として保存</li>
                 </ol>
                 <h3
                 id="カウントダウン中のキャンセル">カウントダウン中のキャンセル</h3>
@@ -316,6 +402,10 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <td>FPS</td>
                 <td>録画のフレームレート（10, 12, 15, 24, 30, 50,
                 60）</td>
+                </tr>
+                <tr>
+                <td>Quality</td>
+                <td>MP4 の品質（High / Medium / Low）</td>
                 </tr>
                 <tr>
                 <td>Delay</td>
@@ -341,7 +431,199 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <p>マウスクリックについては、左クリック・右クリック・中クリックそれぞれ異なるインジケータが表示されます。</p>
-                <h2 id="設定の保存">設定の保存</h2>
+                <h2
+                id="アノテーションエディター">アノテーションエディター</h2>
+                <p>PNG
+                モードでは、キャプチャした画像に矢印や図形などのアノテーション（注釈）を追加できます。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image009.png"
+                alt="image" /></p>
+                <h3
+                id="アノテーションエディターの起動">アノテーションエディターの起動</h3>
+                <p>PNG
+                モードで画像をキャプチャした後、オプションメニューから
+                <strong>Annotation Editor</strong>
+                を選択するか、Save/Copy ボタンを
+                Shift+クリックすることでアノテーションエディターが開きます。</p>
+                <h3 id="ツールバー">ツールバー</h3>
+                <p>アノテーションエディターのツールバーには以下の機能があります。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image010.png"
+                alt="image" /></p>
+                <h4 id="描画ツール">描画ツール</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image011.png"
+                alt="image" /></p>
+                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 41%" />
+                <col style="width: 25%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>ツール</th>
+                <th>アイコン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>選択</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_select.svg"
+                alt="image" /></td>
+                <td>描画したアノテーションを選択・移動</td>
+                </tr>
+                <tr>
+                <td>線</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_line.svg"
+                alt="image" /></td>
+                <td>直線を描画</td>
+                </tr>
+                <tr>
+                <td>矢印</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_arrow.svg"
+                alt="image" /></td>
+                <td>矢印を描画</td>
+                </tr>
+                <tr>
+                <td>矩形</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_rect.svg"
+                alt="image" /></td>
+                <td>四角形を描画</td>
+                </tr>
+                <tr>
+                <td>楕円</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_ellipse.svg"
+                alt="image" /></td>
+                <td>円・楕円を描画</td>
+                </tr>
+                <tr>
+                <td>番号</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_number.svg"
+                alt="image" /></td>
+                <td>番号付きの丸を描画（自動でインクリメント）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="色の選択">色の選択</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image012.png"
+                alt="image" /></p>
+                <p>5つのプリセットカラー（赤、黄、緑、白、黒）と、カスタムカラーボタンから色を選択できます。</p>
+                <ul>
+                <li><strong>プリセットカラー</strong>:
+                クリックで選択</li>
+                <li><strong>カスタムカラー (BG)</strong>:
+                クリックで選択、右クリックでカラーピッカーを開いて色を変更</li>
+                </ul>
+                <h4 id="線幅の選択">線幅の選択</h4>
+                <p><img
+                src="../../images/common/snapshot_capture/image013.png"
+                alt="image" /></p>
+                <p>3つのプリセット（細、中、太）から線幅を選択できます。</p>
+                <h4 id="アクションボタン">アクションボタン</h4>
+                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 41%" />
+                <col style="width: 25%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>ボタン</th>
+                <th>アイコン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Undo</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_undo.svg"
+                alt="image" /></td>
+                <td>最後の操作を元に戻す</td>
+                </tr>
+                <tr>
+                <td>Clear All</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_clear.svg"
+                alt="image" /></td>
+                <td>すべてのアノテーションを削除</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="フッターボタン">フッターボタン</h3>
+                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 41%" />
+                <col style="width: 25%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>ボタン</th>
+                <th>アイコン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Save</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_apply.svg"
+                alt="image" /></td>
+                <td>アノテーション付き画像をPNGファイルとして保存</td>
+                </tr>
+                <tr>
+                <td>Copy</td>
+                <td><img
+                src="../../images/common/snapshot_capture/snapshot_copy.svg"
+                alt="image" /></td>
+                <td>アノテーション付き画像をクリップボードにコピー</td>
+                </tr>
+                <tr>
+                <td>Cancel</td>
+                <td><img
+                src="../../images/common/snapshot_capture/action_cancel.svg"
+                alt="image" /></td>
+                <td>アノテーションエディターを閉じる（保存・コピーは行われません）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3
+                id="キーボードショートカット">キーボードショートカット</h3>
+                <table>
+                <colgroup>
+                <col style="width: 50%" />
+                <col style="width: 50%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>キー</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Delete / Backspace</td>
+                <td>選択中のアノテーションを削除</td>
+                </tr>
+                <tr>
+                <td>Shift + ドラッグ</td>
+                <td>線を45度単位にスナップ、矩形/楕円を正方形/正円に制約</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="設定の保存">設定の保存</h3>
+                <p>アノテーションエディターで選択した色と線幅は自動的に保存され、次回起動時に復元されます。</p>
+                <h2 id="設定の保存-1">設定の保存</h2>
                 <p>ウィンドウを閉じる際、以下の設定が自動的に保存されます。</p>
                 <ul>
                 <li>選択中のモード</li>
@@ -350,8 +632,10 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>透明設定</li>
                 <li>FPS</li>
                 <li>Loop 設定</li>
+                <li>MP4 品質設定</li>
                 <li>Delay・Trim 設定</li>
                 <li>カーソル・クリック・キー表示設定</li>
+                <li>アノテーションエディターの色・線幅設定</li>
                 </ul>
                 <p>次回起動時に、これらの設定が復元されます。</p>
                 <h2 id="保存先について">保存先について</h2>
@@ -366,6 +650,11 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>Rec
                 モードの録画は、ビューポートの画面キャプチャを使用するため、他のウィンドウがビューポートを覆うとキャプチャに含まれる可能性があります</li>
                 <li>高解像度・高フレームレートでの録画は、メモリ使用量が増加します</li>
+                <li>MP4 形式で保存するには、FFmpeg
+                がシステムにインストールされている必要があります</li>
+                <li>このツールを使用するには PIL (Pillow)
+                ライブラリが必要です（Maya 2022
+                以降には標準で含まれています）</li>
                 </ul>
             </main>
         </div>

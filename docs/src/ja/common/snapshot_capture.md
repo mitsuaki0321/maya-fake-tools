@@ -1,7 +1,7 @@
 ---
 title: Snapshot Capture
 category: common
-description: ビューポートからPNGスナップショットやアニメーションGIFをキャプチャ
+description: ビューポートからPNGスナップショットやアニメーションGIF/MP4をキャプチャ
 lang: ja
 lang-ref: snapshot_capture
 order: 30
@@ -14,8 +14,10 @@ Snapshot Capture は、Maya のビューポートから画像をキャプチャ�
 | モード | 説明 |
 |--------|------|
 | PNG | 現在のフレームを PNG 画像として保存またはクリップボードにコピー |
-| GIF | タイムラインの範囲をアニメーション GIF として保存 |
-| Rec | ビューポートをリアルタイムで録画し、GIF として保存 |
+| GIF | タイムラインの範囲をアニメーション GIF または MP4 として保存 |
+| Rec | ビューポートをリアルタイムで録画し、GIF または MP4 として保存 |
+
+また、キャプチャした画像に矢印や図形などのアノテーションを追加できる**アノテーションエディター**機能も搭載しています。
 
 ## 起動方法
 
@@ -70,7 +72,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
    - 320x240
    - 256x256
    - 128x128
-3. **Set ボタン**: 入力した解像度をビューポートに適用
+3. **Set ボタン (→|)**: 入力した解像度をビューポートに適用
 
 ## PNG モード
 
@@ -83,8 +85,8 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 1. モードセレクタで **PNG** を選択
 2. 必要に応じて背景色を設定（後述）
 3. 以下のいずれかを実行：
-   - **Save ボタン** (💾): ファイルダイアログが開き、PNG ファイルとして保存
-   - **Copy ボタン** (📋): クリップボードに画像をコピー
+   - **Save ボタン** ![image](../../images/common/snapshot_capture/snapshot_save.svg): ファイルダイアログが開き、PNG ファイルとして保存
+   - **Copy ボタン** ![image](../../images/common/snapshot_capture/snapshot_copy.svg): クリップボードに画像をコピー
 
 ### 外部アプリで編集
 
@@ -102,25 +104,31 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 
 ![image](../../images/common/snapshot_capture/image003.png)
 
+![image](../../images/common/snapshot_capture/image007.png)
+
 #### オプションメニュー
 
-歯車アイコンのオプションボタンから追加設定にアクセスできます。
+オプションボタンから以下の設定が可能です。
 
-- **Transparent**: 背景を透明にします（アルファチャンネル付き PNG）
-- **Use Maya Background**: Maya のグローバル背景色を使用
+| オプション | 説明 |
+|------------|------|
+| Transparent | 背景を透明にする（GIF のみ） |
+| Use Maya Background | Maya のグローバル背景色を背景色に設定 |
+| Edit Annotations | キャプチャ後にアノテーションエディターを起動 |
+
 
 ## GIF モード
 
-タイムラインの再生範囲をアニメーション GIF としてキャプチャします。
+タイムラインの再生範囲をアニメーション GIF または MP4 としてキャプチャします。
 
-![image001](../../images/common/snapshot_capture/image004.png)
+![image](../../images/common/snapshot_capture/image004.png)
 
 ### 操作方法
 
 1. モードセレクタで **GIF** を選択
 2. Maya のタイムラインで開始フレームと終了フレームを設定
 3. 必要に応じて背景色・オプションを設定
-4. **Save ボタン** (💾) をクリックしてファイルを保存
+4. **Save ボタン** ![image](../../images/common/snapshot_capture/snapshot_save.svg) をクリックしてファイルを保存
 
 ### オプション
 
@@ -128,25 +136,44 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 
 | オプション | 説明 |
 |------------|------|
-| Transparent | 背景を透明にする |
+| Transparent | 背景を透明にする（GIF のみ） |
 | Use Maya Background | Maya のグローバル背景色を使用 |
 | Loop | GIF をループ再生する（デフォルト: オン） |
 | FPS | フレームレートを設定（10, 12, 15, 24, 30, 50, 60） |
+| MP4 Quality | MP4 の品質設定（High / Medium / Low） |
+
+### MP4 として保存
+
+FFmpeg がインストールされている場合、ファイルダイアログで `.mp4` 形式を選択して保存できます。
+
+![image](../../images/common/snapshot_capture/image008.png)
+
+#### MP4 品質設定
+
+オプションメニューの **Quality** サブメニューから MP4 の品質を選択できます。
+
+| 品質 | 説明 |
+|------|------|
+| High | 高画質（CRF 18、エンコード速度: 遅い） |
+| Medium | 標準画質（CRF 23、エンコード速度: 普通）（デフォルト） |
+| Low | 低画質（CRF 28、エンコード速度: 速い） |
+
+> **Note**: MP4 保存には FFmpeg が必要です。FFmpeg は PATH に追加するか、一般的なインストール場所（`C:\ffmpeg\bin` など）に配置してください。
 
 ## Rec モード
 
-ビューポートをリアルタイムで録画し、GIF として保存します。マウスカーソルやキーボード入力のオーバーレイ表示も可能です。
+ビューポートをリアルタイムで録画し、GIF または MP4 として保存します。マウスカーソルやキーボード入力のオーバーレイ表示も可能です。
 
-![image001](../../images/common/snapshot_capture/image005.png)
+![image](../../images/common/snapshot_capture/image005.png)
 
 ### 操作方法
 
 1. モードセレクタで **Rec** を選択
 2. オプションメニューで録画設定を行う（後述）
-3. **Record ボタン** (●) をクリックして録画を開始
+3. **Record ボタン** ![image](../../images/common/snapshot_capture/snapshot_rec.svg) をクリックして録画を開始
 4. カウントダウン後、録画が開始されます
-5. **Stop ボタン** (■) をクリックして録画を停止
-6. ファイルダイアログが開き、GIF として保存
+5. **Stop ボタン** ![image](../../images/common/snapshot_capture/snapshot_stop.svg) をクリックして録画を停止
+6. ファイルダイアログが開き、GIF または MP4 として保存
 
 ### カウントダウン中のキャンセル
 
@@ -160,6 +187,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 |------------|------|
 | Loop | GIF をループ再生する |
 | FPS | 録画のフレームレート（10, 12, 15, 24, 30, 50, 60） |
+| Quality | MP4 の品質（High / Medium / Low） |
 | Delay | 録画開始前のカウントダウン秒数（0, 1, 2, 3） |
 | Trim | 録画終了時に末尾からトリムする秒数（0, 1, 2, 3） |
 | Show Cursor | マウスカーソルをオーバーレイ表示 |
@@ -167,6 +195,76 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 | Show Keys | 押されたキーをオーバーレイ表示 |
 
 マウスクリックについては、左クリック・右クリック・中クリックそれぞれ異なるインジケータが表示されます。
+
+## アノテーションエディター
+
+PNG モードでは、キャプチャした画像に矢印や図形などのアノテーション（注釈）を追加できます。
+
+![image](../../images/common/snapshot_capture/image009.png)
+
+### アノテーションエディターの起動
+
+PNG モードで画像をキャプチャした後、オプションメニューから **Annotation Editor** を選択するか、Save/Copy ボタンを Shift+クリックすることでアノテーションエディターが開きます。
+
+### ツールバー
+
+アノテーションエディターのツールバーには以下の機能があります。
+
+![image](../../images/common/snapshot_capture/image010.png)
+
+#### 描画ツール
+
+![image](../../images/common/snapshot_capture/image011.png)
+
+| ツール | アイコン | 説明 |
+|--------|----------|------|
+| 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・移動 |
+| 線 | ![image](../../images/common/snapshot_capture/tool_line.svg) | 直線を描画 |
+| 矢印 | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | 矢印を描画 |
+| 矩形 | ![image](../../images/common/snapshot_capture/tool_rect.svg) | 四角形を描画 |
+| 楕円 | ![image](../../images/common/snapshot_capture/tool_ellipse.svg) | 円・楕円を描画 |
+| 番号 | ![image](../../images/common/snapshot_capture/tool_number.svg) | 番号付きの丸を描画（自動でインクリメント） |
+
+#### 色の選択
+
+![image](../../images/common/snapshot_capture/image012.png)
+
+5つのプリセットカラー（赤、黄、緑、白、黒）と、カスタムカラーボタンから色を選択できます。
+
+- **プリセットカラー**: クリックで選択
+- **カスタムカラー (BG)**: クリックで選択、右クリックでカラーピッカーを開いて色を変更
+
+#### 線幅の選択
+
+![image](../../images/common/snapshot_capture/image013.png)
+
+3つのプリセット（細、中、太）から線幅を選択できます。
+
+#### アクションボタン
+
+| ボタン | アイコン | 説明 |
+|--------|----------|------|
+| Undo | ![image](../../images/common/snapshot_capture/action_undo.svg) | 最後の操作を元に戻す |
+| Clear All | ![image](../../images/common/snapshot_capture/action_clear.svg) | すべてのアノテーションを削除 |
+
+### フッターボタン
+
+| ボタン | アイコン | 説明 |
+|--------|----------|------|
+| Save | ![image](../../images/common/snapshot_capture/action_apply.svg) | アノテーション付き画像をPNGファイルとして保存 |
+| Copy | ![image](../../images/common/snapshot_capture/snapshot_copy.svg) | アノテーション付き画像をクリップボードにコピー |
+| Cancel | ![image](../../images/common/snapshot_capture/action_cancel.svg) | アノテーションエディターを閉じる（保存・コピーは行われません） |
+
+### キーボードショートカット
+
+| キー | 説明 |
+|------|------|
+| Delete / Backspace | 選択中のアノテーションを削除 |
+| Shift + ドラッグ | 線を45度単位にスナップ、矩形/楕円を正方形/正円に制約 |
+
+### 設定の保存
+
+アノテーションエディターで選択した色と線幅は自動的に保存され、次回起動時に復元されます。
 
 ## 設定の保存
 
@@ -178,8 +276,10 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 - 透明設定
 - FPS
 - Loop 設定
+- MP4 品質設定
 - Delay・Trim 設定
 - カーソル・クリック・キー表示設定
+- アノテーションエディターの色・線幅設定
 
 次回起動時に、これらの設定が復元されます。
 
@@ -193,3 +293,5 @@ faketools.tools.common.snapshot_capture.ui.show_ui()
 - GIF モードでは、最大 500 フレームまでキャプチャ可能です
 - Rec モードの録画は、ビューポートの画面キャプチャを使用するため、他のウィンドウがビューポートを覆うとキャプチャに含まれる可能性があります
 - 高解像度・高フレームレートでの録画は、メモリ使用量が増加します
+- MP4 形式で保存するには、FFmpeg がシステムにインストールされている必要があります
+- このツールを使用するには PIL (Pillow) ライブラリが必要です（Maya 2022 以降には標準で含まれています）
