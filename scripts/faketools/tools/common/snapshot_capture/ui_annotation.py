@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from typing import TYPE_CHECKING
 
 from ....lib_ui import get_maya_main_window
@@ -28,12 +29,14 @@ from ....lib_ui.qt_compat import (
     QGraphicsTextItem,
     QGraphicsView,
     QHBoxLayout,
+    QIcon,
     QPainter,
     QPen,
     QPixmap,
     QPointF,
     QPolygonF,
     QPushButton,
+    QSize,
     Qt,
     QToolButton,
     QVBoxLayout,
@@ -61,14 +64,32 @@ TOOL_RECT = "rect"
 TOOL_ELLIPSE = "ellipse"
 TOOL_NUMBER = "number"
 
-# Tool icons (Unicode characters)
+# Icon directory path
+_ICON_DIR = os.path.join(os.path.dirname(__file__), "icons")
+
+# Tool icons (SVG filenames)
 TOOL_ICONS = {
-    TOOL_SELECT: "\u25c7",  # ◇
-    TOOL_LINE: "\u2571",  # ╱
-    TOOL_ARROW: "\u2192",  # →
-    TOOL_RECT: "\u25a2",  # ▢
-    TOOL_ELLIPSE: "\u25cb",  # ○
-    TOOL_NUMBER: "\u2460",  # ①
+    TOOL_SELECT: "tool_select.svg",
+    TOOL_LINE: "tool_line.svg",
+    TOOL_ARROW: "tool_arrow.svg",
+    TOOL_RECT: "tool_rect.svg",
+    TOOL_ELLIPSE: "tool_ellipse.svg",
+    TOOL_NUMBER: "tool_number.svg",
+}
+
+# Stroke width icons (SVG filenames)
+STROKE_ICONS = {
+    2: "stroke_thin.svg",
+    4: "stroke_medium.svg",
+    6: "stroke_thick.svg",
+}
+
+# Action icons (SVG filenames)
+ACTION_ICONS = {
+    "undo": "action_undo.svg",
+    "clear": "action_clear.svg",
+    "cancel": "action_cancel.svg",
+    "apply": "action_apply.svg",
 }
 
 # Color presets (RGB hex, RGB tuple, name)
@@ -113,6 +134,8 @@ class AnnotationEditorDialog(QDialog):
         self._annotation_layer = AnnotationLayer()
         self._current_tool = TOOL_SELECT
         self._current_color = (229, 57, 53)  # Default red (#e53935)
+        self._custom_color: tuple[int, int, int] | None = None  # User's custom color
+        self._is_custom_selected = False  # Whether custom color button is selected
         self._line_width = 4  # Default medium
         self._next_number = 1  # Auto-increment for number tool
 
@@ -131,8 +154,8 @@ class AnnotationEditorDialog(QDialog):
     def _setup_ui(self):
         """Set up the dialog UI."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
 
         # Toolbar
         toolbar = self._create_toolbar()
@@ -144,25 +167,69 @@ class AnnotationEditorDialog(QDialog):
         self._view.setRenderHint(QPainter.RenderHint.Antialiasing)
         self._view.setDragMode(QGraphicsView.DragMode.NoDrag)
         self._view.annotation_created.connect(self._on_annotation_created)
+        self._view.setStyleSheet("border: 1px solid #444444;")
 
         # Disable scroll bars for fixed size view
         self._view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
-        layout.addWidget(self._view)
+        # Center the view horizontally
+        view_container = QHBoxLayout()
+        view_container.setContentsMargins(0, 0, 0, 0)
+        view_container.addStretch()
+        view_container.addWidget(self._view)
+        view_container.addStretch()
+        layout.addLayout(view_container)
 
         # Button row
         button_layout = QHBoxLayout()
+        button_layout.setContentsMargins(0, 2, 0, 0)
         button_layout.addStretch()
 
-        cancel_btn = QPushButton("Cancel")
+        # Action button group with background
+        footer_action_group = QWidget()
+        footer_action_group.setStyleSheet("background: #2e2e2e; border-radius: 5px;")
+        footer_action_layout = QHBoxLayout(footer_action_group)
+        footer_action_layout.setContentsMargins(4, 1, 4, 1)
+        footer_action_layout.setSpacing(1)
+
+        # Cancel button
+        cancel_btn = QToolButton()
+        cancel_btn.setFixedSize(26, 26)
+        cancel_btn.setToolTip("Cancel")
+        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel_icon_path = self._get_icon_path(ACTION_ICONS["cancel"])
+        if cancel_icon_path:
+            cancel_btn.setIcon(QIcon(cancel_icon_path))
+            cancel_btn.setIconSize(QSize(20, 20))
+        else:
+            cancel_btn.setText("X")
+        cancel_btn.setStyleSheet(
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
+            "QToolButton:hover { background: #404040; }"
+        )
         cancel_btn.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_btn)
+        footer_action_layout.addWidget(cancel_btn)
 
-        apply_btn = QPushButton("Apply")
+        # Apply button
+        apply_btn = QToolButton()
+        apply_btn.setFixedSize(26, 26)
+        apply_btn.setToolTip("Apply")
+        apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        apply_icon_path = self._get_icon_path(ACTION_ICONS["apply"])
+        if apply_icon_path:
+            apply_btn.setIcon(QIcon(apply_icon_path))
+            apply_btn.setIconSize(QSize(20, 20))
+        else:
+            apply_btn.setText("OK")
+        apply_btn.setStyleSheet(
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
+            "QToolButton:hover { background: #404040; }"
+        )
         apply_btn.clicked.connect(self.accept)
-        button_layout.addWidget(apply_btn)
+        footer_action_layout.addWidget(apply_btn)
 
+        button_layout.addWidget(footer_action_group)
         layout.addLayout(button_layout)
 
     def _create_toolbar(self) -> QWidget:
@@ -173,7 +240,7 @@ class AnnotationEditorDialog(QDialog):
         """
         toolbar = QWidget()
         layout = QHBoxLayout(toolbar)
-        layout.setContentsMargins(5, 2, 5, 2)
+        layout.setContentsMargins(4, 1, 4, 1)
         layout.setSpacing(4)
 
         # Tool group container with background
@@ -227,10 +294,12 @@ class AnnotationEditorDialog(QDialog):
         # Custom color button (square)
         self._custom_color_btn = QPushButton()
         self._custom_color_btn.setFixedSize(16, 16)
-        self._custom_color_btn.setToolTip("Custom Color")
+        self._custom_color_btn.setToolTip("Custom Color (Right-click to change)")
         self._custom_color_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._update_custom_color_button()
-        self._custom_color_btn.clicked.connect(self._on_custom_color)
+        self._custom_color_btn.clicked.connect(self._on_custom_color_click)
+        self._custom_color_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._custom_color_btn.customContextMenuRequested.connect(self._on_custom_color_picker)
         color_group_layout.addWidget(self._custom_color_btn)
 
         layout.addWidget(color_group)
@@ -256,17 +325,50 @@ class AnnotationEditorDialog(QDialog):
         # Spacer to push action buttons to the right
         layout.addStretch()
 
-        # Undo button (Maya default style)
-        undo_btn = QPushButton("Undo")
-        undo_btn.setToolTip("Undo Last Action")
-        undo_btn.clicked.connect(self._on_undo)
-        layout.addWidget(undo_btn)
+        # Action group container with background
+        action_group = QWidget()
+        action_group.setStyleSheet("background: #2e2e2e; border-radius: 5px;")
+        action_group_layout = QHBoxLayout(action_group)
+        action_group_layout.setContentsMargins(4, 1, 4, 1)
+        action_group_layout.setSpacing(1)
 
-        # Clear button (Maya default style)
-        clear_btn = QPushButton("Clear")
+        # Undo button
+        undo_btn = QToolButton()
+        undo_btn.setFixedSize(26, 26)
+        undo_btn.setToolTip("Undo Last Action")
+        undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        undo_icon_path = self._get_icon_path(ACTION_ICONS["undo"])
+        if undo_icon_path:
+            undo_btn.setIcon(QIcon(undo_icon_path))
+            undo_btn.setIconSize(QSize(20, 20))
+        else:
+            undo_btn.setText("U")
+        undo_btn.setStyleSheet(
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
+            "QToolButton:hover { background: #404040; }"
+        )
+        undo_btn.clicked.connect(self._on_undo)
+        action_group_layout.addWidget(undo_btn)
+
+        # Clear button
+        clear_btn = QToolButton()
+        clear_btn.setFixedSize(26, 26)
         clear_btn.setToolTip("Clear All Annotations")
+        clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        clear_icon_path = self._get_icon_path(ACTION_ICONS["clear"])
+        if clear_icon_path:
+            clear_btn.setIcon(QIcon(clear_icon_path))
+            clear_btn.setIconSize(QSize(20, 20))
+        else:
+            clear_btn.setText("C")
+        clear_btn.setStyleSheet(
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
+            "QToolButton:hover { background: #404040; }"
+        )
         clear_btn.clicked.connect(self._on_clear_all)
-        layout.addWidget(clear_btn)
+        action_group_layout.addWidget(clear_btn)
+
+        layout.addWidget(action_group)
 
         return toolbar
 
@@ -284,11 +386,23 @@ class AnnotationEditorDialog(QDialog):
         divider.setContentsMargins(6, 0, 6, 0)
         return divider
 
-    def _create_tool_button(self, icon: str, tool: str, tooltip: str) -> QToolButton:
+    def _get_icon_path(self, filename: str) -> str | None:
+        """Get full path to an icon file.
+
+        Args:
+            filename: Icon filename.
+
+        Returns:
+            Full path if exists, None otherwise.
+        """
+        path = os.path.join(_ICON_DIR, filename)
+        return path if os.path.exists(path) else None
+
+    def _create_tool_button(self, icon_file: str, tool: str, tooltip: str) -> QToolButton:
         """Create a tool button with icon.
 
         Args:
-            icon: Unicode icon character.
+            icon_file: SVG icon filename.
             tool: Tool identifier.
             tooltip: Tooltip text.
 
@@ -296,11 +410,19 @@ class AnnotationEditorDialog(QDialog):
             Configured QToolButton.
         """
         btn = QToolButton()
-        btn.setText(icon)
         btn.setCheckable(True)
         btn.setFixedSize(26, 26)
         btn.setToolTip(f"{tooltip} Tool")
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        icon_path = self._get_icon_path(icon_file)
+        if icon_path:
+            btn.setIcon(QIcon(icon_path))
+            btn.setIconSize(QSize(20, 20))
+        else:
+            # Fallback to first letter
+            btn.setText(tooltip[0])
+
         btn.clicked.connect(lambda: self._on_tool_selected(tool))
         return btn
 
@@ -308,11 +430,11 @@ class AnnotationEditorDialog(QDialog):
         """Update tool button styles based on selection state."""
         for _tool, btn in self._tool_buttons.items():
             if btn.isChecked():
-                btn.setStyleSheet("QToolButton { background: #505050; color: #fff; border: none; border-radius: 4px; font-size: 13px; }")
+                btn.setStyleSheet("QToolButton { background: #505050; border: none; border-radius: 4px; }")
             else:
                 btn.setStyleSheet(
-                    "QToolButton { background: transparent; color: #888; border: none; border-radius: 4px; font-size: 13px; }"
-                    "QToolButton:hover { background: #404040; color: #ccc; }"
+                    "QToolButton { background: transparent; border: none; border-radius: 4px; }"
+                    "QToolButton:hover { background: #404040; }"
                 )
 
     def _create_stroke_button(self, width: int, visual_height: int, name: str) -> QToolButton:
@@ -333,9 +455,16 @@ class AnnotationEditorDialog(QDialog):
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         btn.setChecked(width == self._line_width)
 
-        # Store visual height for styling
-        btn.setProperty("visual_height", visual_height)
+        # Store line width for styling
         btn.setProperty("line_width", width)
+
+        # Set icon
+        icon_file = STROKE_ICONS.get(width)
+        if icon_file:
+            icon_path = self._get_icon_path(icon_file)
+            if icon_path:
+                btn.setIcon(QIcon(icon_path))
+                btn.setIconSize(QSize(20, 20))
 
         self._update_stroke_button_style(btn)
         btn.clicked.connect(lambda checked=False, w=width: self._on_line_width(w))
@@ -347,43 +476,15 @@ class AnnotationEditorDialog(QDialog):
         Args:
             btn: Button to update.
         """
-        visual_height = btn.property("visual_height")
         is_selected = btn.isChecked()
 
-        # We'll use text-based visual representation
-        # Using box-drawing characters for stroke visualization
-        if visual_height == 1:
-            stroke_char = "─"  # Thin
-        elif visual_height == 3:
-            stroke_char = "━"  # Medium
-        else:
-            stroke_char = "▬"  # Thick
-
-        btn.setText(stroke_char)
         if is_selected:
-            btn.setStyleSheet("""
-                QToolButton {
-                    background: #4a4a4a;
-                    color: #fff;
-                    border: none;
-                    border-radius: 3px;
-                    font-size: 14px;
-                }
-            """)
+            btn.setStyleSheet("QToolButton { background: #4a4a4a; border: none; border-radius: 3px; }")
         else:
-            btn.setStyleSheet("""
-                QToolButton {
-                    background: transparent;
-                    color: #777;
-                    border: none;
-                    border-radius: 3px;
-                    font-size: 14px;
-                }
-                QToolButton:hover {
-                    background: #404040;
-                    color: #bbb;
-                }
-            """)
+            btn.setStyleSheet(
+                "QToolButton { background: transparent; border: none; border-radius: 3px; }"
+                "QToolButton:hover { background: #404040; }"
+            )
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
         """Update color button style.
@@ -400,20 +501,22 @@ class AnnotationEditorDialog(QDialog):
             btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 8px;")
 
     def _update_custom_color_button(self):
-        """Update custom color button to show current color or default gray."""
+        """Update custom color button to show custom color and selection state."""
         if not self._custom_color_btn:
             return
 
-        # Check if current color is a preset
-        is_preset = any(rgb_color == self._current_color for _, rgb_color, _ in COLOR_PRESETS)
-
-        if is_preset:
-            # Show gray when a preset is selected (no selection border)
-            self._custom_color_btn.setStyleSheet("background-color: rgb(128, 128, 128); border: 2px solid transparent; border-radius: 3px;")
+        # Determine display color
+        if self._custom_color:
+            r, g, b = self._custom_color
         else:
-            # Show current custom color with white selection border
-            r, g, b = self._current_color
+            # Default gray when no custom color set
+            r, g, b = 128, 128, 128
+
+        # Show selection border if custom color is selected
+        if self._is_custom_selected:
             self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 3px;")
+        else:
+            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 3px;")
 
     def _update_color_selection(self):
         """Update color button selection states."""
@@ -447,16 +550,31 @@ class AnnotationEditorDialog(QDialog):
             color: Selected RGB color.
         """
         self._current_color = color
+        self._is_custom_selected = False
         self._update_color_selection()
         self._view.set_color(color)
 
-    def _on_custom_color(self):
-        """Handle custom color button click."""
-        initial_color = QColor(*self._current_color)
+    def _on_custom_color_click(self):
+        """Handle custom color button click - select custom color or open picker if not set."""
+        if self._custom_color:
+            # Select the existing custom color
+            self._current_color = self._custom_color
+            self._is_custom_selected = True
+            self._update_color_selection()
+            self._view.set_color(self._current_color)
+        else:
+            # No custom color set yet, open picker
+            self._on_custom_color_picker()
+
+    def _on_custom_color_picker(self):
+        """Open color picker to set custom color."""
+        initial_color = QColor(*(self._custom_color or self._current_color))
         color = QColorDialog.getColor(initial_color, self, "Select Annotation Color")
 
         if color.isValid():
-            self._current_color = (color.red(), color.green(), color.blue())
+            self._custom_color = (color.red(), color.green(), color.blue())
+            self._current_color = self._custom_color
+            self._is_custom_selected = True
             self._update_color_selection()
             self._view.set_color(self._current_color)
 

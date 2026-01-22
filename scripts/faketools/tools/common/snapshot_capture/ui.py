@@ -531,7 +531,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.png_copy_button.setObjectName(self._ui_name("PNGCopyButton"))
         self.png_copy_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.png_copy_button.setToolTip("Copy to Clipboard (Right-click for more options)")
-        copy_icon_path = self._get_icon_path("snapshot_copy.png")
+        copy_icon_path = self._get_icon_path("snapshot_copy.svg")
         if copy_icon_path:
             self.png_copy_button.setIcon(QIcon(copy_icon_path))
         else:
@@ -589,7 +589,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.option_button.setToolTip("Options")
         self.option_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
 
-        option_icon_path = self._get_icon_path("snapshot_options.png")
+        option_icon_path = self._get_icon_path("snapshot_options.svg")
         if option_icon_path:
             self.option_button.setIcon(QIcon(option_icon_path))
 
@@ -614,7 +614,7 @@ class SnapshotCaptureWindow(QMainWindow):
         button.setObjectName(self._ui_name(name))
         button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         button.setToolTip("Save")
-        save_icon_path = self._get_icon_path("snapshot_save.png")
+        save_icon_path = self._get_icon_path("snapshot_save.svg")
         if save_icon_path:
             button.setIcon(QIcon(save_icon_path))
         else:
@@ -678,7 +678,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.preset_button.setFixedSize(BUTTON_SIZE_SMALL, BUTTON_SIZE_SMALL)
         self.preset_button.setToolTip("Resolution Presets")
         self.preset_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        preset_icon_path = self._get_icon_path("snapshot_dropdown.png")
+        preset_icon_path = self._get_icon_path("snapshot_dropdown.svg")
         if preset_icon_path:
             self.preset_button.setIcon(QIcon(preset_icon_path))
 
@@ -695,7 +695,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.set_button.setObjectName(self._ui_name("SetButton"))
         self.set_button.setFixedSize(BUTTON_SIZE, BUTTON_SIZE)
         self.set_button.setToolTip("Apply Resolution")
-        set_icon_path = self._get_icon_path("snapshot_set.png")
+        set_icon_path = self._get_icon_path("snapshot_set.svg")
         if set_icon_path:
             self.set_button.setIcon(QIcon(set_icon_path))
         else:
@@ -721,14 +721,14 @@ class SnapshotCaptureWindow(QMainWindow):
             return
 
         if state == "rec":
-            icon_path = self._get_icon_path("snapshot_rec.png")
+            icon_path = self._get_icon_path("snapshot_rec.svg")
             self.record_button.setToolTip("Start Recording")
         elif state == "stop":
-            icon_path = self._get_icon_path("snapshot_stop.png")
+            icon_path = self._get_icon_path("snapshot_stop.svg")
             self.record_button.setToolTip("Stop Recording")
         else:
             # Countdown state
-            icon_path = self._get_icon_path(f"snapshot_countdown_{state}.png")
+            icon_path = self._get_icon_path(f"snapshot_countdown_{state}.svg")
             self.record_button.setToolTip(f"Cancel ({state})")
 
         if icon_path:
