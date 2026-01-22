@@ -11,7 +11,7 @@ import math
 import os
 from typing import TYPE_CHECKING
 
-from ....lib_ui import get_maya_main_window
+from ....lib_ui import ToolSettingsManager, get_maya_main_window
 from ....lib_ui.qt_compat import (
     QApplication,
     QBrush,
@@ -133,16 +133,16 @@ class AnnotationEditorDialog(QDialog):
         self._background_color = background_color
         self._annotation_layer = AnnotationLayer()
         self._current_tool = TOOL_SELECT
-        self._current_color = (229, 57, 53)  # Default red (#e53935)
-        self._custom_color: tuple[int, int, int] | None = None  # User's custom color
-        self._is_custom_selected = False  # Whether custom color button is selected
-        self._line_width = 4  # Default medium
         self._next_number = 1  # Auto-increment for number tool
+
+        # Settings manager for persisting user preferences
+        self._settings = ToolSettingsManager(tool_name="snapshot_capture", category="common")
+        self._load_settings()  # Load saved color and line width
 
         # Undo stack for annotation history
         self._undo_stack: list[tuple] = []
 
-        # Tool buttons storage for state management
+        # Tool buttons storage for state management (initialized before _setup_ui)
         self._tool_buttons: dict[str, QToolButton] = {}
         self._color_buttons: list[QPushButton] = []
         self._custom_color_btn: QPushButton | None = None
@@ -150,6 +150,10 @@ class AnnotationEditorDialog(QDialog):
 
         self._setup_ui()
         self._load_image()
+
+        # Apply loaded settings to the view
+        self._view.set_color(self._current_color)
+        self._view.set_line_width(self._line_width)
 
     def _setup_ui(self):
         """Set up the dialog UI."""
@@ -205,8 +209,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             cancel_btn.setText("X")
         cancel_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
-            "QToolButton:hover { background: #404040; }"
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
         )
         cancel_btn.clicked.connect(self.reject)
         footer_action_layout.addWidget(cancel_btn)
@@ -223,8 +226,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             apply_btn.setText("OK")
         apply_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
-            "QToolButton:hover { background: #404040; }"
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
         )
         apply_btn.clicked.connect(self.accept)
         footer_action_layout.addWidget(apply_btn)
@@ -286,7 +288,9 @@ class AnnotationEditorDialog(QDialog):
             btn.setFixedSize(16, 16)
             btn.setToolTip(name)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self._update_color_button_style(btn, rgb_color, selected=(rgb_color == self._current_color))
+            # Don't select preset if custom color is selected
+            is_selected = (rgb_color == self._current_color) and not self._is_custom_selected
+            self._update_color_button_style(btn, rgb_color, selected=is_selected)
             btn.clicked.connect(lambda checked=False, c=rgb_color: self._on_color_preset(c))
             self._color_buttons.append(btn)
             color_group_layout.addWidget(btn)
@@ -343,10 +347,7 @@ class AnnotationEditorDialog(QDialog):
             undo_btn.setIconSize(QSize(20, 20))
         else:
             undo_btn.setText("U")
-        undo_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
-            "QToolButton:hover { background: #404040; }"
-        )
+        undo_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
         undo_btn.clicked.connect(self._on_undo)
         action_group_layout.addWidget(undo_btn)
 
@@ -362,8 +363,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             clear_btn.setText("C")
         clear_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }"
-            "QToolButton:hover { background: #404040; }"
+            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
         )
         clear_btn.clicked.connect(self._on_clear_all)
         action_group_layout.addWidget(clear_btn)
@@ -433,8 +433,7 @@ class AnnotationEditorDialog(QDialog):
                 btn.setStyleSheet("QToolButton { background: #505050; border: none; border-radius: 4px; }")
             else:
                 btn.setStyleSheet(
-                    "QToolButton { background: transparent; border: none; border-radius: 4px; }"
-                    "QToolButton:hover { background: #404040; }"
+                    "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
                 )
 
     def _create_stroke_button(self, width: int, visual_height: int, name: str) -> QToolButton:
@@ -481,10 +480,7 @@ class AnnotationEditorDialog(QDialog):
         if is_selected:
             btn.setStyleSheet("QToolButton { background: #4a4a4a; border: none; border-radius: 3px; }")
         else:
-            btn.setStyleSheet(
-                "QToolButton { background: transparent; border: none; border-radius: 3px; }"
-                "QToolButton:hover { background: #404040; }"
-            )
+            btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 3px; }QToolButton:hover { background: #404040; }")
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
         """Update color button style.
@@ -520,9 +516,10 @@ class AnnotationEditorDialog(QDialog):
 
     def _update_color_selection(self):
         """Update color button selection states."""
-        # Update preset buttons
+        # Update preset buttons (don't select if custom color is active)
         for btn, (_, rgb_color, _) in zip(self._color_buttons, COLOR_PRESETS):
-            self._update_color_button_style(btn, rgb_color, selected=(rgb_color == self._current_color))
+            is_selected = (rgb_color == self._current_color) and not self._is_custom_selected
+            self._update_color_button_style(btn, rgb_color, selected=is_selected)
 
         # Update custom color button
         self._update_custom_color_button()
@@ -714,6 +711,54 @@ class AnnotationEditorDialog(QDialog):
             AnnotationLayer with all annotations.
         """
         return self._annotation_layer
+
+    def _load_settings(self):
+        """Load saved annotation editor settings."""
+        data = self._settings.load_settings("annotation")
+
+        # Load color settings
+        saved_color = data.get("color")
+        if saved_color and isinstance(saved_color, list) and len(saved_color) == 3:
+            self._current_color = tuple(saved_color)
+        else:
+            self._current_color = (229, 57, 53)  # Default red (#e53935)
+
+        # Load custom color
+        saved_custom = data.get("custom_color")
+        if saved_custom and isinstance(saved_custom, list) and len(saved_custom) == 3:
+            self._custom_color = tuple(saved_custom)
+        else:
+            self._custom_color = None
+
+        # Load whether custom color is selected
+        self._is_custom_selected = data.get("is_custom_selected", False)
+
+        # Load line width
+        saved_width = data.get("line_width")
+        if saved_width in [2, 4, 6]:
+            self._line_width = saved_width
+        else:
+            self._line_width = 4  # Default medium
+
+    def _save_settings(self):
+        """Save current annotation editor settings."""
+        data = {
+            "color": list(self._current_color),
+            "custom_color": list(self._custom_color) if self._custom_color else None,
+            "is_custom_selected": self._is_custom_selected,
+            "line_width": self._line_width,
+        }
+        self._settings.save_settings(data, "annotation")
+
+    def accept(self):
+        """Accept dialog and save settings."""
+        self._save_settings()
+        super().accept()
+
+    def reject(self):
+        """Reject dialog and save settings."""
+        self._save_settings()
+        super().reject()
 
 
 class AnnotationGraphicsView(QGraphicsView):
