@@ -189,8 +189,30 @@ class NumberAnnotation:
         return "number"
 
 
+@dataclass
+class FreehandAnnotation:
+    """Freehand drawing annotation (polyline path).
+
+    Attributes:
+        id: Unique identifier.
+        points: List of (x, y) ratio tuples (0.0-1.0).
+        color: Line color as RGB tuple.
+        line_width: Line thickness in pixels.
+    """
+
+    points: list[tuple[float, float]]
+    color: tuple[int, int, int] = (255, 0, 0)
+    line_width: int = 3
+    id: str = field(default_factory=_generate_id)
+
+    @property
+    def annotation_type(self) -> Literal["freehand"]:
+        """Return annotation type identifier."""
+        return "freehand"
+
+
 # Type alias for any annotation type
-AnnotationType = Union[TextAnnotation, ArrowAnnotation, RectangleAnnotation, EllipseAnnotation, LineAnnotation, NumberAnnotation]
+AnnotationType = Union[TextAnnotation, ArrowAnnotation, RectangleAnnotation, EllipseAnnotation, LineAnnotation, NumberAnnotation, FreehandAnnotation]
 
 
 @dataclass
@@ -266,6 +288,7 @@ DEFAULT_COLORS = {
     "ellipse": (0, 255, 0),
     "line": (255, 0, 0),
     "number": (255, 0, 0),
+    "freehand": (255, 0, 0),
 }
 
 # Default line widths
@@ -274,6 +297,7 @@ DEFAULT_LINE_WIDTHS = {
     "rectangle": 2,
     "ellipse": 2,
     "line": 3,
+    "freehand": 3,
 }
 
 # Default number size (diameter in pixels)

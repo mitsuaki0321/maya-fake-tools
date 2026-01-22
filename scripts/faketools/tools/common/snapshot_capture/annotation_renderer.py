@@ -100,7 +100,15 @@ def _render_annotation(image: Image.Image, annotation: AnnotationType) -> Image.
     Returns:
         Image with annotation rendered.
     """
-    from .annotation import ArrowAnnotation, EllipseAnnotation, LineAnnotation, NumberAnnotation, RectangleAnnotation, TextAnnotation
+    from .annotation import (
+        ArrowAnnotation,
+        EllipseAnnotation,
+        FreehandAnnotation,
+        LineAnnotation,
+        NumberAnnotation,
+        RectangleAnnotation,
+        TextAnnotation,
+    )
 
     if isinstance(annotation, TextAnnotation):
         return _render_text(image, annotation)
@@ -114,6 +122,8 @@ def _render_annotation(image: Image.Image, annotation: AnnotationType) -> Image.
         return _render_line(image, annotation)
     elif isinstance(annotation, NumberAnnotation):
         return _render_number(image, annotation)
+    elif isinstance(annotation, FreehandAnnotation):
+        return _render_freehand(image, annotation)
     return image
 
 
@@ -390,6 +400,129 @@ def _render_line(image: Image.Image, annotation) -> Image.Image:
         draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
 
     return image
+
+
+def _render_freehand(image: Image.Image, annotation) -> Image.Image:
+    """Render freehand annotation with antialiasing.
+
+    Args:
+        image: PIL Image to draw on.
+        annotation: FreehandAnnotation object.
+
+    Returns:
+        Image with freehand path rendered.
+    """
+    if not annotation.points or len(annotation.points) < 2:
+        return image
+
+    # Convert ratio points to pixel positions (keep as float for precision)
+    pixel_points = [(x * image.width, y * image.height) for x, y in annotation.points]
+
+    # Scale line width based on image resolution
+    scale_factor = max(image.width / 640, image.height / 360)
+    line_width = max(1, int(annotation.line_width * scale_factor))
+
+    color = annotation.color
+
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+        pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
+
+        # Apply Catmull-Rom spline interpolation for smoother curves
+        interpolated = _catmull_rom_spline(pixel_points, segments_per_curve=4)
+
+        # Use Path object for smoother rendering than line()
+        path = aggdraw.Path()
+        path.moveto(interpolated[0][0], interpolated[0][1])
+        for x, y in interpolated[1:]:
+            path.lineto(x, y)
+
+        draw.path(path, None, pen)  # None for fill, pen for stroke
+        draw.flush()
+
+        # Draw circles at endpoints to simulate round caps
+        radius = line_width / 2.0
+        if radius > 0.5:
+            brush = aggdraw.Brush(_color_to_aggdraw(color))
+            sx, sy = interpolated[0]
+            ex, ey = interpolated[-1]
+            draw.ellipse([sx - radius, sy - radius, sx + radius, sy + radius], brush)
+            draw.ellipse([ex - radius, ey - radius, ex + radius, ey + radius], brush)
+            draw.flush()
+    else:
+        # PIL fallback: use Catmull-Rom spline interpolation for smoother curves
+        interpolated = _catmull_rom_spline(pixel_points, segments_per_curve=4)
+        int_points = [(int(round(x)), int(round(y))) for x, y in interpolated]
+
+        draw = ImageDraw.Draw(image)
+        # Draw the interpolated polyline
+        draw.line(int_points, fill=color, width=line_width, joint="curve")
+
+        # Draw circles at endpoints to simulate round caps
+        radius = line_width // 2
+        if radius > 0:
+            start_x, start_y = int_points[0]
+            end_x, end_y = int_points[-1]
+            draw.ellipse([start_x - radius, start_y - radius, start_x + radius, start_y + radius], fill=color)
+            draw.ellipse([end_x - radius, end_y - radius, end_x + radius, end_y + radius], fill=color)
+
+    return image
+
+
+def _catmull_rom_spline(
+    points: list[tuple[float, float]], segments_per_curve: int = 4
+) -> list[tuple[float, float]]:
+    """Generate smooth curve points using Catmull-Rom spline interpolation.
+
+    Args:
+        points: List of control points (x, y).
+        segments_per_curve: Number of interpolated segments between each pair of points.
+
+    Returns:
+        List of interpolated points forming a smooth curve.
+    """
+    if len(points) < 2:
+        return points
+    if len(points) == 2:
+        return points
+
+    result = []
+
+    # Extend points at start and end for proper interpolation
+    extended = [points[0]] + list(points) + [points[-1]]
+
+    for i in range(1, len(extended) - 2):
+        p0 = extended[i - 1]
+        p1 = extended[i]
+        p2 = extended[i + 1]
+        p3 = extended[i + 2]
+
+        # Generate interpolated points between p1 and p2
+        for j in range(segments_per_curve):
+            t = j / segments_per_curve
+
+            # Catmull-Rom spline formula
+            t2 = t * t
+            t3 = t2 * t
+
+            x = 0.5 * (
+                (2 * p1[0])
+                + (-p0[0] + p2[0]) * t
+                + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2
+                + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3
+            )
+            y = 0.5 * (
+                (2 * p1[1])
+                + (-p0[1] + p2[1]) * t
+                + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2
+                + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
+            )
+            result.append((x, y))
+
+    # Add the last point
+    result.append(points[-1])
+
+    return result
 
 
 def _render_number(image: Image.Image, annotation) -> Image.Image:

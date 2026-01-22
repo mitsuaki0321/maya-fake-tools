@@ -24,6 +24,7 @@ from ....lib_ui.qt_compat import (
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsLineItem,
+    QGraphicsPathItem,
     QGraphicsPolygonItem,
     QGraphicsRectItem,
     QGraphicsScene,
@@ -34,6 +35,7 @@ from ....lib_ui.qt_compat import (
     QImage,
     QMimeData,
     QPainter,
+    QPainterPath,
     QPen,
     QPixmap,
     QPointF,
@@ -49,6 +51,7 @@ from .annotation import (
     AnnotationLayer,
     ArrowAnnotation,
     EllipseAnnotation,
+    FreehandAnnotation,
     LineAnnotation,
     NumberAnnotation,
     RectangleAnnotation,
@@ -66,6 +69,7 @@ TOOL_ARROW = "arrow"
 TOOL_RECT = "rect"
 TOOL_ELLIPSE = "ellipse"
 TOOL_NUMBER = "number"
+TOOL_FREEHAND = "freehand"
 
 # Icon directory path
 _ICON_DIR = os.path.join(os.path.dirname(__file__), "icons")
@@ -78,6 +82,7 @@ TOOL_ICONS = {
     TOOL_RECT: "tool_rect.svg",
     TOOL_ELLIPSE: "tool_ellipse.svg",
     TOOL_NUMBER: "tool_number.svg",
+    TOOL_FREEHAND: "tool_freehand.svg",
 }
 
 # Stroke width icons (SVG filenames)
@@ -272,6 +277,7 @@ class AnnotationEditorDialog(QDialog):
         # Tool buttons with icons
         tools = [
             (TOOL_SELECT, "Select"),
+            (TOOL_FREEHAND, "Freehand"),
             (TOOL_LINE, "Line"),
             (TOOL_ARROW, "Arrow"),
             (TOOL_RECT, "Rectangle"),
@@ -845,6 +851,13 @@ class AnnotationGraphicsView(QGraphicsView):
         self._current_item = None
         self._shift_pressed = False
 
+        # Freehand drawing state
+        self._freehand_path: QPainterPath | None = None
+        self._freehand_points: list[tuple[float, float]] = []
+        self._freehand_last_point: tuple[float, float] | None = None
+        self._freehand_last_midpoint: tuple[float, float] | None = None
+        self._freehand_min_distance_sq = 0.0
+
         # Custom signal
         self.annotation_created = self._Signal()
 
@@ -1047,6 +1060,26 @@ class AnnotationGraphicsView(QGraphicsView):
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene().addItem(self._current_item)
 
+        elif self._current_tool == TOOL_FREEHAND:
+            # Create path for freehand drawing
+            self._freehand_path = QPainterPath()
+            self._freehand_path.moveTo(x, y)
+            self._freehand_points = [(x, y)]
+            self._freehand_last_point = (x, y)
+            self._freehand_last_midpoint = None
+            min_distance = max(1.5, self._line_width * 0.35)
+            self._freehand_min_distance_sq = min_distance * min_distance
+
+            # Use round caps and joins for smooth freehand appearance
+            freehand_pen = QPen(QColor(*self._current_color))
+            freehand_pen.setWidth(self._line_width)
+            freehand_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            freehand_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+
+            self._current_item = QGraphicsPathItem(self._freehand_path)
+            self._current_item.setPen(freehand_pen)
+            self.scene().addItem(self._current_item)
+
     def _update_preview_item(self, current_pos):
         """Update the preview item during drag.
 
@@ -1081,6 +1114,48 @@ class AnnotationGraphicsView(QGraphicsView):
             # Number: center at start, radius = distance to cursor (always circle)
             radius = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
             self._current_item.setRect(x1 - radius, y1 - radius, radius * 2, radius * 2)
+
+        elif self._current_tool == TOOL_FREEHAND:
+            # Add point to path
+            if self._freehand_path is not None and self._append_freehand_point(x2, y2):
+                self._current_item.setPath(self._freehand_path)
+
+    def _append_freehand_point(self, x: float, y: float) -> bool:
+        """Append a filtered point to the freehand path with light smoothing."""
+        if self._freehand_points:
+            last_x, last_y = self._freehand_points[-1]
+            dx = x - last_x
+            dy = y - last_y
+            if dx * dx + dy * dy < self._freehand_min_distance_sq:
+                return False
+
+        self._freehand_points.append((x, y))
+
+        if self._freehand_path is None:
+            return True
+
+        if self._freehand_last_point is None:
+            self._freehand_last_point = (x, y)
+            return True
+
+        mid_x = (self._freehand_last_point[0] + x) / 2.0
+        mid_y = (self._freehand_last_point[1] + y) / 2.0
+
+        if self._freehand_last_midpoint is None:
+            self._freehand_path.lineTo(mid_x, mid_y)
+        else:
+            self._freehand_path.quadTo(self._freehand_last_point[0], self._freehand_last_point[1], mid_x, mid_y)
+
+        self._freehand_last_midpoint = (mid_x, mid_y)
+        self._freehand_last_point = (x, y)
+        return True
+
+    def _finish_freehand_path(self):
+        """Finish the smoothed freehand path at the last point."""
+        if self._freehand_path is None or self._freehand_last_point is None:
+            return
+        if self._freehand_last_midpoint is not None:
+            self._freehand_path.lineTo(self._freehand_last_point[0], self._freehand_last_point[1])
 
     def _finalize_item(self, end_pos):
         """Finalize the item and create annotation.
@@ -1261,6 +1336,48 @@ class AnnotationGraphicsView(QGraphicsView):
                 # Add number text
                 self._add_number_text(self._current_item, x1, y1, radius_px)
 
+        elif self._current_tool == TOOL_FREEHAND:
+            if self._freehand_path is not None:
+                self._append_freehand_point(x2, y2)
+                self._finish_freehand_path()
+                if self._current_item:
+                    self._current_item.setPath(self._freehand_path)
+
+            # Require minimum points (at least 2 distinct points)
+            if len(self._freehand_points) < 2:
+                if self._current_item:
+                    self.scene().removeItem(self._current_item)
+                self._current_item = None
+                self._freehand_path = None
+                self._freehand_points = []
+                self._freehand_last_point = None
+                self._freehand_last_midpoint = None
+                self._freehand_min_distance_sq = 0.0
+                return
+
+            # Simplify path using Douglas-Peucker algorithm
+            simplified_points = self._simplify_path(self._freehand_points, epsilon=2.0)
+
+            # Convert pixel coordinates to ratio coordinates
+            ratio_points = [(px / width, py / height) for px, py in simplified_points]
+
+            annotation = FreehandAnnotation(
+                points=ratio_points,
+                color=self._current_color,
+                line_width=self._line_width,
+            )
+
+            if self._current_item:
+                self._current_item.annotation_id = annotation.id
+                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+
+            # Reset freehand state
+            self._freehand_path = None
+            self._freehand_points = []
+            self._freehand_last_point = None
+            self._freehand_last_midpoint = None
+            self._freehand_min_distance_sq = 0.0
+
         if annotation:
             self.annotation_created.emit(annotation)
 
@@ -1323,6 +1440,77 @@ class AnnotationGraphicsView(QGraphicsView):
         # Store reference to delete with line
         if not hasattr(line_item, "_arrowhead"):
             line_item._arrowhead = arrow_item
+
+    def _simplify_path(self, points: list[tuple[float, float]], epsilon: float = 2.0) -> list[tuple[float, float]]:
+        """Simplify path using the Douglas-Peucker algorithm.
+
+        Reduces the number of points in a path while preserving its shape.
+
+        Args:
+            points: List of (x, y) tuples.
+            epsilon: Maximum distance threshold for simplification.
+
+        Returns:
+            Simplified list of points.
+        """
+        if len(points) < 3:
+            return points
+
+        # Find the point with maximum distance from the line between first and last
+        first = points[0]
+        last = points[-1]
+
+        max_dist = 0.0
+        max_idx = 0
+
+        for i in range(1, len(points) - 1):
+            dist = self._perpendicular_distance(points[i], first, last)
+            if dist > max_dist:
+                max_dist = dist
+                max_idx = i
+
+        # If max distance is greater than epsilon, recursively simplify
+        if max_dist > epsilon:
+            # Recursive call
+            left = self._simplify_path(points[: max_idx + 1], epsilon)
+            right = self._simplify_path(points[max_idx:], epsilon)
+
+            # Concatenate results (avoid duplicate point at junction)
+            return left[:-1] + right
+        else:
+            # Return just endpoints
+            return [first, last]
+
+    def _perpendicular_distance(
+        self, point: tuple[float, float], line_start: tuple[float, float], line_end: tuple[float, float]
+    ) -> float:
+        """Calculate perpendicular distance from point to line.
+
+        Args:
+            point: Point (x, y).
+            line_start: Line start (x, y).
+            line_end: Line end (x, y).
+
+        Returns:
+            Perpendicular distance.
+        """
+        x, y = point
+        x1, y1 = line_start
+        x2, y2 = line_end
+
+        # Handle degenerate case where line is a point
+        dx = x2 - x1
+        dy = y2 - y1
+        line_len_sq = dx * dx + dy * dy
+
+        if line_len_sq == 0:
+            return math.sqrt((x - x1) ** 2 + (y - y1) ** 2)
+
+        # Calculate perpendicular distance using cross product formula
+        numerator = abs(dy * x - dx * y + x2 * y1 - y2 * x1)
+        denominator = math.sqrt(line_len_sq)
+
+        return numerator / denominator
 
 
 def show_annotation_editor(
