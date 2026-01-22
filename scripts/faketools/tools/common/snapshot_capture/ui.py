@@ -597,6 +597,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.option_menu.setObjectName(self._ui_name("OptionMenu"))
         self.option_menu.aboutToShow.connect(self._populate_option_menu)
         self.option_button.setMenu(self.option_menu)
+        self.option_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
         row1_layout.addWidget(self.option_button)
 
         return row1_layout
@@ -688,6 +689,7 @@ class SnapshotCaptureWindow(QMainWindow):
         for preset_label in command.RESOLUTION_PRESETS:
             preset_menu.addAction(preset_label, lambda checked=False, p=preset_label: self._on_preset_selected(p))
         self.preset_button.setMenu(preset_menu)
+        self.preset_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
         row2_layout.addWidget(self.preset_button)
 
         # Set button

@@ -15,6 +15,7 @@ from ....lib_ui import ToolSettingsManager, get_maya_main_window
 from ....lib_ui.qt_compat import (
     QApplication,
     QBrush,
+    QByteArray,
     QColor,
     QColorDialog,
     QDialog,
@@ -30,6 +31,8 @@ from ....lib_ui.qt_compat import (
     QGraphicsView,
     QHBoxLayout,
     QIcon,
+    QImage,
+    QMimeData,
     QPainter,
     QPen,
     QPixmap,
@@ -88,8 +91,9 @@ STROKE_ICONS = {
 ACTION_ICONS = {
     "undo": "action_undo.svg",
     "clear": "action_clear.svg",
+    "save": "action_apply.svg",
+    "copy": "snapshot_copy.svg",
     "cancel": "action_cancel.svg",
-    "apply": "action_apply.svg",
 }
 
 # Color presets (RGB hex, RGB tuple, name)
@@ -197,6 +201,36 @@ class AnnotationEditorDialog(QDialog):
         footer_action_layout.setContentsMargins(4, 1, 4, 1)
         footer_action_layout.setSpacing(1)
 
+        # Save button (accept and close)
+        save_btn = QToolButton()
+        save_btn.setFixedSize(26, 26)
+        save_btn.setToolTip("Save")
+        save_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        save_icon_path = self._get_icon_path(ACTION_ICONS["save"])
+        if save_icon_path:
+            save_btn.setIcon(QIcon(save_icon_path))
+            save_btn.setIconSize(QSize(20, 20))
+        else:
+            save_btn.setText("S")
+        save_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        save_btn.clicked.connect(self.accept)
+        footer_action_layout.addWidget(save_btn)
+
+        # Copy to clipboard button
+        copy_btn = QToolButton()
+        copy_btn.setFixedSize(26, 26)
+        copy_btn.setToolTip("Copy to Clipboard")
+        copy_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        copy_icon_path = self._get_icon_path(ACTION_ICONS["copy"])
+        if copy_icon_path:
+            copy_btn.setIcon(QIcon(copy_icon_path))
+            copy_btn.setIconSize(QSize(20, 20))
+        else:
+            copy_btn.setText("C")
+        copy_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        copy_btn.clicked.connect(self._on_copy_to_clipboard)
+        footer_action_layout.addWidget(copy_btn)
+
         # Cancel button
         cancel_btn = QToolButton()
         cancel_btn.setFixedSize(26, 26)
@@ -213,23 +247,6 @@ class AnnotationEditorDialog(QDialog):
         )
         cancel_btn.clicked.connect(self.reject)
         footer_action_layout.addWidget(cancel_btn)
-
-        # Apply button
-        apply_btn = QToolButton()
-        apply_btn.setFixedSize(26, 26)
-        apply_btn.setToolTip("Apply")
-        apply_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        apply_icon_path = self._get_icon_path(ACTION_ICONS["apply"])
-        if apply_icon_path:
-            apply_btn.setIcon(QIcon(apply_icon_path))
-            apply_btn.setIconSize(QSize(20, 20))
-        else:
-            apply_btn.setText("OK")
-        apply_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
-        )
-        apply_btn.clicked.connect(self.accept)
-        footer_action_layout.addWidget(apply_btn)
 
         button_layout.addWidget(footer_action_group)
         layout.addLayout(button_layout)
@@ -711,6 +728,39 @@ class AnnotationEditorDialog(QDialog):
             AnnotationLayer with all annotations.
         """
         return self._annotation_layer
+
+    def _on_copy_to_clipboard(self):
+        """Copy annotated image to clipboard."""
+        from io import BytesIO
+
+        from .annotation_renderer import render_annotations
+        from .image import composite_with_background
+
+        # Composite image with background
+        composited = composite_with_background(self._image, self._background_color)
+
+        # Render annotations onto the image
+        annotated = render_annotations(composited, self._annotation_layer)
+
+        # Convert to PNG bytes
+        buffer = BytesIO()
+        annotated.save(buffer, format="PNG")
+        buffer.seek(0)
+        png_data = buffer.read()
+
+        # Convert to QImage
+        qimage = QImage()
+        qimage.loadFromData(png_data)
+
+        # Set clipboard with multiple formats
+        mime_data = QMimeData()
+        mime_data.setImageData(qimage)
+        mime_data.setData("image/png", QByteArray(png_data))
+
+        clipboard = QApplication.clipboard()
+        clipboard.setMimeData(mime_data)
+
+        logger.info("Annotated image copied to clipboard")
 
     def _load_settings(self):
         """Load saved annotation editor settings."""
