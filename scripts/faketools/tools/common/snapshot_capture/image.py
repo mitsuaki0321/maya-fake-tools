@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from PIL import Image
+from PIL import Image
 
+if TYPE_CHECKING:
     from .annotation import AnnotationLayer
 
 
@@ -23,8 +23,6 @@ def composite_with_background(
     Returns:
         Composited image (RGB if color specified, RGBA if transparent).
     """
-    from PIL import Image
-
     if background_color is None:
         # Keep transparency
         if image.mode != "RGBA":

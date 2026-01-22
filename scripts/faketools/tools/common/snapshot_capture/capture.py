@@ -4,14 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 import tempfile
-from typing import TYPE_CHECKING
 
 import maya.cmds as cmds
+from PIL import Image
 
 from .constants import DISPLAY_MODES
-
-if TYPE_CHECKING:
-    from PIL import Image
 
 
 def set_display_mode(panel_name: str, mode: str) -> None:
@@ -43,8 +40,6 @@ def capture_frame(
     Returns:
         PIL Image object.
     """
-    from PIL import Image
-
     current_frame = cmds.currentTime(query=True)
 
     # Use temp file
@@ -102,8 +97,6 @@ def capture_frame_range(
     Returns:
         List of PIL Image objects.
     """
-    from PIL import Image
-
     images = []
     original_frame = cmds.currentTime(query=True)
 

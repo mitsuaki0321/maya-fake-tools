@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from PIL import Image
+
 from .base import BaseExportHandler
 
 if TYPE_CHECKING:
-    from PIL import Image
-
     from ..annotation import AnnotationLayer
 
 
@@ -61,8 +61,6 @@ class GifExportHandler(BaseExportHandler):
         Raises:
             ValueError: If no images provided.
         """
-        from PIL import Image
-
         from ..annotation_renderer import render_annotations_to_frames
         from ..image import composite_with_background
 

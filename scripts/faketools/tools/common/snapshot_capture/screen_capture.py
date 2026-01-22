@@ -5,10 +5,7 @@ Uses PIL ImageGrab for cross-platform screen capture.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from PIL import Image
+from PIL import Image, ImageGrab
 
 
 def capture_screen_region(bbox: tuple[int, int, int, int]) -> Image.Image:
@@ -25,8 +22,6 @@ def capture_screen_region(bbox: tuple[int, int, int, int]) -> Image.Image:
         - Linux: Requires X11 (Wayland not supported)
         - macOS: May require screen capture permission
     """
-    from PIL import ImageGrab
-
     return ImageGrab.grab(bbox=bbox)
 
 

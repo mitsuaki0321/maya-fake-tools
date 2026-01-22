@@ -9,6 +9,14 @@ import os
 import maya.api.OpenMayaUI as omui
 import maya.cmds as cmds
 
+# Check PIL availability
+try:
+    from PIL import Image  # noqa: F401
+
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+
 from ....lib_ui import ToolDataManager, ToolSettingsManager, get_maya_main_window
 from ....lib_ui.maya_qt import qt_widget_from_maya_control, qt_widget_from_maya_layout
 from ....lib_ui.qt_compat import (
@@ -1505,9 +1513,14 @@ def show_ui():
     """Show the Snapshot Capture window.
 
     Returns:
-        SnapshotCaptureWindow: The window instance.
+        SnapshotCaptureWindow: The window instance, or None if PIL is not available.
     """
     global _instance
+
+    # Check PIL availability
+    if not PIL_AVAILABLE:
+        cmds.error("Snapshot Capture requires PIL (Pillow) library. Please install it or use Maya 2022+.")
+        return None
 
     # Close existing instance
     if _instance is not None:

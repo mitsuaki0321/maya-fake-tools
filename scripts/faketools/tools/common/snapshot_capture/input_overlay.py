@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
+if TYPE_CHECKING:
     from .input_monitor import ClickEvent
 
 # Click indicator colors (RGB)
@@ -40,8 +40,6 @@ def draw_cursor(
     Returns:
         Image with cursor drawn.
     """
-    from PIL import ImageDraw
-
     # Calculate cursor position relative to capture region
     rel_x = cursor_screen_pos[0] - capture_bbox[0]
     rel_y = cursor_screen_pos[1] - capture_bbox[1]
@@ -86,8 +84,6 @@ def draw_click_indicators(
     """
     if not click_events:
         return image
-
-    from PIL import ImageDraw
 
     result = image.copy()
     draw = ImageDraw.Draw(result)
@@ -150,8 +146,6 @@ def draw_key_overlay(
     """
     if not pressed_keys:
         return image
-
-    from PIL import Image, ImageDraw, ImageFont
 
     result = image.copy()
 

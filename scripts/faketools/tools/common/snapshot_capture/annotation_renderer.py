@@ -10,9 +10,9 @@ import logging
 import math
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
+if TYPE_CHECKING:
     from .annotation import AnnotationLayer, AnnotationType
 
 logger = logging.getLogger(__name__)
@@ -144,8 +144,6 @@ def _render_text(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with text rendered.
     """
-    from PIL import Image, ImageDraw
-
     # Convert ratio to pixel position
     x = int(annotation.x * image.width)
     y = int(annotation.y * image.height)
@@ -232,8 +230,6 @@ def _render_arrow(image: Image.Image, annotation) -> Image.Image:
 
         draw.flush()
     else:
-        from PIL import ImageDraw
-
         draw = ImageDraw.Draw(image)
         draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
         _draw_arrowhead_pil(draw, start_x, start_y, end_x, end_y, color, line_width)
@@ -319,8 +315,6 @@ def _render_rectangle(image: Image.Image, annotation) -> Image.Image:
         draw.rectangle([x, y, x + w, y + h], pen)
         draw.flush()
     else:
-        from PIL import ImageDraw
-
         draw = ImageDraw.Draw(image)
         draw.rectangle([x, y, x + w, y + h], outline=color, width=line_width)
 
@@ -357,8 +351,6 @@ def _render_ellipse(image: Image.Image, annotation) -> Image.Image:
         draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], pen)
         draw.flush()
     else:
-        from PIL import ImageDraw
-
         draw = ImageDraw.Draw(image)
         draw.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], outline=color, width=line_width)
 
@@ -394,8 +386,6 @@ def _render_line(image: Image.Image, annotation) -> Image.Image:
         draw.line([start_x, start_y, end_x, end_y], pen)
         draw.flush()
     else:
-        from PIL import ImageDraw
-
         draw = ImageDraw.Draw(image)
         draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
 
@@ -412,8 +402,6 @@ def _render_number(image: Image.Image, annotation) -> Image.Image:
     Returns:
         Image with numbered circle rendered.
     """
-    from PIL import ImageDraw
-
     # Convert ratio to pixel positions
     cx = int(annotation.x * image.width)
     cy = int(annotation.y * image.height)
@@ -459,8 +447,6 @@ def _get_font(size: int):
     Returns:
         PIL ImageFont object.
     """
-    from PIL import ImageFont
-
     # Try common font paths
     font_paths = [
         "arial.ttf",
