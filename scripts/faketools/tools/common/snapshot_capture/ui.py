@@ -66,6 +66,9 @@ RESOLUTION_INPUT_WIDTH = 45
 # Recording Constants
 MAX_GIF_FRAMES = 500
 
+# Tooltip style (Maya's default)
+TOOLTIP_STYLE = "QToolTip { background-color: #FFFFDC; color: #000000; border: 1px solid #767676; border-radius: 0px; }"
+
 # Options
 FPS_OPTIONS = [10, 12, 15, 24, 30, 50, 60]
 DELAY_OPTIONS = [0, 1, 2, 3]
@@ -609,6 +612,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.png_copy_button.clicked.connect(self._on_copy_png_to_clipboard)
         self.png_copy_button.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.png_copy_button.customContextMenuRequested.connect(self._show_copy_context_menu)
+        self.png_copy_button.setStyleSheet(self.png_copy_button.styleSheet() + TOOLTIP_STYLE)
         png_layout.addWidget(self.png_copy_button)
 
         self.action_stack.addWidget(png_widget)  # index 0
@@ -638,6 +642,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.record_button.setToolTip("Start Recording")
         self._update_record_button_icon("rec")
         self.record_button.clicked.connect(self._on_record_toggle)
+        self.record_button.setStyleSheet(self.record_button.styleSheet() + TOOLTIP_STYLE)
         rec_layout.addWidget(self.record_button)
 
         self.action_stack.addWidget(rec_widget)  # index 2
@@ -667,7 +672,7 @@ class SnapshotCaptureWindow(QMainWindow):
         self.option_menu.setObjectName(self._ui_name("OptionMenu"))
         self.option_menu.aboutToShow.connect(self._populate_option_menu)
         self.option_button.setMenu(self.option_menu)
-        self.option_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        self.option_button.setStyleSheet(f"QToolButton::menu-indicator {{ image: none; }}{TOOLTIP_STYLE}")
         row1_layout.addWidget(self.option_button)
 
         return row1_layout
@@ -691,6 +696,7 @@ class SnapshotCaptureWindow(QMainWindow):
         else:
             button.setText("S")
         button.clicked.connect(self._on_save_button)
+        button.setStyleSheet(button.styleSheet() + TOOLTIP_STYLE)
         return button
 
     def _create_separator(self, name: str) -> QWidget:
@@ -759,7 +765,7 @@ class SnapshotCaptureWindow(QMainWindow):
         for preset_label in command.RESOLUTION_PRESETS:
             preset_menu.addAction(preset_label, lambda checked=False, p=preset_label: self._on_preset_selected(p))
         self.preset_button.setMenu(preset_menu)
-        self.preset_button.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        self.preset_button.setStyleSheet(f"QToolButton::menu-indicator {{ image: none; }}{TOOLTIP_STYLE}")
         row2_layout.addWidget(self.preset_button)
 
         # Set button
@@ -773,6 +779,7 @@ class SnapshotCaptureWindow(QMainWindow):
         else:
             self.set_button.setText("Set")
         self.set_button.clicked.connect(self._on_set_custom_resolution)
+        self.set_button.setStyleSheet(self.set_button.styleSheet() + TOOLTIP_STYLE)
         row2_layout.addWidget(self.set_button)
 
         return row2_layout
@@ -781,7 +788,7 @@ class SnapshotCaptureWindow(QMainWindow):
         """Update BG button stylesheet to show current color."""
         if self.bg_button:
             r, g, b = self._bg_color
-            self.bg_button.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #888888;")
+            self.bg_button.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #888888;{TOOLTIP_STYLE}")
 
     def _update_record_button_icon(self, state: str):
         """Update record button icon based on state.

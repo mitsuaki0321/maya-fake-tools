@@ -120,6 +120,9 @@ LINE_WIDTH_PRESETS = [
     (6, 5, "Thick"),
 ]
 
+# Tooltip style (Maya's default)
+TOOLTIP_STYLE = "QToolTip { background-color: #FFFFDC; color: #000000; border: 1px solid #767676; border-radius: 0px; }"
+
 
 class AnnotationEditorDialog(QDialog):
     """Dialog for editing annotations on an image."""
@@ -129,7 +132,7 @@ class AnnotationEditorDialog(QDialog):
         image: Image.Image,
         parent=None,
         background_color: tuple[int, int, int] | None = None,
-        save_callback: "Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None" = None,
+        save_callback: Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None = None,
     ):
         """Initialize annotation editor.
 
@@ -225,7 +228,7 @@ class AnnotationEditorDialog(QDialog):
             save_btn.setIconSize(QSize(20, 20))
         else:
             save_btn.setText("S")
-        save_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        save_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
         save_btn.clicked.connect(self._on_save_clicked)
         footer_action_layout.addWidget(save_btn)
 
@@ -240,7 +243,7 @@ class AnnotationEditorDialog(QDialog):
             copy_btn.setIconSize(QSize(20, 20))
         else:
             copy_btn.setText("C")
-        copy_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        copy_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
         copy_btn.clicked.connect(self._on_copy_to_clipboard)
         footer_action_layout.addWidget(copy_btn)
 
@@ -256,7 +259,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             cancel_btn.setText("X")
         cancel_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
         )
         cancel_btn.clicked.connect(self.reject)
         footer_action_layout.addWidget(cancel_btn)
@@ -378,7 +381,7 @@ class AnnotationEditorDialog(QDialog):
             undo_btn.setIconSize(QSize(20, 20))
         else:
             undo_btn.setText("U")
-        undo_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        undo_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
         undo_btn.clicked.connect(self._on_undo)
         action_group_layout.addWidget(undo_btn)
 
@@ -393,7 +396,7 @@ class AnnotationEditorDialog(QDialog):
             delete_btn.setIconSize(QSize(20, 20))
         else:
             delete_btn.setText("D")
-        delete_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        delete_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
         delete_btn.clicked.connect(self._on_delete_selected)
         action_group_layout.addWidget(delete_btn)
 
@@ -409,7 +412,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             clear_btn.setText("C")
         clear_btn.setStyleSheet(
-            "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
         )
         clear_btn.clicked.connect(self._on_clear_all)
         action_group_layout.addWidget(clear_btn)
@@ -476,10 +479,10 @@ class AnnotationEditorDialog(QDialog):
         """Update tool button styles based on selection state."""
         for _tool, btn in self._tool_buttons.items():
             if btn.isChecked():
-                btn.setStyleSheet("QToolButton { background: #505050; border: none; border-radius: 4px; }")
+                btn.setStyleSheet(f"QToolButton {{ background: #505050; border: none; border-radius: 4px; }}{TOOLTIP_STYLE}")
             else:
                 btn.setStyleSheet(
-                    "QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }"
+                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
                 )
 
     def _create_stroke_button(self, width: int, visual_height: int, name: str) -> QToolButton:
@@ -524,9 +527,9 @@ class AnnotationEditorDialog(QDialog):
         is_selected = btn.isChecked()
 
         if is_selected:
-            btn.setStyleSheet("QToolButton { background: #4a4a4a; border: none; border-radius: 3px; }")
+            btn.setStyleSheet(f"QToolButton {{ background: #4a4a4a; border: none; border-radius: 3px; }}{TOOLTIP_STYLE}")
         else:
-            btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 3px; }QToolButton:hover { background: #404040; }")
+            btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 3px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
         """Update color button style.
@@ -538,9 +541,9 @@ class AnnotationEditorDialog(QDialog):
         """
         r, g, b = color
         if selected:
-            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px #333;")
+            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px #333;{TOOLTIP_STYLE}")
         else:
-            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 8px;")
+            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 8px;{TOOLTIP_STYLE}")
 
     def _update_custom_color_button(self):
         """Update custom color button to show custom color and selection state."""
@@ -556,9 +559,9 @@ class AnnotationEditorDialog(QDialog):
 
         # Show selection border if custom color is selected
         if self._is_custom_selected:
-            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 3px;")
+            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 3px;{TOOLTIP_STYLE}")
         else:
-            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 3px;")
+            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 3px;{TOOLTIP_STYLE}")
 
     def _update_color_selection(self):
         """Update color button selection states."""
@@ -1564,7 +1567,7 @@ def show_annotation_editor(
     image: Image.Image,
     parent=None,
     background_color: tuple[int, int, int] | None = None,
-    save_callback: "Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None" = None,
+    save_callback: Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None = None,
 ) -> AnnotationLayer | None:
     """Show the annotation editor dialog.
 
