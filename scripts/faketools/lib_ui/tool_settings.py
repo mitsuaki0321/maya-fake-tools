@@ -146,7 +146,7 @@ class ToolSettingsManager:
         try:
             with open(preset_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Saved settings to preset '{preset_name}': {preset_path}")
+            logger.debug(f"Saved settings to preset '{preset_name}': {preset_path}")
         except (TypeError, ValueError) as e:
             logger.error(f"Failed to serialize settings for preset '{preset_name}': {e}")
             raise ValueError(f"Settings data must be JSON serializable: {e}") from e
@@ -180,7 +180,7 @@ class ToolSettingsManager:
         try:
             with open(preset_path, encoding="utf-8") as f:
                 data = json.load(f)
-            logger.info(f"Loaded settings from preset '{preset_name}': {preset_path}")
+            logger.debug(f"Loaded settings from preset '{preset_name}': {preset_path}")
             return data
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from '{preset_path}': {e}")
