@@ -58,6 +58,8 @@ from .annotation import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -95,6 +97,7 @@ STROKE_ICONS = {
 # Action icons (SVG filenames)
 ACTION_ICONS = {
     "undo": "action_undo.svg",
+    "delete": "action_delete.svg",
     "clear": "action_clear.svg",
     "save": "action_apply.svg",
     "copy": "snapshot_copy.svg",
@@ -126,6 +129,7 @@ class AnnotationEditorDialog(QDialog):
         image: Image.Image,
         parent=None,
         background_color: tuple[int, int, int] | None = None,
+        save_callback: "Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None" = None,
     ):
         """Initialize annotation editor.
 
@@ -133,6 +137,9 @@ class AnnotationEditorDialog(QDialog):
             image: PIL Image to annotate.
             parent: Parent widget.
             background_color: RGB tuple for background compositing, or None for transparent.
+            save_callback: Optional callback for save action. Should return True if save succeeded.
+                          If provided, the dialog only closes when save succeeds.
+                          Signature: (image, annotations, parent_widget) -> bool
         """
         super().__init__(parent or get_maya_main_window())
         self.setWindowTitle("Annotation Editor")
@@ -140,6 +147,7 @@ class AnnotationEditorDialog(QDialog):
 
         self._image = image
         self._background_color = background_color
+        self._save_callback = save_callback
         self._annotation_layer = AnnotationLayer()
         self._current_tool = TOOL_SELECT
         self._next_number = 1  # Auto-increment for number tool
@@ -218,7 +226,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             save_btn.setText("S")
         save_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
-        save_btn.clicked.connect(self.accept)
+        save_btn.clicked.connect(self._on_save_clicked)
         footer_action_layout.addWidget(save_btn)
 
         # Copy to clipboard button
@@ -373,6 +381,21 @@ class AnnotationEditorDialog(QDialog):
         undo_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
         undo_btn.clicked.connect(self._on_undo)
         action_group_layout.addWidget(undo_btn)
+
+        # Delete selected button
+        delete_btn = QToolButton()
+        delete_btn.setFixedSize(26, 26)
+        delete_btn.setToolTip("Delete Selected (Del)")
+        delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        delete_icon_path = self._get_icon_path(ACTION_ICONS["delete"])
+        if delete_icon_path:
+            delete_btn.setIcon(QIcon(delete_icon_path))
+            delete_btn.setIconSize(QSize(20, 20))
+        else:
+            delete_btn.setText("D")
+        delete_btn.setStyleSheet("QToolButton { background: transparent; border: none; border-radius: 4px; }QToolButton:hover { background: #404040; }")
+        delete_btn.clicked.connect(self._on_delete_selected)
+        action_group_layout.addWidget(delete_btn)
 
         # Clear button
         clear_btn = QToolButton()
@@ -806,6 +829,22 @@ class AnnotationEditorDialog(QDialog):
         }
         self._settings.save_settings(data, "annotation")
 
+    def _on_save_clicked(self):
+        """Handle save button click.
+
+        If save_callback is provided, call it and only close dialog on success.
+        Otherwise, just accept the dialog.
+        """
+        if self._save_callback is not None:
+            # Call the save callback with image, annotations, and self as parent for file dialog
+            success = self._save_callback(self._image, self._annotation_layer, self)
+            if success:
+                self.accept()
+            # If not successful, keep the dialog open
+        else:
+            # No callback, just accept
+            self.accept()
+
     def accept(self):
         """Accept dialog and save settings."""
         self._save_settings()
@@ -941,6 +980,14 @@ class AnnotationGraphicsView(QGraphicsView):
         if event.key() == Qt.Key.Key_Shift:
             self._shift_pressed = False
         super().keyReleaseEvent(event)
+
+    def wheelEvent(self, event):
+        """Disable wheel scrolling to prevent unwanted view movement.
+
+        Args:
+            event: Wheel event.
+        """
+        event.accept()
 
     def mousePressEvent(self, event):
         """Handle mouse press events.
@@ -1517,6 +1564,7 @@ def show_annotation_editor(
     image: Image.Image,
     parent=None,
     background_color: tuple[int, int, int] | None = None,
+    save_callback: "Callable[[Image.Image, AnnotationLayer, QWidget], bool] | None" = None,
 ) -> AnnotationLayer | None:
     """Show the annotation editor dialog.
 
@@ -1524,11 +1572,14 @@ def show_annotation_editor(
         image: PIL Image to annotate.
         parent: Parent widget.
         background_color: RGB tuple for background compositing, or None for transparent.
+        save_callback: Optional callback for save action. Should return True if save succeeded.
+                      If provided, the dialog only closes when save succeeds.
+                      Signature: (image, annotations, parent_widget) -> bool
 
     Returns:
         AnnotationLayer if accepted, None if cancelled.
     """
-    dialog = AnnotationEditorDialog(image, parent, background_color)
+    dialog = AnnotationEditorDialog(image, parent, background_color, save_callback)
     if dialog.exec() == QDialog.DialogCode.Accepted:
         return dialog.get_annotations()
     return None

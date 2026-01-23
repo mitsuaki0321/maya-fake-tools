@@ -25,6 +25,7 @@ from ....lib_ui.qt_compat import (
     QColor,
     QColorDialog,
     QComboBox,
+    QFileDialog,
     QHBoxLayout,
     QIcon,
     QImage,
@@ -1274,29 +1275,52 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.waitCursor(state=False)
 
             # Show annotation editor if enabled
-            annotations = None
             if edit_annotations:
-                annotations = show_annotation_editor(image, self, background_color)
+                # Create save callback that handles file dialog and saving
+                def save_callback(img, annotations, parent_widget):
+                    return self._save_png_with_dialog(img, background_color, annotations, parent_widget)
+
+                annotations = show_annotation_editor(image, self, background_color, save_callback)
                 if annotations is None:
                     # User cancelled annotation editor
                     return
+            else:
+                # No annotation editor, save directly
+                self._save_png_with_dialog(image, background_color, annotations=None)
 
-            # Get save path from user
-            file_path = cmds.fileDialog2(
-                fileFilter="PNG Images (*.png)",
-                dialogStyle=2,
-                fileMode=0,
-                caption="Save Snapshot",
-                startingDirectory=self._get_save_directory(),
-            )
+        except Exception as e:
+            cmds.waitCursor(state=False)
+            cmds.inViewMessage(amg="", pos="midCenter", fade=True, fadeOutTime=0.0)
+            cmds.warning(f"Failed to save PNG: {e}")
+            logger.error(f"Failed to save: {e}")
 
-            if not file_path:
-                return
+    def _save_png_with_dialog(self, image, background_color, annotations, parent=None) -> bool:
+        """Show save dialog and save PNG image.
 
-            file_path = file_path[0]
-            if not file_path.lower().endswith(".png"):
-                file_path += ".png"
+        Args:
+            image: PIL Image to save.
+            background_color: RGB tuple for background compositing.
+            annotations: Optional AnnotationLayer to render.
+            parent: Optional parent widget for the file dialog.
 
+        Returns:
+            True if save succeeded, False if cancelled.
+        """
+        # Get save path from user using QFileDialog (works properly with Qt modal dialogs)
+        file_path, _ = QFileDialog.getSaveFileName(
+            parent or self,
+            "Save Snapshot",
+            self._get_save_directory(),
+            "PNG Images (*.png)",
+        )
+
+        if not file_path:
+            return False
+
+        if not file_path.lower().endswith(".png"):
+            file_path += ".png"
+
+        try:
             cmds.waitCursor(state=True)
             cmds.inViewMessage(amg="Saving...", pos="midCenter", fade=False)
 
@@ -1306,11 +1330,13 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.waitCursor(state=False)
             cmds.inViewMessage(amg="Saved!", pos="midCenter", fade=True)
             logger.info(f"Saved snapshot: {file_path}")
+            return True
         except Exception as e:
             cmds.waitCursor(state=False)
             cmds.inViewMessage(amg="", pos="midCenter", fade=True, fadeOutTime=0.0)
             cmds.warning(f"Failed to save PNG: {e}")
             logger.error(f"Failed to save: {e}")
+            return False
 
     def _get_animation_file_filter(self) -> str:
         """Build file filter for animation export.
