@@ -95,6 +95,11 @@ class DockableWidget(MayaQWidgetDockableMixin, QWidget):
 
         self.setLayout(main_layout)
 
+        # Connect settings changed signals for auto-save
+        self.filter_selection_widget.settings_changed.connect(self._save_settings)
+        self.substitution_selection_widget.settings_changed.connect(self._save_settings)
+        self.rename_selection_widget.settings_changed.connect(self._save_settings)
+
         # Restore settings
         self._restore_settings()
 

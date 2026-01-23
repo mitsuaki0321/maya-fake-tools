@@ -3,7 +3,7 @@
 import maya.cmds as cmds
 
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.qt_compat import QHBoxLayout, QLabel, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.qt_compat import QHBoxLayout, QLabel, QLineEdit, QSizePolicy, QWidget, Signal
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.ui_utils import get_text_width
 from .. import command
@@ -19,6 +19,8 @@ class RenameSelectionWidget(QWidget):
     - # : Number placeholder (1, 2, 3, ...)
     - ~ : Original name placeholder
     """
+
+    settings_changed = Signal()
 
     def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
@@ -96,6 +98,7 @@ class RenameSelectionWidget(QWidget):
         nodes = command.solve_rename(nodes, new_name, start_alpha=start_alpha, start_number=start_number)
 
         cmds.select(nodes, r=True)
+        self.settings_changed.emit()
 
     def _collect_settings(self) -> dict:
         """Collect current widget settings.

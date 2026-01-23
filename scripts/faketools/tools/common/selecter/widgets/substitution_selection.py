@@ -5,7 +5,7 @@ import maya.cmds as cmds
 from .....lib import lib_name, lib_transform
 from .....lib.lib_selection import get_top_nodes
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget, Signal
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.ui_utils import get_line_height
 from .....lib_ui.widgets import extra_widgets
@@ -24,6 +24,8 @@ class SubstitutionSelectionWidget(QWidget):
     - Selection by substituted name
     - Rename, mirror, duplicate operations
     """
+
+    settings_changed = Signal()
 
     def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
@@ -163,8 +165,10 @@ class SubstitutionSelectionWidget(QWidget):
 
         if not result_nodes:
             cmds.warning("No matching nodes found.")
+            self.settings_changed.emit()
             return nodes
 
+        self.settings_changed.emit()
         return result_nodes
 
     @maya_decorator.undo_chunk("Selecter: Select Right to Left")
@@ -197,8 +201,10 @@ class SubstitutionSelectionWidget(QWidget):
 
         if not result_nodes:
             cmds.warning("No matching nodes found.")
+            self.settings_changed.emit()
             return nodes
 
+        self.settings_changed.emit()
         return result_nodes
 
     @maya_decorator.undo_chunk("Selecter: Select Substitution")
@@ -233,8 +239,10 @@ class SubstitutionSelectionWidget(QWidget):
 
         if not result_nodes:
             cmds.warning("No matching nodes found.")
+            self.settings_changed.emit()
             return nodes
 
+        self.settings_changed.emit()
         return result_nodes
 
     @maya_decorator.undo_chunk("Selecter: Rename Substitution")
@@ -250,6 +258,7 @@ class SubstitutionSelectionWidget(QWidget):
         result_nodes = command.substitute_rename(nodes, search_text, replace_text)
 
         cmds.select(result_nodes, r=True)
+        self.settings_changed.emit()
 
     @maya_decorator.undo_chunk("Selecter: Mirror Position")
     @maya_decorator.error_handler
@@ -287,6 +296,7 @@ class SubstitutionSelectionWidget(QWidget):
             result_nodes.append(name)
 
         cmds.select(result_nodes, r=True)
+        self.settings_changed.emit()
 
     @maya_decorator.undo_chunk("Selecter: Duplicate Substitution")
     @maya_decorator.error_handler
@@ -306,6 +316,7 @@ class SubstitutionSelectionWidget(QWidget):
 
         result_nodes = command.substitute_duplicate(nodes, search_text, replace_text)
         if not result_nodes:
+            self.settings_changed.emit()
             return
 
         if all(["dagNode" in cmds.nodeType(node, inherited=True) for node in result_nodes]):
@@ -322,6 +333,8 @@ class SubstitutionSelectionWidget(QWidget):
         else:
             cmds.select(result_nodes, r=True)
 
+        self.settings_changed.emit()
+
     @maya_decorator.undo_chunk("Selecter: Duplicate Original Substitution")
     @maya_decorator.error_handler
     def duplicate_original_substitution(self):
@@ -335,6 +348,7 @@ class SubstitutionSelectionWidget(QWidget):
         result_nodes = command.substitute_duplicate_original(nodes, search_text, replace_text)
 
         cmds.select(result_nodes, r=True)
+        self.settings_changed.emit()
 
     def _get_substitution_option(self):
         """Get the substitution option.

@@ -6,7 +6,7 @@ import maya.cmds as cmds
 
 from .....lib import lib_selection
 from .....lib_ui import base_window, maya_decorator
-from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget
+from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget, Signal
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from .constants import FILTER_COLOR, selecter_handler
@@ -18,6 +18,8 @@ class FilterSelectionWidget(QWidget):
 
     Provides filtering functionality for nodes by name (regex) and type.
     """
+
+    settings_changed = Signal()
 
     def __init__(self, settings: ToolSettingsManager, parent=None):
         """Constructor.
@@ -96,8 +98,10 @@ class FilterSelectionWidget(QWidget):
 
         if not result_nodes:
             cmds.warning("No matching nodes found.")
+            self.settings_changed.emit()
             return nodes
 
+        self.settings_changed.emit()
         return result_nodes
 
     @maya_decorator.undo_chunk("Selecter: Filter Type")
@@ -122,8 +126,10 @@ class FilterSelectionWidget(QWidget):
 
         if not result_nodes:
             cmds.warning("No matching nodes found.")
+            self.settings_changed.emit()
             return nodes
 
+        self.settings_changed.emit()
         return result_nodes
 
     def _collect_settings(self) -> dict:
