@@ -271,6 +271,7 @@ class DocBuilder:
             "root_path": root_path,
             "project_name": self.config["project"]["name" if lang == "ja" else "name_en"],
             "home_text": "ホーム" if lang == "ja" else "Home",
+            "home_link": "index.html" if lang == "ja" else "index_en.html",
             "toc_title": "目次" if lang == "ja" else "Table of Contents",
             "lang_link": lang_link,
             "lang_link_text": lang_link_text,
@@ -551,6 +552,7 @@ class DocBuilder:
             "intro": intro_content,
             "categories": categories_data,
             "project_name": self.config["project"]["name" if lang == "ja" else "name_en"],
+            "home_link": "index.html" if lang == "ja" else "index_en.html",
             "lang_link": "index_en.html" if lang == "ja" else "index.html",
             "lang_link_text": "日本語" if lang == "en" else "English",
         }
@@ -606,7 +608,7 @@ class DocBuilder:
         html_parts.append('    <header class="site-header">')
         html_parts.append('        <div class="header-content">')
         html_parts.append('            <div class="logo">')
-        html_parts.append(f'                <a href="index.html">{data["project_name"]}</a>')
+        html_parts.append(f'                <a href="{data["home_link"]}">{data["project_name"]}</a>')
         html_parts.append("            </div>")
         html_parts.append('            <nav class="language-switcher">')
         html_parts.append(f'                <a href="{data["lang_link"]}" class="lang-switch-btn">{data["lang_link_text"]}</a>')

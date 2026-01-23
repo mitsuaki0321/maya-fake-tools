@@ -47,6 +47,8 @@ You can switch the displayed camera from the **Camera** menu in the menu bar.
 
 You can display only selected objects in the viewport from the **Isolate** menu in the menu bar.
 
+![image](../../images/common/snapshot_capture/image014.png)
+
 | Menu Item | Description |
 |-----------|-------------|
 | View Selected | Toggle between showing only selected objects / all objects |
@@ -258,9 +260,12 @@ Select from 3 presets (thin, medium, thick).
 
 #### Action Buttons
 
+![image](../../images/common/snapshot_capture/image016.png)
+
 | Button | Icon | Description |
 |--------|------|-------------|
 | Undo | ![image](../../images/common/snapshot_capture/action_undo.svg) | Undo the last action |
+| Delete | ![image](../../images/common/snapshot_capture/action_delete.svg) | Delete selected annotation |
 | Clear All | ![image](../../images/common/snapshot_capture/action_clear.svg) | Delete all annotations |
 
 ### Footer Buttons

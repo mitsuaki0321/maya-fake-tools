@@ -15,7 +15,7 @@
     <header class="site-header">
         <div class="header-content">
             <div class="logo">
-                <a href="$root_path$index.html">$project_name$</a>
+                <a href="$root_path$$home_link$">$project_name$</a>
             </div>
             <nav class="language-switcher">
                 $if(lang_link)$
@@ -29,7 +29,7 @@
         $if(breadcrumb)$
         <nav class="breadcrumb" aria-label="breadcrumb">
             <ol>
-                <li><a href="$root_path$index.html">$home_text$</a></li>
+                <li><a href="$root_path$$home_link$">$home_text$</a></li>
                 $for(breadcrumb)$
                 <li$if(breadcrumb.active)$ class="active"$endif$>
                     $if(breadcrumb.url)$
