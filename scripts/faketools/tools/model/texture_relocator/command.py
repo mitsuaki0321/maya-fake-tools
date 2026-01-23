@@ -4,11 +4,12 @@ Pure Maya operations for relocating texture file paths.
 """
 
 from dataclasses import dataclass
+import glob
 import logging
 from pathlib import Path
+import re
 import shutil
 
-import maya.app.general.fileTexturePathResolver as resolver
 import maya.cmds as cmds
 
 logger = logging.getLogger(__name__)
@@ -71,19 +72,35 @@ def resolve_texture_files(file_node: str) -> list[str]:
     Returns:
         list[str]: List of resolved file paths.
     """
-    pattern = cmds.getAttr(f"{file_node}.computedFileTextureNamePattern")
+    patterns = ["<UDIM>", "<f>", "<F>"]
 
-    if not pattern:
-        file_path = cmds.getAttr(f"{file_node}.fileTextureName")
-        return [file_path] if file_path else []
+    tex_path = cmds.getAttr(f"{file_node}.computedFileTextureNamePattern")
+    if not tex_path:
+        return []
 
-    try:
-        files = resolver.findAllFilesForPattern(pattern)
-        return list(files) if files else []
-    except Exception:
-        logger.warning(f"Failed to resolve files for pattern: {pattern}")
-        file_path = cmds.getAttr(f"{file_node}.fileTextureName")
-        return [file_path] if file_path else []
+    # Check if pattern contains UDIM/sequence tokens
+    pattern_regex = ".*({}).*".format("|".join(patterns))
+    if re.match(pattern_regex, tex_path):
+        file_name = Path(tex_path).name
+        dir_path = Path(tex_path).parent
+
+        if not dir_path.exists():
+            logger.warning(f"Directory not found: {dir_path}")
+            return []
+
+        # Replace tokens with glob wildcard
+        glob_pattern = re.sub("|".join(patterns), "*", file_name)
+        matched_files = glob.glob(str(dir_path / glob_pattern))
+
+        # Normalize path separators
+        result = [p.replace("\\", "/") for p in matched_files]
+        logger.debug(f"Resolved {len(result)} files for pattern: {tex_path}")
+        return result
+    else:
+        # No pattern tokens, return single file if exists
+        if Path(tex_path).exists():
+            return [tex_path]
+        return []
 
 
 @dataclass
