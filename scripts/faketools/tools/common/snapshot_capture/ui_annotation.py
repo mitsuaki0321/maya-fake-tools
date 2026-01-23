@@ -228,7 +228,9 @@ class AnnotationEditorDialog(QDialog):
             save_btn.setIconSize(QSize(20, 20))
         else:
             save_btn.setText("S")
-        save_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
+        save_btn.setStyleSheet(
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+        )
         save_btn.clicked.connect(self._on_save_clicked)
         footer_action_layout.addWidget(save_btn)
 
@@ -243,7 +245,9 @@ class AnnotationEditorDialog(QDialog):
             copy_btn.setIconSize(QSize(20, 20))
         else:
             copy_btn.setText("C")
-        copy_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
+        copy_btn.setStyleSheet(
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+        )
         copy_btn.clicked.connect(self._on_copy_to_clipboard)
         footer_action_layout.addWidget(copy_btn)
 
@@ -381,7 +385,9 @@ class AnnotationEditorDialog(QDialog):
             undo_btn.setIconSize(QSize(20, 20))
         else:
             undo_btn.setText("U")
-        undo_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
+        undo_btn.setStyleSheet(
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+        )
         undo_btn.clicked.connect(self._on_undo)
         action_group_layout.addWidget(undo_btn)
 
@@ -396,7 +402,9 @@ class AnnotationEditorDialog(QDialog):
             delete_btn.setIconSize(QSize(20, 20))
         else:
             delete_btn.setText("D")
-        delete_btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
+        delete_btn.setStyleSheet(
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+        )
         delete_btn.clicked.connect(self._on_delete_selected)
         action_group_layout.addWidget(delete_btn)
 
@@ -529,7 +537,9 @@ class AnnotationEditorDialog(QDialog):
         if is_selected:
             btn.setStyleSheet(f"QToolButton {{ background: #4a4a4a; border: none; border-radius: 3px; }}{TOOLTIP_STYLE}")
         else:
-            btn.setStyleSheet(f"QToolButton {{ background: transparent; border: none; border-radius: 3px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}")
+            btn.setStyleSheet(
+                f"QToolButton {{ background: transparent; border: none; border-radius: 3px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            )
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
         """Update color button style.
@@ -541,7 +551,9 @@ class AnnotationEditorDialog(QDialog):
         """
         r, g, b = color
         if selected:
-            btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px #333;{TOOLTIP_STYLE}")
+            btn.setStyleSheet(
+                f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 8px; box-shadow: 0 0 0 1px #333;{TOOLTIP_STYLE}"
+            )
         else:
             btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 8px;{TOOLTIP_STYLE}")
 
@@ -561,7 +573,9 @@ class AnnotationEditorDialog(QDialog):
         if self._is_custom_selected:
             self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid #fff; border-radius: 3px;{TOOLTIP_STYLE}")
         else:
-            self._custom_color_btn.setStyleSheet(f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 3px;{TOOLTIP_STYLE}")
+            self._custom_color_btn.setStyleSheet(
+                f"background-color: rgb({r}, {g}, {b}); border: 2px solid transparent; border-radius: 3px;{TOOLTIP_STYLE}"
+            )
 
     def _update_color_selection(self):
         """Update color button selection states."""
@@ -656,20 +670,8 @@ class AnnotationEditorDialog(QDialog):
                 self._scene.removeItem(item._arrowhead)
             self._scene.removeItem(item)
 
-        # If this was a number annotation, recalculate the next number
-        if self._next_number > 1:
-            # Check what numbers are still in use
-            remaining_numbers = set()
-            for ann in self._annotation_layer.annotations:
-                if isinstance(ann, NumberAnnotation):
-                    remaining_numbers.add(ann.number)
-
-            # Find the next available number
-            next_num = 1
-            while next_num in remaining_numbers:
-                next_num += 1
-            self._next_number = next_num
-            self._view.set_next_number(self._next_number)
+        # Recalculate next number to reuse deleted numbers
+        self._recalculate_next_number()
 
     def _on_delete_selected(self):
         """Delete selected annotation items."""
@@ -683,6 +685,25 @@ class AnnotationEditorDialog(QDialog):
             if hasattr(item, "_arrowhead"):
                 self._scene.removeItem(item._arrowhead)
             self._scene.removeItem(item)
+
+        # Recalculate next number to reuse deleted numbers
+        self._recalculate_next_number()
+
+    def _recalculate_next_number(self):
+        """Recalculate the next number to use by finding the smallest available number."""
+        # Collect all numbers currently in use
+        used_numbers = set()
+        for ann in self._annotation_layer.annotations:
+            if isinstance(ann, NumberAnnotation):
+                used_numbers.add(ann.number)
+
+        # Find the smallest available number starting from 1
+        next_num = 1
+        while next_num in used_numbers:
+            next_num += 1
+
+        self._next_number = next_num
+        self._view.set_next_number(self._next_number)
 
     def _on_clear_all(self):
         """Clear all annotations."""
@@ -750,8 +771,7 @@ class AnnotationEditorDialog(QDialog):
 
         # Update next number if this was a number annotation
         if isinstance(annotation, NumberAnnotation):
-            self._next_number = annotation.number + 1
-            self._view.set_next_number(self._next_number)
+            self._recalculate_next_number()
 
     def get_annotations(self) -> AnnotationLayer:
         """Get the annotation layer.
@@ -1531,9 +1551,7 @@ class AnnotationGraphicsView(QGraphicsView):
             # Return just endpoints
             return [first, last]
 
-    def _perpendicular_distance(
-        self, point: tuple[float, float], line_start: tuple[float, float], line_end: tuple[float, float]
-    ) -> float:
+    def _perpendicular_distance(self, point: tuple[float, float], line_start: tuple[float, float], line_end: tuple[float, float]) -> float:
         """Calculate perpendicular distance from point to line.
 
         Args:
