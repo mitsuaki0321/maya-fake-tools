@@ -124,6 +124,74 @@ LINE_WIDTH_PRESETS = [
 TOOLTIP_STYLE = "QToolTip { background-color: #FFFFDC; color: #000000; border: 1px solid #767676; border-radius: 0px; }"
 
 
+class MovableLineItem(QGraphicsLineItem):
+    """Line item that tracks movement for undo support."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self._original_pos: QPointF | None = None
+        self.annotation_id: str | None = None
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
+            self._original_pos = self.pos()
+        return super().itemChange(change, value)
+
+
+class MovableRectItem(QGraphicsRectItem):
+    """Rectangle item that tracks movement for undo support."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self._original_pos: QPointF | None = None
+        self.annotation_id: str | None = None
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
+            self._original_pos = self.pos()
+        return super().itemChange(change, value)
+
+
+class MovableEllipseItem(QGraphicsEllipseItem):
+    """Ellipse item that tracks movement for undo support."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self._original_pos: QPointF | None = None
+        self.annotation_id: str | None = None
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
+            self._original_pos = self.pos()
+        return super().itemChange(change, value)
+
+
+class MovablePathItem(QGraphicsPathItem):
+    """Path item that tracks movement for undo support."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self._original_pos: QPointF | None = None
+        self.annotation_id: str | None = None
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
+            self._original_pos = self.pos()
+        return super().itemChange(change, value)
+
+
 class AnnotationEditorDialog(QDialog):
     """Dialog for editing annotations on an image."""
 
@@ -653,37 +721,64 @@ class AnnotationEditorDialog(QDialog):
             self._update_stroke_button_style(btn)
 
     def _on_undo(self):
-        """Undo the last annotation creation."""
+        """Undo the last annotation action (create or move)."""
         if not self._undo_stack:
             return
 
-        # Get last created annotation info
-        annotation_id, item = self._undo_stack.pop()
+        # Get last action info
+        entry = self._undo_stack.pop()
 
-        # Remove from annotation layer
-        self._annotation_layer.remove(annotation_id)
+        # Handle new format: (action_type, annotation_id, item, extra_data)
+        if len(entry) == 4:
+            action_type, annotation_id, item, extra_data = entry
+        else:
+            # Legacy format: (annotation_id, item) - treat as create
+            action_type = "create"
+            annotation_id, item = entry
+            extra_data = None
 
-        # Remove from scene
-        if item and item.scene():
-            # Also remove arrowhead if present
-            if hasattr(item, "_arrowhead") and item._arrowhead.scene():
-                self._scene.removeItem(item._arrowhead)
-            self._scene.removeItem(item)
+        if action_type == "create":
+            # Remove from annotation layer
+            self._annotation_layer.remove(annotation_id)
 
-        # Recalculate next number to reuse deleted numbers
-        self._recalculate_next_number()
+            # Remove from scene
+            if item and item.scene():
+                # Child items (arrowhead, text) are removed automatically
+                self._scene.removeItem(item)
+
+            # Recalculate next number to reuse deleted numbers
+            self._recalculate_next_number()
+
+        elif action_type == "move":
+            # Restore original coordinates
+            annotation = self._annotation_layer.get(annotation_id)
+            if annotation and extra_data:
+                for key, value in extra_data.items():
+                    setattr(annotation, key, value)
+
+                # Reset item position to origin (coords are stored in annotation)
+                if item and item.scene():
+                    item.setPos(0, 0)
+                    item._original_pos = None
 
     def _on_delete_selected(self):
         """Delete selected annotation items."""
         selected = self._scene.selectedItems()
         for item in selected:
             if hasattr(item, "annotation_id"):
-                self._annotation_layer.remove(item.annotation_id)
-                # Remove from undo stack if present
-                self._undo_stack = [(aid, itm) for aid, itm in self._undo_stack if aid != item.annotation_id]
-            # Also remove arrowhead if present
-            if hasattr(item, "_arrowhead"):
-                self._scene.removeItem(item._arrowhead)
+                annotation_id = item.annotation_id
+                self._annotation_layer.remove(annotation_id)
+                # Remove from undo stack if present (handle both old and new formats)
+                new_stack = []
+                for entry in self._undo_stack:
+                    if len(entry) == 4:
+                        _, aid, _, _ = entry
+                    else:
+                        aid, _ = entry
+                    if aid != annotation_id:
+                        new_stack.append(entry)
+                self._undo_stack = new_stack
+            # Child items (arrowhead, text) are removed automatically
             self._scene.removeItem(item)
 
         # Recalculate next number to reuse deleted numbers
@@ -708,11 +803,9 @@ class AnnotationEditorDialog(QDialog):
     def _on_clear_all(self):
         """Clear all annotations."""
         # Remove annotation items but keep background
+        # Child items (arrowheads, text) are removed automatically with parents
         for item in list(self._scene.items()):
             if hasattr(item, "annotation_id"):
-                # Also remove arrowhead if present
-                if hasattr(item, "_arrowhead"):
-                    self._scene.removeItem(item._arrowhead)
                 self._scene.removeItem(item)
         self._annotation_layer.clear()
 
@@ -766,8 +859,8 @@ class AnnotationEditorDialog(QDialog):
                 item = scene_item
                 break
 
-        # Add to undo stack
-        self._undo_stack.append((annotation.id, item))
+        # Add to undo stack with new format: (action_type, annotation_id, item, extra_data)
+        self._undo_stack.append(("create", annotation.id, item, None))
 
         # Update next number if this was a number annotation
         if isinstance(annotation, NumberAnnotation):
@@ -981,6 +1074,11 @@ class AnnotationGraphicsView(QGraphicsView):
         elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             # Delete selected items
             self._delete_selected_items()
+        elif event.key() == Qt.Key.Key_Z and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            # Undo last action
+            parent = self.parent()
+            if parent and hasattr(parent, "_on_undo"):
+                parent._on_undo()
         super().keyPressEvent(event)
 
     def _delete_selected_items(self):
@@ -1048,6 +1146,8 @@ class AnnotationGraphicsView(QGraphicsView):
             event: Mouse event.
         """
         if self._current_tool == TOOL_SELECT:
+            # Finalize any item moves before calling super
+            self._finalize_item_moves()
             super().mouseReleaseEvent(event)
             return
 
@@ -1105,6 +1205,18 @@ class AnnotationGraphicsView(QGraphicsView):
 
         return new_x2, new_y2
 
+    def _snap_radius(self, radius: float, increment: float = 10.0) -> float:
+        """Snap radius to increments.
+
+        Args:
+            radius: Current radius in pixels.
+            increment: Snap increment in pixels.
+
+        Returns:
+            Snapped radius.
+        """
+        return max(increment, round(radius / increment) * increment)
+
     def _create_preview_item(self):
         """Create a preview item for the current tool."""
         pen = QPen(QColor(*self._current_color))
@@ -1113,19 +1225,19 @@ class AnnotationGraphicsView(QGraphicsView):
         x, y = self._start_pos.x(), self._start_pos.y()
 
         if self._current_tool in (TOOL_LINE, TOOL_ARROW):
-            self._current_item = QGraphicsLineItem(x, y, x, y)
+            self._current_item = MovableLineItem(x, y, x, y)
             self._current_item.setPen(pen)
             self.scene().addItem(self._current_item)
 
         elif self._current_tool == TOOL_RECT:
-            self._current_item = QGraphicsRectItem(x, y, 0, 0)
+            self._current_item = MovableRectItem(x, y, 0, 0)
             self._current_item.setPen(pen)
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene().addItem(self._current_item)
 
         elif self._current_tool in (TOOL_ELLIPSE, TOOL_NUMBER):
             # Both ellipse and number use circle preview (number is always circle)
-            self._current_item = QGraphicsEllipseItem(x, y, 0, 0)
+            self._current_item = MovableEllipseItem(x, y, 0, 0)
             self._current_item.setPen(pen)
             self._current_item.setBrush(QBrush(Qt.BrushStyle.NoBrush))
             self.scene().addItem(self._current_item)
@@ -1146,7 +1258,7 @@ class AnnotationGraphicsView(QGraphicsView):
             freehand_pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             freehand_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
 
-            self._current_item = QGraphicsPathItem(self._freehand_path)
+            self._current_item = MovablePathItem(self._freehand_path)
             self._current_item.setPen(freehand_pen)
             self.scene().addItem(self._current_item)
 
@@ -1183,6 +1295,8 @@ class AnnotationGraphicsView(QGraphicsView):
         elif self._current_tool == TOOL_NUMBER:
             # Number: center at start, radius = distance to cursor (always circle)
             radius = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            if shift_pressed:
+                radius = self._snap_radius(radius)
             self._current_item.setRect(x1 - radius, y1 - radius, radius * 2, radius * 2)
 
         elif self._current_tool == TOOL_FREEHAND:
@@ -1279,7 +1393,6 @@ class AnnotationGraphicsView(QGraphicsView):
             )
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
                 # Update line to final position
                 self._current_item.setLine(x1, y1, x2, y2)
 
@@ -1301,7 +1414,6 @@ class AnnotationGraphicsView(QGraphicsView):
             )
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
                 # Shorten line so it doesn't overlap with arrowhead
                 arrow_length = self._line_width * 4
@@ -1335,7 +1447,6 @@ class AnnotationGraphicsView(QGraphicsView):
             )
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
                 # Update rect to final position
                 left_px = min(x1, x2)
                 top_px = min(y1, y2)
@@ -1366,7 +1477,6 @@ class AnnotationGraphicsView(QGraphicsView):
             )
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
                 # Update ellipse to final position
                 left_px = min(x1, x2)
                 top_px = min(y1, y2)
@@ -1377,6 +1487,8 @@ class AnnotationGraphicsView(QGraphicsView):
         elif self._current_tool == TOOL_NUMBER:
             # Number: center at start, radius = distance to cursor
             radius_px = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            if shift_pressed:
+                radius_px = self._snap_radius(radius_px)
 
             # Require minimum size
             if radius_px < 10:
@@ -1399,7 +1511,6 @@ class AnnotationGraphicsView(QGraphicsView):
 
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
                 # Update circle to final position (centered at start)
                 self._current_item.setRect(x1 - radius_px, y1 - radius_px, radius_px * 2, radius_px * 2)
 
@@ -1439,7 +1550,6 @@ class AnnotationGraphicsView(QGraphicsView):
 
             if self._current_item:
                 self._current_item.annotation_id = annotation.id
-                self._current_item.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
 
             # Reset freehand state
             self._freehand_path = None
@@ -1452,6 +1562,126 @@ class AnnotationGraphicsView(QGraphicsView):
             self.annotation_created.emit(annotation)
 
         self._current_item = None
+
+    def _finalize_item_moves(self):
+        """Finalize item movements and update annotation data."""
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        if width == 0 or height == 0:
+            return
+
+        parent = self.parent()
+        if not parent:
+            return
+
+        # Check all items for movement
+        for item in self.scene().items():
+            if not hasattr(item, "_original_pos") or not hasattr(item, "annotation_id"):
+                continue
+
+            original_pos = item._original_pos
+            if original_pos is None:
+                continue
+
+            # Calculate movement delta
+            current_pos = item.pos()
+            dx = current_pos.x() - original_pos.x()
+            dy = current_pos.y() - original_pos.y()
+
+            # Skip if no significant movement
+            if abs(dx) < 1 and abs(dy) < 1:
+                item._original_pos = None
+                continue
+
+            # Convert to ratio delta
+            ratio_dx = dx / width
+            ratio_dy = dy / height
+
+            # Get the annotation from parent
+            annotation_id = item.annotation_id
+            if hasattr(parent, "_annotation_layer"):
+                annotation = parent._annotation_layer.get(annotation_id)
+                if annotation:
+                    # Store original values for undo
+                    original_coords = self._get_annotation_coords(annotation)
+
+                    # Update annotation coordinates based on type
+                    self._update_annotation_coords(annotation, ratio_dx, ratio_dy)
+
+                    # Add to undo stack
+                    if hasattr(parent, "_undo_stack"):
+                        parent._undo_stack.append(("move", annotation_id, item, original_coords))
+
+            # Reset original position
+            item._original_pos = None
+
+    def _get_annotation_coords(self, annotation) -> dict:
+        """Get current coordinates from an annotation for undo.
+
+        Args:
+            annotation: Annotation object.
+
+        Returns:
+            Dictionary of coordinate values.
+        """
+        ann_type = annotation.annotation_type
+
+        if ann_type in ("line", "arrow"):
+            return {
+                "start_x": annotation.start_x,
+                "start_y": annotation.start_y,
+                "end_x": annotation.end_x,
+                "end_y": annotation.end_y,
+            }
+        elif ann_type == "rectangle":
+            return {
+                "x": annotation.x,
+                "y": annotation.y,
+            }
+        elif ann_type == "ellipse":
+            return {
+                "center_x": annotation.center_x,
+                "center_y": annotation.center_y,
+            }
+        elif ann_type == "number":
+            return {
+                "x": annotation.x,
+                "y": annotation.y,
+            }
+        elif ann_type == "freehand":
+            return {
+                "points": list(annotation.points),
+            }
+        return {}
+
+    def _update_annotation_coords(self, annotation, dx: float, dy: float):
+        """Update annotation coordinates by delta.
+
+        Args:
+            annotation: Annotation object.
+            dx: X delta in ratio coordinates.
+            dy: Y delta in ratio coordinates.
+        """
+        ann_type = annotation.annotation_type
+
+        if ann_type in ("line", "arrow"):
+            annotation.start_x += dx
+            annotation.start_y += dy
+            annotation.end_x += dx
+            annotation.end_y += dy
+        elif ann_type == "rectangle":
+            annotation.x += dx
+            annotation.y += dy
+        elif ann_type == "ellipse":
+            annotation.center_x += dx
+            annotation.center_y += dy
+        elif ann_type == "number":
+            annotation.x += dx
+            annotation.y += dy
+        elif ann_type == "freehand":
+            annotation.points = [(px + dx, py + dy) for px, py in annotation.points]
 
     def _add_number_text(self, ellipse_item: QGraphicsEllipseItem, cx: float, cy: float, radius: float):
         """Add number text to a number annotation circle.
@@ -1474,10 +1704,10 @@ class AnnotationGraphicsView(QGraphicsView):
         text_item.setParentItem(ellipse_item)
 
     def _add_arrowhead(self, line_item: QGraphicsLineItem, x1: float, y1: float, x2: float, y2: float):
-        """Add an arrowhead polygon to the scene.
+        """Add an arrowhead polygon as a child of the line item.
 
         Args:
-            line_item: The line item (used to get color).
+            line_item: The parent line item.
             x1, y1: Start point.
             x2, y2: End point (arrow tip).
         """
@@ -1501,15 +1731,13 @@ class AnnotationGraphicsView(QGraphicsView):
             ]
         )
 
-        # Create and add polygon item
-        arrow_item = QGraphicsPolygonItem(polygon)
+        # Create polygon item as child of line item so it moves together
+        arrow_item = QGraphicsPolygonItem(polygon, line_item)
         arrow_item.setBrush(QBrush(QColor(*self._current_color)))
         arrow_item.setPen(QPen(Qt.PenStyle.NoPen))
-        self.scene().addItem(arrow_item)
 
-        # Store reference to delete with line
-        if not hasattr(line_item, "_arrowhead"):
-            line_item._arrowhead = arrow_item
+        # Store reference for cleanup
+        line_item._arrowhead = arrow_item
 
     def _simplify_path(self, points: list[tuple[float, float]], epsilon: float = 2.0) -> list[tuple[float, float]]:
         """Simplify path using the Douglas-Peucker algorithm.
