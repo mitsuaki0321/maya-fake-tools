@@ -318,3 +318,20 @@ These settings are restored on the next launch.
 - High resolution and high frame rate recording increases memory usage
 - FFmpeg must be installed on your system to save in MP4 format
 - This tool requires the PIL (Pillow) library (included by default in Maya 2022 and later)
+
+## Optional Dependencies
+
+The following libraries provide additional features and performance improvements when installed. They are not required, and the tool will automatically fall back to alternative methods if they are not available.
+
+| Library | Purpose | Fallback |
+|---------|---------|----------|
+| mss | High-speed screen capture for Rec mode (2-3x faster than PIL ImageGrab) | Uses PIL ImageGrab |
+| aggdraw | Antialiased drawing for annotations | Uses PIL ImageDraw (no antialiasing) |
+
+### Installation
+
+```bash
+pip install mss aggdraw
+```
+
+> **Note**: aggdraw may require compilation on environments without pre-built wheels.
