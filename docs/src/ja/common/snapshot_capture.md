@@ -238,7 +238,8 @@ PNG モードで画像をキャプチャした後、オプションメニュー�
 
 | ツール | アイコン | 説明 |
 |--------|----------|------|
-| 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・移動 |
+| 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・ドラッグで移動 |
+| フリーハンド | ![image](../../images/common/snapshot_capture/tool_freehand.svg) | フリーハンドで線を描画 |
 | 線 | ![image](../../images/common/snapshot_capture/tool_line.svg) | 直線を描画 |
 | 矢印 | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | 矢印を描画 |
 | 矩形 | ![image](../../images/common/snapshot_capture/tool_rect.svg) | 四角形を描画 |
@@ -284,8 +285,9 @@ PNG モードで画像をキャプチャした後、オプションメニュー�
 
 | キー | 説明 |
 |------|------|
+| Ctrl + Z | 直前の操作を元に戻す（作成・移動に対応） |
 | Delete / Backspace | 選択中のアノテーションを削除 |
-| Shift + ドラッグ | 線を45度単位にスナップ、矩形/楕円を正方形/正円に制約 |
+| Shift + ドラッグ | 線/矢印を45度単位にスナップ、矩形/楕円を正方形/正円に制約、番号を10px単位でスナップ |
 
 ### 設定の保存
 

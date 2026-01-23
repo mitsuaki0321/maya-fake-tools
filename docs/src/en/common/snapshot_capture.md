@@ -236,7 +236,8 @@ The annotation editor toolbar has the following features:
 
 | Tool | Icon | Description |
 |------|------|-------------|
-| Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select and move drawn annotations |
+| Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select and drag to move annotations |
+| Freehand | ![image](../../images/common/snapshot_capture/tool_freehand.svg) | Draw freehand lines |
 | Line | ![image](../../images/common/snapshot_capture/tool_line.svg) | Draw a straight line |
 | Arrow | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | Draw an arrow |
 | Rectangle | ![image](../../images/common/snapshot_capture/tool_rect.svg) | Draw a rectangle |
@@ -280,8 +281,9 @@ Select from 3 presets (thin, medium, thick).
 
 | Key | Description |
 |-----|-------------|
+| Ctrl + Z | Undo the last action (supports create and move operations) |
 | Delete / Backspace | Delete the selected annotation |
-| Shift + drag | Snap lines to 45-degree angles, constrain rectangles/ellipses to squares/circles |
+| Shift + drag | Snap lines/arrows to 45-degree angles, constrain rectangles/ellipses to squares/circles, snap number radius to 10px increments |
 
 ### Settings Persistence
 
