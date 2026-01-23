@@ -89,6 +89,12 @@
                     id="toc-保存先について">保存先について</a></li>
                     <li><a href="#注意事項"
                     id="toc-注意事項">注意事項</a></li>
+                    <li><a href="#オプション依存ライブラリ"
+                    id="toc-オプション依存ライブラリ">オプション依存ライブラリ</a>
+                    <ul>
+                    <li><a href="#インストール方法"
+                    id="toc-インストール方法">インストール方法</a></li>
+                    </ul></li>
                     </ul>
                 </div>
             </aside>
@@ -532,7 +538,14 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <td><img
                 src="../../images/common/snapshot_capture/tool_select.svg"
                 alt="image" /></td>
-                <td>描画したアノテーションを選択・移動</td>
+                <td>描画したアノテーションを選択・ドラッグで移動</td>
+                </tr>
+                <tr>
+                <td>フリーハンド</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_freehand.svg"
+                alt="image" /></td>
+                <td>フリーハンドで線を描画</td>
                 </tr>
                 <tr>
                 <td>線</td>
@@ -684,12 +697,16 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </thead>
                 <tbody>
                 <tr>
+                <td>Ctrl + Z</td>
+                <td>直前の操作を元に戻す（作成・移動に対応）</td>
+                </tr>
+                <tr>
                 <td>Delete / Backspace</td>
                 <td>選択中のアノテーションを削除</td>
                 </tr>
                 <tr>
                 <td>Shift + ドラッグ</td>
-                <td>線を45度単位にスナップ、矩形/楕円を正方形/正円に制約</td>
+                <td>線/矢印を45度単位にスナップ、矩形/楕円を正方形/正円に制約、番号を10px単位でスナップ</td>
                 </tr>
                 </tbody>
                 </table>
@@ -728,6 +745,42 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 ライブラリが必要です（Maya 2022
                 以降には標準で含まれています）</li>
                 </ul>
+                <h2
+                id="オプション依存ライブラリ">オプション依存ライブラリ</h2>
+                <p>以下のライブラリをインストールすると、追加機能や性能向上が得られます。いずれも必須ではなく、インストールされていない場合は自動的にフォールバック処理が行われます。</p>
+                <table>
+                <colgroup>
+                <col style="width: 35%" />
+                <col style="width: 17%" />
+                <col style="width: 47%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>ライブラリ</th>
+                <th>用途</th>
+                <th>フォールバック</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>mss</td>
+                <td>Rec モードの高速スクリーンキャプチャ（PIL ImageGrab
+                の 2〜3 倍高速）</td>
+                <td>PIL ImageGrab を使用</td>
+                </tr>
+                <tr>
+                <td>aggdraw</td>
+                <td>アノテーションのアンチエイリアス描画</td>
+                <td>PIL ImageDraw を使用（アンチエイリアスなし）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="インストール方法">インストール方法</h3>
+                <pre class="bash"><code>pip install mss aggdraw</code></pre>
+                <blockquote>
+                <p><strong>Note</strong>: aggdraw
+                は事前ビルドされたホイールがない環境ではコンパイルが必要な場合があります。</p>
+                </blockquote>
             </main>
         </div>
     </div>

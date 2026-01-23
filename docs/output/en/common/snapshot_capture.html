@@ -99,6 +99,13 @@
                     id="toc-about-save-location">About Save
                     Location</a></li>
                     <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    <li><a href="#optional-dependencies"
+                    id="toc-optional-dependencies">Optional
+                    Dependencies</a>
+                    <ul>
+                    <li><a href="#installation"
+                    id="toc-installation">Installation</a></li>
+                    </ul></li>
                     </ul>
                 </div>
             </aside>
@@ -561,7 +568,14 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <td><img
                 src="../../images/common/snapshot_capture/tool_select.svg"
                 alt="image" /></td>
-                <td>Select and move drawn annotations</td>
+                <td>Select and drag to move annotations</td>
+                </tr>
+                <tr>
+                <td>Freehand</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_freehand.svg"
+                alt="image" /></td>
+                <td>Draw freehand lines</td>
                 </tr>
                 <tr>
                 <td>Line</td>
@@ -710,13 +724,19 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 </thead>
                 <tbody>
                 <tr>
+                <td>Ctrl + Z</td>
+                <td>Undo the last action (supports create and move
+                operations)</td>
+                </tr>
+                <tr>
                 <td>Delete / Backspace</td>
                 <td>Delete the selected annotation</td>
                 </tr>
                 <tr>
                 <td>Shift + drag</td>
-                <td>Snap lines to 45-degree angles, constrain
-                rectangles/ellipses to squares/circles</td>
+                <td>Snap lines/arrows to 45-degree angles, constrain
+                rectangles/ellipses to squares/circles, snap number
+                radius to 10px increments</td>
                 </tr>
                 </tbody>
                 </table>
@@ -761,6 +781,46 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <li>This tool requires the PIL (Pillow) library
                 (included by default in Maya 2022 and later)</li>
                 </ul>
+                <h2 id="optional-dependencies">Optional
+                Dependencies</h2>
+                <p>The following libraries provide additional features
+                and performance improvements when installed. They are
+                not required, and the tool will automatically fall back
+                to alternative methods if they are not available.</p>
+                <table>
+                <colgroup>
+                <col style="width: 32%" />
+                <col style="width: 32%" />
+                <col style="width: 35%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Library</th>
+                <th>Purpose</th>
+                <th>Fallback</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>mss</td>
+                <td>High-speed screen capture for Rec mode (2-3x faster
+                than PIL ImageGrab)</td>
+                <td>Uses PIL ImageGrab</td>
+                </tr>
+                <tr>
+                <td>aggdraw</td>
+                <td>Antialiased drawing for annotations</td>
+                <td>Uses PIL ImageDraw (no antialiasing)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="installation">Installation</h3>
+                <pre class="bash"><code>pip install mss aggdraw</code></pre>
+                <blockquote>
+                <p><strong>Note</strong>: aggdraw may require
+                compilation on environments without pre-built
+                wheels.</p>
+                </blockquote>
             </main>
         </div>
     </div>
