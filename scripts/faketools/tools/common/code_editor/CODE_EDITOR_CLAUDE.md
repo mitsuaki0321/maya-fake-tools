@@ -515,16 +515,31 @@ show_ui()
 - **1.0.0**: Initial integration into FakeTools
   - Converted TOOL_CONFIG
   - Converted logging to standard Python logging
-  - Phase 1: FakeTools entry point adaptation
-    - Renamed `maya_integration.py` → `main.py`
-    - Added `show_ui()` to `ui/__init__.py` for FakeTools registry
-    - Removed standalone Maya menu (now uses FakeTools menu)
-    - Removed docs module and help button from toolbar
 
-## Next Phase: Phase 2
+---
+
+## Phase 1: FakeTools Entry Point Adaptation ✅ COMPLETE
+
+**Status**: 完了 (Commit: fdceaf9)
+
+### 実施内容
+- `maya_integration.py` → `main.py` にリネーム
+- `ui/__init__.py` に `show_ui()` 追加（FakeTools registry 用）
+- `__init__.py` に `show_ui()` 追加（便利インポート用）
+- Maya 独自メニュー削除（FakeTools メニューを使用）
+- docs モジュール・ヘルプボタン削除
+
+### 動作確認
+- FakeTools メニュー → Common → Code Editor から起動可能
+
+---
+
+## Phase 2: Config/Workspace Path (未実施)
+
+**Status**: 検討中
 
 ### Goal
-Config/Workspace パス の FakeTools 規約への統一（検討）
+Config/Workspace パス の FakeTools 規約への統一
 
 ### 検討事項
 現在の設定パスは Maya の prefs ディレクトリ下に保存されており、動作に問題はない。
@@ -534,7 +549,22 @@ FakeTools の ToolSettingsManager への移行は大規模な変更となるた�
 2. **パス変更案**: `maya_code_editor_config` → `faketools_code_editor` など
 3. **ToolSettingsManager 移行案**: FakeTools 標準に完全統一
 
-### 優先度の低い項目（将来検討）
-- Qt imports: 独自 qt_compat.py → FakeTools lib_ui/qt_compat.py
-- Window base: QWidget → BaseMainWindow
-- Settings: Custom → ToolSettingsManager
+### 対象ファイル
+- `settings/settings_manager.py` - Config path
+- `settings/workspace_manager.py` - Workspace path
+
+---
+
+## Future Phases (優先度低)
+
+### Phase 3: Qt Compatibility Layer
+- 独自 `ui/qt_compat.py` → FakeTools `lib_ui/qt_compat.py` への統一
+- 影響範囲が大きいため慎重に検討
+
+### Phase 4: Window Base Class
+- `MayaCodeEditor(QWidget)` → `BaseMainWindow` への移行
+- 大規模リファクタリングが必要
+
+### Phase 5: Settings Integration
+- Custom `SettingsManager` → FakeTools `ToolSettingsManager`
+- セッション管理など独自機能が多いため検討が必要
