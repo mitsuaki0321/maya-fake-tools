@@ -3,13 +3,12 @@ Main entry point for Maya Code Editor.
 Handles initialization and Maya integration.
 """
 
+from logging import getLogger
 import sys
 
 from .ui.qt_compat import QApplication, Qt
-from .utils.logger_config import get_logger
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 # Import Maya modules
 try:
@@ -249,58 +248,6 @@ def create_maya_menu():
 
         cmds.menuItem(divider=True, parent=main_menu)
 
-        # Add logging submenu
-        log_menu = cmds.menuItem(parent=main_menu, label="Logging", subMenu=True)
-
-        # Log level options
-        cmds.menuItem(parent=log_menu, label="Set Log Level", divider=True)
-
-        cmds.menuItem(
-            parent=log_menu,
-            label="DEBUG (Most Verbose)",
-            command=lambda x: _set_log_level_from_menu("DEBUG"),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="INFO (Default)",
-            command=lambda x: _set_log_level_from_menu("INFO"),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="WARNING",
-            command=lambda x: _set_log_level_from_menu("WARNING"),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="ERROR",
-            command=lambda x: _set_log_level_from_menu("ERROR"),
-        )
-
-        cmds.menuItem(divider=True, parent=log_menu)
-
-        cmds.menuItem(
-            parent=log_menu,
-            label="Show Log Status",
-            command=lambda x: _show_log_status(),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="Open Log File",
-            command=lambda x: _open_log_file(),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="Clear Log File",
-            command=lambda x: _clear_log_file(),
-        )
-        cmds.menuItem(
-            parent=log_menu,
-            label="Test Logging",
-            command=lambda x: _test_logging(),
-        )
-
-        cmds.menuItem(divider=True, parent=main_menu)
-
         cmds.menuItem(
             parent=main_menu,
             label="Reload Editor (Dev)",
@@ -309,72 +256,6 @@ def create_maya_menu():
 
     except Exception as e:
         logger.error(f"Failed to create Maya menu: {e}")
-
-
-# Logging menu helper functions
-def _set_log_level_from_menu(level: str) -> None:
-    """Helper function to set log level from Maya menu."""
-    try:
-        from .utils.logging_utils import set_log_level
-
-        set_log_level(level)
-        cmds.confirmDialog(title="Log Level Changed", message=f"Log level set to: {level}", button=["OK"])
-    except Exception as e:
-        logger.error(f"Failed to set log level: {e}")
-        cmds.warning(f"Failed to set log level: {e}")
-
-
-def _show_log_status() -> None:
-    """Helper function to show log status from Maya menu."""
-    try:
-        from .utils.logging_utils import show_log_status
-
-        show_log_status()
-    except Exception as e:
-        logger.error(f"Failed to show log status: {e}")
-        cmds.warning(f"Failed to show log status: {e}")
-
-
-def _open_log_file() -> None:
-    """Helper function to open log file from Maya menu."""
-    try:
-        from .utils.logging_utils import open_log_file
-
-        open_log_file()
-    except Exception as e:
-        logger.error(f"Failed to open log file: {e}")
-        cmds.warning(f"Failed to open log file: {e}")
-
-
-def _clear_log_file() -> None:
-    """Helper function to clear log file from Maya menu."""
-    try:
-        result = cmds.confirmDialog(
-            title="Clear Log File",
-            message="This will backup and clear the current log file. Continue?",
-            button=["Yes", "No"],
-            defaultButton="No",
-            cancelButton="No",
-        )
-        if result == "Yes":
-            from .utils.logging_utils import clear_log_file
-
-            clear_log_file()
-            cmds.confirmDialog(title="Log Cleared", message="Log file has been cleared (backup created)", button=["OK"])
-    except Exception as e:
-        logger.error(f"Failed to clear log file: {e}")
-        cmds.warning(f"Failed to clear log file: {e}")
-
-
-def _test_logging() -> None:
-    """Helper function to test logging from Maya menu."""
-    try:
-        from .utils.logging_utils import test_logging
-
-        test_logging()
-    except Exception as e:
-        logger.error(f"Failed to test logging: {e}")
-        cmds.warning(f"Failed to test logging: {e}")
 
 
 def remove_maya_menu():

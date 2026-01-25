@@ -3,12 +3,12 @@ Main window for Maya Code Editor.
 Provides the primary UI layout and coordinates between components.
 """
 
+from logging import getLogger
 import os
 
 from ..docs import user_guide
 from ..settings import SettingsManager
 from ..utils.autosave_manager import AutoSaveManager  # Direct import to avoid circular dependency
-from ..utils.logger_config import get_logger
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 from .execution_manager import ExecutionManager
 from .qt_compat import QWidget
@@ -16,8 +16,7 @@ from .shortcut_handler import ShortcutHandler
 from .ui_layout_manager import UILayoutManager
 from .ui_session_manager import UISessionManager
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class MayaCodeEditor(QWidget):

@@ -8,6 +8,7 @@ import contextlib
 try:
     import maya.cmds as cmds  # type: ignore
     import maya.OpenMayaUI as omui  # type: ignore
+
     MAYA_AVAILABLE = True
 except ImportError:
     # Maya not available - this module won't be used outside Maya

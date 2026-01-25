@@ -6,14 +6,13 @@ Loads color schemes and token rules from JSON configuration files.
 from __future__ import annotations
 
 import json
+from logging import getLogger
 import os
 from typing import Any
 
 from ..ui.qt_compat import QColor, QFont, QTextCharFormat
-from ..utils.logger_config import get_logger
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class SyntaxConfigLoader:

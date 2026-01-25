@@ -4,13 +4,11 @@ Handles persistent user preferences like editor settings, theme, fonts, etc.
 """
 
 import json
+from logging import getLogger
 import os
 from typing import Any
 
-from ..utils.logger_config import get_logger
-
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class UserSettings:

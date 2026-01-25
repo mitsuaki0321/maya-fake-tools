@@ -3,6 +3,8 @@ Maya Native Terminal Widget using cmdScrollFieldReporter.
 Provides authentic Maya Script Editor-like output display.
 """
 
+from logging import getLogger
+
 try:
     import maya.cmds as cmds
     import maya.OpenMayaUI as omui
@@ -11,11 +13,9 @@ try:
 except ImportError:
     MAYA_AVAILABLE = False
 
-from ..utils.logger_config import get_logger
 from .qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 if MAYA_AVAILABLE:
     try:

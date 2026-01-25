@@ -4,13 +4,11 @@ Handles temporary session state like window position, open tabs, draft content, 
 """
 
 import json
+from logging import getLogger
 import os
 from typing import Any
 
-from ..utils.logger_config import get_logger
-
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class SessionManager:

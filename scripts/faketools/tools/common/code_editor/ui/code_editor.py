@@ -4,12 +4,12 @@ Provides tabbed interface for editing multiple Python files.
 """
 
 import contextlib
+from logging import getLogger
 import os
 import re
 
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
-from ..utils.logger_config import get_logger
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
 from .editor_text_operations import EditorTextOperationsMixin
@@ -33,8 +33,7 @@ from .qt_compat import (
 )
 from .tab_bar import EditableTabBar
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):

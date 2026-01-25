@@ -5,11 +5,9 @@ Handles Python code execution, inspection, and result display.
 
 import ast
 import contextlib
+from logging import getLogger
 
-from ..utils.logger_config import get_logger
-
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 try:
     import maya.cmds as cmds

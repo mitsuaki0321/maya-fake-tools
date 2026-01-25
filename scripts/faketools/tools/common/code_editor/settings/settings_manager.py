@@ -5,17 +5,16 @@ Uses a modular architecture with separate managers for different types of settin
 """
 
 import json
+from logging import getLogger
 import os
 from typing import Any
 
 from ..ui.qt_compat import QFont
-from ..utils.logger_config import get_logger
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class SettingsManager:

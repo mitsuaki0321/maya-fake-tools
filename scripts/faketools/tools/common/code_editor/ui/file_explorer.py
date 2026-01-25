@@ -3,10 +3,10 @@ File explorer widget for Maya Code Editor.
 Provides VSCode-like file tree navigation.
 """
 
+from logging import getLogger
 import os
 
 from ..themes import AppTheme
-from ..utils.logger_config import get_logger
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 from .qt_compat import (
     QAction,
@@ -33,8 +33,7 @@ from .qt_compat import (
     Signal,
 )
 
-# Set up module logger
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class HiddenFileFilterModel(QSortFilterProxyModel):

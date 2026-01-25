@@ -3,15 +3,16 @@ UI Layout Manager for Maya Code Editor.
 Handles UI initialization, theming, and layout management.
 """
 
+from logging import getLogger
+
 from ..themes import AppTheme
-from ..utils.logger_config import get_logger
 from .code_editor import CodeEditorWidget
 from .file_explorer import FileExplorer
 from .output_terminal import OutputTerminal
 from .qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
 from .toolbar import ToolBar
 
-logger = get_logger(__name__)
+logger = getLogger(__name__)
 
 
 class UILayoutManager:
