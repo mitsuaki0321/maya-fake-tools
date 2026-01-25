@@ -144,7 +144,6 @@ class ToolBar(QWidget):
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
-    show_help_clicked = Signal()  # Signal for showing user guide
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -242,29 +241,6 @@ class ToolBar(QWidget):
             }
         """)
 
-        # Show user guide
-        self.show_help_button = QPushButton("?")
-        self.show_help_button.setFixedSize(26, 20)
-        self.show_help_button.setToolTip("Show User Guide")
-        self.show_help_button.setCursor(Qt.PointingHandCursor)
-        self.show_help_button.setStyleSheet("""
-                QPushButton {
-                background-color: transparent;
-                border: 1px solid transparent;
-                border-radius: 3px;
-                padding: 2px;
-                color: #CCCCCC;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #3c3c3c;
-            }
-            QPushButton:pressed {
-                background-color: #094771;
-            }
-        """)
-
         # Add widgets to layout following the specified order
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(sep0)
@@ -281,7 +257,6 @@ class ToolBar(QWidget):
         layout.addWidget(sep5)
         layout.addWidget(self.swap_layout_button)
         layout.addStretch()
-        layout.addWidget(self.show_help_button)
 
         # Calculate dynamic height
         # icon_height(16px) + button_padding(4px) + toolbar_padding(6px) = 26px
@@ -302,7 +277,6 @@ class ToolBar(QWidget):
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)
-        self.show_help_button.clicked.connect(self.show_help_clicked.emit)
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""

@@ -210,75 +210,16 @@ def reload_editor_dev():
 
         module_cleaner.cleanup()
 
-        # Reload editor
-        import maya_code_editor
-
-        maya_code_editor.show_editor()
+        # Reload editor (show_editor is defined in this module)
+        show_editor()
         logger.info("Maya Code Editor reloaded successfully!")
     except Exception as e:
         logger.error(f"Failed to reload editor: {str(e)}")
 
 
-# Maya menu integration
-def create_maya_menu():
-    """Create Maya menu for the code editor."""
-    if not MAYA_AVAILABLE:
-        return
+def show_ui():
+    """Show the Code Editor UI.
 
-    try:
-        # Remove existing menu if it exists
-        if cmds.menu("MayaCodeEditorMenu", exists=True):
-            cmds.deleteUI("MayaCodeEditorMenu")
-
-        # Create main menu
-        main_menu = cmds.menu("MayaCodeEditorMenu", parent="MayaWindow", label="Code Editor", tearOff=True)
-
-        # Add menu items
-        cmds.menuItem(parent=main_menu, label="Show Code Editor", command=lambda x: show_editor())
-
-        cmds.menuItem(parent=main_menu, label="Hide Code Editor", command=lambda x: hide_editor())
-
-        cmds.menuItem(divider=True, parent=main_menu)
-
-        cmds.menuItem(
-            parent=main_menu,
-            label="Close Code Editor",
-            command=lambda x: close_editor(),
-        )
-
-        cmds.menuItem(divider=True, parent=main_menu)
-
-        cmds.menuItem(
-            parent=main_menu,
-            label="Reload Editor (Dev)",
-            command=lambda x: reload_editor_dev(),
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to create Maya menu: {e}")
-
-
-def remove_maya_menu():
-    """Remove Maya menu for the code editor."""
-    if not MAYA_AVAILABLE:
-        return
-
-    try:
-        if cmds.menu("MayaCodeEditorMenu", exists=True):
-            cmds.deleteUI("MayaCodeEditorMenu")
-    except Exception as e:
-        logger.error(f"Failed to remove Maya menu: {e}")
-
-
-# Auto-create menu when module is imported in Maya
-if MAYA_AVAILABLE:
-    try:
-        create_maya_menu()
-        logger.info("Maya Code Editor menu created successfully")
-    except Exception:
-        pass
-
-
-if __name__ == "__main__":
-    # Standalone testing
+    This is the FakeTools standard entry point for the menu system.
+    """
     show_editor()

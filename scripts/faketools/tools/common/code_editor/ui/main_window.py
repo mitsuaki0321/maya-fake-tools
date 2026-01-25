@@ -6,7 +6,6 @@ Provides the primary UI layout and coordinates between components.
 from logging import getLogger
 import os
 
-from ..docs import user_guide
 from ..settings import SettingsManager
 from ..utils.autosave_manager import AutoSaveManager  # Direct import to avoid circular dependency
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
@@ -512,10 +511,6 @@ class MayaCodeEditor(QWidget):
             logger.info(f"Using fallback directory: {home_path}")
         else:
             logger.warning("No valid directory found for file explorer")
-
-    def show_user_guide(self):
-        """Show the user guide in the default web browser."""
-        user_guide.show()
 
     def toggle_file_explorer(self):
         """Toggle the visibility of the file explorer panel."""

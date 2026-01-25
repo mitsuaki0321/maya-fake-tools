@@ -11,4 +11,12 @@ TOOL_CONFIG = {
     "category": "common",
 }
 
-__all__ = ["TOOL_CONFIG"]
+
+def show_ui():
+    """Show the Code Editor UI."""
+    from .main import show_editor
+
+    show_editor()
+
+
+__all__ = ["TOOL_CONFIG", "show_ui"]
