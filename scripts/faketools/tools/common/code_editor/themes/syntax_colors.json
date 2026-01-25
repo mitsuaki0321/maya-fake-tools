@@ -1,0 +1,32 @@
+{
+  "theme_name": "VSCode Dark Modern",
+  "colors": {
+    "control_keyword": "#c586c0",
+    "def_class_keyword": "#569cd6", 
+    "boolean": "#559ad3",
+    "string": "#ce9178",
+    "comment": "#6a9955",
+    "number": "#b5cea8",
+    "function": "#dcdcaa",
+    "class": "#4ec9b0",
+    "variable": "#9cdcfe",
+    "operator": "#d4d4d4",
+    "bracket": "#ffd700",
+    "punctuation": "#d4d4d4",
+    "decorator": "#c586c0",
+    "type_annotation": "#4ec9b0",
+    "escape_sequence": "#d7ba7d",
+    "method": "#dcdcaa"
+  },
+  "token_rules": {
+    "control_keywords": [
+      "if", "elif", "else", "for", "while", "break", "continue",
+      "return", "yield", "import", "from", "as", "try", "except",
+      "finally", "raise", "with", "pass", "del", "global", "nonlocal",
+      "and", "or", "not", "in", "is", "lambda", "assert"
+    ],
+    "def_class_keywords": ["def", "class"],
+    "boolean_values": ["True", "False", "None"],
+    "high_priority_keywords": ["for", "in"]
+  }
+}
