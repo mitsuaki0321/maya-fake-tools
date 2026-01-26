@@ -26,6 +26,7 @@ from ....lib_ui.qt_compat import (
     QGraphicsLineItem,
     QGraphicsPathItem,
     QGraphicsPolygonItem,
+    QGraphicsProxyWidget,
     QGraphicsRectItem,
     QGraphicsScene,
     QGraphicsTextItem,
@@ -38,14 +39,17 @@ from ....lib_ui.qt_compat import (
     QPainterPath,
     QPen,
     QPixmap,
+    QPlainTextEdit,
     QPointF,
     QPolygonF,
     QPushButton,
     QSize,
     Qt,
+    QTimer,
     QToolButton,
     QVBoxLayout,
     QWidget,
+    Signal,
 )
 from .annotation import (
     AnnotationLayer,
@@ -55,6 +59,7 @@ from .annotation import (
     LineAnnotation,
     NumberAnnotation,
     RectangleAnnotation,
+    TextAnnotation,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +77,7 @@ TOOL_RECT = "rect"
 TOOL_ELLIPSE = "ellipse"
 TOOL_NUMBER = "number"
 TOOL_FREEHAND = "freehand"
+TOOL_TEXT = "text"
 
 # Icon directory path
 _ICON_DIR = os.path.join(os.path.dirname(__file__), "icons")
@@ -85,6 +91,7 @@ TOOL_ICONS = {
     TOOL_ELLIPSE: "tool_ellipse.svg",
     TOOL_NUMBER: "tool_number.svg",
     TOOL_FREEHAND: "tool_freehand.svg",
+    TOOL_TEXT: "tool_text.svg",
 }
 
 # Stroke width icons (SVG filenames)
@@ -190,6 +197,120 @@ class MovablePathItem(QGraphicsPathItem):
         if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
             self._original_pos = self.pos()
         return super().itemChange(change, value)
+
+
+class MovableTextItem(QGraphicsRectItem):
+    """Text item container that tracks movement for undo support.
+
+    Uses QGraphicsRectItem as a container for QGraphicsTextItem to enable
+    proper selection and movement handling.
+    """
+
+    def __init__(self, text_item: QGraphicsTextItem, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges)
+        self._original_pos: QPointF | None = None
+        self.annotation_id: str | None = None
+
+        # Make container invisible
+        self.setPen(QPen(Qt.PenStyle.NoPen))
+        self.setBrush(QBrush(Qt.BrushStyle.NoBrush))
+
+        # Set text item as child
+        self._text_item = text_item
+        self._text_item.setParentItem(self)
+
+    @property
+    def text_item(self) -> QGraphicsTextItem:
+        """Get the child text item."""
+        return self._text_item
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemPositionChange and self._original_pos is None:
+            self._original_pos = self.pos()
+        return super().itemChange(change, value)
+
+
+class TextInputWidget(QWidget):
+    """Widget for inline multiline text input on canvas."""
+
+    text_accepted = Signal(str)
+    text_cancelled = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Set up the input widget UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self._text_edit = QPlainTextEdit()
+        self._text_edit.setPlaceholderText("Enter text... (Ctrl+Enter to confirm)")
+        self._text_edit.setMinimumWidth(150)
+        self._text_edit.setStyleSheet(
+            "QPlainTextEdit { background: rgba(42, 42, 42, 120); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 3px; padding: 4px 8px; font-size: 14px; }"
+        )
+        # Set initial fixed height (will grow with content)
+        self._min_height = 60
+        self._max_height = 200
+        self._text_edit.setFixedHeight(self._min_height)
+        self._text_edit.textChanged.connect(self._adjust_size)
+        layout.addWidget(self._text_edit)
+
+    def _adjust_size(self):
+        """Adjust widget height based on content."""
+        # Calculate height based on line count and font metrics
+        font_metrics = self._text_edit.fontMetrics()
+        line_height = font_metrics.lineSpacing()
+        line_count = max(1, self._text_edit.document().blockCount())
+        # Add padding for margins (top/bottom padding + border)
+        content_height = line_count * line_height + 24
+        # Clamp between min and max, only grow (never shrink below min)
+        new_height = max(self._min_height, min(self._max_height, content_height))
+        self._text_edit.setFixedHeight(new_height)
+
+    def _on_accept(self):
+        """Handle text acceptance."""
+        text = self._text_edit.toPlainText().strip()
+        if text:
+            self.text_accepted.emit(text)
+        else:
+            self.text_cancelled.emit()
+
+    def keyPressEvent(self, event):
+        """Handle key press events.
+
+        - Ctrl+Enter: Confirm text
+        - Escape: Cancel input
+        - Enter: Insert newline (default behavior)
+        """
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                self._on_accept()
+                return
+        elif event.key() == Qt.Key.Key_Escape:
+            self.text_cancelled.emit()
+            return
+        super().keyPressEvent(event)
+
+    def set_focus(self):
+        """Set focus to the text edit."""
+        self._text_edit.setFocus()
+        self._text_edit.selectAll()
+
+    def has_text(self) -> bool:
+        """Check if the text edit has non-empty content."""
+        return bool(self._text_edit.toPlainText().strip())
+
+    def accept_text(self):
+        """Accept the current text (for external calls like outside click)."""
+        self._on_accept()
 
 
 class AnnotationEditorDialog(QDialog):
@@ -366,6 +487,7 @@ class AnnotationEditorDialog(QDialog):
             (TOOL_RECT, "Rectangle"),
             (TOOL_ELLIPSE, "Ellipse"),
             (TOOL_NUMBER, "Number"),
+            (TOOL_TEXT, "Text"),
         ]
 
         for tool, tooltip in tools:
@@ -761,6 +883,17 @@ class AnnotationEditorDialog(QDialog):
                     item.setPos(0, 0)
                     item._original_pos = None
 
+        elif action_type == "scale":
+            # Restore original size/coordinates
+            annotation = self._annotation_layer.get(annotation_id)
+            if annotation and extra_data:
+                for key, value in extra_data.items():
+                    setattr(annotation, key, value)
+
+                # Update visual item to reflect restored values
+                if item and item.scene():
+                    self._view._refresh_item_from_annotation(item, annotation)
+
     def _on_delete_selected(self):
         """Delete selected annotation items."""
         selected = self._scene.selectedItems()
@@ -1013,6 +1146,11 @@ class AnnotationGraphicsView(QGraphicsView):
         self._freehand_last_midpoint: tuple[float, float] | None = None
         self._freehand_min_distance_sq = 0.0
 
+        # Text input state
+        self._text_input_proxy: QGraphicsProxyWidget | None = None
+        self._text_input_widget: TextInputWidget | None = None
+        self._text_input_pos: QPointF | None = None
+
         # Custom signal
         self.annotation_created = self._Signal()
 
@@ -1025,6 +1163,10 @@ class AnnotationGraphicsView(QGraphicsView):
         Args:
             tool: Tool identifier.
         """
+        # Cancel any pending text input when switching tools
+        if self._current_tool == TOOL_TEXT and tool != TOOL_TEXT:
+            self._cancel_text_input()
+
         self._current_tool = tool
         if tool == TOOL_SELECT:
             self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
@@ -1060,6 +1202,8 @@ class AnnotationGraphicsView(QGraphicsView):
         """Update cursor based on current tool."""
         if self._current_tool == TOOL_SELECT:
             self.setCursor(Qt.CursorShape.ArrowCursor)
+        elif self._current_tool == TOOL_TEXT:
+            self.setCursor(Qt.CursorShape.IBeamCursor)
         else:
             self.setCursor(Qt.CursorShape.CrossCursor)
 
@@ -1103,11 +1247,27 @@ class AnnotationGraphicsView(QGraphicsView):
         super().keyReleaseEvent(event)
 
     def wheelEvent(self, event):
-        """Disable wheel scrolling to prevent unwanted view movement.
+        """Handle wheel events for scaling selected items.
+
+        Ctrl+wheel scales selected annotation items.
+        Without Ctrl, wheel is disabled to prevent unwanted scrolling.
 
         Args:
             event: Wheel event.
         """
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            selected_items = self.scene().selectedItems()
+            if selected_items:
+                # Determine scale factor from wheel direction
+                delta = event.angleDelta().y()
+                scale_factor = 1.1 if delta > 0 else 0.9
+
+                for item in selected_items:
+                    self._scale_item(item, scale_factor)
+
+                event.accept()
+                return
+
         event.accept()
 
     def mousePressEvent(self, event):
@@ -1116,8 +1276,25 @@ class AnnotationGraphicsView(QGraphicsView):
         Args:
             event: Mouse event.
         """
+        # Handle click outside text input widget
+        if self._text_input_widget and self._text_input_proxy:
+            click_pos = self.mapToScene(event.pos())
+            proxy_rect = self._text_input_proxy.sceneBoundingRect()
+            if not proxy_rect.contains(click_pos):
+                # Click outside text input - confirm if has text, cancel otherwise
+                if self._text_input_widget.has_text():
+                    self._text_input_widget.accept_text()
+                else:
+                    self._cancel_text_input()
+                # Don't return - allow starting new text input or other tool action
+
         if self._current_tool == TOOL_SELECT:
             super().mousePressEvent(event)
+            return
+
+        if self._current_tool == TOOL_TEXT:
+            if event.button() == Qt.MouseButton.LeftButton:
+                self._start_text_input(event)
             return
 
         if event.button() == Qt.MouseButton.LeftButton:
@@ -1654,6 +1831,12 @@ class AnnotationGraphicsView(QGraphicsView):
             return {
                 "points": list(annotation.points),
             }
+        elif ann_type == "text":
+            return {
+                "x": annotation.x,
+                "y": annotation.y,
+                "font_size": annotation.font_size,
+            }
         return {}
 
     def _update_annotation_coords(self, annotation, dx: float, dy: float):
@@ -1682,6 +1865,9 @@ class AnnotationGraphicsView(QGraphicsView):
             annotation.y += dy
         elif ann_type == "freehand":
             annotation.points = [(px + dx, py + dy) for px, py in annotation.points]
+        elif ann_type == "text":
+            annotation.x += dx
+            annotation.y += dy
 
     def _add_number_text(self, ellipse_item: QGraphicsEllipseItem, cx: float, cy: float, radius: float):
         """Add number text to a number annotation circle.
@@ -1807,6 +1993,526 @@ class AnnotationGraphicsView(QGraphicsView):
         denominator = math.sqrt(line_len_sq)
 
         return numerator / denominator
+
+    # ==================== Text Input Methods ====================
+
+    def _start_text_input(self, event):
+        """Start inline text input at click position.
+
+        Args:
+            event: Mouse event.
+        """
+        # Remove any existing text input immediately (synchronous)
+        self._cleanup_text_input_sync()
+
+        # Get scene position
+        self._text_input_pos = self.mapToScene(event.pos())
+
+        # Create text input widget
+        self._text_input_widget = TextInputWidget()
+        self._text_input_widget.text_accepted.connect(self._finalize_text_input)
+        self._text_input_widget.text_cancelled.connect(self._cancel_text_input)
+
+        # Add to scene via proxy widget
+        self._text_input_proxy = QGraphicsProxyWidget()
+        self._text_input_proxy.setWidget(self._text_input_widget)
+        self._text_input_proxy.setPos(self._text_input_pos)
+        self._text_input_proxy.setZValue(1000)  # Above other items
+        self.scene().addItem(self._text_input_proxy)
+
+        # Set focus to input
+        self._text_input_widget.set_focus()
+
+    def _finalize_text_input(self, text: str):
+        """Finalize text input and create annotation.
+
+        Args:
+            text: The text content.
+        """
+        if not self._text_input_pos:
+            # Defer cleanup to avoid deleting widget during signal processing
+            QTimer.singleShot(0, self._cleanup_text_input)
+            return
+
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        if width == 0 or height == 0:
+            QTimer.singleShot(0, self._cleanup_text_input)
+            return
+
+        # Store values before cleanup
+        pos_x = self._text_input_pos.x()
+        pos_y = self._text_input_pos.y()
+
+        # Convert to ratio coordinates
+        ratio_x = pos_x / width
+        ratio_y = pos_y / height
+
+        # Create text annotation (bold if line width >= 4)
+        use_bold = self._line_width >= 4
+        annotation = TextAnnotation(
+            text=text,
+            x=ratio_x,
+            y=ratio_y,
+            font_size=16,
+            color=self._current_color,
+            background_color=None,  # No background for simple text
+            bold=use_bold,
+        )
+
+        # Create visual text item
+        self._create_text_item(annotation, pos_x, pos_y)
+
+        # Emit signal
+        self.annotation_created.emit(annotation)
+
+        # Defer cleanup to avoid deleting widget during signal processing
+        QTimer.singleShot(0, self._cleanup_text_input)
+
+    def _cancel_text_input(self):
+        """Cancel text input without creating annotation."""
+        # Defer cleanup to avoid deleting widget during signal processing
+        QTimer.singleShot(0, self._cleanup_text_input)
+
+    def _cleanup_text_input_sync(self):
+        """Clean up text input widget synchronously (for starting new input)."""
+        # Disconnect signals first to prevent further callbacks
+        if self._text_input_widget:
+            try:
+                self._text_input_widget.text_accepted.disconnect(self._finalize_text_input)
+                self._text_input_widget.text_cancelled.disconnect(self._cancel_text_input)
+            except (RuntimeError, TypeError):
+                pass  # Already disconnected or widget deleted
+
+        if self._text_input_proxy:
+            if self._text_input_proxy.scene():
+                self.scene().removeItem(self._text_input_proxy)
+            self._text_input_proxy = None
+
+        self._text_input_widget = None
+        self._text_input_pos = None
+
+    def _cleanup_text_input(self):
+        """Clean up text input widget with deferred deletion."""
+        # Disconnect signals first to prevent further callbacks
+        if self._text_input_widget:
+            try:
+                self._text_input_widget.text_accepted.disconnect(self._finalize_text_input)
+                self._text_input_widget.text_cancelled.disconnect(self._cancel_text_input)
+            except (RuntimeError, TypeError):
+                pass  # Already disconnected or widget deleted
+
+        if self._text_input_proxy:
+            if self._text_input_proxy.scene():
+                self.scene().removeItem(self._text_input_proxy)
+            # Schedule for deletion to ensure clean removal
+            self._text_input_proxy.deleteLater()
+            self._text_input_proxy = None
+
+        if self._text_input_widget:
+            self._text_input_widget.deleteLater()
+            self._text_input_widget = None
+
+        self._text_input_pos = None
+
+    def _create_text_item(self, annotation: TextAnnotation, x: float, y: float):
+        """Create a visual text item for a text annotation.
+
+        Args:
+            annotation: TextAnnotation object.
+            x: X position in pixels.
+            y: Y position in pixels.
+        """
+        # Create text item
+        text_item = QGraphicsTextItem(annotation.text)
+        text_item.setDefaultTextColor(QColor(*annotation.color))
+
+        font = QFont()
+        font.setPixelSize(annotation.font_size)
+        font.setBold(getattr(annotation, "bold", False))
+        text_item.setFont(font)
+
+        # Create container for selection/movement
+        text_rect = text_item.boundingRect()
+        container = MovableTextItem(text_item, 0, 0, text_rect.width(), text_rect.height())
+        container.annotation_id = annotation.id
+        container.setPos(x, y)
+
+        self.scene().addItem(container)
+
+    # ==================== Scale Methods ====================
+
+    def _scale_item(self, item, scale_factor: float):
+        """Scale an annotation item.
+
+        Args:
+            item: QGraphicsItem to scale.
+            scale_factor: Scale multiplier (>1 to enlarge, <1 to shrink).
+        """
+        annotation_id = getattr(item, "annotation_id", None)
+        if not annotation_id:
+            return
+
+        parent = self.parent()
+        if not parent or not hasattr(parent, "_annotation_layer"):
+            return
+
+        annotation = parent._annotation_layer.get(annotation_id)
+        if not annotation:
+            return
+
+        # Store original values for undo
+        original_coords = self._get_annotation_coords(annotation)
+
+        # Scale based on annotation type
+        self._scale_annotation(item, annotation, scale_factor)
+
+        # Add to undo stack
+        if hasattr(parent, "_undo_stack"):
+            parent._undo_stack.append(("scale", annotation_id, item, original_coords))
+
+    def _scale_annotation(self, item, annotation, scale_factor: float):
+        """Scale annotation based on its type.
+
+        Args:
+            item: QGraphicsItem.
+            annotation: Annotation object.
+            scale_factor: Scale multiplier.
+        """
+        ann_type = annotation.annotation_type
+
+        if ann_type in ("line", "arrow"):
+            self._scale_line_annotation(item, annotation, scale_factor)
+        elif ann_type == "rectangle":
+            self._scale_rect_annotation(item, annotation, scale_factor)
+        elif ann_type == "ellipse":
+            self._scale_ellipse_annotation(item, annotation, scale_factor)
+        elif ann_type == "number":
+            self._scale_number_annotation(item, annotation, scale_factor)
+        elif ann_type == "freehand":
+            self._scale_freehand_annotation(item, annotation, scale_factor)
+        elif ann_type == "text":
+            self._scale_text_annotation(item, annotation, scale_factor)
+
+    def _scale_line_annotation(self, item, annotation, scale_factor: float):
+        """Scale line/arrow annotation from center.
+
+        Args:
+            item: QGraphicsLineItem.
+            annotation: LineAnnotation or ArrowAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        # Calculate center point
+        cx = (annotation.start_x + annotation.end_x) / 2
+        cy = (annotation.start_y + annotation.end_y) / 2
+
+        # Scale endpoints from center
+        annotation.start_x = cx + (annotation.start_x - cx) * scale_factor
+        annotation.start_y = cy + (annotation.start_y - cy) * scale_factor
+        annotation.end_x = cx + (annotation.end_x - cx) * scale_factor
+        annotation.end_y = cy + (annotation.end_y - cy) * scale_factor
+
+        # Update visual item
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        x1 = annotation.start_x * width
+        y1 = annotation.start_y * height
+        x2 = annotation.end_x * width
+        y2 = annotation.end_y * height
+
+        if isinstance(item, MovableLineItem):
+            # For arrows, shorten line and update arrowhead
+            if annotation.annotation_type == "arrow":
+                arrow_length = annotation.line_width * 4
+                angle = math.atan2(y2 - y1, x2 - x1)
+                line_end_x = x2 - arrow_length * math.cos(angle)
+                line_end_y = y2 - arrow_length * math.sin(angle)
+                item.setLine(x1, y1, line_end_x, line_end_y)
+
+                # Update arrowhead
+                if hasattr(item, "_arrowhead") and item._arrowhead:
+                    self._update_arrowhead(item, x1, y1, x2, y2)
+            else:
+                item.setLine(x1, y1, x2, y2)
+
+    def _update_arrowhead(self, line_item, x1: float, y1: float, x2: float, y2: float):
+        """Update arrowhead polygon position.
+
+        Args:
+            line_item: Parent line item.
+            x1, y1: Start point.
+            x2, y2: End point (arrow tip).
+        """
+        if not hasattr(line_item, "_arrowhead") or not line_item._arrowhead:
+            return
+
+        # Get line width from annotation
+        parent = self.parent()
+        if parent and hasattr(parent, "_annotation_layer"):
+            annotation_id = getattr(line_item, "annotation_id", None)
+            if annotation_id:
+                annotation = parent._annotation_layer.get(annotation_id)
+                if annotation:
+                    line_width = annotation.line_width
+                else:
+                    line_width = self._line_width
+            else:
+                line_width = self._line_width
+        else:
+            line_width = self._line_width
+
+        angle = math.atan2(y2 - y1, x2 - x1)
+        arrow_length = line_width * 4
+        arrow_angle = math.pi / 6
+
+        left_x = x2 - arrow_length * math.cos(angle - arrow_angle)
+        left_y = y2 - arrow_length * math.sin(angle - arrow_angle)
+        right_x = x2 - arrow_length * math.cos(angle + arrow_angle)
+        right_y = y2 - arrow_length * math.sin(angle + arrow_angle)
+
+        polygon = QPolygonF(
+            [
+                QPointF(x2, y2),
+                QPointF(left_x, left_y),
+                QPointF(right_x, right_y),
+            ]
+        )
+        line_item._arrowhead.setPolygon(polygon)
+
+    def _scale_rect_annotation(self, item, annotation, scale_factor: float):
+        """Scale rectangle annotation from center.
+
+        Args:
+            item: MovableRectItem.
+            annotation: RectangleAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        # Calculate center
+        cx = annotation.x + annotation.width / 2
+        cy = annotation.y + annotation.height / 2
+
+        # Scale dimensions
+        new_width = annotation.width * scale_factor
+        new_height = annotation.height * scale_factor
+
+        # Update annotation (maintain center)
+        annotation.width = new_width
+        annotation.height = new_height
+        annotation.x = cx - new_width / 2
+        annotation.y = cy - new_height / 2
+
+        # Update visual item
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        left_px = annotation.x * width
+        top_px = annotation.y * height
+        w_px = annotation.width * width
+        h_px = annotation.height * height
+
+        if isinstance(item, MovableRectItem):
+            item.setRect(left_px, top_px, w_px, h_px)
+
+    def _scale_ellipse_annotation(self, item, annotation, scale_factor: float):
+        """Scale ellipse annotation.
+
+        Args:
+            item: MovableEllipseItem.
+            annotation: EllipseAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        # Scale radii
+        annotation.radius_x *= scale_factor
+        annotation.radius_y *= scale_factor
+
+        # Update visual item
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        cx = annotation.center_x * width
+        cy = annotation.center_y * height
+        rx = annotation.radius_x * width
+        ry = annotation.radius_y * height
+
+        if isinstance(item, MovableEllipseItem):
+            item.setRect(cx - rx, cy - ry, rx * 2, ry * 2)
+
+    def _scale_number_annotation(self, item, annotation, scale_factor: float):
+        """Scale number annotation.
+
+        Args:
+            item: MovableEllipseItem.
+            annotation: NumberAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        # Scale radius
+        annotation.radius *= scale_factor
+
+        # Update visual item
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+
+        cx = annotation.x * width
+        cy = annotation.y * scene_rect.height()
+        r = annotation.radius * width
+
+        if isinstance(item, MovableEllipseItem):
+            item.setRect(cx - r, cy - r, r * 2, r * 2)
+
+            # Update text size
+            for child in item.childItems():
+                if isinstance(child, QGraphicsTextItem):
+                    font = child.font()
+                    font.setPixelSize(max(10, int(r * 1.2)))
+                    child.setFont(font)
+                    # Re-center text
+                    text_rect = child.boundingRect()
+                    child.setPos(-text_rect.width() / 2, -text_rect.height() / 2)
+
+    def _scale_freehand_annotation(self, item, annotation, scale_factor: float):
+        """Scale freehand annotation from centroid.
+
+        Args:
+            item: MovablePathItem.
+            annotation: FreehandAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        points = annotation.points
+        if not points:
+            return
+
+        # Calculate centroid
+        cx = sum(p[0] for p in points) / len(points)
+        cy = sum(p[1] for p in points) / len(points)
+
+        # Scale points from centroid
+        annotation.points = [(cx + (x - cx) * scale_factor, cy + (y - cy) * scale_factor) for x, y in points]
+
+        # Rebuild path
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        pixel_points = [(x * width, y * height) for x, y in annotation.points]
+
+        path = QPainterPath()
+        if pixel_points:
+            path.moveTo(pixel_points[0][0], pixel_points[0][1])
+            for px, py in pixel_points[1:]:
+                path.lineTo(px, py)
+
+        if isinstance(item, MovablePathItem):
+            item.setPath(path)
+
+    def _scale_text_annotation(self, item, annotation, scale_factor: float):
+        """Scale text annotation by changing font size.
+
+        Args:
+            item: MovableTextItem.
+            annotation: TextAnnotation.
+            scale_factor: Scale multiplier.
+        """
+        # Scale font size with limits
+        new_size = int(annotation.font_size * scale_factor)
+        annotation.font_size = max(8, min(72, new_size))
+
+        # Update visual item
+        if isinstance(item, MovableTextItem):
+            text_item = item.text_item
+            font = text_item.font()
+            font.setPixelSize(annotation.font_size)
+            text_item.setFont(font)
+
+            # Update container rect
+            text_rect = text_item.boundingRect()
+            item.setRect(0, 0, text_rect.width(), text_rect.height())
+
+    def _refresh_item_from_annotation(self, item, annotation):
+        """Refresh visual item from annotation data (for undo).
+
+        Args:
+            item: QGraphicsItem to update.
+            annotation: Annotation object with current data.
+        """
+        scene_rect = self.scene().sceneRect()
+        width = scene_rect.width()
+        height = scene_rect.height()
+
+        ann_type = annotation.annotation_type
+
+        if ann_type in ("line", "arrow"):
+            x1 = annotation.start_x * width
+            y1 = annotation.start_y * height
+            x2 = annotation.end_x * width
+            y2 = annotation.end_y * height
+
+            if isinstance(item, MovableLineItem):
+                if ann_type == "arrow":
+                    arrow_length = annotation.line_width * 4
+                    angle = math.atan2(y2 - y1, x2 - x1)
+                    line_end_x = x2 - arrow_length * math.cos(angle)
+                    line_end_y = y2 - arrow_length * math.sin(angle)
+                    item.setLine(x1, y1, line_end_x, line_end_y)
+                    if hasattr(item, "_arrowhead") and item._arrowhead:
+                        self._update_arrowhead(item, x1, y1, x2, y2)
+                else:
+                    item.setLine(x1, y1, x2, y2)
+
+        elif ann_type == "rectangle":
+            left_px = annotation.x * width
+            top_px = annotation.y * height
+            w_px = annotation.width * width
+            h_px = annotation.height * height
+            if isinstance(item, MovableRectItem):
+                item.setRect(left_px, top_px, w_px, h_px)
+
+        elif ann_type == "ellipse":
+            cx = annotation.center_x * width
+            cy = annotation.center_y * height
+            rx = annotation.radius_x * width
+            ry = annotation.radius_y * height
+            if isinstance(item, MovableEllipseItem):
+                item.setRect(cx - rx, cy - ry, rx * 2, ry * 2)
+
+        elif ann_type == "number":
+            cx = annotation.x * width
+            cy = annotation.y * height
+            r = annotation.radius * width
+            if isinstance(item, MovableEllipseItem):
+                item.setRect(cx - r, cy - r, r * 2, r * 2)
+                for child in item.childItems():
+                    if isinstance(child, QGraphicsTextItem):
+                        font = child.font()
+                        font.setPixelSize(max(10, int(r * 1.2)))
+                        child.setFont(font)
+                        text_rect = child.boundingRect()
+                        child.setPos(-text_rect.width() / 2, -text_rect.height() / 2)
+
+        elif ann_type == "freehand":
+            pixel_points = [(x * width, y * height) for x, y in annotation.points]
+            path = QPainterPath()
+            if pixel_points:
+                path.moveTo(pixel_points[0][0], pixel_points[0][1])
+                for px, py in pixel_points[1:]:
+                    path.lineTo(px, py)
+            if isinstance(item, MovablePathItem):
+                item.setPath(path)
+
+        elif ann_type == "text":
+            if isinstance(item, MovableTextItem):
+                text_item = item.text_item
+                font = text_item.font()
+                font.setPixelSize(annotation.font_size)
+                font.setBold(getattr(annotation, "bold", False))
+                text_item.setFont(font)
+                text_rect = text_item.boundingRect()
+                item.setRect(0, 0, text_rect.width(), text_rect.height())
 
 
 def show_annotation_editor(

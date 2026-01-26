@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 from typing import TYPE_CHECKING
 
 from PIL import Image, ImageDraw, ImageFont
@@ -163,8 +164,9 @@ def _render_text(image: Image.Image, annotation) -> Image.Image:
     scale_factor = max(image.width / 640, image.height / 360)
     scaled_font_size = max(10, int(annotation.font_size * scale_factor))
 
-    # Try to load font
-    font = _get_font(scaled_font_size)
+    # Try to load font (with bold if specified)
+    bold = getattr(annotation, "bold", False)
+    font = _get_font(scaled_font_size, bold=bold)
 
     # Create temporary draw to measure text
     temp_draw = ImageDraw.Draw(image)
@@ -469,9 +471,7 @@ def _render_freehand(image: Image.Image, annotation) -> Image.Image:
     return image
 
 
-def _catmull_rom_spline(
-    points: list[tuple[float, float]], segments_per_curve: int = 4
-) -> list[tuple[float, float]]:
+def _catmull_rom_spline(points: list[tuple[float, float]], segments_per_curve: int = 4) -> list[tuple[float, float]]:
     """Generate smooth curve points using Catmull-Rom spline interpolation.
 
     Args:
@@ -506,16 +506,10 @@ def _catmull_rom_spline(
             t3 = t2 * t
 
             x = 0.5 * (
-                (2 * p1[0])
-                + (-p0[0] + p2[0]) * t
-                + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2
-                + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3
+                (2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3
             )
             y = 0.5 * (
-                (2 * p1[1])
-                + (-p0[1] + p2[1]) * t
-                + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2
-                + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
+                (2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3
             )
             result.append((x, y))
 
@@ -569,25 +563,50 @@ def _render_number(image: Image.Image, annotation) -> Image.Image:
     return image
 
 
-def _get_font(size: int):
+def _get_font(size: int, bold: bool = False):
     """Get a font for text rendering.
 
-    Attempts to load system fonts, falls back to PIL default.
+    Attempts to load bundled Noto Sans fonts first, then system fonts,
+    falls back to PIL default.
 
     Args:
         size: Font size in points.
+        bold: Whether to use bold font.
 
     Returns:
         PIL ImageFont object.
     """
-    # Try common font paths
-    font_paths = [
-        "arial.ttf",
-        "Arial.ttf",
-        "/System/Library/Fonts/Helvetica.ttc",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "C:/Windows/Fonts/arial.ttf",
-    ]
+    # Get path to bundled fonts directory
+    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
+
+    # Try bundled Noto Sans fonts first (guaranteed to exist)
+    if bold:
+        bundled_font = os.path.join(fonts_dir, "NotoSans-Bold.ttf")
+    else:
+        bundled_font = os.path.join(fonts_dir, "NotoSans-Regular.ttf")
+
+    try:
+        return ImageFont.truetype(bundled_font, size)
+    except OSError:
+        pass  # Fall through to system fonts
+
+    # Fallback to system fonts (bold and regular variants)
+    if bold:
+        font_paths = [
+            "arialbd.ttf",
+            "Arial Bold.ttf",
+            "/System/Library/Fonts/Helvetica-Bold.ttc",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "C:/Windows/Fonts/arialbd.ttf",
+        ]
+    else:
+        font_paths = [
+            "arial.ttf",
+            "Arial.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "C:/Windows/Fonts/arial.ttf",
+        ]
 
     for font_path in font_paths:
         try:

@@ -33,6 +33,7 @@ class TextAnnotation:
         font_size: Font size in points.
         color: Text color as RGB tuple.
         background_color: Background color as RGBA tuple, or None for no background.
+        bold: Whether to use bold font.
     """
 
     text: str
@@ -41,6 +42,7 @@ class TextAnnotation:
     font_size: int = 16
     color: tuple[int, int, int] = (255, 255, 255)
     background_color: tuple[int, int, int, int] | None = (0, 0, 0, 180)
+    bold: bool = False
     id: str = field(default_factory=_generate_id)
 
     @property
