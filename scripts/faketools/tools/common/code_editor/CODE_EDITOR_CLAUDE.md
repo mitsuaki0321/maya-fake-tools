@@ -26,8 +26,8 @@ Maya Code Editor is a full-featured Python code editor with native Maya integrat
 | Maya menu | ✅ Done | Removed standalone menu, uses FakeTools menu |
 | docs module | ✅ Done | Removed (user guide button removed from toolbar) |
 | Import paths | ❌ Pending | Still references `maya_code_editor` in some places |
-| Config paths | ❌ Pending | References `maya_code_editor_config` |
-| Workspace paths | ❌ Pending | References `maya_code_editor_workspace` |
+| Config paths | ✅ Done | Uses ToolDataManager: `{data_root}/common/code_editor/config/` |
+| Workspace paths | ✅ Done | Uses ToolDataManager: `{data_root}/common/code_editor/workspace/` |
 | Qt imports | ⚠️ Review | Has own qt_compat.py, should use FakeTools lib_ui |
 
 ## Directory Structure
@@ -165,9 +165,9 @@ SettingsManager
 ├── SessionManager           # Window state, tabs, recent files
 └── WorkspaceManager         # Workspace directories
 
-Storage Locations:
-├── {maya_prefs}/maya_code_editor_config/  # Settings JSON
-└── {maya_prefs}/maya_code_editor_workspace/  # Default workspace
+Storage Locations (FakeTools convention):
+├── {MAYA_APP_DIR}/faketools_workspace/common/code_editor/config/  # Settings JSON
+└── {MAYA_APP_DIR}/faketools_workspace/common/code_editor/workspace/  # Default workspace
 ```
 
 ### Key Patterns
@@ -463,19 +463,14 @@ All major functionality is encapsulated in Manager classes:
 - ~~`maya_integration.py` renamed to `main.py`~~
 - ~~`reload_editor_dev()` fixed to call `show_editor()` directly~~
 
-### 2. Config Directory Path
-Current: `{maya_prefs}/maya_code_editor_config/`
-Should be: TBD (FakeTools convention)
+### ~~2. Config Directory Path~~ ✅ DONE (Phase 2)
+- ~~`settings/settings_manager.py` now uses `ToolDataManager`~~
+- ~~Path: `{data_root}/common/code_editor/config/`~~
+- ~~Auto-migration from legacy location~~
 
-Files to update:
-- `settings/settings_manager.py`
-
-### 3. Workspace Directory Path
-Current: `{maya_prefs}/maya_code_editor_workspace/`
-Should be: TBD (FakeTools convention)
-
-Files to update:
-- `settings/workspace_manager.py`
+### ~~3. Workspace Directory Path~~ ✅ DONE (Phase 2)
+- ~~`settings/workspace_manager.py` now uses `ToolDataManager`~~
+- ~~Path: `{data_root}/common/code_editor/workspace/`~~
 
 ### 4. Qt Compatibility Layer
 Current: `ui/qt_compat.py` (own implementation)
@@ -534,24 +529,45 @@ show_ui()
 
 ---
 
-## Phase 2: Config/Workspace Path (未実施)
+## Phase 2: Config/Workspace Path ✅ COMPLETE
 
-**Status**: 検討中
+**Status**: 完了
 
 ### Goal
 Config/Workspace パス の FakeTools 規約への統一
 
-### 検討事項
-現在の設定パスは Maya の prefs ディレクトリ下に保存されており、動作に問題はない。
-FakeTools の ToolSettingsManager への移行は大規模な変更となるため、以下を検討：
+### 実施内容
 
-1. **現状維持案**: 設定パスはそのままで動作確認済み
-2. **パス変更案**: `maya_code_editor_config` → `faketools_code_editor` など
-3. **ToolSettingsManager 移行案**: FakeTools 標準に完全統一
+#### Path Changes
+| Type | Old | New |
+|------|-----|-----|
+| Config | `{maya_app_dir}/scripts/maya_code_editor_config/` | `{data_root}/common/code_editor/config/` |
+| Workspace | `{maya_app_dir}/scripts/maya_code_editor_workspace/` | `{data_root}/common/code_editor/workspace/` |
 
-### 対象ファイル
-- `settings/settings_manager.py` - Config path
-- `settings/workspace_manager.py` - Workspace path
+`{data_root}` = `{MAYA_APP_DIR}/faketools_workspace/` (GlobalConfig から取得)
+
+#### Files Modified
+- `settings/settings_manager.py`
+  - `_get_settings_directory()`: Uses `ToolDataManager` for path resolution
+
+- `settings/workspace_manager.py`
+  - `_create_default_workspace()`: Uses `ToolDataManager` for path resolution
+
+#### New Directory Structure
+```
+{MAYA_APP_DIR}/faketools_workspace/common/code_editor/
+├── config/
+│   ├── user_settings.json
+│   ├── session.json
+│   ├── workspace.json
+│   └── backups/
+└── workspace/
+    └── welcome.py
+```
+
+#### Note
+- レガシーからの自動マイグレーションは行わない
+- 旧バージョンのユーザーは必要に応じて手動で設定を移行
 
 ---
 

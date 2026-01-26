@@ -25,31 +25,41 @@ class SettingsManager:
 
     def __init__(self):
         self.settings_dir = self._get_settings_directory()
+        logger.debug(f"Settings directory: {self.settings_dir}")
 
         # Initialize sub-managers
         self.user_settings = UserSettings(self.settings_dir)
         self.session_manager = SessionManager(self.settings_dir)
         self.workspace_manager = WorkspaceManager(self.settings_dir)
 
-        # Legacy support - migrate old settings if they exist
+        # Log workspace directory after initialization
+        workspace_dir = self.workspace_manager.get_workspace_directory()
+        logger.debug(f"Workspace directory: {workspace_dir}")
+
+        # Legacy support - migrate old settings.json to new modular structure
         self._migrate_legacy_settings()
 
         # Clean up any old backups in root directory on startup
         self._cleanup_old_backups()
 
     def _get_settings_directory(self) -> str:
-        """Get the directory for settings files."""
-        # Try to get Maya's preferences directory first
-        try:
-            import maya.cmds as cmds  # type: ignore
+        """Get the directory for settings files.
 
-            maya_app_dir = cmds.internalVar(userAppDir=True)
-            settings_dir = os.path.join(maya_app_dir, "scripts", "maya_code_editor_config")
-        except ImportError:
-            # Fallback to user's home directory if not in Maya
+        Uses FakeTools ToolDataManager for path resolution:
+        {MAYA_APP_DIR}/faketools_workspace/common/code_editor/config/
+        """
+        try:
+            from .....lib_ui.tool_data import ToolDataManager
+
+            data_manager = ToolDataManager("code_editor", "common")
+            settings_dir = str(data_manager.get_data_dir() / "config")
+            logger.debug(f"Using ToolDataManager for settings path: {settings_dir}")
+        except (ImportError, RuntimeError) as e:
+            # Fallback for standalone mode
             import tempfile
 
-            settings_dir = os.path.join(tempfile.gettempdir(), "maya_code_editor_config")
+            settings_dir = os.path.join(tempfile.gettempdir(), "faketools_code_editor_config")
+            logger.debug(f"Using fallback settings path (standalone mode): {settings_dir} ({e})")
 
         # Create directory if it doesn't exist
         os.makedirs(settings_dir, exist_ok=True)

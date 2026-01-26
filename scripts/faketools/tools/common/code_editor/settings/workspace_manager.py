@@ -118,28 +118,38 @@ class WorkspaceManager:
 
         # If no workspace directory is set, create default
         if not workspace_dir:
+            logger.debug("No saved workspace directory, creating default")
             workspace_dir = self._create_default_workspace()
             self.set("workspace.root_directory", workspace_dir)
             self.save_workspace()
+        else:
+            logger.debug(f"Loaded saved workspace directory: {workspace_dir}")
 
         return workspace_dir
 
     def _create_default_workspace(self) -> str:
-        """Create and return the default workspace directory."""
-        try:
-            import maya.cmds as cmds  # type: ignore
+        """Create and return the default workspace directory.
 
-            maya_app_dir = cmds.internalVar(userAppDir=True)
-            workspace_dir = os.path.join(maya_app_dir, "scripts", "maya_code_editor_workspace")
-        except ImportError:
+        Uses FakeTools ToolDataManager for path resolution:
+        {MAYA_APP_DIR}/faketools_workspace/common/code_editor/workspace/
+        """
+        try:
+            from .....lib_ui.tool_data import ToolDataManager
+
+            data_manager = ToolDataManager("code_editor", "common")
+            workspace_dir = str(data_manager.get_data_dir() / "workspace")
+            logger.debug(f"Using ToolDataManager for workspace path: {workspace_dir}")
+        except (ImportError, RuntimeError) as e:
             # Fallback for standalone mode
             import tempfile
 
-            workspace_dir = os.path.join(tempfile.gettempdir(), "maya_code_editor_workspace")
+            workspace_dir = os.path.join(tempfile.gettempdir(), "faketools_code_editor_workspace")
+            logger.debug(f"Using fallback workspace path (standalone mode): {workspace_dir} ({e})")
 
         # Create directory if it doesn't exist
         if not os.path.exists(workspace_dir):
             os.makedirs(workspace_dir, exist_ok=True)
+            logger.debug(f"Created workspace directory: {workspace_dir}")
 
         # Copy startup files to workspace
         self._copy_startup_files(workspace_dir)
