@@ -59,11 +59,10 @@ class EditorShortcuts:
                 # Delegate to parent class
                 editor.QPlainTextEdit.keyPressEvent(editor, event)
                 return True
-            else:
-                # Call the specified method
-                if hasattr(editor, method_name):
-                    getattr(editor, method_name)()
-                    return True
+            # Call the specified method
+            if hasattr(editor, method_name):
+                getattr(editor, method_name)()
+                return True
 
         # Check standard shortcuts (Ctrl+C, Ctrl+V, etc.)
         for shortcut_key, method_name in self.shortcuts.items():
@@ -72,11 +71,10 @@ class EditorShortcuts:
                     # Delegate to parent class
                     editor.QPlainTextEdit.keyPressEvent(editor, event)
                     return True
-                else:
-                    # Call the specified method
-                    if hasattr(editor, method_name):
-                        getattr(editor, method_name)()
-                        return True
+                # Call the specified method
+                if hasattr(editor, method_name):
+                    getattr(editor, method_name)()
+                    return True
 
         # Check string-based shortcuts
         key_combo = self._get_key_combination(event)
@@ -144,8 +142,7 @@ class EditorShortcuts:
         if key_name:
             if modifiers:
                 return "+".join(modifiers + [key_name])
-            else:
-                return key_name
+            return key_name
 
         return None
 

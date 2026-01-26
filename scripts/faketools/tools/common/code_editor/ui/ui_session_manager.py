@@ -94,12 +94,11 @@ class UISessionManager:
                     continue
 
                 # Skip snippet preview tabs (but keep file preview tabs)
-                if hasattr(editor, "is_preview") and editor.is_preview:
-                    # Check if it's a snippet preview (no file_path) or file preview (has file_path)
-                    if not file_path:
-                        # This is a snippet preview tab, skip it
-                        continue
-                    # If it has a file_path, it's a file preview tab, continue to save it
+                # Check if it's a snippet preview (no file_path) or file preview (has file_path)
+                if hasattr(editor, "is_preview") and editor.is_preview and not file_path:
+                    # This is a snippet preview tab, skip it
+                    continue
+                # If it has a file_path, it's a file preview tab, continue to save it
 
                 tab_info = self.settings_manager.create_tab_info(
                     file_path=file_path,

@@ -118,9 +118,8 @@ class MayaTerminalWidget(QWidget):
                 print("# " + "=" * 50)
 
                 return True
-            else:
-                logger.error("Failed to get Maya terminal widget pointer")
-                return False
+            logger.error("Failed to get Maya terminal widget pointer")
+            return False
 
         except Exception as e:
             logger.error(f"Error setting up Maya terminal: {e}")

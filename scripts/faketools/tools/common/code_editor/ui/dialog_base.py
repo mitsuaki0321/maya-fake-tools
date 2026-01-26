@@ -133,8 +133,7 @@ class CodeEditorInputDialog(QInputDialog):
 
         if dialog.exec() == QInputDialog.Accepted:
             return dialog.textValue(), True
-        else:
-            return "", False
+        return "", False
 
 
 class CodeEditorFileDialog(QFileDialog):

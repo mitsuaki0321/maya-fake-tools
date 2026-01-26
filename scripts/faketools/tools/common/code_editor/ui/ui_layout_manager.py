@@ -3,6 +3,7 @@ UI Layout Manager for Maya Code Editor.
 Handles UI initialization, theming, and layout management.
 """
 
+import contextlib
 from logging import getLogger
 
 from .....lib_ui.qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
@@ -131,11 +132,14 @@ class UILayoutManager:
                     editor.setExtraSelections([selection])
 
         # Apply terminal theme
-        if self.main_window.output_terminal:
-            # Only apply stylesheet if using QTextEdit (not Maya native terminal)
-            if hasattr(self.main_window.output_terminal, "output_display") and self.main_window.output_terminal.output_display:
-                terminal_style = AppTheme.get_terminal_stylesheet()
-                self.main_window.output_terminal.output_display.setStyleSheet(terminal_style)
+        # Only apply stylesheet if using QTextEdit (not Maya native terminal)
+        if (
+            self.main_window.output_terminal
+            and hasattr(self.main_window.output_terminal, "output_display")
+            and self.main_window.output_terminal.output_display
+        ):
+            terminal_style = AppTheme.get_terminal_stylesheet()
+            self.main_window.output_terminal.output_display.setStyleSheet(terminal_style)
 
         # Apply file explorer theme
         if self.main_window.file_explorer:
@@ -186,10 +190,8 @@ class UILayoutManager:
         for i in range(self.main_window.code_editor.count()):
             editor = self.main_window.code_editor.widget(i)
             if editor and hasattr(editor, "focus_lost"):
-                try:
+                with contextlib.suppress(Exception):
                     editor.focus_lost.connect(self.main_window.autosave_manager.flush_backups)
-                except Exception:
-                    pass  # Already connected or invalid
 
         # Connect signal for new tabs to auto-connect their focus_lost signal
         self.main_window.code_editor.currentChanged.connect(self._on_tab_changed_connect_focus)
@@ -201,15 +203,11 @@ class UILayoutManager:
 
         editor = self.main_window.code_editor.widget(index)
         if editor and hasattr(editor, "focus_lost"):
-            try:
-                # Disconnect first to avoid duplicate connections
-                try:
-                    editor.focus_lost.disconnect(self.main_window.autosave_manager.flush_backups)
-                except Exception:
-                    pass
+            # Disconnect first to avoid duplicate connections
+            with contextlib.suppress(Exception):
+                editor.focus_lost.disconnect(self.main_window.autosave_manager.flush_backups)
+            with contextlib.suppress(Exception):
                 editor.focus_lost.connect(self.main_window.autosave_manager.flush_backups)
-            except Exception:
-                pass
 
     def apply_font_settings(self):
         """Apply default font settings from settings.json to editors and terminal."""
@@ -270,11 +268,19 @@ class UILayoutManager:
         # Save window geometry
         if not self.main_window.isMaximized():
             self.main_window.settings_manager.set_window_geometry(
-                self.main_window.x(), self.main_window.y(), self.main_window.width(), self.main_window.height(), False
+                self.main_window.x(),
+                self.main_window.y(),
+                self.main_window.width(),
+                self.main_window.height(),
+                False,
             )
         else:
             self.main_window.settings_manager.set_window_geometry(
-                self.main_window.x(), self.main_window.y(), self.main_window.width(), self.main_window.height(), True
+                self.main_window.x(),
+                self.main_window.y(),
+                self.main_window.width(),
+                self.main_window.height(),
+                True,
             )
 
         # Save splitter sizes

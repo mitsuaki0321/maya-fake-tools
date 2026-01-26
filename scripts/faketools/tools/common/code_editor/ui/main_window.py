@@ -76,7 +76,7 @@ class MayaCodeEditor(QWidget):
                     "cmds": cmds,
                     "om2": om2,
                     "om": om2,  # Alias for backward compatibility
-                }
+                },
             )
 
         except ImportError:
@@ -168,7 +168,7 @@ class MayaCodeEditor(QWidget):
 
                 except Exception as e:
                     failed_count += 1
-                    self.output_terminal.append_output(f"Failed to save tab {i + 1}: {str(e)}")
+                    self.output_terminal.append_output(f"Failed to save tab {i + 1}: {e!s}")
 
         if saved_count > 0:
             self.output_terminal.append_output(f"Saved {saved_count} file(s)")
@@ -380,7 +380,7 @@ class MayaCodeEditor(QWidget):
             self.output_terminal.append_output(f"Created new file: {filename}")
 
         except Exception as e:
-            CodeEditorMessageBox.critical(self, "Error", f"Failed to create file: {str(e)}")
+            CodeEditorMessageBox.critical(self, "Error", f"Failed to create file: {e!s}")
 
     def clear_terminal(self):
         """Clear the output terminal."""
@@ -408,7 +408,7 @@ class MayaCodeEditor(QWidget):
                 self.execution_manager.execute_code(code)
 
         except Exception as e:
-            self.output_terminal.append_output(f"Error executing file: {str(e)}")
+            self.output_terminal.append_output(f"Error executing file: {e!s}")
 
     def manual_save_session(self):
         """Manually save session state for testing."""
@@ -436,7 +436,7 @@ class MayaCodeEditor(QWidget):
                 os.makedirs(workspace_dir, exist_ok=True)
                 self.output_terminal.append_success(f"Created workspace directory: {workspace_dir}")
             except Exception as e:
-                self.output_terminal.append_error(f"Failed to create workspace directory: {str(e)}")
+                self.output_terminal.append_error(f"Failed to create workspace directory: {e!s}")
                 return
 
         # Open directory in system file manager
@@ -455,7 +455,7 @@ class MayaCodeEditor(QWidget):
 
             self.output_terminal.append_output(f"Opened workspace directory: {workspace_dir}")
         except Exception as e:
-            self.output_terminal.append_error(f"Failed to open workspace directory: {str(e)}")
+            self.output_terminal.append_error(f"Failed to open workspace directory: {e!s}")
 
     def show_syntax_errors_in_terminal(self, errors):
         """Show syntax errors in the output terminal."""

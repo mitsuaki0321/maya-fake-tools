@@ -202,11 +202,10 @@ class SettingsManager:
         # Route to appropriate manager based on key prefix
         if key.startswith("window.") or key.startswith("session.") or key.startswith("recent_files") or key.startswith("draft_content"):
             return self.session_manager.get(key, default)
-        elif key.startswith("workspace.") or key.startswith("project."):
+        if key.startswith("workspace.") or key.startswith("project."):
             return self.workspace_manager.get(key, default)
-        else:
-            # Default to user settings
-            return self.user_settings.get(key, default)
+        # Default to user settings
+        return self.user_settings.get(key, default)
 
     def set(self, key: str, value: Any):
         """Set a setting value using dot notation (e.g., 'editor.font_size', 12)."""
@@ -309,7 +308,12 @@ class SettingsManager:
         return self.session_manager.should_restore_session()
 
     def create_tab_info(
-        self, file_path: str = None, content: str = "", cursor_position: int = 0, is_modified: bool = False, tab_name: str = None
+        self,
+        file_path: str = None,
+        content: str = "",
+        cursor_position: int = 0,
+        is_modified: bool = False,
+        tab_name: str = None,
     ) -> dict[str, Any]:
         """Create tab information dictionary."""
         return self.session_manager.create_tab_info(file_path, content, cursor_position, is_modified, tab_name)

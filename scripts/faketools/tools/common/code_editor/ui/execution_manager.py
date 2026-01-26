@@ -73,7 +73,6 @@ class NativeExecutionBridge:
                                 exec_globals[key] = value
                         except Exception as e:
                             logger.debug(f"Failed to sync variable '{key}': {e}")
-                            pass
 
                 # Then update __main__ with any exec_globals that might be newer
                 for key, value in exec_globals.items():
@@ -107,7 +106,6 @@ class NativeExecutionBridge:
                                 exec_globals[key] = value
                         except Exception as e:
                             logger.debug(f"Failed to sync variable '{key}': {e}")
-                            pass
 
             return True
         except Exception as e:
@@ -284,7 +282,7 @@ class ExecutionManager:
                     ):
                         return False
                     # Single expression statements (like just "variable_name")
-                    elif isinstance(stmt, ast.Expr):
+                    if isinstance(stmt, ast.Expr):
                         return True
                 return False
             except SyntaxError:

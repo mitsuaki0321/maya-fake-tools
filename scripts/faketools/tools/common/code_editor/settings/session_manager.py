@@ -215,26 +215,30 @@ class SessionManager:
         app = QApplication.instance()
         if app:
             for widget in app.allWidgets():
-                if hasattr(widget, "__class__") and "MayaCodeEditor" in widget.__class__.__name__:
-                    if hasattr(widget, "code_editor") and widget.code_editor:
-                        tabs = []
-                        for i in range(widget.code_editor.count()):
-                            editor = widget.code_editor.widget(i)
-                            if editor:
-                                # Skip preview tabs
-                                if hasattr(editor, "is_preview") and editor.is_preview:
-                                    continue
+                if (
+                    hasattr(widget, "__class__")
+                    and "MayaCodeEditor" in widget.__class__.__name__
+                    and hasattr(widget, "code_editor")
+                    and widget.code_editor
+                ):
+                    tabs = []
+                    for i in range(widget.code_editor.count()):
+                        editor = widget.code_editor.widget(i)
+                        if editor:
+                            # Skip preview tabs
+                            if hasattr(editor, "is_preview") and editor.is_preview:
+                                continue
 
-                                tab_info = {
-                                    "file_path": getattr(editor, "file_path", None),
-                                    "content": editor.toPlainText(),
-                                    "cursor_position": editor.textCursor().position(),
-                                    "is_modified": getattr(editor, "is_modified", False),
-                                    "tab_name": widget.code_editor.tabText(i),
-                                    "is_preview": False,
-                                }
-                                tabs.append(tab_info)
-                        return tabs
+                            tab_info = {
+                                "file_path": getattr(editor, "file_path", None),
+                                "content": editor.toPlainText(),
+                                "cursor_position": editor.textCursor().position(),
+                                "is_modified": getattr(editor, "is_modified", False),
+                                "tab_name": widget.code_editor.tabText(i),
+                                "is_preview": False,
+                            }
+                            tabs.append(tab_info)
+                    return tabs
         return []
 
     def get_session_state(self) -> list[dict[str, Any]]:
@@ -248,7 +252,12 @@ class SessionManager:
         return result
 
     def create_tab_info(
-        self, file_path: str = None, content: str = "", cursor_position: int = 0, is_modified: bool = False, tab_name: str = None
+        self,
+        file_path: str = None,
+        content: str = "",
+        cursor_position: int = 0,
+        is_modified: bool = False,
+        tab_name: str = None,
     ) -> dict[str, Any]:
         """Create tab information dictionary."""
         return {

@@ -214,7 +214,6 @@ class AutoSaveManager(QObject):
     def _cleanup_old_backups(self, file_path_or_id: str):
         """Remove old backup files beyond the limit."""
         # No longer needed - we only keep one backup file per tab
-        pass
 
     def get_available_backups(self) -> list[dict]:
         """Get list of available backups for recovery."""

@@ -46,9 +46,8 @@ class OutputTerminal(QWidget):
                 layout.addWidget(self.maya_terminal)
                 # Maya terminal will show its own welcome message
                 return
-            else:
-                # Fallback if Maya terminal fails
-                self.maya_terminal = None
+            # Fallback if Maya terminal fails
+            self.maya_terminal = None
 
         # Fallback to QTextEdit terminal
         self.create_fallback_terminal(layout)
@@ -263,7 +262,7 @@ class OutputTerminal(QWidget):
         """Get all output text."""
         if self.use_maya_terminal and self.maya_terminal:
             return self.maya_terminal.get_output_text()
-        elif self.output_display:
+        if self.output_display:
             return self.output_display.toPlainText()
         return ""
 
@@ -277,7 +276,7 @@ class OutputTerminal(QWidget):
                 f.write(self.get_output_text())
             return True
         except Exception as e:
-            self.append_error(f"Failed to save output: {str(e)}")
+            self.append_error(f"Failed to save output: {e!s}")
             return False
 
     def closeEvent(self, event):

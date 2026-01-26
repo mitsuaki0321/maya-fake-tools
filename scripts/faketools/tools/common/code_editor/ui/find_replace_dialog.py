@@ -446,12 +446,11 @@ class FindReplaceDialog(CodeEditorDialog):
         if not found_cursor.isNull():
             self.editor.setTextCursor(found_cursor)
             return True
-        elif wrap_around:
+        if wrap_around:
             # Try wrapping around
             return self.wrap_around_search(search_text, flags)
-        else:
-            CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
-            return False
+        CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
+        return False
 
     def wrap_around_search(self, search_text, flags):
         """Search with wrap-around."""
@@ -480,9 +479,8 @@ class FindReplaceDialog(CodeEditorDialog):
         if not found_cursor.isNull():
             self.editor.setTextCursor(found_cursor)
             return True
-        else:
-            CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
-            return False
+        CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
+        return False
 
     def regex_search(self, pattern, cursor, flags):
         """Perform regex search (simplified implementation)."""
@@ -582,9 +580,8 @@ class FindReplaceDialog(CodeEditorDialog):
                 self.editor.viewport().update()
 
             return count
-        else:
-            # Fallback if no multi-cursor support
-            return 0
+        # Fallback if no multi-cursor support
+        return 0
 
     def highlight_all_matches(self, search_text):
         """Highlight all matches in the editor."""
@@ -644,8 +641,7 @@ class FindReplaceDialog(CodeEditorDialog):
         """Count total number of matches."""
         if self.use_regex_cb.isChecked():
             return self.count_regex_matches(search_text)
-        else:
-            return self.count_text_matches(search_text)
+        return self.count_text_matches(search_text)
 
     def count_text_matches(self, search_text):
         """Count text matches."""
@@ -679,8 +675,7 @@ class FindReplaceDialog(CodeEditorDialog):
         """Perform replace all operation."""
         if self.use_regex_cb.isChecked():
             return self.regex_replace_all(search_text, replace_text)
-        else:
-            return self.text_replace_all(search_text, replace_text)
+        return self.text_replace_all(search_text, replace_text)
 
     def text_replace_all(self, search_text, replace_text):
         """Replace all text matches with proper undo support."""
@@ -761,8 +756,7 @@ class FindReplaceDialog(CodeEditorDialog):
         """Check if two texts match based on current options."""
         if self.match_case_cb.isChecked():
             return text1 == text2
-        else:
-            return text1.lower() == text2.lower()
+        return text1.lower() == text2.lower()
 
     def clear_multi_cursor(self):
         """Clear multi-cursor mode if active."""
@@ -805,7 +799,10 @@ class FindReplaceDialog(CodeEditorDialog):
             direction = "up" if self.up_radio.isChecked() else "down"
 
             self.parent_window.settings_manager.set_search_settings(
-                self.match_case_cb.isChecked(), self.whole_words_cb.isChecked(), self.use_regex_cb.isChecked(), direction
+                self.match_case_cb.isChecked(),
+                self.whole_words_cb.isChecked(),
+                self.use_regex_cb.isChecked(),
+                direction,
             )
             # Save to file immediately
             self.parent_window.settings_manager.save_settings()

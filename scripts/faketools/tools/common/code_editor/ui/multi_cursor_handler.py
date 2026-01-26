@@ -97,10 +97,8 @@ class MultiCursorMixin:
             self.setExtraSelections([])
 
         # Emit status if the signal is connected
-        try:
+        with contextlib.suppress(Exception):
             self.multi_cursor_status.emit("Multi-cursor cleared")
-        except Exception:
-            pass  # Signal might not be connected
 
     def add_next_occurrence(self):
         """Add next occurrence of selected text (Ctrl+D)."""
@@ -141,13 +139,11 @@ class MultiCursorMixin:
                 found = doc.find(self.search_text, 0)
 
             # Add next occurrence if found and different from current
-            if not found.isNull():
-                # Check if it's not the same as current selection
-                if found.selectionStart() != current.selectionStart():
-                    new_cursor = QTextCursor(self.document())
-                    new_cursor.setPosition(found.selectionStart())
-                    new_cursor.setPosition(found.selectionEnd(), QTextCursor.KeepAnchor)
-                    self.all_cursors.append(new_cursor)
+            if not found.isNull() and found.selectionStart() != current.selectionStart():
+                new_cursor = QTextCursor(self.document())
+                new_cursor.setPosition(found.selectionStart())
+                new_cursor.setPosition(found.selectionEnd(), QTextCursor.KeepAnchor)
+                self.all_cursors.append(new_cursor)
 
             self.viewport().update()
 
@@ -327,26 +323,25 @@ class MultiCursorMixin:
 
                 self.viewport().update()
                 return True
-            else:
-                # Simple Ctrl+Click to add cursor (no drag)
-                # If this is the first Ctrl+Click and we have no cursors,
-                # add the current cursor position first
-                if not self.all_cursors:
-                    main_cursor = self.textCursor()
-                    first_cursor = QTextCursor(self.document())
-                    first_cursor.setPosition(main_cursor.position())
-                    self.all_cursors.append(first_cursor)
+            # Simple Ctrl+Click to add cursor (no drag)
+            # If this is the first Ctrl+Click and we have no cursors,
+            # add the current cursor position first
+            if not self.all_cursors:
+                main_cursor = self.textCursor()
+                first_cursor = QTextCursor(self.document())
+                first_cursor.setPosition(main_cursor.position())
+                self.all_cursors.append(first_cursor)
 
-                # Add cursor at click position
-                new_cursor = QTextCursor(self.document())
-                new_cursor.setPosition(cursor.position())
-                self.all_cursors.append(new_cursor)
+            # Add cursor at click position
+            new_cursor = QTextCursor(self.document())
+            new_cursor.setPosition(cursor.position())
+            self.all_cursors.append(new_cursor)
 
-                self.viewport().update()
-                with contextlib.suppress(Exception):
-                    self.multi_cursor_status.emit(f"Added cursor (total: {len(self.all_cursors)})")
-                return True
-        elif self.all_cursors:
+            self.viewport().update()
+            with contextlib.suppress(Exception):
+                self.multi_cursor_status.emit(f"Added cursor (total: {len(self.all_cursors)})")
+            return True
+        if self.all_cursors:
             # Normal click - clear multi-cursors
             self.clear_multi_cursors()
             self.is_ctrl_dragging = False
@@ -684,7 +679,8 @@ class MultiCursorMixin:
             temp_cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
             first_line_end = self.cursorRect(temp_cursor)
             painter.fillRect(
-                QRect(start_rect.x(), start_rect.y(), first_line_end.x() - start_rect.x(), start_rect.height()), self.multi_selection_color
+                QRect(start_rect.x(), start_rect.y(), first_line_end.x() - start_rect.x(), start_rect.height()),
+                self.multi_selection_color,
             )
 
             # Draw middle lines

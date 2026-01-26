@@ -140,7 +140,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return True
 
         except Exception as e:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {str(e)}")
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {e!s}")
             return False
 
     def save_file(self, file_path: str = None) -> bool:
@@ -161,7 +161,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return True
 
         except Exception as e:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to save file: {str(e)}")
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to save file: {e!s}")
             return False
 
     def get_display_name(self) -> str:
@@ -171,8 +171,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             # For preview tabs, use the preview_title without any modifications
             if hasattr(self, "preview_title"):
                 return self.preview_title
-            else:
-                return "Preview"
+            return "Preview"
 
         # Use custom name if set, otherwise use file name
         if self.custom_name:
@@ -413,12 +412,19 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return
 
         # Clear old multi-selections on certain keys (if not in new multi-cursor mode)
-        if not self.all_cursors and hasattr(self, "_multi_selections") and self._multi_selections:
-            if event.key() in [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End] or (
-                event.key() not in [Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_F2]
-                and not (event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_D)
-            ):
-                self._clear_multi_selections()
+        if (
+            not self.all_cursors
+            and hasattr(self, "_multi_selections")
+            and self._multi_selections
+            and (
+                event.key() in [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End]
+                or (
+                    event.key() not in [Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_F2]
+                    and not (event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_D)
+                )
+            )
+        ):
+            self._clear_multi_selections()
 
         # Handle Home key with smart home behavior (single-cursor mode)
         if event.key() == Qt.Key_Home and not (event.modifiers() & Qt.ControlModifier):
@@ -467,26 +473,25 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return
 
         # Handle Ctrl+drag selection
-        if hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging:
-            if event.modifiers() & Qt.ControlModifier and event.buttons() & Qt.LeftButton:
-                # Get current position
-                try:
-                    current_pos = event.position().toPoint()  # PySide6
-                except AttributeError:
-                    current_pos = event.pos()  # PySide2
+        if hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging and event.modifiers() & Qt.ControlModifier and event.buttons() & Qt.LeftButton:
+            # Get current position
+            try:
+                current_pos = event.position().toPoint()  # PySide6
+            except AttributeError:
+                current_pos = event.pos()  # PySide2
 
-                cursor = self.cursorForPosition(current_pos)
+            cursor = self.cursorForPosition(current_pos)
 
-                # Update drag selection
-                if self.ctrl_drag_cursor:
-                    self.ctrl_drag_cursor.setPosition(self.ctrl_drag_start)
-                    self.ctrl_drag_cursor.setPosition(cursor.position(), QTextCursor.KeepAnchor)
+            # Update drag selection
+            if self.ctrl_drag_cursor:
+                self.ctrl_drag_cursor.setPosition(self.ctrl_drag_start)
+                self.ctrl_drag_cursor.setPosition(cursor.position(), QTextCursor.KeepAnchor)
 
-                    # Update display to show selection
-                    self.viewport().update()
+                # Update display to show selection
+                self.viewport().update()
 
-                event.accept()
-                return
+            event.accept()
+            return
 
         # Delegate to parent
         super().mouseMoveEvent(event)
@@ -500,59 +505,58 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return
 
         # Handle Ctrl+click or Ctrl+drag
-        if event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier:
-            if hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging:
-                # Check if this was a drag or just a click
-                if self.ctrl_drag_cursor:
-                    if self.ctrl_drag_cursor.hasSelection():
-                        # It was a drag - add the selection
-                        self.all_cursors.append(self.ctrl_drag_cursor)
+        if event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier and hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging:
+            # Check if this was a drag or just a click
+            if self.ctrl_drag_cursor:
+                if self.ctrl_drag_cursor.hasSelection():
+                    # It was a drag - add the selection
+                    self.all_cursors.append(self.ctrl_drag_cursor)
+                    with contextlib.suppress(Exception):
+                        self.multi_cursor_status.emit(f"Added selection (total: {len(self.all_cursors)})")
+                else:
+                    # It was just a click - add cursor at click position
+                    try:
+                        click_pos = event.position().toPoint()  # PySide6
+                    except AttributeError:
+                        click_pos = event.pos()  # PySide2
+
+                    cursor = self.cursorForPosition(click_pos)
+
+                    # If this is the first Ctrl+click and we have no cursors,
+                    # add the current cursor position first
+                    if not self.all_cursors:
+                        main_cursor = self.textCursor()
+                        first_cursor = QTextCursor(self.document())
+                        first_cursor.setPosition(main_cursor.position())
+                        self.all_cursors.append(first_cursor)
+                        # Hide the normal cursor when entering multi-cursor mode
+                        self.setCursorWidth(0)
+
+                    # Check if we already have a cursor at this position
+                    cursor_exists = False
+                    for existing_cursor in self.all_cursors:
+                        if existing_cursor.position() == cursor.position() and not existing_cursor.hasSelection():
+                            cursor_exists = True
+                            break
+
+                    if not cursor_exists:
+                        # Add new cursor at click position
+                        new_cursor = QTextCursor(self.document())
+                        new_cursor.setPosition(cursor.position())
+                        self.all_cursors.append(new_cursor)
+
                         with contextlib.suppress(Exception):
-                            self.multi_cursor_status.emit(f"Added selection (total: {len(self.all_cursors)})")
-                    else:
-                        # It was just a click - add cursor at click position
-                        try:
-                            click_pos = event.position().toPoint()  # PySide6
-                        except AttributeError:
-                            click_pos = event.pos()  # PySide2
+                            self.multi_cursor_status.emit(f"Added cursor {len(self.all_cursors)}")
 
-                        cursor = self.cursorForPosition(click_pos)
+            # Reset drag state
+            self.is_ctrl_dragging = False
+            self.ctrl_drag_cursor = None
+            self.ctrl_drag_start = None
 
-                        # If this is the first Ctrl+click and we have no cursors,
-                        # add the current cursor position first
-                        if not self.all_cursors:
-                            main_cursor = self.textCursor()
-                            first_cursor = QTextCursor(self.document())
-                            first_cursor.setPosition(main_cursor.position())
-                            self.all_cursors.append(first_cursor)
-                            # Hide the normal cursor when entering multi-cursor mode
-                            self.setCursorWidth(0)
-
-                        # Check if we already have a cursor at this position
-                        cursor_exists = False
-                        for existing_cursor in self.all_cursors:
-                            if existing_cursor.position() == cursor.position() and not existing_cursor.hasSelection():
-                                cursor_exists = True
-                                break
-
-                        if not cursor_exists:
-                            # Add new cursor at click position
-                            new_cursor = QTextCursor(self.document())
-                            new_cursor.setPosition(cursor.position())
-                            self.all_cursors.append(new_cursor)
-
-                            with contextlib.suppress(Exception):
-                                self.multi_cursor_status.emit(f"Added cursor {len(self.all_cursors)}")
-
-                # Reset drag state
-                self.is_ctrl_dragging = False
-                self.ctrl_drag_cursor = None
-                self.ctrl_drag_start = None
-
-                # Update display
-                self.viewport().update()
-                event.accept()
-                return
+            # Update display
+            self.viewport().update()
+            event.accept()
+            return
 
         # Delegate to parent
         super().mouseReleaseEvent(event)
@@ -1104,7 +1108,6 @@ class CodeEditorWidget(QTabWidget):
     def style_preview_tab(self, index):
         """Apply italic styling to preview tab."""
         # Disabled due to Maya crash issues with custom painting
-        pass
 
     def on_preview_text_changed(self, editor):
         """Handle text changes in preview tab."""
@@ -1228,18 +1231,17 @@ class CodeEditorWidget(QTabWidget):
         # If we found a preview tab, replace it
         if existing_preview_index >= 0:
             preview_editor = self.widget(existing_preview_index)
-            if preview_editor:
-                # Load new file into existing preview tab
-                if preview_editor.load_file(file_path):
-                    file_name = os.path.basename(file_path)
-                    self.setTabText(existing_preview_index, file_name + " (Preview)")
-                    self.setCurrentIndex(existing_preview_index)
-                    # Update the tracked index
-                    self.preview_tab_index = existing_preview_index
+            # Load new file into existing preview tab
+            if preview_editor and preview_editor.load_file(file_path):
+                file_name = os.path.basename(file_path)
+                self.setTabText(existing_preview_index, file_name + " (Preview)")
+                self.setCurrentIndex(existing_preview_index)
+                # Update the tracked index
+                self.preview_tab_index = existing_preview_index
 
-                    # Save session state after preview change
-                    QTimer.singleShot(100, self.save_session_if_available)
-                    return True
+                # Save session state after preview change
+                QTimer.singleShot(100, self.save_session_if_available)
+                return True
 
         # Create new preview tab
         editor = PythonEditor(self)
@@ -1359,8 +1361,7 @@ class CodeEditorWidget(QTabWidget):
                         text = f"● {text}"
                 else:
                     # Remove active indicator from inactive tabs
-                    if text.startswith("● "):
-                        text = text[2:]
+                    text = text.removeprefix("● ")
 
                 self.setTabText(i, text)
 

@@ -32,7 +32,7 @@ class MayaDock:
     def create_docked_widget(self):
         """Create and dock the widget in Maya's UI."""
         if not MAYA_AVAILABLE:
-            return
+            return None
 
         # Delete existing control if it exists
         if cmds.workspaceControl(self.CONTROL_NAME, exists=True):
@@ -46,11 +46,9 @@ class MayaDock:
             cmds.deleteUI(self.workspace_control)
 
         # Reset workspace control state by deleting preferences if needed
-        try:
+        with contextlib.suppress(Exception):
             # Try to reset the workspace state to ensure it doesn't retain floating state
             cmds.workspaceControlState(self.CONTROL_NAME, remove=True)
-        except Exception:
-            pass
 
         # Create new WorkspaceControl
         self.workspace_control = cmds.workspaceControl(
@@ -171,11 +169,9 @@ class MayaDock:
             cmds.workspaceControl(actual_workspace_name, edit=True, restore=True)
 
             # Force the workspace to be selected/active
-            try:
+            with contextlib.suppress(Exception):
                 # Try to make it the active tab in its dock area
                 cmds.workspaceControl(actual_workspace_name, edit=True, selectTab=True)
-            except Exception:
-                pass
 
             # Ensure the widget is visible
             if self.widget:

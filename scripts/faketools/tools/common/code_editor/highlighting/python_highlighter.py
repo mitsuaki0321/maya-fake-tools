@@ -314,19 +314,17 @@ class PythonHighlighter(QSyntaxHighlighter):
                         # Bare 'Name(' with capital first letter gets class color
                         if self.ENABLE_CAPITAL_CALL and not in_import_stmt:
                             j2 = self._next_meaningful(tokens, i + 1)
-                            if j2 < n and tokens[j2].type == _tokenize.OP and tokens[j2].string == "(":
-                                if tstr[:1].isupper():
-                                    add_token(tok, "classname")
+                            if j2 < n and tokens[j2].type == _tokenize.OP and tokens[j2].string == "(" and tstr[:1].isupper():
+                                add_token(tok, "classname")
 
                         # Bare function calls 'name(' also get method color
                         if self.ENABLE_METHOD_TAIL and not in_import_stmt:
                             j3 = self._next_meaningful(tokens, i + 1)
                             is_call = j3 < n and tokens[j3].type == _tokenize.OP and tokens[j3].string == "("
                             prev_is_dot = i > 0 and tokens[i - 1].type == _tokenize.OP and tokens[i - 1].string == "."
-                            if is_call and not prev_is_dot:
-                                # Let capital 'Name(' be handled by class color if enabled
-                                if not (self.ENABLE_CAPITAL_CALL and tstr[:1].isupper()):
-                                    add_token(tok, "method")
+                            # Let capital 'Name(' be handled by class color if enabled
+                            if is_call and not prev_is_dot and not (self.ENABLE_CAPITAL_CALL and tstr[:1].isupper()):
+                                add_token(tok, "method")
                         # Regular NAMEs remain uncolored
 
             elif ttype == _tokenize.OP:

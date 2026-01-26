@@ -4,7 +4,7 @@ Detects Maya commands and generates appropriate documentation URLs.
 """
 
 import re
-from typing import Optional, Tuple
+from typing import Optional
 import webbrowser
 
 
@@ -48,7 +48,7 @@ class MayaHelpDetector:
         self._maya_version = None
         self._language = None
 
-    def detect_maya_command_at_cursor(self, text: str, cursor_position: int) -> Optional[Tuple[str, str, str]]:
+    def detect_maya_command_at_cursor(self, text: str, cursor_position: int) -> Optional[tuple[str, str, str]]:
         """
         Detect Maya command at cursor position.
 
@@ -167,24 +167,22 @@ class MayaHelpDetector:
             base_url = f"https://help.autodesk.com/cloudhelp/{version}/{language}/Maya-Tech-Docs"
             return f"{base_url}/CommandsPython/{command}.html"
 
-        elif module == "pymel.core":
+        if module == "pymel.core":
             # PyMel Documentation - comprehensive API reference only available until 2023
             # For 2024+, fall back to general PyMel search since detailed API docs are not available
             if int(version) <= 2023:
                 base_url = f"https://help.autodesk.com/cloudhelp/{version}/ENU/Maya-Tech-Docs"
                 return f"{base_url}/PyMel/generated/functions/pymel.core.general/pymel.core.general.{command}.html"
-            else:
-                # For 2024+, direct to PyMel installation/usage guide or search
-                return f"https://help.autodesk.com/view/MAYAUL/{version}/ENU/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4"
+            # For 2024+, direct to PyMel installation/usage guide or search
+            return f"https://help.autodesk.com/view/MAYAUL/{version}/ENU/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4"
 
-        elif module.startswith("maya.api.OpenMaya") or module.startswith("maya.OpenMaya"):
+        if module.startswith("maya.api.OpenMaya") or module.startswith("maya.OpenMaya"):
             # Maya API Documentation - try to link directly to specific class
             class_url = self._generate_openmp_class_url(command, version)
             if class_url:
                 return class_url
-            else:
-                # Fallback to main API reference
-                return f"https://help.autodesk.com/view/MAYADEV/{version}/ENU/?guid=MAYA_API_REF_py_ref_index_html"
+            # Fallback to main API reference
+            return f"https://help.autodesk.com/view/MAYADEV/{version}/ENU/?guid=MAYA_API_REF_py_ref_index_html"
 
         return None
 
@@ -229,11 +227,10 @@ class MayaHelpDetector:
         """Convert module name to URL format."""
         if module_name == "OpenMayaUI":
             return "open_maya_u_i"
-        else:
-            # OpenMaya -> open_maya, OpenMayaAnim -> open_maya_anim, etc.
-            import re
+        # OpenMaya -> open_maya, OpenMayaAnim -> open_maya_anim, etc.
+        import re
 
-            return re.sub(r"(?<!^)(?=[A-Z])", "_", module_name).lower()
+        return re.sub(r"(?<!^)(?=[A-Z])", "_", module_name).lower()
 
     def _convert_class_name_to_url_format_algorithmic(self, class_name: str) -> Optional[str]:
         """Convert Maya class name to URL format using algorithmic approach."""
@@ -337,19 +334,17 @@ class MayaHelpDetector:
         if module == "maya.cmds":
             base_url = f"https://help.autodesk.com/cloudhelp/{version}/ENU/Maya-Tech-Docs"
             return f"{base_url}/CommandsPython/{command}.html"
-        elif module == "pymel.core":
+        if module == "pymel.core":
             if int(version) <= 2023:
                 base_url = f"https://help.autodesk.com/cloudhelp/{version}/ENU/Maya-Tech-Docs"
                 return f"{base_url}/PyMel/generated/functions/pymel.core.general/pymel.core.general.{command}.html"
-            else:
-                return f"https://help.autodesk.com/view/MAYAUL/{version}/ENU/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4"
-        elif module.startswith("maya.api.OpenMaya") or module.startswith("maya.OpenMaya"):
+            return f"https://help.autodesk.com/view/MAYAUL/{version}/ENU/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4"
+        if module.startswith("maya.api.OpenMaya") or module.startswith("maya.OpenMaya"):
             # Try direct class URL first, fallback to main API reference
             class_url = self._generate_openmp_class_url(command, version)
             if class_url:
                 return class_url
-            else:
-                return f"https://help.autodesk.com/view/MAYADEV/{version}/ENU/?guid=MAYA_API_REF_py_ref_index_html"
+            return f"https://help.autodesk.com/view/MAYADEV/{version}/ENU/?guid=MAYA_API_REF_py_ref_index_html"
 
         return None
 
@@ -368,9 +363,8 @@ class MayaHelpDetector:
 
         if module == "maya.cmds":
             return f"Maya Help: {command}()"
-        elif module == "pymel.core":
+        if module == "pymel.core":
             return f"PyMel Help: {command}()"
-        elif "OpenMaya" in module:
+        if "OpenMaya" in module:
             return f"Maya API Help: {command}"
-        else:
-            return f"Maya Help: {alias}.{command}"
+        return f"Maya Help: {alias}.{command}"

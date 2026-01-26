@@ -3,7 +3,7 @@
 # Lazy imports to avoid circular dependencies
 # Import these directly when needed instead of from __init__
 
-__all__ = ["MayaCodeEditor", "FileExplorer", "CodeEditorWidget", "OutputTerminal", "ToolBar", "show_ui"]
+__all__ = ["CodeEditorWidget", "FileExplorer", "MayaCodeEditor", "OutputTerminal", "ToolBar", "show_ui"]
 
 
 def show_ui():

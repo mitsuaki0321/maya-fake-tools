@@ -280,7 +280,7 @@ class EditorTextOperationsMixin:
                         "start": cursor.selectionStart(),
                         "end": cursor.selectionEnd(),
                         "text": selected_text,
-                    }
+                    },
                 ]
 
                 # Immediately find and add the next occurrence
@@ -303,7 +303,7 @@ class EditorTextOperationsMixin:
                                 "start": next_start,
                                 "end": next_end,
                                 "text": selected_text,
-                            }
+                            },
                         )
 
                 self._highlight_selections()
@@ -321,7 +321,7 @@ class EditorTextOperationsMixin:
                         "start": cursor.selectionStart(),
                         "end": cursor.selectionEnd(),
                         "text": selected_text,
-                    }
+                    },
                 ]
 
                 # Immediately find and add the next occurrence on first Ctrl+D
@@ -344,7 +344,7 @@ class EditorTextOperationsMixin:
                                 "start": next_start,
                                 "end": next_end,
                                 "text": selected_text,
-                            }
+                            },
                         )
 
                 self._highlight_selections()

@@ -497,7 +497,7 @@ class FileExplorer(QWidget):
                 self.file_selected.emit(file_path)
 
             except Exception as e:
-                CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {str(e)}")
+                CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {e!s}")
 
     def create_new_folder(self, base_path: str, is_dir: bool):
         """Create a new folder."""
@@ -514,7 +514,7 @@ class FileExplorer(QWidget):
             try:
                 os.makedirs(folder_path, exist_ok=True)
             except Exception as e:
-                CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {str(e)}")
+                CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {e!s}")
 
     def refresh(self):
         """Refresh the file tree."""
@@ -623,7 +623,7 @@ class FileExplorer(QWidget):
                     errors.append(f"{os.path.basename(file_path)}: Path not found")
             except Exception as e:
                 error_count += 1
-                errors.append(f"{os.path.basename(file_path)}: {str(e)}")
+                errors.append(f"{os.path.basename(file_path)}: {e!s}")
 
         # Refresh the view
         self.refresh()
@@ -674,7 +674,7 @@ class FileExplorer(QWidget):
             self.refresh()
 
         except Exception as e:
-            CodeEditorMessageBox.critical(self, "Error", f"Failed to delete {item_type}: {str(e)}")
+            CodeEditorMessageBox.critical(self, "Error", f"Failed to delete {item_type}: {e!s}")
 
     def copy_selected(self):
         """Copy selected items to clipboard."""
@@ -719,7 +719,7 @@ class FileExplorer(QWidget):
 
             except Exception as e:
                 error_count += 1
-                logger.error(f"Error processing {source_path}: {str(e)}")
+                logger.error(f"Error processing {source_path}: {e!s}")
 
         # Clear clipboard after cut operation
         if self.clipboard_operation == "cut" and success_count > 0:
@@ -756,11 +756,9 @@ class FileExplorer(QWidget):
 
             if file_info.isDir():
                 return file_path
-            else:
-                return file_info.dir().absolutePath()
-        else:
-            # Use root path
-            return self.root_path
+            return file_info.dir().absolutePath()
+        # Use root path
+        return self.root_path
 
     def copy_item(self, source_path, destination_dir):
         """Copy a single item (file or folder) to destination."""
@@ -779,7 +777,7 @@ class FileExplorer(QWidget):
                 shutil.copytree(source_path, destination_path)
             return True
         except Exception as e:
-            CodeEditorMessageBox.warning(self, "Copy Error", f"Failed to copy {source_name}: {str(e)}")
+            CodeEditorMessageBox.warning(self, "Copy Error", f"Failed to copy {source_name}: {e!s}")
             return False
 
     def move_item(self, source_path, destination_dir):
@@ -796,7 +794,7 @@ class FileExplorer(QWidget):
             shutil.move(source_path, destination_path)
             return True
         except Exception as e:
-            CodeEditorMessageBox.warning(self, "Move Error", f"Failed to move {source_name}: {str(e)}")
+            CodeEditorMessageBox.warning(self, "Move Error", f"Failed to move {source_name}: {e!s}")
             return False
 
     def get_unique_name(self, path):
@@ -881,27 +879,26 @@ class FileExplorer(QWidget):
                 self.delegate.set_hovered_index(index if index.isValid() else None)
                 return False
 
-            elif event.type() == QEvent.Leave:
+            if event.type() == QEvent.Leave:
                 # Clear hover state when mouse leaves
                 self.delegate.set_hovered_index(None)
                 return False
 
-            elif event.type() == QEvent.MouseButtonPress:
-                # Check if click is on run button
-                if event.button() == Qt.LeftButton:
-                    index = self.tree_view.indexAt(event.pos())
-                    if index.isValid() and index == self.delegate.hovered_index:
-                        button_rect = self.delegate.get_run_button_rect()
-                        if button_rect and button_rect.contains(event.pos()):
-                            # Execute the file
-                            source_index = self.proxy_model.mapToSource(index)
-                            file_path = self.file_model.filePath(source_index)
+            # Check if click is on run button
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                index = self.tree_view.indexAt(event.pos())
+                if index.isValid() and index == self.delegate.hovered_index:
+                    button_rect = self.delegate.get_run_button_rect()
+                    if button_rect and button_rect.contains(event.pos()):
+                        # Execute the file
+                        source_index = self.proxy_model.mapToSource(index)
+                        file_path = self.file_model.filePath(source_index)
 
-                            # Set flag to prevent preview tab from opening
-                            self._run_button_clicked = True
+                        # Set flag to prevent preview tab from opening
+                        self._run_button_clicked = True
 
-                            self.file_executed.emit(file_path)
-                            return True  # Consume the event
+                        self.file_executed.emit(file_path)
+                        return True  # Consume the event
 
         return super().eventFilter(obj, event)
 
@@ -1000,7 +997,7 @@ class FileExplorer(QWidget):
             except Exception as e:
                 error_count += 1
                 operation = "copying" if is_external_drag else "moving"
-                logger.error(f"Error {operation} {source_path}: {str(e)}")
+                logger.error(f"Error {operation} {source_path}: {e!s}")
 
         # Refresh the view
         self.refresh()
