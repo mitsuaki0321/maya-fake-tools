@@ -1,5 +1,5 @@
 """
-Base dialog classes for Maya Code Editor.
+Base dialog classes for Code Editor.
 Provides centralized dialog positioning and styling for consistent UX.
 """
 
@@ -12,7 +12,7 @@ class DialogPositioner:
     @staticmethod
     def get_code_editor_parent():
         """Get the main code editor window for dialog positioning."""
-        # Try to find the main Maya Code Editor window
+        # Try to find the main Code Editor window
         app = QApplication.instance()
         if not app:
             return None

@@ -1,5 +1,5 @@
 """
-Themes package for Maya Code Editor.
+Themes package for Code Editor.
 """
 
 from .app_theme import AppTheme

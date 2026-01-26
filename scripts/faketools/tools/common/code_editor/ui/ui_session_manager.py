@@ -1,5 +1,5 @@
 """
-Session management for Maya Code Editor UI.
+Session management for Code Editor UI.
 Handles saving and restoring session state including open tabs and their content.
 """
 

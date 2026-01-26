@@ -1,5 +1,5 @@
 """
-Shortcut handler for Maya Code Editor.
+Shortcut handler for Code Editor.
 Manages all keyboard shortcuts and their associated functionality.
 """
 
@@ -8,7 +8,7 @@ from .find_replace_dialog import FindReplaceDialog
 
 
 class ShortcutHandler:
-    """Handler for all keyboard shortcuts in the Maya Code Editor."""
+    """Handler for all keyboard shortcuts in the Code Editor."""
 
     def __init__(self, main_window):
         """Initialize the shortcut handler with reference to main window."""

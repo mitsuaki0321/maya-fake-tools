@@ -729,16 +729,16 @@ import sys
 try:
     if '{module_name}' in sys.modules:
         importlib.reload(sys.modules['{module_name}'])
-        print("Maya Code Editor: Module '{module_name}' reloaded successfully.")
+        print("Code Editor: Module '{module_name}' reloaded successfully.")
     else:
         # Try to import first
         module = __import__('{module_name}')
         importlib.reload(module)
-        print("Maya Code Editor: Module '{module_name}' imported and reloaded successfully.")
+        print("Code Editor: Module '{module_name}' imported and reloaded successfully.")
 except ModuleNotFoundError:
-    print("Maya Code Editor: Module '{module_name}' not found.")
+    print("Code Editor: Module '{module_name}' not found.")
 except Exception as e:
-    print(f"Maya Code Editor: Error reloading module '{module_name}': {{e}}")
+    print(f"Code Editor: Error reloading module '{module_name}': {{e}}")
 """
             # Execute the reload code silently like inspect object
             if hasattr(exec_manager, "execute_inspection_code"):

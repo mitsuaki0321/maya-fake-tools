@@ -23,7 +23,7 @@ class MayaDock:
     """Manages Maya WorkspaceControl for docking the code editor."""
 
     CONTROL_NAME = "MayaCodeEditorWorkspaceControl"
-    WINDOW_TITLE = "Maya Code Editor"
+    WINDOW_TITLE = "Code Editor"
 
     def __init__(self, widget: QWidget):  # type: ignore
         self.widget = widget

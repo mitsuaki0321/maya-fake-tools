@@ -1,4 +1,4 @@
-"""Integration module for Maya Code Editor."""
+"""Integration module for Code Editor."""
 
 from .maya_dock import MayaDock
 

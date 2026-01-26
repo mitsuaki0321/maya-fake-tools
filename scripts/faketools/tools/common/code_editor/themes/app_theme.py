@@ -1,5 +1,5 @@
 """
-Application theme for Maya Code Editor.
+Application theme for Code Editor.
 
 Provides consistent styling across all UI components.
 """

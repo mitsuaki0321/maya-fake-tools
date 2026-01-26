@@ -1,5 +1,5 @@
 """
-Auto-save manager for Maya Code Editor.
+Auto-save manager for Code Editor.
 Provides automatic backup and recovery functionality to prevent data loss.
 """
 

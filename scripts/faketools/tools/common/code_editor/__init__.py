@@ -1,4 +1,4 @@
-"""Maya Code Editor - Python code editor with native Maya integration."""
+"""Code Editor - Python code editor with native Maya integration."""
 
 TOOL_CONFIG = {
     "name": "Code Editor",

@@ -1,5 +1,5 @@
 """
-User settings manager for Maya Code Editor.
+User settings manager for Code Editor.
 Handles persistent user preferences like editor settings, theme, fonts, etc.
 """
 

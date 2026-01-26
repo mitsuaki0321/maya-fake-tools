@@ -1,5 +1,5 @@
 """
-Python syntax highlighter for the Maya Code Editor.
+Python syntax highlighter for the Code Editor.
 
 Provides comprehensive Python syntax highlighting with support for:
 - Comments, strings (including multiline), numbers, operators, brackets

@@ -1,5 +1,5 @@
 """
-Session manager for Maya Code Editor.
+Session manager for Code Editor.
 Handles temporary session state like window position, open tabs, draft content, etc.
 """
 

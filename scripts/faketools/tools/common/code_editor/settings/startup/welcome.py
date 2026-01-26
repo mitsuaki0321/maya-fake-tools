@@ -1,5 +1,5 @@
 """
-Welcome to Maya Code Editor Workspace!
+Welcome to Code Editor Workspace!
 
 This is your personal Maya scripting workspace.
 All files here are automatically added to Python path.
@@ -57,7 +57,7 @@ import maya.cmds as cmds
 
 def hello_maya():
     """Simple test function."""
-    cmds.confirmDialog(title="Maya Code Editor", message="Welcome to your workspace!", button="OK")
+    cmds.confirmDialog(title="Code Editor", message="Welcome to your workspace!", button="OK")
 
 
 if __name__ == "__main__":

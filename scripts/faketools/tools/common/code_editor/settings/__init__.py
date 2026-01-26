@@ -1,5 +1,5 @@
 """
-Settings package for Maya Code Editor.
+Settings package for Code Editor.
 """
 
 # Direct imports kept as they don't cause circular dependencies

@@ -1,5 +1,5 @@
 """
-Workspace manager for Maya Code Editor.
+Workspace manager for Code Editor.
 Handles workspace-specific settings like root directory, project configuration, etc.
 """
 
@@ -26,7 +26,7 @@ class WorkspaceManager:
             "workspace": {
                 "root_directory": "",  # Will be set to default workspace on first run
                 "name": "Default Workspace",
-                "description": "Maya Code Editor workspace",
+                "description": "Code Editor workspace",
                 "created_date": "",
                 "last_accessed": "",
             },

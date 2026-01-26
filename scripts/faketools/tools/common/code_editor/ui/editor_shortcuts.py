@@ -1,5 +1,5 @@
 """
-Editor shortcuts management for Maya Code Editor.
+Editor shortcuts management for Code Editor.
 Provides a clean, extensible way to manage keyboard shortcuts in the code editor.
 """
 

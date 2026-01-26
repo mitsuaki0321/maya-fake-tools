@@ -90,7 +90,7 @@ class OutputTerminal(QWidget):
         layout.addWidget(self.output_display)
 
         # Add welcome message
-        self.append_output("Maya Code Editor - Output Terminal")
+        self.append_output("Code Editor - Output Terminal")
         self.append_output("-" * 40)
 
     def append_output(self, text: str, color: str = None):

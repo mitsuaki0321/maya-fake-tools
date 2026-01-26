@@ -114,7 +114,7 @@ class MayaTerminalWidget(QWidget):
                 self._setup_context_menu()
 
                 # Initial message
-                print("# Maya Code Editor Terminal")
+                print("# Code Editor Terminal")
                 print("# " + "=" * 50)
 
                 return True

@@ -1,5 +1,5 @@
 """
-Utility modules for Maya Code Editor.
+Utility modules for Code Editor.
 """
 
 # Lazy imports to avoid circular dependencies

@@ -1,5 +1,5 @@
 """
-VSCode Dark Modern style toolbar widget for Maya Code Editor.
+VSCode Dark Modern style toolbar widget for Code Editor.
 Provides quick access to common actions with proper icon states and styling.
 """
 

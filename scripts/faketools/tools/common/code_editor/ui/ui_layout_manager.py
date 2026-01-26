@@ -1,5 +1,5 @@
 """
-UI Layout Manager for Maya Code Editor.
+UI Layout Manager for Code Editor.
 Handles UI initialization, theming, and layout management.
 """
 
@@ -31,7 +31,7 @@ class UILayoutManager:
 
     def init_ui(self):
         """Initialize the user interface."""
-        self.main_window.setWindowTitle("Maya Code Editor")
+        self.main_window.setWindowTitle("Code Editor")
         self.main_window.setMinimumSize(600, 400)  # Reduced minimum size for flexibility
 
         # Create main layout

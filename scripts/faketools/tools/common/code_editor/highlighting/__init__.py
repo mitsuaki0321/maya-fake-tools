@@ -1,4 +1,4 @@
-"""Highlighting module for Maya Code Editor."""
+"""Highlighting module for Code Editor."""
 
 from .python_highlighter import PythonHighlighter
 

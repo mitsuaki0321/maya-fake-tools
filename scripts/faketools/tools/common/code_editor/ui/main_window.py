@@ -1,5 +1,5 @@
 """
-Main window for Maya Code Editor.
+Main window for Code Editor.
 Provides the primary UI layout and coordinates between components.
 """
 

@@ -1,5 +1,5 @@
 """
-Execution Manager for Maya Code Editor.
+Execution Manager for Code Editor.
 Handles Python code execution, inspection, and result display.
 """
 
@@ -119,7 +119,7 @@ class NativeExecutionBridge:
 
 
 class ExecutionManager:
-    """Manages code execution and object inspection for the Maya Code Editor."""
+    """Manages code execution and object inspection for the Code Editor."""
 
     def __init__(self, main_window):
         """Initialize the ExecutionManager with reference to main window.
@@ -316,9 +316,9 @@ try:
     for _attr in _attrs:
         print("  " + _attr)
 except NameError:
-    print("Maya Code Editor: 'OBJECT_NAME_PLACEHOLDER' is not defined")
+    print("Code Editor: 'OBJECT_NAME_PLACEHOLDER' is not defined")
 except Exception as _inspect_err:
-    print("Maya Code Editor: Error inspecting 'OBJECT_NAME_PLACEHOLDER' - " + str(_inspect_err))
+    print("Code Editor: Error inspecting 'OBJECT_NAME_PLACEHOLDER' - " + str(_inspect_err))
 """.replace("OBJECT_NAME_PLACEHOLDER", object_name)
 
                 # Execute the inspection code
@@ -343,9 +343,9 @@ try:
         print("-" * 40)
         help(type(_obj))
 except NameError:
-    print("Maya Code Editor: 'OBJECT_NAME_PLACEHOLDER' is not defined")
+    print("Code Editor: 'OBJECT_NAME_PLACEHOLDER' is not defined")
 except Exception as _help_err:
-    print("Maya Code Editor: Error getting help for 'OBJECT_NAME_PLACEHOLDER' - " + str(_help_err))
+    print("Code Editor: Error getting help for 'OBJECT_NAME_PLACEHOLDER' - " + str(_help_err))
 """.replace("OBJECT_NAME_PLACEHOLDER", object_name).replace("object_name", f"'{object_name}'")
 
                 # Execute the inspection code

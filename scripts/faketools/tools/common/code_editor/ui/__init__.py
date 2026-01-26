@@ -1,4 +1,4 @@
-"""UI module for Maya Code Editor."""
+"""UI module for Code Editor."""
 
 # Lazy imports to avoid circular dependencies
 # Import these directly when needed instead of from __init__

@@ -1,5 +1,5 @@
 """
-File explorer widget for Maya Code Editor.
+File explorer widget for Code Editor.
 Provides VSCode-like file tree navigation.
 """
 

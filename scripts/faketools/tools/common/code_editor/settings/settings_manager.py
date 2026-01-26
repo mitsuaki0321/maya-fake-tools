@@ -1,5 +1,5 @@
 """
-Settings manager for Maya Code Editor.
+Settings manager for Code Editor.
 Handles persistent storage of editor settings, window state, and user preferences.
 Uses a modular architecture with separate managers for different types of settings.
 """
