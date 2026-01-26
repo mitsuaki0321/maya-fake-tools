@@ -10,7 +10,7 @@ from logging import getLogger
 import os
 from typing import Any
 
-from ..ui.qt_compat import QColor, QFont, QTextCharFormat
+from .....lib_ui.qt_compat import QColor, QFont, QTextCharFormat
 
 logger = getLogger(__name__)
 

@@ -3,7 +3,7 @@ Text operations mixin for the Python editor.
 Handles line operations, multi-selection, and text manipulation.
 """
 
-from .qt_compat import QTextCharFormat, QTextCursor, QTextEdit
+from .....lib_ui.qt_compat import QTextCharFormat, QTextCursor, QTextEdit
 
 # SimpleRenameDialog import removed - F2 feature removed
 

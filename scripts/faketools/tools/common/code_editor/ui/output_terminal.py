@@ -4,8 +4,8 @@ Provides Script Editor-like output display functionality.
 Supports both Maya native terminal and fallback QTextEdit.
 """
 
+from .....lib_ui.qt_compat import QApplication, QColor, QFont, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
 from ..themes import AppTheme
-from .qt_compat import QApplication, QColor, QFont, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
 
 # Try to import Maya terminal widget
 try:

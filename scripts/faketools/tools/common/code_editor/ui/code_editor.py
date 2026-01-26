@@ -8,14 +8,7 @@ from logging import getLogger
 import os
 import re
 
-from ..highlighting.python_highlighter import PythonHighlighter
-from ..themes import AppTheme
-from .dialog_base import CodeEditorMessageBox
-from .editor_shortcuts import EditorShortcuts
-from .editor_text_operations import EditorTextOperationsMixin
-from .line_number_area import LineNumberArea
-from .multi_cursor_handler import MultiCursorMixin
-from .qt_compat import (
+from .....lib_ui.qt_compat import (
     QAction,
     QColor,
     QFileDialog,
@@ -31,6 +24,13 @@ from .qt_compat import (
     QTimer,
     Signal,
 )
+from ..highlighting.python_highlighter import PythonHighlighter
+from ..themes import AppTheme
+from .dialog_base import CodeEditorMessageBox
+from .editor_shortcuts import EditorShortcuts
+from .editor_text_operations import EditorTextOperationsMixin
+from .line_number_area import LineNumberArea
+from .multi_cursor_handler import MultiCursorMixin
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
@@ -1380,7 +1380,7 @@ class CodeEditorWidget(QTabWidget):
         try:
             # Check if this is a mouse press event on the tab bar
             if obj == self.tabBar() and hasattr(event, "type"):
-                from .qt_compat import QtCore
+                from .....lib_ui.qt_compat import QtCore
 
                 # Handle middle mouse button press
                 if event.type() == QtCore.QEvent.MouseButtonPress and hasattr(event, "button") and event.button() == Qt.MiddleButton:

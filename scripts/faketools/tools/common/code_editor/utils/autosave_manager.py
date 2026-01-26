@@ -8,7 +8,7 @@ import os
 import time
 from typing import Optional
 
-from ..ui.qt_compat import QObject, QTimer, Signal
+from .....lib_ui.qt_compat import QObject, QTimer, Signal
 
 
 class AutoSaveManager(QObject):

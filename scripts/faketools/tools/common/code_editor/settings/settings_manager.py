@@ -9,7 +9,7 @@ from logging import getLogger
 import os
 from typing import Any
 
-from ..ui.qt_compat import QFont
+from .....lib_ui.qt_compat import QFont
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager

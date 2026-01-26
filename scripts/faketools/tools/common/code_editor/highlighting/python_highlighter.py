@@ -19,7 +19,7 @@ import keyword
 import token as _token
 import tokenize as _tokenize
 
-from ..ui.qt_compat import QSyntaxHighlighter
+from .....lib_ui.qt_compat import QSyntaxHighlighter
 from .syntax_config_loader import SyntaxConfigLoader
 
 

@@ -3,7 +3,7 @@ Line number area widget for the code editor.
 Displays line numbers alongside the code editor.
 """
 
-from .qt_compat import QWidget
+from .....lib_ui.qt_compat import QWidget
 
 
 class LineNumberArea(QWidget):

@@ -5,11 +5,11 @@ Handles UI initialization, theming, and layout management.
 
 from logging import getLogger
 
+from .....lib_ui.qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
 from ..themes import AppTheme
 from .code_editor import CodeEditorWidget
 from .file_explorer import FileExplorer
 from .output_terminal import OutputTerminal
-from .qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
 from .toolbar import ToolBar
 
 logger = getLogger(__name__)

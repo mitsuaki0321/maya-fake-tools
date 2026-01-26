@@ -6,7 +6,7 @@ Handles initialization and Maya integration.
 from logging import getLogger
 import sys
 
-from .ui.qt_compat import QApplication, Qt
+from ....lib_ui.qt_compat import QApplication, Qt
 
 logger = getLogger(__name__)
 
@@ -62,7 +62,7 @@ def show_editor(floating=False):
             try:
                 import maya.OpenMayaUI as omui
 
-                from .ui.qt_compat import QWidget, shiboken
+                from ....lib_ui.qt_compat import QWidget, shiboken
 
                 maya_main_ptr = omui.MQtUtil.mainWindow()
                 if maya_main_ptr:

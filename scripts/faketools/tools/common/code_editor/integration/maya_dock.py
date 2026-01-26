@@ -16,7 +16,7 @@ except ImportError:
     cmds = None
     omui = None
 
-from ..ui.qt_compat import QVBoxLayout, QWidget, shiboken
+from .....lib_ui.qt_compat import QVBoxLayout, QWidget, shiboken
 
 
 class MayaDock:

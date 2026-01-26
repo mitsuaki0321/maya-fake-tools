@@ -5,7 +5,7 @@ Provides quick access to common actions with proper icon states and styling.
 
 import os
 
-from .qt_compat import QFrame, QHBoxLayout, QIcon, QPushButton, Qt, QWidget, Signal
+from .....lib_ui.qt_compat import QFrame, QHBoxLayout, QIcon, QPushButton, Qt, QWidget, Signal
 
 
 class VSCodeButton(QPushButton):

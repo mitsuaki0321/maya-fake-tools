@@ -3,7 +3,7 @@ Custom tab bar for the code editor.
 Handles tab-specific behaviors and interactions.
 """
 
-from .qt_compat import QTabBar
+from .....lib_ui.qt_compat import QTabBar
 
 
 class EditableTabBar(QTabBar):

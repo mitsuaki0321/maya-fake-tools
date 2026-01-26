@@ -5,7 +5,7 @@ Provides VSCode-style multi-cursor editing capabilities.
 
 import contextlib
 
-from .qt_compat import QApplication, QColor, QKeySequence, QRect, QShortcut, Qt, QTextCursor, Signal
+from .....lib_ui.qt_compat import QApplication, QColor, QKeySequence, QRect, QShortcut, Qt, QTextCursor, Signal
 
 
 class MultiCursorMixin:

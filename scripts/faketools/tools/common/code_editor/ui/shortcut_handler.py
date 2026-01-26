@@ -3,8 +3,8 @@ Shortcut handler for Maya Code Editor.
 Manages all keyboard shortcuts and their associated functionality.
 """
 
+from .....lib_ui.qt_compat import QApplication, QKeySequence, QShortcut, Qt, QTextCursor
 from .find_replace_dialog import FindReplaceDialog
-from .qt_compat import QApplication, QKeySequence, QShortcut, Qt, QTextCursor
 
 
 class ShortcutHandler:

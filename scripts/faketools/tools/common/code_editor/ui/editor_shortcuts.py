@@ -3,7 +3,7 @@ Editor shortcuts management for Maya Code Editor.
 Provides a clean, extensible way to manage keyboard shortcuts in the code editor.
 """
 
-from .qt_compat import QKeySequence, Qt
+from .....lib_ui.qt_compat import QKeySequence, Qt
 
 
 class EditorShortcuts:

@@ -6,11 +6,11 @@ Provides the primary UI layout and coordinates between components.
 from logging import getLogger
 import os
 
+from .....lib_ui.qt_compat import QWidget
 from ..settings import SettingsManager
 from ..utils.autosave_manager import AutoSaveManager  # Direct import to avoid circular dependency
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 from .execution_manager import ExecutionManager
-from .qt_compat import QWidget
 from .shortcut_handler import ShortcutHandler
 from .ui_layout_manager import UILayoutManager
 from .ui_session_manager import UISessionManager
@@ -502,7 +502,7 @@ class MayaCodeEditor(QWidget):
 
     def _setup_fallback_directory(self):
         """Setup fallback directory when workspace is not available."""
-        from .qt_compat import QDir
+        from .....lib_ui.qt_compat import QDir
 
         # Try home directory as fallback
         home_path = QDir.homePath()

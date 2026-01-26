@@ -5,7 +5,7 @@ Handles saving and restoring session state including open tabs and their content
 
 import os
 
-from .qt_compat import QTimer
+from .....lib_ui.qt_compat import QTimer
 
 
 class UISessionManager:

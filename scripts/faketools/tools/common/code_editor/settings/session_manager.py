@@ -210,7 +210,7 @@ class SessionManager:
     def get_current_tabs(self) -> list[dict[str, Any]]:
         """Get current tabs from main window."""
         # Try to find main window
-        from ..ui.qt_compat import QApplication
+        from .....lib_ui.qt_compat import QApplication
 
         app = QApplication.instance()
         if app:

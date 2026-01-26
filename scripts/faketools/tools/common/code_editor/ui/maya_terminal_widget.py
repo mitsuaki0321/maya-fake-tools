@@ -13,7 +13,7 @@ try:
 except ImportError:
     MAYA_AVAILABLE = False
 
-from .qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
+from .....lib_ui.qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
 
 logger = getLogger(__name__)
 

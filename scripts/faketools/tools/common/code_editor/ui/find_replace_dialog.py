@@ -3,8 +3,7 @@ Find and Replace dialog for the code editor.
 Provides search and replace functionality with various options.
 """
 
-from .dialog_base import CodeEditorDialog, CodeEditorMessageBox
-from .qt_compat import (
+from .....lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
     QColor,
@@ -21,6 +20,7 @@ from .qt_compat import (
     QTextEdit,
     QVBoxLayout,
 )
+from .dialog_base import CodeEditorDialog, CodeEditorMessageBox
 
 
 class FindReplaceDialog(CodeEditorDialog):

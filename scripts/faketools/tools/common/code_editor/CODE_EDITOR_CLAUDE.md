@@ -28,7 +28,7 @@ Maya Code Editor is a full-featured Python code editor with native Maya integrat
 | Import paths | ❌ Pending | Still references `maya_code_editor` in some places |
 | Config paths | ✅ Done | Uses ToolDataManager: `{data_root}/common/code_editor/config/` |
 | Workspace paths | ✅ Done | Uses ToolDataManager: `{data_root}/common/code_editor/workspace/` |
-| Qt imports | ⚠️ Review | Has own qt_compat.py, should use FakeTools lib_ui |
+| Qt imports | ✅ Done | Uses FakeTools `lib_ui/qt_compat.py` |
 
 ## Directory Structure
 
@@ -63,7 +63,6 @@ code_editor/
 │
 ├── ui/                      # User interface
 │   ├── __init__.py
-│   ├── qt_compat.py         # PySide2/6 compatibility layer
 │   ├── main_window.py       # MayaCodeEditor main widget
 │   ├── code_editor.py       # PythonEditor, CodeEditorWidget
 │   ├── line_number_area.py  # Line numbers widget
@@ -294,12 +293,6 @@ All major functionality is encapsulated in Manager classes:
 
 ### ui/
 
-#### `qt_compat.py`
-- PySide2/PySide6 compatibility layer
-- Exports all Qt classes used by the editor
-- shiboken/shiboken6 wrapper detection
-- **TODO**: Consider using FakeTools' `lib_ui/qt_compat.py` instead
-
 #### `main_window.py`
 - **Class**: `MayaCodeEditor(QWidget)`
 - Central coordinator for all components
@@ -472,9 +465,9 @@ All major functionality is encapsulated in Manager classes:
 - ~~`settings/workspace_manager.py` now uses `ToolDataManager`~~
 - ~~Path: `{data_root}/common/code_editor/workspace/`~~
 
-### 4. Qt Compatibility Layer
-Current: `ui/qt_compat.py` (own implementation)
-Consider: Using FakeTools' `lib_ui/qt_compat.py`
+### ~~4. Qt Compatibility Layer~~ ✅ DONE (Phase 3)
+- ~~Current: `ui/qt_compat.py` (own implementation)~~
+- ~~Consider: Using FakeTools' `lib_ui/qt_compat.py`~~
 
 ### 5. Window Base Class
 Current: Custom `MayaCodeEditor(QWidget)`
@@ -571,11 +564,58 @@ Config/Workspace パス の FakeTools 規約への統一
 
 ---
 
-## Future Phases (優先度低)
+## Phase 3: Qt Compatibility Layer Migration ✅ COMPLETE
 
-### Phase 3: Qt Compatibility Layer
-- 独自 `ui/qt_compat.py` → FakeTools `lib_ui/qt_compat.py` への統一
-- 影響範囲が大きいため慎重に検討
+**Status**: 完了
+
+### Goal
+Code Editor の独自 `ui/qt_compat.py` を FakeTools の `lib_ui/qt_compat.py` に統一
+
+### 実施内容
+
+#### Import Path Changes
+| Location | Old | New |
+|----------|-----|-----|
+| `ui/*.py` | `from .qt_compat` | `from .....lib_ui.qt_compat` |
+| `utils/*.py` | `from ..ui.qt_compat` | `from .....lib_ui.qt_compat` |
+| `highlighting/*.py` | `from ..ui.qt_compat` | `from .....lib_ui.qt_compat` |
+| `integration/*.py` | `from ..ui.qt_compat` | `from .....lib_ui.qt_compat` |
+| `settings/*.py` | `from ..ui.qt_compat` | `from .....lib_ui.qt_compat` |
+
+#### Files Modified (18 files)
+- `ui/main_window.py`
+- `ui/code_editor.py`
+- `ui/file_explorer.py`
+- `ui/output_terminal.py`
+- `ui/tab_bar.py`
+- `ui/toolbar.py`
+- `ui/find_replace_dialog.py`
+- `ui/dialog_base.py`
+- `ui/shortcut_handler.py`
+- `ui/editor_shortcuts.py`
+- `ui/editor_text_operations.py`
+- `ui/multi_cursor_handler.py`
+- `ui/ui_layout_manager.py`
+- `ui/line_number_area.py`
+- `ui/ui_session_manager.py`
+- `ui/maya_terminal_widget.py`
+- `utils/autosave_manager.py`
+- `highlighting/python_highlighter.py`
+- `highlighting/syntax_config_loader.py`
+- `integration/maya_dock.py`
+- `settings/settings_manager.py`
+
+#### Files Deleted
+- `ui/qt_compat.py` - No longer needed, using shared `lib_ui/qt_compat.py`
+
+#### Compatibility Notes
+- Code Editor used PySide6-first import order; lib_ui uses PySide2-first
+- `QT_VERSION` integer (2/6) replaced by `is_pyside6()` helper function
+- All 49 Qt items used by Code Editor are available in lib_ui/qt_compat.py
+
+---
+
+## Future Phases (優先度低)
 
 ### Phase 4: Window Base Class
 - `MayaCodeEditor(QWidget)` → `BaseMainWindow` への移行

@@ -3,7 +3,7 @@ Base dialog classes for Maya Code Editor.
 Provides centralized dialog positioning and styling for consistent UX.
 """
 
-from .qt_compat import QApplication, QDialog, QFileDialog, QInputDialog, QMessageBox
+from .....lib_ui.qt_compat import QApplication, QDialog, QFileDialog, QInputDialog, QMessageBox
 
 
 class DialogPositioner:
