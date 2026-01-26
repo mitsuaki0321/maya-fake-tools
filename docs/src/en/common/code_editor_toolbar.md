@@ -16,9 +16,11 @@ The toolbar provides quick access to main actions like creating files, saving, a
 
 ## Features
 
-**Create New File**
+**![image](../../images/common/code_editor/toggle_normal.svg) Toggle File Explorer**
 
-![image](../../images/common/code_editor/new_normal.png)
+- Toggles the file explorer visibility.
+
+**![image](../../images/common/code_editor/new_normal.svg) Create New File**
 
 - Creates a new file.\
 Clicking this button opens a dialog to enter the file name.
@@ -27,39 +29,29 @@ Clicking this button opens a dialog to enter the file name.
 
 - Enter a file name and click "OK" to create a new file and open it in a tab.
 
-**Run Code**
-
-![image](../../images/common/code_editor/run_normal.png)
+**![image](../../images/common/code_editor/run_normal.svg) Run Code**
 
 - Runs the code in the currently active editor.\
 If code is selected, only the selected portion will be executed.
 
-**Save Current File**
-
-![image](../../images/common/code_editor/save_normal.png)
+**![image](../../images/common/code_editor/save_normal.svg) Save Current File**
 
 - Saves the contents of the currently active editor.\
 If there are unsaved changes, an asterisk (*) appears on the tab.
 
-**Save All Files**
-
-![image](../../images/common/code_editor/saveall_normal.png)
+**![image](../../images/common/code_editor/saveall_normal.svg) Save All Files**
 
 - Saves the contents of all open editors.
 
-**Clear Console**
-
-![image](../../images/common/code_editor/clear_normal.png)
+**![image](../../images/common/code_editor/clear_normal.svg) Clear Console**
 
 Clears the console contents.
 
-**Open Root Directory**
-
-![image](../../images/common/code_editor/folder_normal.png)
+**![image](../../images/common/code_editor/folder_normal.svg) Open Root Directory**
 
 - Opens the workspace root directory in the OS standard file explorer.
 
-**Swap Editor/Terminal Position**
+**![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
 
 - Swaps the vertical positions of the code editor and terminal.
 

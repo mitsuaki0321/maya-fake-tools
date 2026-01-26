@@ -12,7 +12,7 @@ lang-ref: code_editor_terminal
 The Code Editor terminal embeds the Script Editor's terminal portion.\
 Therefore, basic functionality is the same as the Script Editor terminal.
 
-The context menu (right-click menu) has several terminal-specific features.
+![image](../../images/common/code_editor/terminal.png)
 
 ## Features
 

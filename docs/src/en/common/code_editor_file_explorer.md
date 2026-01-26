@@ -56,7 +56,7 @@ Preview tabs allow you to preview multiple files sequentially in a single tab.
 
 ### Run Without Opening
 
-Hovering over a Python file in the explorer displays a `Run` button on the right side.
+Hovering over a Python file in the explorer displays a ![image](../../images/common/code_editor/run_normal.svg) button on the right side.
 
 ![image](../../images/common/code_editor/directory-run-code.png)
 

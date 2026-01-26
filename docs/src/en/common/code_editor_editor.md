@@ -82,7 +82,7 @@ Press Ctrl+F/Ctrl+H to open the find/replace dialog.
 The code editor supports multi-cursor functionality.\
 Hold Ctrl and click to place multiple cursors.
 
-![multi-cursor](../../images/mult-cursor.png)
+![image](../../images/common/code_editor/mult-cursor.png)
 
 Normal editing operations work in multi-cursor mode.\
 For example, you can select, copy, paste, and delete.

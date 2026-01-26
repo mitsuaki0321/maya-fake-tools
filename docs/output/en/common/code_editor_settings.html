@@ -61,9 +61,6 @@
                     <li><a href="#autosave-settings-autosave"
                     id="toc-autosave-settings-autosave">Autosave
                     Settings (autosave)</a></li>
-                    <li><a href="#file-settings-files"
-                    id="toc-file-settings-files">File Settings
-                    (files)</a></li>
                     <li><a href="#layout-settings-layout"
                     id="toc-layout-settings-layout">Layout Settings
                     (layout)</a></li>
@@ -135,11 +132,6 @@
                 (editor)</h3>
                 <p>Settings for code editor display and behavior.</p>
                 <table>
-                <colgroup>
-                <col style="width: 29%" />
-                <col style="width: 29%" />
-                <col style="width: 41%" />
-                </colgroup>
                 <thead>
                 <tr>
                 <th>Setting</th>
@@ -149,48 +141,15 @@
                 </thead>
                 <tbody>
                 <tr>
-                <td><code>font_family</code></td>
-                <td>“Consolas”</td>
-                <td>Editor font name</td>
-                </tr>
-                <tr>
                 <td><code>font_size</code></td>
                 <td>10</td>
                 <td>Editor font size</td>
                 </tr>
-                <tr>
-                <td><code>tab_size</code></td>
-                <td>4</td>
-                <td>Number of spaces when pressing Tab</td>
-                </tr>
-                <tr>
-                <td><code>word_wrap</code></td>
-                <td>true</td>
-                <td>Whether to wrap long lines</td>
-                </tr>
-                <tr>
-                <td><code>show_line_numbers</code></td>
-                <td>true</td>
-                <td>Whether to show line numbers</td>
-                </tr>
-                <tr>
-                <td><code>highlight_current_line</code></td>
-                <td>true</td>
-                <td>Whether to highlight the current line</td>
-                </tr>
-                <tr>
-                <td><code>auto_indent</code></td>
-                <td>true</td>
-                <td>Whether to auto-indent on new lines</td>
-                </tr>
-                <tr>
-                <td><code>theme</code></td>
-                <td>“dark_modern”</td>
-                <td>Color theme (dark_modern / dark_classic /
-                light)</td>
-                </tr>
                 </tbody>
                 </table>
+                <p>Note: Font family is fixed to “Consolas” (fallback:
+                “Courier New”). Tab size is 4 spaces. Word wrap and line
+                numbers are always enabled.</p>
                 <h3 id="terminal-settings-terminal">Terminal Settings
                 (terminal)</h3>
                 <p>Settings for the terminal that displays execution
@@ -205,27 +164,14 @@
                 </thead>
                 <tbody>
                 <tr>
-                <td><code>font_family</code></td>
-                <td>“Consolas”</td>
-                <td>Terminal font name</td>
-                </tr>
-                <tr>
                 <td><code>font_size</code></td>
                 <td>9</td>
                 <td>Terminal font size</td>
                 </tr>
-                <tr>
-                <td><code>max_lines</code></td>
-                <td>1000</td>
-                <td>Maximum lines to display in terminal</td>
-                </tr>
-                <tr>
-                <td><code>auto_scroll</code></td>
-                <td>true</td>
-                <td>Whether to auto-scroll to new output</td>
-                </tr>
                 </tbody>
                 </table>
+                <p>Note: Font family is fixed to “Consolas” (fallback:
+                “Courier New”). Maximum lines is 1000.</p>
                 <h3 id="search-settings-search">Search Settings
                 (search)</h3>
                 <p>Initial settings for find/replace functionality.</p>
@@ -343,24 +289,6 @@
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="file-settings-files">File Settings (files)</h3>
-                <p>Settings for file management.</p>
-                <table>
-                <thead>
-                <tr>
-                <th>Setting</th>
-                <th>Default</th>
-                <th>Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td><code>max_recent_files</code></td>
-                <td>20</td>
-                <td>Maximum number of recent files in history</td>
-                </tr>
-                </tbody>
-                </table>
                 <h3 id="layout-settings-layout">Layout Settings
                 (layout)</h3>
                 <p>Settings for window layout.</p>
@@ -388,21 +316,14 @@
                 <h2 id="settings-file-example">Settings File
                 Example</h2>
                 <pre class="json"><code>{
+  &quot;general&quot;: {
+    &quot;language&quot;: &quot;JPN&quot;
+  },
   &quot;editor&quot;: {
-    &quot;font_family&quot;: &quot;Consolas&quot;,
-    &quot;font_size&quot;: 12,
-    &quot;tab_size&quot;: 4,
-    &quot;word_wrap&quot;: true,
-    &quot;show_line_numbers&quot;: true,
-    &quot;highlight_current_line&quot;: true,
-    &quot;auto_indent&quot;: true,
-    &quot;theme&quot;: &quot;dark_modern&quot;
+    &quot;font_size&quot;: 12
   },
   &quot;terminal&quot;: {
-    &quot;font_family&quot;: &quot;Consolas&quot;,
-    &quot;font_size&quot;: 10,
-    &quot;max_lines&quot;: 1000,
-    &quot;auto_scroll&quot;: true
+    &quot;font_size&quot;: 10
   },
   &quot;search&quot;: {
     &quot;match_case&quot;: false,
@@ -423,9 +344,6 @@
     &quot;enabled&quot;: true,
     &quot;interval_seconds&quot;: 60,
     &quot;backup_on_change&quot;: true
-  },
-  &quot;files&quot;: {
-    &quot;max_recent_files&quot;: 20
   },
   &quot;layout&quot;: {
     &quot;terminal_at_bottom&quot;: true

@@ -56,7 +56,7 @@ lang-ref: code_editor_file_explorer
 
 ### ファイルを開かず実行
 
-python ファイルをエクスプローラーでホバーすることにより、右端に `Run` ボタンが表示されます。\
+python ファイルをエクスプローラーでホバーすることにより、右端に ![image](../../images/common/code_editor/run_normal.svg) ボタンが表示されます。
 
 ![image](../../images/common/code_editor/directory-run-code.png)
 

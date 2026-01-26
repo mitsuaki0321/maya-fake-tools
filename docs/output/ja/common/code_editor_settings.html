@@ -58,9 +58,6 @@
                     <li><a href="#自動保存設定-autosave"
                     id="toc-自動保存設定-autosave">自動保存設定
                     (autosave)</a></li>
-                    <li><a href="#ファイル設定-files"
-                    id="toc-ファイル設定-files">ファイル設定
-                    (files)</a></li>
                     <li><a href="#レイアウト設定-layout"
                     id="toc-レイアウト設定-layout">レイアウト設定
                     (layout)</a></li>
@@ -119,11 +116,6 @@
                 <h3 id="エディタ設定-editor">エディタ設定 (editor)</h3>
                 <p>コードエディタの表示と動作に関する設定です。</p>
                 <table>
-                <colgroup>
-                <col style="width: 30%" />
-                <col style="width: 46%" />
-                <col style="width: 23%" />
-                </colgroup>
                 <thead>
                 <tr>
                 <th>設定名</th>
@@ -133,48 +125,15 @@
                 </thead>
                 <tbody>
                 <tr>
-                <td><code>font_family</code></td>
-                <td>“Consolas”</td>
-                <td>エディタのフォント名</td>
-                </tr>
-                <tr>
                 <td><code>font_size</code></td>
                 <td>10</td>
                 <td>エディタの文字サイズ</td>
                 </tr>
-                <tr>
-                <td><code>tab_size</code></td>
-                <td>4</td>
-                <td>タブキーを押したときの空白文字数</td>
-                </tr>
-                <tr>
-                <td><code>word_wrap</code></td>
-                <td>true</td>
-                <td>長い行を折り返して表示するか</td>
-                </tr>
-                <tr>
-                <td><code>show_line_numbers</code></td>
-                <td>true</td>
-                <td>行番号を表示するか</td>
-                </tr>
-                <tr>
-                <td><code>highlight_current_line</code></td>
-                <td>true</td>
-                <td>カーソルがある行をハイライト表示するか</td>
-                </tr>
-                <tr>
-                <td><code>auto_indent</code></td>
-                <td>true</td>
-                <td>改行時に自動でインデントを行うか</td>
-                </tr>
-                <tr>
-                <td><code>theme</code></td>
-                <td>“dark_modern”</td>
-                <td>カラーテーマ（dark_modern / dark_classic /
-                light）</td>
-                </tr>
                 </tbody>
                 </table>
+                <p>※ フォントは “Consolas” 固定（フォールバック:
+                “Courier
+                New”）。タブサイズは4スペース。折り返し表示と行番号は常に有効です。</p>
                 <h3 id="ターミナル設定-terminal">ターミナル設定
                 (terminal)</h3>
                 <p>実行結果を表示するターミナルの設定です。</p>
@@ -188,27 +147,14 @@
                 </thead>
                 <tbody>
                 <tr>
-                <td><code>font_family</code></td>
-                <td>“Consolas”</td>
-                <td>ターミナルのフォント名</td>
-                </tr>
-                <tr>
                 <td><code>font_size</code></td>
                 <td>9</td>
                 <td>ターミナルの文字サイズ</td>
                 </tr>
-                <tr>
-                <td><code>max_lines</code></td>
-                <td>1000</td>
-                <td>ターミナルに表示する最大行数</td>
-                </tr>
-                <tr>
-                <td><code>auto_scroll</code></td>
-                <td>true</td>
-                <td>新しい出力を自動でスクロールして表示するか</td>
-                </tr>
                 </tbody>
                 </table>
+                <p>※ フォントは “Consolas” 固定（フォールバック:
+                “Courier New”）。最大行数は1000行です。</p>
                 <h3 id="検索設定-search">検索設定 (search)</h3>
                 <p>検索・置換機能の初期設定です。</p>
                 <table>
@@ -319,24 +265,6 @@
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="ファイル設定-files">ファイル設定 (files)</h3>
-                <p>ファイル管理に関する設定です。</p>
-                <table>
-                <thead>
-                <tr>
-                <th>設定名</th>
-                <th>デフォルト値</th>
-                <th>説明</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td><code>max_recent_files</code></td>
-                <td>20</td>
-                <td>最近使ったファイルの履歴の最大数</td>
-                </tr>
-                </tbody>
-                </table>
                 <h3 id="レイアウト設定-layout">レイアウト設定
                 (layout)</h3>
                 <p>ウィンドウのレイアウトに関する設定です。</p>
@@ -363,21 +291,14 @@
                 </table>
                 <h2 id="設定ファイルの例">設定ファイルの例</h2>
                 <pre class="json"><code>{
+  &quot;general&quot;: {
+    &quot;language&quot;: &quot;JPN&quot;
+  },
   &quot;editor&quot;: {
-    &quot;font_family&quot;: &quot;Consolas&quot;,
-    &quot;font_size&quot;: 12,
-    &quot;tab_size&quot;: 4,
-    &quot;word_wrap&quot;: true,
-    &quot;show_line_numbers&quot;: true,
-    &quot;highlight_current_line&quot;: true,
-    &quot;auto_indent&quot;: true,
-    &quot;theme&quot;: &quot;dark_modern&quot;
+    &quot;font_size&quot;: 12
   },
   &quot;terminal&quot;: {
-    &quot;font_family&quot;: &quot;Consolas&quot;,
-    &quot;font_size&quot;: 10,
-    &quot;max_lines&quot;: 1000,
-    &quot;auto_scroll&quot;: true
+    &quot;font_size&quot;: 10
   },
   &quot;search&quot;: {
     &quot;match_case&quot;: false,
@@ -398,9 +319,6 @@
     &quot;enabled&quot;: true,
     &quot;interval_seconds&quot;: 60,
     &quot;backup_on_change&quot;: true
-  },
-  &quot;files&quot;: {
-    &quot;max_recent_files&quot;: 20
   },
   &quot;layout&quot;: {
     &quot;terminal_at_bottom&quot;: true
