@@ -62,7 +62,6 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 | Retarget Transforms | Model | numpy |
 | Snapshot Capture | Common | Pillow |
 
-**注:** numpy と scipy は Maya 2022 以降に含まれています。Pillow は別途インストールが必要です。
 
 また一部のツールで追加ライブラリをインストールすると機能が向上するものがあります。
 

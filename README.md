@@ -62,7 +62,6 @@ These tools will not launch if the required libraries are not installed.
 | Retarget Transforms | Model | numpy |
 | Snapshot Capture | Common | Pillow |
 
-**Note:** numpy and scipy are included in Maya 2022 and later. Pillow must be installed separately.
 
 Some tools can be enhanced with optional libraries:
 
