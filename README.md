@@ -64,6 +64,13 @@ These tools will not launch if the required libraries are not installed.
 
 **Note:** numpy and scipy are included in Maya 2022 and later. Pillow must be installed separately.
 
+Some tools can be enhanced with optional libraries:
+
+| Tool | Category | Optional Libraries | Enhancement |
+|------|----------|-------------------|-------------|
+| Snapshot Capture | Common | aggdraw | Anti-aliased annotation rendering |
+| Snapshot Capture | Common | mss | Faster screenshot capture |
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
