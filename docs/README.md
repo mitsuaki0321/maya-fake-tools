@@ -55,6 +55,30 @@ lang-ref: unique_tool_id
 - `description`: ページの説明
 - `lang-ref`: 言語間リンク用のユニークID（対応する他言語ページと同じ値を設定）
 
+**サブページ用フィールド:**
+- `hidden`: `true` に設定するとインデックスページに表示されない
+- `parent`: 親ページの `lang-ref` ID
+- `parent_title`: 親ページの表示タイトル
+
+サブページの例（Code Editor のエディタページ）:
+```markdown
+---
+title: コードエディター
+hidden: true
+parent: code_editor
+parent_title: Code Editor
+lang: ja
+lang-ref: code_editor_editor
+---
+```
+
+親ページからサブページへのリンク:
+```markdown
+→ 詳細は [ターミナルのドキュメント](code_editor_terminal.html) を参照してください。
+```
+
+※ 同じディレクトリ内のページは `.html` 拡張子でリンクできます。
+
 ### 3. 画像の配置（任意）
 
 ```
