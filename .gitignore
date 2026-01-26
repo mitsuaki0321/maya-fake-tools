@@ -218,6 +218,7 @@ DEVELOP.md
 LOGGING_USAGE.md
 SETTINGS_USAGE.md
 PIE_MENU_USAGE.md
+CODE_EDITOR_CLAUDE.md
 
 # Development tools (uv, ruff, mypy config)
 pyproject.toml
