@@ -26,21 +26,8 @@
     </header>
 
     <div class="container">
-        $if(breadcrumb)$
-        <nav class="breadcrumb" aria-label="breadcrumb">
-            <ol>
-                <li><a href="$root_path$$home_link$">$home_text$</a></li>
-                $for(breadcrumb)$
-                <li$if(breadcrumb.active)$ class="active"$endif$>
-                    $if(breadcrumb.url)$
-                    <a href="$breadcrumb.url$">$breadcrumb.text$</a>
-                    $else$
-                    $breadcrumb.text$
-                    $endif$
-                </li>
-                $endfor$
-            </ol>
-        </nav>
+        $if(breadcrumb_html)$
+        $breadcrumb_html$
         $endif$
 
         <div class="content-wrapper">

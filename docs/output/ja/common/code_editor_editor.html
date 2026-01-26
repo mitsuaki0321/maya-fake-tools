@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>コードエディター - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/code_editor_editor.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li><a href="code_editor.html">Code Editor</a></li>
+                        <li class="active">コードエディター</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#タブ管理"
+                    id="toc-タブ管理">タブ管理</a>
+                    <ul>
+                    <li><a href="#draft-タブ" id="toc-draft-タブ">Draft
+                    タブ</a></li>
+                    <li><a href="#永続タブとプレビュータブ"
+                    id="toc-永続タブとプレビュータブ">永続タブとプレビュータブ</a></li>
+                    </ul></li>
+                    <li><a href="#検索置換"
+                    id="toc-検索置換">検索/置換</a></li>
+                    <li><a href="#マルチカーソル"
+                    id="toc-マルチカーソル">マルチカーソル</a></li>
+                    <li><a href="#特殊なコンテキストメニューの機能"
+                    id="toc-特殊なコンテキストメニューの機能">特殊なコンテキストメニューの機能</a>
+                    <ul>
+                    <li><a href="#コマンドヘルプ表示"
+                    id="toc-コマンドヘルプ表示">コマンドヘルプ表示</a></li>
+                    <li><a href="#inspect-object-help"
+                    id="toc-inspect-object-help">Inspect Object
+                    (Help)</a></li>
+                    <li><a href="#リロード"
+                    id="toc-リロード">リロード</a></li>
+                    </ul></li>
+                    <li><a href="#ショートカットキー"
+                    id="toc-ショートカットキー">ショートカットキー</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">コードエディター</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>コードエディターは実際にコードを書くための主要なインターフェースです。<br />
+                シンタックスハイライト、エラーチェックなどの高度なコード編集機能を提供します。</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor.png"
+                alt="image" /></p>
+                <h2 id="タブ管理">タブ管理</h2>
+                <h3 id="draft-タブ">Draft タブ</h3>
+                <p>Draft
+                タブは、コードの一時的なメモやスニペットを保存するためのスペースです。<br />
+                このタブは、常に表示され閉じることはできません。</p>
+                <p><img
+                src="../../images/common/code_editor/draft-tab.png"
+                alt="image" /></p>
+                <h3
+                id="永続タブとプレビュータブ">永続タブとプレビュータブ</h3>
+                <p>コードエディターでは、ファイルを永続タブまたはプレビュータブで開くことができます。
+                この二つのタブは、実際にファイルを編集するためのタブです。</p>
+                <p>ファイルエクスプローラーのファイルをクリックすることで、以下のようにタブが開きます。</p>
+                <ul>
+                <li><p><strong>永続タブ</strong>: ファイルを
+                <strong>ダブルクリック</strong>
+                して開くと、永続タブとして開きます。<br />
+                永続タブは、複数のファイルを同時に開いて編集できます。<br />
+                編集中のファイルは、タブ上にアスタリスク (*)
+                が表示されます。</p>
+                <p><img
+                src="../../images/common/code_editor/pinned-tab.png"
+                alt="image" /></p></li>
+                <li><p><strong>プレビュータブ</strong>: ファイルを
+                <strong>シングルクリック</strong>
+                して開くと、プレビュータブとして開きます。<br />
+                プレビュータブは、1
+                つのタブで複数のファイルを順番にプレビューできます。<br />
+                新しいファイルをプレビューすると、前のプレビュー内容は上書きされます。</p>
+                <p><img
+                src="../../images/common/code_editor/preview-tab.png"
+                alt="image" /></p></li>
+                </ul>
+                <p>二つのタブは、ドラッグアンドドロップで順番を入れ替えることができます。<br />
+                また、タブの上で中クリックすることにより、タブを閉じることができます。</p>
+                <h2 id="検索置換">検索/置換</h2>
+                <p>コードエディターでは、検索と置換の機能が組み込まれています。<br />
+                Ctr+F/Ctrl+H で検索/置換ダイアログが表示されます。</p>
+                <p><img
+                src="../../images/common/code_editor/find-and-replace.png"
+                alt="image" /></p>
+                <p><strong>フィールド</strong></p>
+                <ul>
+                <li><strong>Find:</strong>
+                検索する文字列を入力します。<br />
+                </li>
+                <li>Replace: 置換する文字列を入力します。</li>
+                </ul>
+                <p><strong>チェックボックス</strong></p>
+                <ul>
+                <li>Match case:
+                オンの場合、大文字と小文字を区別して検索します。<br />
+                </li>
+                <li>Whole words only:
+                オンの場合、完全一致する単語のみを検索します。<br />
+                </li>
+                <li>Use regular expression:
+                オンの場合、正規表現を使用して検索します。</li>
+                </ul>
+                <p><strong>検索方向 ( Direction )</strong></p>
+                <ul>
+                <li>Up: カーソルの上方向に向かって検索します。<br />
+                </li>
+                <li>Down: カーソルの下方向に向かって検索します。</li>
+                </ul>
+                <p><strong>ボタン</strong></p>
+                <ul>
+                <li>Next: 次の一致する箇所に移動します。<br />
+                </li>
+                <li>Prev: 前の一致する箇所に移動します。<br />
+                </li>
+                <li>Find All:
+                一致するすべてを選択しマルチカーソルモードにします。<br />
+                </li>
+                <li>Replace: 現在の一致する箇所を置換します。<br />
+                </li>
+                <li>Replace All: 一致するすべての箇所を置換します。</li>
+                </ul>
+                <h2 id="マルチカーソル">マルチカーソル</h2>
+                <p>コードエディターでは、マルチカーソル機能をサポートしています。<br />
+                Ctrl
+                キーを押しながらクリックすることで、複数のカーソルを配置できます。</p>
+                <p><img src="../../images/mult-cursor.png"
+                alt="multi-cursor" /></p>
+                <p>マルチカーソルモード中も、通常の編集操作が可能です。<br />
+                例えば、選択やコピー、貼り付け、削除などが行えます。</p>
+                <p>マルチカーソルモードでの主なショートカットキーは以下の通りです。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>ショートカットキー</th>
+                <th>機能説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Ctrl+Click</td>
+                <td>カーソルを追加</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Drag</td>
+                <td>選択範囲を追加</td>
+                </tr>
+                <tr>
+                <td>Middle-Click+Drag</td>
+                <td>矩形/列選択</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>次の出現箇所</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+L</td>
+                <td>すべての出現箇所</td>
+                </tr>
+                <tr>
+                <td>Alt+Shift+I</td>
+                <td>行末にカーソルを追加</td>
+                </tr>
+                <tr>
+                <td>Escape</td>
+                <td>カーソルをクリア</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2
+                id="特殊なコンテキストメニューの機能">特殊なコンテキストメニューの機能</h2>
+                <p>コンテキストメニュー（右クリックメニュー）には、コードエディター特有の機能がいくつかあります。</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor-menu.png"
+                alt="image" /></p>
+                <h3 id="コマンドヘルプ表示">コマンドヘルプ表示</h3>
+                <p>コンテキストメニューから Maya の <strong>python
+                (cmds)</strong> と <strong>OpenMaya (om)</strong>
+                コマンドのヘルプがブラウザで表示できます。</p>
+                <p>ドキュメントを表示するには、<code>cmds</code>
+                に続く関数名を以下のように選択します。</p>
+                <p><img
+                src="../../images/common/code_editor/cmd-help.png"
+                alt="image" /></p>
+                <p>選択後、コンテキストメニューから <strong>Maya Help:
+                <function_name></strong> を選択します。</p>
+                <p>対応しているコマンドは以下の通りです。<br />
+                対応文字列に続く関数名のヘルプが表示されます。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>モジュール名</th>
+                <th>対応文字列</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>maya.cmds</td>
+                <td>cmds, mc</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMaya</td>
+                <td>om, OpenMaya</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaUI</td>
+                <td>omui, OpenMayaUI</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaAnim</td>
+                <td>oma, OpenMayaAnim</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaRender</td>
+                <td>omr, OpenMayaRender</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="inspect-object-help">Inspect Object (Help)</h3>
+                <p>コンテキストメニューから Maya
+                のオブジェクトの中身を調べることができます。</p>
+                <p>オブジェクトの文字列を選択し <strong>Inspect Object:
+                <object_name></strong> か <strong>Inspect Object Help:
+                <object_name></strong> を実行します。<br />
+                実行するとターミナルにオブジェクトの情報が表示されます。</p>
+                <p><strong>Inspect Object の例</strong></p>
+                <p><img
+                src="../../images/common/code_editor/inspect-object.png"
+                alt="image" /></p>
+                <h3 id="リロード">リロード</h3>
+                <p>コンテキストメニューから選択したモジュールをリロードできます。</p>
+                <p>モジュールの文字列を選択し <strong>Reload Module:
+                <module_name></strong> を実行します。<br />
+                実行するとそのモジュールがリロードされます。</p>
+                <h2 id="ショートカットキー">ショートカットキー</h2>
+                <p>コードエディターで使用できる主なショートカットキーは以下の通りです。</p>
+                <table>
+                <colgroup>
+                <col style="width: 46%" />
+                <col style="width: 53%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>ショートカットキー</th>
+                <th>機能説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Ctrl+N</td>
+                <td>新規ファイル作成</td>
+                </tr>
+                <tr>
+                <td>Ctrl+S</td>
+                <td>現在のファイルを保存</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+S</td>
+                <td>すべての開いているファイルを保存</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>次の出現箇所を選択（マルチセレクション）</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+D</td>
+                <td>現在の行を複製</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+K</td>
+                <td>現在の行を削除</td>
+                </tr>
+                <tr>
+                <td>Ctrl+L</td>
+                <td>現在の行を選択（繰り返しで拡張）</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+Up/Down</td>
+                <td>行を上下に移動</td>
+                </tr>
+                <tr>
+                <td>Ctrl+/</td>
+                <td>行コメントの切り替え</td>
+                </tr>
+                <tr>
+                <td>Tab / Shift+Tab</td>
+                <td>選択のインデント/インデント解除</td>
+                </tr>
+                <tr>
+                <td>Enter</td>
+                <td>自動インデント付きのスマート改行</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Click</td>
+                <td>クリック位置にカーソルを追加</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Drag</td>
+                <td>選択範囲を追加（ドラッグして異なるコードを選択）</td>
+                </tr>
+                <tr>
+                <td>Middle-Click+Drag</td>
+                <td>矩形/列選択（矩形エリア内のテキストを選択）</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>単語を選択して次の出現箇所を追加</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+L</td>
+                <td>現在の単語のすべての出現箇所を選択</td>
+                </tr>
+                <tr>
+                <td>Alt+Shift+I</td>
+                <td>選択内の行末にカーソルを追加</td>
+                </tr>
+                <tr>
+                <td>Escape</td>
+                <td>すべてのマルチカーソルをクリア</td>
+                </tr>
+                <tr>
+                <td>Ctrl+F</td>
+                <td>検索ダイアログ</td>
+                </tr>
+                <tr>
+                <td>Ctrl+H</td>
+                <td>置換ダイアログ</td>
+                </tr>
+                <tr>
+                <td>F3 / Shift+F3</td>
+                <td>次/前を検索</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Enter</td>
+                <td>現在の行または選択を実行</td>
+                </tr>
+                <tr>
+                <td>Numpad Enter</td>
+                <td>現在のスクリプトを実行（実行ボタンと同じ）</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+Enter</td>
+                <td>ファイル全体を実行</td>
+                </tr>
+                <tr>
+                <td>Ctrl+K</td>
+                <td>ターミナル出力をクリア</td>
+                </tr>
+                <tr>
+                <td>Ctrl+MouseWheel</td>
+                <td>フォントサイズの調整</td>
+                </tr>
+                </tbody>
+                </table>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

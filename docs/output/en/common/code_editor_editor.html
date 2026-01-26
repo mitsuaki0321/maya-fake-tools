@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/code_editor_editor.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li><a href="code_editor.html">Code Editor</a></li>
+                        <li class="active">Code Editor</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#tab-management"
+                    id="toc-tab-management">Tab Management</a>
+                    <ul>
+                    <li><a href="#draft-tab" id="toc-draft-tab">Draft
+                    Tab</a></li>
+                    <li><a href="#persistent-tabs-and-preview-tabs"
+                    id="toc-persistent-tabs-and-preview-tabs">Persistent
+                    Tabs and Preview Tabs</a></li>
+                    </ul></li>
+                    <li><a href="#findreplace"
+                    id="toc-findreplace">Find/Replace</a></li>
+                    <li><a href="#multi-cursor"
+                    id="toc-multi-cursor">Multi-Cursor</a></li>
+                    <li><a href="#special-context-menu-features"
+                    id="toc-special-context-menu-features">Special
+                    Context Menu Features</a>
+                    <ul>
+                    <li><a href="#command-help-display"
+                    id="toc-command-help-display">Command Help
+                    Display</a></li>
+                    <li><a href="#inspect-object-help"
+                    id="toc-inspect-object-help">Inspect Object
+                    (Help)</a></li>
+                    <li><a href="#reload"
+                    id="toc-reload">Reload</a></li>
+                    </ul></li>
+                    <li><a href="#keyboard-shortcuts"
+                    id="toc-keyboard-shortcuts">Keyboard
+                    Shortcuts</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Code Editor</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>The code editor is the main interface for writing
+                code.<br />
+                It provides advanced code editing features such as
+                syntax highlighting and error checking.</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor.png"
+                alt="image" /></p>
+                <h2 id="tab-management">Tab Management</h2>
+                <h3 id="draft-tab">Draft Tab</h3>
+                <p>The Draft tab is a space for saving temporary code
+                notes and snippets.<br />
+                This tab is always visible and cannot be closed.</p>
+                <p><img
+                src="../../images/common/code_editor/draft-tab.png"
+                alt="image" /></p>
+                <h3 id="persistent-tabs-and-preview-tabs">Persistent
+                Tabs and Preview Tabs</h3>
+                <p>In the code editor, you can open files in persistent
+                tabs or preview tabs. Both types of tabs are used for
+                actual file editing.</p>
+                <p>Clicking files in the file explorer opens tabs as
+                follows:</p>
+                <ul>
+                <li><p><strong>Persistent Tab</strong>:
+                <strong>Double-clicking</strong> a file opens it as a
+                persistent tab.<br />
+                Persistent tabs allow you to open and edit multiple
+                files simultaneously.<br />
+                Files with unsaved changes display an asterisk (*) on
+                the tab.</p>
+                <p><img
+                src="../../images/common/code_editor/pinned-tab.png"
+                alt="image" /></p></li>
+                <li><p><strong>Preview Tab</strong>:
+                <strong>Single-clicking</strong> a file opens it as a
+                preview tab.<br />
+                Preview tabs allow you to preview multiple files
+                sequentially in a single tab.<br />
+                Previewing a new file overwrites the previous preview
+                content.</p>
+                <p><img
+                src="../../images/common/code_editor/preview-tab.png"
+                alt="image" /></p></li>
+                </ul>
+                <p>You can rearrange tabs by dragging and
+                dropping.<br />
+                You can also close tabs by middle-clicking on them.</p>
+                <h2 id="findreplace">Find/Replace</h2>
+                <p>The code editor has built-in find and replace
+                functionality.<br />
+                Press Ctrl+F/Ctrl+H to open the find/replace dialog.</p>
+                <p><img
+                src="../../images/common/code_editor/find-and-replace.png"
+                alt="image" /></p>
+                <p><strong>Fields</strong></p>
+                <ul>
+                <li><strong>Find:</strong> Enter the string to search
+                for.</li>
+                <li><strong>Replace:</strong> Enter the replacement
+                string.</li>
+                </ul>
+                <p><strong>Checkboxes</strong></p>
+                <ul>
+                <li><strong>Match case:</strong> When enabled, searches
+                are case-sensitive.</li>
+                <li><strong>Whole words only:</strong> When enabled,
+                only matches complete words.</li>
+                <li><strong>Use regular expression:</strong> When
+                enabled, uses regex for searching.</li>
+                </ul>
+                <p><strong>Direction</strong></p>
+                <ul>
+                <li><strong>Up:</strong> Searches upward from the cursor
+                position.</li>
+                <li><strong>Down:</strong> Searches downward from the
+                cursor position.</li>
+                </ul>
+                <p><strong>Buttons</strong></p>
+                <ul>
+                <li><strong>Next:</strong> Moves to the next match.</li>
+                <li><strong>Prev:</strong> Moves to the previous
+                match.</li>
+                <li><strong>Find All:</strong> Selects all matches and
+                enters multi-cursor mode.</li>
+                <li><strong>Replace:</strong> Replaces the current
+                match.</li>
+                <li><strong>Replace All:</strong> Replaces all
+                matches.</li>
+                </ul>
+                <h2 id="multi-cursor">Multi-Cursor</h2>
+                <p>The code editor supports multi-cursor
+                functionality.<br />
+                Hold Ctrl and click to place multiple cursors.</p>
+                <p><img src="../../images/mult-cursor.png"
+                alt="multi-cursor" /></p>
+                <p>Normal editing operations work in multi-cursor
+                mode.<br />
+                For example, you can select, copy, paste, and
+                delete.</p>
+                <p>Main keyboard shortcuts for multi-cursor mode:</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Shortcut</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Ctrl+Click</td>
+                <td>Add cursor</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Drag</td>
+                <td>Add selection</td>
+                </tr>
+                <tr>
+                <td>Middle-Click+Drag</td>
+                <td>Rectangle/column selection</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>Next occurrence</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+L</td>
+                <td>All occurrences</td>
+                </tr>
+                <tr>
+                <td>Alt+Shift+I</td>
+                <td>Add cursors at line ends</td>
+                </tr>
+                <tr>
+                <td>Escape</td>
+                <td>Clear cursors</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="special-context-menu-features">Special Context
+                Menu Features</h2>
+                <p>The context menu (right-click menu) has several code
+                editor-specific features.</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor-menu.png"
+                alt="image" /></p>
+                <h3 id="command-help-display">Command Help Display</h3>
+                <p>You can display Maya <strong>python (cmds)</strong>
+                and <strong>OpenMaya (om)</strong> command help in the
+                browser from the context menu.</p>
+                <p>To display documentation, select the function name
+                following <code>cmds</code> as shown below:</p>
+                <p><img
+                src="../../images/common/code_editor/cmd-help.png"
+                alt="image" /></p>
+                <p>After selecting, choose <strong>Maya Help:
+                <function_name></strong> from the context menu.</p>
+                <p>Supported commands are as follows.<br />
+                Help for function names following the corresponding
+                strings will be displayed.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Module Name</th>
+                <th>Corresponding Strings</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>maya.cmds</td>
+                <td>cmds, mc</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMaya</td>
+                <td>om, OpenMaya</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaUI</td>
+                <td>omui, OpenMayaUI</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaAnim</td>
+                <td>oma, OpenMayaAnim</td>
+                </tr>
+                <tr>
+                <td>maya.api.OpenMayaRender</td>
+                <td>omr, OpenMayaRender</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="inspect-object-help">Inspect Object (Help)</h3>
+                <p>You can inspect Maya objects from the context
+                menu.</p>
+                <p>Select an object string and execute <strong>Inspect
+                Object: <object_name></strong> or <strong>Inspect Object
+                Help: <object_name></strong>.<br />
+                The object information will be displayed in the
+                terminal.</p>
+                <p><strong>Inspect Object Example</strong></p>
+                <p><img
+                src="../../images/common/code_editor/inspect-object.png"
+                alt="image" /></p>
+                <h3 id="reload">Reload</h3>
+                <p>You can reload the selected module from the context
+                menu.</p>
+                <p>Select a module string and execute <strong>Reload
+                Module: <module_name></strong>.<br />
+                The module will be reloaded.</p>
+                <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+                <p>Main keyboard shortcuts available in the code
+                editor:</p>
+                <table>
+                <colgroup>
+                <col style="width: 39%" />
+                <col style="width: 60%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Shortcut</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Ctrl+N</td>
+                <td>Create new file</td>
+                </tr>
+                <tr>
+                <td>Ctrl+S</td>
+                <td>Save current file</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+S</td>
+                <td>Save all open files</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>Select next occurrence (multi-selection)</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+D</td>
+                <td>Duplicate current line</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+K</td>
+                <td>Delete current line</td>
+                </tr>
+                <tr>
+                <td>Ctrl+L</td>
+                <td>Select current line (repeat to extend)</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+Up/Down</td>
+                <td>Move line up/down</td>
+                </tr>
+                <tr>
+                <td>Ctrl+/</td>
+                <td>Toggle line comment</td>
+                </tr>
+                <tr>
+                <td>Tab / Shift+Tab</td>
+                <td>Indent/unindent selection</td>
+                </tr>
+                <tr>
+                <td>Enter</td>
+                <td>Smart newline with auto-indent</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Click</td>
+                <td>Add cursor at click position</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Drag</td>
+                <td>Add selection (drag to select different code)</td>
+                </tr>
+                <tr>
+                <td>Middle-Click+Drag</td>
+                <td>Rectangle/column selection</td>
+                </tr>
+                <tr>
+                <td>Ctrl+D</td>
+                <td>Select word and add next occurrence</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+L</td>
+                <td>Select all occurrences of current word</td>
+                </tr>
+                <tr>
+                <td>Alt+Shift+I</td>
+                <td>Add cursors at end of lines in selection</td>
+                </tr>
+                <tr>
+                <td>Escape</td>
+                <td>Clear all multi-cursors</td>
+                </tr>
+                <tr>
+                <td>Ctrl+F</td>
+                <td>Find dialog</td>
+                </tr>
+                <tr>
+                <td>Ctrl+H</td>
+                <td>Replace dialog</td>
+                </tr>
+                <tr>
+                <td>F3 / Shift+F3</td>
+                <td>Find next/previous</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Enter</td>
+                <td>Execute current line or selection</td>
+                </tr>
+                <tr>
+                <td>Numpad Enter</td>
+                <td>Execute current script (same as Run button)</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Shift+Enter</td>
+                <td>Execute entire file</td>
+                </tr>
+                <tr>
+                <td>Ctrl+K</td>
+                <td>Clear terminal output</td>
+                </tr>
+                <tr>
+                <td>Ctrl+MouseWheel</td>
+                <td>Adjust font size</td>
+                </tr>
+                </tbody>
+                </table>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

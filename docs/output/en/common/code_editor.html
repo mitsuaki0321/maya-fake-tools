@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Custom Python code editor for Maya">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/code_editor.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li class="active">Code Editor</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#interface"
+                    id="toc-interface">Interface</a>
+                    <ul>
+                    <li><a href="#toolbar"
+                    id="toc-toolbar">Toolbar</a></li>
+                    <li><a href="#file-explorer"
+                    id="toc-file-explorer">File Explorer</a></li>
+                    <li><a href="#code-editor" id="toc-code-editor">Code
+                    Editor</a></li>
+                    <li><a href="#terminal"
+                    id="toc-terminal">Terminal</a></li>
+                    </ul></li>
+                    <li><a href="#running-code"
+                    id="toc-running-code">Running Code</a></li>
+                    <li><a href="#configuration-files"
+                    id="toc-configuration-files">Configuration
+                    Files</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Code Editor</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A custom Python code editor for Maya.<br />
+                It features syntax highlighting, file explorer,
+                terminal, and more.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following commands.</p>
+                <pre class="python"><code>import faketools.tools.common.code_editor.ui
+faketools.tools.common.code_editor.ui.show_ui()</code></pre>
+                <pre class="python"><code>import faketools.tools.common.code_editor.ui
+faketools.tools.common.code_editor.ui.show_ui(floating=True)</code></pre>
+                <p>Use <code>floating=True</code> to launch as a
+                floating window.<br />
+                Use <code>floating=False</code> (default) to dock it to
+                Maya’s main window.</p>
+                <h2 id="interface">Interface</h2>
+                <p>The tool interface consists of the following main
+                components.</p>
+                <p><img src="../../images/common/code_editor/window.png"
+                alt="image" /></p>
+                <h3 id="toolbar">Toolbar</h3>
+                <p>The toolbar provides quick access to main actions
+                like creating files, saving, and running code.<br />
+                See <a href="code_editor_toolbar.html">Toolbar
+                Documentation</a> for details.</p>
+                <p><img
+                src="../../images/common/code_editor/toolbar.png"
+                alt="image" /></p>
+                <h3 id="file-explorer">File Explorer</h3>
+                <p>The file explorer displays the project directory
+                structure and makes file management easy.<br />
+                See <a href="code_editor_file_explorer.html">File
+                Explorer Documentation</a> for details.</p>
+                <p><img
+                src="../../images/common/code_editor/file-explorer.png"
+                alt="image" /></p>
+                <h3 id="code-editor">Code Editor</h3>
+                <p>The code editor provides advanced code editing
+                features like syntax highlighting and error
+                checking.<br />
+                See <a href="code_editor_editor.html">Code Editor
+                Documentation</a> for details.</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor.png"
+                alt="image" /></p>
+                <h3 id="terminal">Terminal</h3>
+                <p>The terminal displays code execution results and
+                error messages.<br />
+                See <a href="code_editor_terminal.html">Terminal
+                Documentation</a> for details.</p>
+                <p><img
+                src="../../images/common/code_editor/terminal.png"
+                alt="image" /></p>
+                <h2 id="running-code">Running Code</h2>
+                <ol type="1">
+                <li>Click the + icon in the toolbar to create a new
+                file.</li>
+                <li>Enter Python code in the code editor.</li>
+                <li>Click the Play icon in the toolbar to run the
+                code.</li>
+                <li>The execution results will be displayed in the
+                output console.</li>
+                </ol>
+                <h2 id="configuration-files">Configuration Files</h2>
+                <p>The tool saves configuration files in the following
+                locations.</p>
+                <ul>
+                <li>User settings:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>Session:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/session.json</code></li>
+                <li>Workspace settings:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/workspace.json</code></li>
+                <li>Workspace files:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/</code></li>
+                <li>Autosave:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/.maya_code_editor_backups/</code></li>
+                </ul>
+                <p>See <a href="code_editor_settings.html">User
+                Settings</a> for detailed configuration options.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

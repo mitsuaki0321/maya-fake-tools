@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="カスタム Python コードエディター">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/code_editor.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li class="active">Code Editor</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#インターフェース"
+                    id="toc-インターフェース">インターフェース</a>
+                    <ul>
+                    <li><a href="#ツールバー"
+                    id="toc-ツールバー">ツールバー</a></li>
+                    <li><a href="#ファイルエクスプローラー"
+                    id="toc-ファイルエクスプローラー">ファイルエクスプローラー</a></li>
+                    <li><a href="#コードエディター"
+                    id="toc-コードエディター">コードエディター</a></li>
+                    <li><a href="#ターミナル"
+                    id="toc-ターミナル">ターミナル</a></li>
+                    </ul></li>
+                    <li><a href="#コードを実行する"
+                    id="toc-コードを実行する">コードを実行する</a></li>
+                    <li><a href="#設定ファイル"
+                    id="toc-設定ファイル">設定ファイル</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Code Editor</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Maya 用のカスタム Python コードエディターです。<br />
+                シンタックスハイライト、ファイルエクスプローラー、ターミナルなどの機能を備えています。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.code_editor.ui
+faketools.tools.common.code_editor.ui.show_ui()</code></pre>
+                <pre class="python"><code>import faketools.tools.common.code_editor.ui
+faketools.tools.common.code_editor.ui.show_ui(floating=True)</code></pre>
+                <p><code>floating=True</code>
+                を指定すると、フローティングウィンドウとして起動します。<br />
+                <code>floating=False</code> (デフォルト)
+                を指定すると、Maya
+                のメインウィンドウにドッキングします。</p>
+                <h2 id="インターフェース">インターフェース</h2>
+                <p>ツールのインターフェースは以下の主要なコンポーネントで構成されています。</p>
+                <p><img src="../../images/common/code_editor/window.png"
+                alt="image" /></p>
+                <h3 id="ツールバー">ツールバー</h3>
+                <p>ツールバーは、ファイルの作成や保存、コードの実行などの主要なアクションに素早くアクセスできます。<br />
+                → 詳細は <a
+                href="code_editor_toolbar.html">ツールバーのドキュメント</a>
+                を参照してください。</p>
+                <p><img
+                src="../../images/common/code_editor/toolbar.png"
+                alt="image" /></p>
+                <h3
+                id="ファイルエクスプローラー">ファイルエクスプローラー</h3>
+                <p>ファイルエクスプローラーは、プロジェクトのディレクトリ構造を表示し、ファイルの管理を容易にします。<br />
+                → 詳細は <a
+                href="code_editor_file_explorer.html">ファイルエクスプローラーのドキュメント</a>
+                を参照してください。</p>
+                <p><img
+                src="../../images/common/code_editor/file-explorer.png"
+                alt="image" /></p>
+                <h3 id="コードエディター">コードエディター</h3>
+                <p>コードエディターは、シンタックスハイライト、エラーチェックなどの高度なコード編集機能を提供します。<br />
+                → 詳細は <a
+                href="code_editor_editor.html">コードエディターのドキュメント</a>
+                を参照してください。</p>
+                <p><img
+                src="../../images/common/code_editor/code-editor.png"
+                alt="image" /></p>
+                <h3 id="ターミナル">ターミナル</h3>
+                <p>ターミナルは、コードの実行結果やエラーメッセージを表示します。<br />
+                → 詳細は <a
+                href="code_editor_terminal.html">ターミナルのドキュメント</a>
+                を参照してください。</p>
+                <p><img
+                src="../../images/common/code_editor/terminal.png"
+                alt="image" /></p>
+                <h2 id="コードを実行する">コードを実行する</h2>
+                <ol type="1">
+                <li>ツールバーの ＋
+                アイコンをクリックして新しいファイルを作成します。</li>
+                <li>コードエディターに Python コードを入力します。</li>
+                <li>ツールバーの ▶
+                アイコンをクリックしてコードを実行します。</li>
+                <li>アウトプットコンソールに実行結果が表示されます。</li>
+                </ol>
+                <h2 id="設定ファイル">設定ファイル</h2>
+                <p>ツールは、以下の場所に設定ファイルを保存します。</p>
+                <ul>
+                <li>ユーザー設定:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>セッション:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/session.json</code></li>
+                <li>ワークスペース設定:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/workspace.json</code></li>
+                <li>ワークスペースファイル:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/</code></li>
+                <li>オートセーブ:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/.maya_code_editor_backups/</code></li>
+                </ul>
+                <p>詳細な設定については、<a
+                href="code_editor_settings.html">ユーザー設定</a>をご覧ください。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

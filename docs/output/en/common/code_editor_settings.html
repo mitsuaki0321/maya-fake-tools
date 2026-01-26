@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Settings - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/code_editor_settings.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li><a href="code_editor.html">Code Editor</a></li>
+                        <li class="active">User Settings</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#settings-file-location"
+                    id="toc-settings-file-location">Settings File
+                    Location</a></li>
+                    <li><a href="#settings-options"
+                    id="toc-settings-options">Settings Options</a>
+                    <ul>
+                    <li><a href="#editor-settings-editor"
+                    id="toc-editor-settings-editor">Editor Settings
+                    (editor)</a></li>
+                    <li><a href="#terminal-settings-terminal"
+                    id="toc-terminal-settings-terminal">Terminal
+                    Settings (terminal)</a></li>
+                    <li><a href="#search-settings-search"
+                    id="toc-search-settings-search">Search Settings
+                    (search)</a></li>
+                    <li><a href="#maya-integration-settings-maya"
+                    id="toc-maya-integration-settings-maya">Maya
+                    Integration Settings (maya)</a></li>
+                    <li><a href="#command-port-settings-command_port"
+                    id="toc-command-port-settings-command_port">Command
+                    Port Settings (command_port)</a></li>
+                    <li><a href="#autosave-settings-autosave"
+                    id="toc-autosave-settings-autosave">Autosave
+                    Settings (autosave)</a></li>
+                    <li><a href="#file-settings-files"
+                    id="toc-file-settings-files">File Settings
+                    (files)</a></li>
+                    <li><a href="#layout-settings-layout"
+                    id="toc-layout-settings-layout">Layout Settings
+                    (layout)</a></li>
+                    </ul></li>
+                    <li><a href="#settings-file-example"
+                    id="toc-settings-file-example">Settings File
+                    Example</a></li>
+                    <li><a href="#how-to-change-settings"
+                    id="toc-how-to-change-settings">How to Change
+                    Settings</a>
+                    <ul>
+                    <li><a
+                    href="#method-1-from-the-editor-settings-screen"
+                    id="toc-method-1-from-the-editor-settings-screen">Method
+                    1: From the Editor Settings Screen</a></li>
+                    <li><a href="#method-2-edit-json-file-directly"
+                    id="toc-method-2-edit-json-file-directly">Method 2:
+                    Edit JSON File Directly</a></li>
+                    </ul></li>
+                    <li><a href="#resetting-settings"
+                    id="toc-resetting-settings">Resetting
+                    Settings</a></li>
+                    <li><a href="#backup-and-restore-settings"
+                    id="toc-backup-and-restore-settings">Backup and
+                    Restore Settings</a>
+                    <ul>
+                    <li><a href="#backup"
+                    id="toc-backup">Backup</a></li>
+                    <li><a href="#restore"
+                    id="toc-restore">Restore</a></li>
+                    </ul></li>
+                    <li><a href="#troubleshooting"
+                    id="toc-troubleshooting">Troubleshooting</a>
+                    <ul>
+                    <li><a href="#settings-not-being-applied"
+                    id="toc-settings-not-being-applied">Settings Not
+                    Being Applied</a></li>
+                    <li><a href="#settings-file-not-found"
+                    id="toc-settings-file-not-found">Settings File Not
+                    Found</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">User Settings</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>This document describes the Code Editor user
+                settings.</p>
+                <h2 id="settings-file-location">Settings File
+                Location</h2>
+                <p>Settings files are automatically saved in the
+                following locations:</p>
+                <ul>
+                <li>Windows:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>Mac:
+                <code>~/Library/Preferences/Autodesk/maya/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>Linux:
+                <code>~/maya/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                </ul>
+                <p>Note: Settings can be changed from the editor
+                settings screen. You can also edit the JSON file
+                directly.</p>
+                <h2 id="settings-options">Settings Options</h2>
+                <h3 id="editor-settings-editor">Editor Settings
+                (editor)</h3>
+                <p>Settings for code editor display and behavior.</p>
+                <table>
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 29%" />
+                <col style="width: 41%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>font_family</code></td>
+                <td>“Consolas”</td>
+                <td>Editor font name</td>
+                </tr>
+                <tr>
+                <td><code>font_size</code></td>
+                <td>10</td>
+                <td>Editor font size</td>
+                </tr>
+                <tr>
+                <td><code>tab_size</code></td>
+                <td>4</td>
+                <td>Number of spaces when pressing Tab</td>
+                </tr>
+                <tr>
+                <td><code>word_wrap</code></td>
+                <td>true</td>
+                <td>Whether to wrap long lines</td>
+                </tr>
+                <tr>
+                <td><code>show_line_numbers</code></td>
+                <td>true</td>
+                <td>Whether to show line numbers</td>
+                </tr>
+                <tr>
+                <td><code>highlight_current_line</code></td>
+                <td>true</td>
+                <td>Whether to highlight the current line</td>
+                </tr>
+                <tr>
+                <td><code>auto_indent</code></td>
+                <td>true</td>
+                <td>Whether to auto-indent on new lines</td>
+                </tr>
+                <tr>
+                <td><code>theme</code></td>
+                <td>“dark_modern”</td>
+                <td>Color theme (dark_modern / dark_classic /
+                light)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="terminal-settings-terminal">Terminal Settings
+                (terminal)</h3>
+                <p>Settings for the terminal that displays execution
+                results.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>font_family</code></td>
+                <td>“Consolas”</td>
+                <td>Terminal font name</td>
+                </tr>
+                <tr>
+                <td><code>font_size</code></td>
+                <td>9</td>
+                <td>Terminal font size</td>
+                </tr>
+                <tr>
+                <td><code>max_lines</code></td>
+                <td>1000</td>
+                <td>Maximum lines to display in terminal</td>
+                </tr>
+                <tr>
+                <td><code>auto_scroll</code></td>
+                <td>true</td>
+                <td>Whether to auto-scroll to new output</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="search-settings-search">Search Settings
+                (search)</h3>
+                <p>Initial settings for find/replace functionality.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>match_case</code></td>
+                <td>false</td>
+                <td>Whether to match case when searching</td>
+                </tr>
+                <tr>
+                <td><code>whole_words</code></td>
+                <td>false</td>
+                <td>Whether to search for whole words only</td>
+                </tr>
+                <tr>
+                <td><code>use_regex</code></td>
+                <td>false</td>
+                <td>Whether to use regular expressions</td>
+                </tr>
+                <tr>
+                <td><code>search_direction</code></td>
+                <td>“down”</td>
+                <td>Search direction (down / up)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="maya-integration-settings-maya">Maya Integration
+                Settings (maya)</h3>
+                <p>Settings for Maya-specific features.</p>
+                <h4 id="help-settings-maya.help">Help Settings
+                (maya.help)</h4>
+                <p>Settings for Maya command help display available from
+                the code editor context menu.</p>
+                <table>
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 29%" />
+                <col style="width: 41%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>language</code></td>
+                <td>“JPN”</td>
+                <td>Maya help language (JPN: Japanese / ENU:
+                English)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="command-port-settings-command_port">Command Port
+                Settings (command_port)</h3>
+                <p>Settings for integration with external tools.<br />
+                Used when integrating with tools like MCP Server.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>enabled</code></td>
+                <td>false</td>
+                <td>Whether to enable command port</td>
+                </tr>
+                <tr>
+                <td><code>port</code></td>
+                <td>7001</td>
+                <td>Port number to use</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="autosave-settings-autosave">Autosave Settings
+                (autosave)</h3>
+                <p>Settings for automatic saving of work.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>enabled</code></td>
+                <td>true</td>
+                <td>Whether to enable autosave</td>
+                </tr>
+                <tr>
+                <td><code>interval_seconds</code></td>
+                <td>60</td>
+                <td>Autosave interval in seconds</td>
+                </tr>
+                <tr>
+                <td><code>backup_on_change</code></td>
+                <td>true</td>
+                <td>Whether to create backup on file change</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="file-settings-files">File Settings (files)</h3>
+                <p>Settings for file management.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>max_recent_files</code></td>
+                <td>20</td>
+                <td>Maximum number of recent files in history</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="layout-settings-layout">Layout Settings
+                (layout)</h3>
+                <p>Settings for window layout.</p>
+                <table>
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 29%" />
+                <col style="width: 41%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Setting</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>terminal_at_bottom</code></td>
+                <td>true</td>
+                <td>Terminal position (true: bottom / false: top)</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="settings-file-example">Settings File
+                Example</h2>
+                <pre class="json"><code>{
+  &quot;editor&quot;: {
+    &quot;font_family&quot;: &quot;Consolas&quot;,
+    &quot;font_size&quot;: 12,
+    &quot;tab_size&quot;: 4,
+    &quot;word_wrap&quot;: true,
+    &quot;show_line_numbers&quot;: true,
+    &quot;highlight_current_line&quot;: true,
+    &quot;auto_indent&quot;: true,
+    &quot;theme&quot;: &quot;dark_modern&quot;
+  },
+  &quot;terminal&quot;: {
+    &quot;font_family&quot;: &quot;Consolas&quot;,
+    &quot;font_size&quot;: 10,
+    &quot;max_lines&quot;: 1000,
+    &quot;auto_scroll&quot;: true
+  },
+  &quot;search&quot;: {
+    &quot;match_case&quot;: false,
+    &quot;whole_words&quot;: false,
+    &quot;use_regex&quot;: false,
+    &quot;search_direction&quot;: &quot;down&quot;
+  },
+  &quot;maya&quot;: {
+    &quot;help&quot;: {
+      &quot;language&quot;: &quot;ENU&quot;
+    }
+  },
+  &quot;command_port&quot;: {
+    &quot;enabled&quot;: false,
+    &quot;port&quot;: 7001
+  },
+  &quot;autosave&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;interval_seconds&quot;: 60,
+    &quot;backup_on_change&quot;: true
+  },
+  &quot;files&quot;: {
+    &quot;max_recent_files&quot;: 20
+  },
+  &quot;layout&quot;: {
+    &quot;terminal_at_bottom&quot;: true
+  }
+}</code></pre>
+                <h2 id="how-to-change-settings">How to Change
+                Settings</h2>
+                <h3 id="method-1-from-the-editor-settings-screen">Method
+                1: From the Editor Settings Screen</h3>
+                <ol type="1">
+                <li>Open Code Editor</li>
+                <li>Select “Settings” from the menu</li>
+                <li>Change each item and click “Save”</li>
+                </ol>
+                <h3 id="method-2-edit-json-file-directly">Method 2: Edit
+                JSON File Directly</h3>
+                <ol type="1">
+                <li>Open the JSON file at the settings file location
+                with a text editor</li>
+                <li>Change values and save</li>
+                <li>Restart Code Editor</li>
+                </ol>
+                <h2 id="resetting-settings">Resetting Settings</h2>
+                <p>To restore all settings to default: 1. Close Code
+                Editor 2. Delete the <code>user_settings.json</code>
+                file 3. Restart Code Editor (default settings will be
+                created automatically)</p>
+                <h2 id="backup-and-restore-settings">Backup and Restore
+                Settings</h2>
+                <h3 id="backup">Backup</h3>
+                <p>To save your current settings elsewhere, copy the
+                <code>user_settings.json</code> file.</p>
+                <h3 id="restore">Restore</h3>
+                <ol type="1">
+                <li>Close Code Editor</li>
+                <li>Overwrite the original location with your backup
+                JSON file</li>
+                <li>Restart Code Editor</li>
+                </ol>
+                <h2 id="troubleshooting">Troubleshooting</h2>
+                <h3 id="settings-not-being-applied">Settings Not Being
+                Applied</h3>
+                <ul>
+                <li>Close and restart Code Editor completely</li>
+                <li>Check for JSON syntax errors (comma placement,
+                bracket matching, etc.)</li>
+                </ul>
+                <h3 id="settings-file-not-found">Settings File Not
+                Found</h3>
+                <ul>
+                <li>The file is created automatically when Code Editor
+                is launched</li>
+                <li>To create manually, copy the “Settings File Example”
+                above</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

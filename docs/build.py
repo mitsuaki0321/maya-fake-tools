@@ -264,22 +264,25 @@ class DocBuilder:
         breadcrumb = self.build_breadcrumb(md_file, lang, metadata)
 
         # Prepare template variables
+        home_text = "ホーム" if lang == "ja" else "Home"
+        home_link = "index.html" if lang == "ja" else "index_en.html"
         template_vars = {
             "lang": lang,
             "title": metadata.get("title", ""),
             "description": metadata.get("description", ""),
             "root_path": root_path,
             "project_name": self.config["project"]["name" if lang == "ja" else "name_en"],
-            "home_text": "ホーム" if lang == "ja" else "Home",
-            "home_link": "index.html" if lang == "ja" else "index_en.html",
+            "home_text": home_text,
+            "home_link": home_link,
             "toc_title": "目次" if lang == "ja" else "Table of Contents",
             "lang_link": lang_link,
             "lang_link_text": lang_link_text,
         }
 
-        # Add breadcrumb if available
+        # Add breadcrumb HTML if available
         if breadcrumb:
-            template_vars["breadcrumb"] = breadcrumb
+            breadcrumb_html = self.render_breadcrumb_html(breadcrumb, root_path, home_link, home_text)
+            template_vars["breadcrumb_html"] = breadcrumb_html
 
         # Write content to temp file (without front matter)
         temp_md = md_file.with_suffix(".tmp.md")
@@ -378,11 +381,47 @@ class DocBuilder:
 
             breadcrumb.append({"text": category_name, "url": None, "active": False})
 
+        # Add parent page link if specified (for sub-pages)
+        parent = metadata.get("parent")
+        if parent:
+            parent_title = metadata.get("parent_title", parent)
+            parent_url = f"{parent}.html"
+            breadcrumb.append({"text": parent_title, "url": parent_url, "active": False})
+
         # Add current page (no link, marked as active)
         page_title = metadata.get("title", md_file.stem)
         breadcrumb.append({"text": page_title, "url": None, "active": True})
 
         return breadcrumb
+
+    def render_breadcrumb_html(self, breadcrumb: list[dict], root_path: str, home_link: str, home_text: str) -> str:
+        """
+        Render breadcrumb navigation as HTML string.
+
+        Args:
+            breadcrumb: Breadcrumb items
+            root_path: Relative path to root
+            home_link: Home page link
+            home_text: Home link text
+
+        Returns:
+            str: HTML string for breadcrumb
+        """
+        html_parts = ['<nav class="breadcrumb" aria-label="breadcrumb">', "    <ol>"]
+        html_parts.append(f'        <li><a href="{root_path}{home_link}">{home_text}</a></li>')
+
+        for item in breadcrumb:
+            if item.get("active"):
+                html_parts.append(f'        <li class="active">{item["text"]}</li>')
+            elif item.get("url"):
+                html_parts.append(f'        <li><a href="{item["url"]}">{item["text"]}</a></li>')
+            else:
+                html_parts.append(f'        <li>{item["text"]}</li>')
+
+        html_parts.append("    </ol>")
+        html_parts.append("</nav>")
+
+        return "\n".join(html_parts)
 
     def copy_images_for_file(self, md_file: Path, output_file: Path, lang: str):
         """
@@ -458,6 +497,11 @@ class DocBuilder:
 
         for md_file in md_files:
             metadata, _ = self.parse_front_matter(md_file)
+
+            # Skip hidden pages (sub-pages)
+            if metadata.get("hidden"):
+                continue
+
             tool_name = metadata.get("title", md_file.stem)
             tool_description = metadata.get("description", "")
             order = metadata.get("order", 100)  # Default order: 100

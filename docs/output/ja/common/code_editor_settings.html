@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ユーザー設定 - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/code_editor_settings.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li><a href="code_editor.html">Code Editor</a></li>
+                        <li class="active">ユーザー設定</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#設定ファイルの場所"
+                    id="toc-設定ファイルの場所">設定ファイルの場所</a></li>
+                    <li><a href="#設定項目"
+                    id="toc-設定項目">設定項目</a>
+                    <ul>
+                    <li><a href="#エディタ設定-editor"
+                    id="toc-エディタ設定-editor">エディタ設定
+                    (editor)</a></li>
+                    <li><a href="#ターミナル設定-terminal"
+                    id="toc-ターミナル設定-terminal">ターミナル設定
+                    (terminal)</a></li>
+                    <li><a href="#検索設定-search"
+                    id="toc-検索設定-search">検索設定 (search)</a></li>
+                    <li><a href="#maya連携設定-maya"
+                    id="toc-maya連携設定-maya">Maya連携設定
+                    (maya)</a></li>
+                    <li><a href="#コマンドポート設定-command_port"
+                    id="toc-コマンドポート設定-command_port">コマンドポート設定
+                    (command_port)</a></li>
+                    <li><a href="#自動保存設定-autosave"
+                    id="toc-自動保存設定-autosave">自動保存設定
+                    (autosave)</a></li>
+                    <li><a href="#ファイル設定-files"
+                    id="toc-ファイル設定-files">ファイル設定
+                    (files)</a></li>
+                    <li><a href="#レイアウト設定-layout"
+                    id="toc-レイアウト設定-layout">レイアウト設定
+                    (layout)</a></li>
+                    </ul></li>
+                    <li><a href="#設定ファイルの例"
+                    id="toc-設定ファイルの例">設定ファイルの例</a></li>
+                    <li><a href="#設定の変更方法"
+                    id="toc-設定の変更方法">設定の変更方法</a>
+                    <ul>
+                    <li><a href="#方法1-エディタの設定画面から変更"
+                    id="toc-方法1-エディタの設定画面から変更">方法1:
+                    エディタの設定画面から変更</a></li>
+                    <li><a href="#方法2-jsonファイルを直接編集"
+                    id="toc-方法2-jsonファイルを直接編集">方法2:
+                    JSONファイルを直接編集</a></li>
+                    </ul></li>
+                    <li><a href="#設定のリセット"
+                    id="toc-設定のリセット">設定のリセット</a></li>
+                    <li><a href="#設定のバックアップと復元"
+                    id="toc-設定のバックアップと復元">設定のバックアップと復元</a>
+                    <ul>
+                    <li><a href="#バックアップ"
+                    id="toc-バックアップ">バックアップ</a></li>
+                    <li><a href="#復元" id="toc-復元">復元</a></li>
+                    </ul></li>
+                    <li><a href="#トラブルシューティング"
+                    id="toc-トラブルシューティング">トラブルシューティング</a>
+                    <ul>
+                    <li><a href="#設定が反映されない場合"
+                    id="toc-設定が反映されない場合">設定が反映されない場合</a></li>
+                    <li><a href="#設定ファイルが見つからない場合"
+                    id="toc-設定ファイルが見つからない場合">設定ファイルが見つからない場合</a></li>
+                    </ul></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">ユーザー設定</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>このドキュメントでは、コードエディターのユーザー設定について説明します。</p>
+                <h2 id="設定ファイルの場所">設定ファイルの場所</h2>
+                <p>設定ファイルは、以下の場所に自動的に保存されます：</p>
+                <ul>
+                <li>Windows:
+                <code>%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>Mac:
+                <code>~/Library/Preferences/Autodesk/maya/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                <li>Linux:
+                <code>~/maya/faketools_workspace/common/code_editor/config/user_settings.json</code></li>
+                </ul>
+                <p>※
+                設定はエディタの設定画面から変更できます。直接JSONファイルを編集することも可能です。</p>
+                <h2 id="設定項目">設定項目</h2>
+                <h3 id="エディタ設定-editor">エディタ設定 (editor)</h3>
+                <p>コードエディタの表示と動作に関する設定です。</p>
+                <table>
+                <colgroup>
+                <col style="width: 30%" />
+                <col style="width: 46%" />
+                <col style="width: 23%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>font_family</code></td>
+                <td>“Consolas”</td>
+                <td>エディタのフォント名</td>
+                </tr>
+                <tr>
+                <td><code>font_size</code></td>
+                <td>10</td>
+                <td>エディタの文字サイズ</td>
+                </tr>
+                <tr>
+                <td><code>tab_size</code></td>
+                <td>4</td>
+                <td>タブキーを押したときの空白文字数</td>
+                </tr>
+                <tr>
+                <td><code>word_wrap</code></td>
+                <td>true</td>
+                <td>長い行を折り返して表示するか</td>
+                </tr>
+                <tr>
+                <td><code>show_line_numbers</code></td>
+                <td>true</td>
+                <td>行番号を表示するか</td>
+                </tr>
+                <tr>
+                <td><code>highlight_current_line</code></td>
+                <td>true</td>
+                <td>カーソルがある行をハイライト表示するか</td>
+                </tr>
+                <tr>
+                <td><code>auto_indent</code></td>
+                <td>true</td>
+                <td>改行時に自動でインデントを行うか</td>
+                </tr>
+                <tr>
+                <td><code>theme</code></td>
+                <td>“dark_modern”</td>
+                <td>カラーテーマ（dark_modern / dark_classic /
+                light）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="ターミナル設定-terminal">ターミナル設定
+                (terminal)</h3>
+                <p>実行結果を表示するターミナルの設定です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>font_family</code></td>
+                <td>“Consolas”</td>
+                <td>ターミナルのフォント名</td>
+                </tr>
+                <tr>
+                <td><code>font_size</code></td>
+                <td>9</td>
+                <td>ターミナルの文字サイズ</td>
+                </tr>
+                <tr>
+                <td><code>max_lines</code></td>
+                <td>1000</td>
+                <td>ターミナルに表示する最大行数</td>
+                </tr>
+                <tr>
+                <td><code>auto_scroll</code></td>
+                <td>true</td>
+                <td>新しい出力を自動でスクロールして表示するか</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="検索設定-search">検索設定 (search)</h3>
+                <p>検索・置換機能の初期設定です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>match_case</code></td>
+                <td>false</td>
+                <td>大文字・小文字を区別して検索するか</td>
+                </tr>
+                <tr>
+                <td><code>whole_words</code></td>
+                <td>false</td>
+                <td>単語単位で検索するか</td>
+                </tr>
+                <tr>
+                <td><code>use_regex</code></td>
+                <td>false</td>
+                <td>正規表現を使用して検索するか</td>
+                </tr>
+                <tr>
+                <td><code>search_direction</code></td>
+                <td>“down”</td>
+                <td>検索方向（down: 下方向 / up: 上方向）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="maya連携設定-maya">Maya連携設定 (maya)</h3>
+                <p>Maya固有の機能に関する設定です。</p>
+                <h4 id="ヘルプ設定-maya.help">ヘルプ設定
+                (maya.help)</h4>
+                <p>コードエディターのコンテキストメニューより実行できる
+                Maya コマンドのヘルプ表示に関する設定です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>language</code></td>
+                <td>“JPN”</td>
+                <td>Mayaヘルプの言語（JPN: 日本語 / ENU: 英語）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3
+                id="コマンドポート設定-command_port">コマンドポート設定
+                (command_port)</h3>
+                <p>外部ツールとの連携用の設定です。<br />
+                MCP Serverなどのツールと連携する場合に使用します。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>enabled</code></td>
+                <td>false</td>
+                <td>コマンドポートを有効にするか</td>
+                </tr>
+                <tr>
+                <td><code>port</code></td>
+                <td>7001</td>
+                <td>使用するポート番号</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="自動保存設定-autosave">自動保存設定
+                (autosave)</h3>
+                <p>作業内容の自動保存に関する設定です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>enabled</code></td>
+                <td>true</td>
+                <td>自動保存を有効にするか</td>
+                </tr>
+                <tr>
+                <td><code>interval_seconds</code></td>
+                <td>60</td>
+                <td>自動保存の間隔（秒）</td>
+                </tr>
+                <tr>
+                <td><code>backup_on_change</code></td>
+                <td>true</td>
+                <td>ファイル変更時にバックアップを作成するか</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="ファイル設定-files">ファイル設定 (files)</h3>
+                <p>ファイル管理に関する設定です。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>max_recent_files</code></td>
+                <td>20</td>
+                <td>最近使ったファイルの履歴の最大数</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="レイアウト設定-layout">レイアウト設定
+                (layout)</h3>
+                <p>ウィンドウのレイアウトに関する設定です。</p>
+                <table>
+                <colgroup>
+                <col style="width: 30%" />
+                <col style="width: 46%" />
+                <col style="width: 23%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>terminal_at_bottom</code></td>
+                <td>true</td>
+                <td>ターミナルの表示位置（true: 下 / false: 上）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="設定ファイルの例">設定ファイルの例</h2>
+                <pre class="json"><code>{
+  &quot;editor&quot;: {
+    &quot;font_family&quot;: &quot;Consolas&quot;,
+    &quot;font_size&quot;: 12,
+    &quot;tab_size&quot;: 4,
+    &quot;word_wrap&quot;: true,
+    &quot;show_line_numbers&quot;: true,
+    &quot;highlight_current_line&quot;: true,
+    &quot;auto_indent&quot;: true,
+    &quot;theme&quot;: &quot;dark_modern&quot;
+  },
+  &quot;terminal&quot;: {
+    &quot;font_family&quot;: &quot;Consolas&quot;,
+    &quot;font_size&quot;: 10,
+    &quot;max_lines&quot;: 1000,
+    &quot;auto_scroll&quot;: true
+  },
+  &quot;search&quot;: {
+    &quot;match_case&quot;: false,
+    &quot;whole_words&quot;: false,
+    &quot;use_regex&quot;: false,
+    &quot;search_direction&quot;: &quot;down&quot;
+  },
+  &quot;maya&quot;: {
+    &quot;help&quot;: {
+      &quot;language&quot;: &quot;JPN&quot;
+    }
+  },
+  &quot;command_port&quot;: {
+    &quot;enabled&quot;: false,
+    &quot;port&quot;: 7001
+  },
+  &quot;autosave&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;interval_seconds&quot;: 60,
+    &quot;backup_on_change&quot;: true
+  },
+  &quot;files&quot;: {
+    &quot;max_recent_files&quot;: 20
+  },
+  &quot;layout&quot;: {
+    &quot;terminal_at_bottom&quot;: true
+  }
+}</code></pre>
+                <h2 id="設定の変更方法">設定の変更方法</h2>
+                <h3 id="方法1-エディタの設定画面から変更">方法1:
+                エディタの設定画面から変更</h3>
+                <ol type="1">
+                <li>コードエディターを開く</li>
+                <li>メニューから「設定」を選択</li>
+                <li>各項目を変更して「保存」をクリック</li>
+                </ol>
+                <h3 id="方法2-jsonファイルを直接編集">方法2:
+                JSONファイルを直接編集</h3>
+                <ol type="1">
+                <li>上記の設定ファイルの場所にあるJSONファイルをテキストエディタで開く</li>
+                <li>値を変更して保存</li>
+                <li>コードエディターを再起動</li>
+                </ol>
+                <h2 id="設定のリセット">設定のリセット</h2>
+                <p>すべての設定をデフォルトに戻したい場合： 1.
+                コードエディターを閉じる 2.
+                <code>user_settings.json</code>ファイルを削除 3.
+                コードエディターを再起動（自動的にデフォルト設定が作成されます）</p>
+                <h2
+                id="設定のバックアップと復元">設定のバックアップと復元</h2>
+                <h3 id="バックアップ">バックアップ</h3>
+                <p>現在の設定を別の場所に保存したい場合は、<code>user_settings.json</code>ファイルをコピーして保存してください。</p>
+                <h3 id="復元">復元</h3>
+                <ol type="1">
+                <li>コードエディターを閉じる</li>
+                <li>バックアップしたJSONファイルを元の場所に上書きコピー</li>
+                <li>コードエディターを再起動</li>
+                </ol>
+                <h2
+                id="トラブルシューティング">トラブルシューティング</h2>
+                <h3
+                id="設定が反映されない場合">設定が反映されない場合</h3>
+                <ul>
+                <li>Code Editor を完全に閉じて再起動してください</li>
+                <li>JSONファイルの構文エラーがないか確認してください（カンマの位置、括弧の対応など）</li>
+                </ul>
+                <h3
+                id="設定ファイルが見つからない場合">設定ファイルが見つからない場合</h3>
+                <ul>
+                <li>Code Editor
+                を一度起動すると自動的に作成されます</li>
+                <li>手動で作成する場合は、上記の「設定ファイルの例」をコピーして使用してください</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

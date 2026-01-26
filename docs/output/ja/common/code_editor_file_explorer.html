@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファイルエクスプローラー - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/code_editor_file_explorer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li><a href="code_editor.html">Code Editor</a></li>
+                        <li class="active">ファイルエクスプローラー</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#機能説明"
+                    id="toc-機能説明">機能説明</a>
+                    <ul>
+                    <li><a href="#ディレクトリツリー操作"
+                    id="toc-ディレクトリツリー操作">ディレクトリツリー操作</a></li>
+                    <li><a href="#ファイルをタブで開く"
+                    id="toc-ファイルをタブで開く">ファイルをタブで開く</a></li>
+                    <li><a href="#ファイルを開かず実行"
+                    id="toc-ファイルを開かず実行">ファイルを開かず実行</a></li>
+                    </ul></li>
+                    <li><a href="#ショートカットキー"
+                    id="toc-ショートカットキー">ショートカットキー</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">ファイルエクスプローラー</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>ファイルエクスプローラーは、プロジェクトのディレクトリ構造を表示し、ファイルの管理を容易にします。</p>
+                <p><img
+                src="../../images/common/code_editor/file-explorer.png"
+                alt="image" /></p>
+                <h2 id="機能説明">機能説明</h2>
+                <h3
+                id="ディレクトリツリー操作">ディレクトリツリー操作</h3>
+                <p>ファイルエクスプローラーには、プロジェクトのルートディレクトリが表示されます。</p>
+                <p><img
+                src="../../images/common/code_editor/directory-tree.png"
+                alt="image" /></p>
+                <p>新規のディレクトリは、右クリックメニューの
+                <code>New Folder</code> から作成できます。<br />
+                また、ファイルを Drag &amp; Drop
+                で移動することも可能です。</p>
+                <p>そのほかにも、右クリックメニューから以下の操作が可能です。</p>
+                <table>
+                <colgroup>
+                <col style="width: 22%" />
+                <col style="width: 77%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>操作</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>Open</strong></td>
+                <td>選択したファイルをエディタで開きます。</td>
+                </tr>
+                <tr>
+                <td><strong>New Python File</strong></td>
+                <td>選択したディレクトリに新しい Python
+                ファイルを作成します。</td>
+                </tr>
+                <tr>
+                <td><strong>New Folder</strong></td>
+                <td>選択したディレクトリに新しいフォルダを作成します。</td>
+                </tr>
+                <tr>
+                <td><strong>Copy</strong></td>
+                <td>選択したファイルまたはフォルダをコピーします。</td>
+                </tr>
+                <tr>
+                <td><strong>Cut</strong></td>
+                <td>選択したファイルまたはフォルダを切り取ります。</td>
+                </tr>
+                <tr>
+                <td><strong>Paste</strong></td>
+                <td>コピーまたは切り取ったファイルまたはフォルダを貼り付けます。</td>
+                </tr>
+                <tr>
+                <td><strong>Rename</strong></td>
+                <td>選択したファイルまたはフォルダの名前を変更します。</td>
+                </tr>
+                <tr>
+                <td><strong>Delete</strong></td>
+                <td>選択したファイルまたはフォルダを削除します。</td>
+                </tr>
+                <tr>
+                <td><strong>Refresh</strong></td>
+                <td>ディレクトリツリーを更新します。</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="ファイルをタブで開く">ファイルをタブで開く</h3>
+                <p>エクスプローラー上のファイルをクリックすると、そのファイルがエディタの新しいタブで開きます。<br />
+                それぞれ、クリックするとプレビュータブで開き、ダブルクリックすると永続タブで開きます。</p>
+                <p>プレビュータブは、1
+                つのタブで複数のファイルを順番にプレビューできます。</p>
+                <p><strong>プレビュータブ</strong></p>
+                <p><img
+                src="../../images/common/code_editor/preview-tab.png"
+                alt="iamge" /></p>
+                <p><strong>永続タブ</strong></p>
+                <p><img
+                src="../../images/common/code_editor/pinned-tab.png"
+                alt="image" /></p>
+                <h3 id="ファイルを開かず実行">ファイルを開かず実行</h3>
+                <p>python
+                ファイルをエクスプローラーでホバーすることにより、右端に
+                <code>Run</code> ボタンが表示されます。<br />
+                </p>
+                <p><img
+                src="../../images/common/code_editor/directory-run-code.png"
+                alt="image" /></p>
+                <p><code>Run</code>
+                ボタンをクリックすると、そのファイルをエディタで開かずに直接実行できます。</p>
+                <h2 id="ショートカットキー">ショートカットキー</h2>
+                <p>ファイルエクスプローラーには、以下のショートカットキーが割り当てられています。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>操作</th>
+                <th>ショートカットキー</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Copy</td>
+                <td><code>Ctrl + C</code></td>
+                </tr>
+                <tr>
+                <td>Cut</td>
+                <td><code>Ctrl + X</code></td>
+                </tr>
+                <tr>
+                <td>Paste</td>
+                <td><code>Ctrl + V</code></td>
+                </tr>
+                <tr>
+                <td>Rename</td>
+                <td><code>F2</code></td>
+                </tr>
+                </tbody>
+                </table>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
