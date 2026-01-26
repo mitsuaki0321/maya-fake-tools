@@ -10,6 +10,8 @@ import os
 from typing import Any
 
 from .....lib_ui.qt_compat import QFont
+from ..ui.code_editor import DEFAULT_FONT_FAMILY as EDITOR_FONT_FAMILY
+from ..ui.output_terminal import DEFAULT_FONT_FAMILY as TERMINAL_FONT_FAMILY
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager
@@ -236,11 +238,9 @@ class SettingsManager:
 
     def get_editor_font(self) -> QFont:  # type: ignore
         """Get editor font settings as QFont object."""
-        font_info = self.user_settings.get_editor_font_info()
-        family = font_info["family"]
-        size = font_info["size"]
+        size = self.user_settings.get_editor_font_size()
 
-        font = QFont(family, size)
+        font = QFont(EDITOR_FONT_FAMILY, size)
         if not font.exactMatch():
             font = QFont("Courier New", size)
 
@@ -248,11 +248,9 @@ class SettingsManager:
 
     def get_terminal_font(self) -> QFont:  # type: ignore
         """Get terminal font settings as QFont object."""
-        font_info = self.user_settings.get_terminal_font_info()
-        family = font_info["family"]
-        size = font_info["size"]
+        size = self.user_settings.get_terminal_font_size()
 
-        font = QFont(family, size)
+        font = QFont(TERMINAL_FONT_FAMILY, size)
         if not font.exactMatch():
             font = QFont("Courier New", size)
 

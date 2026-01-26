@@ -28,24 +28,18 @@ Settings for code editor display and behavior.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `font_family` | "Consolas" | Editor font name |
 | `font_size` | 10 | Editor font size |
-| `tab_size` | 4 | Number of spaces when pressing Tab |
-| `word_wrap` | true | Whether to wrap long lines |
-| `show_line_numbers` | true | Whether to show line numbers |
-| `highlight_current_line` | true | Whether to highlight the current line |
-| `auto_indent` | true | Whether to auto-indent on new lines |
-| `theme` | "dark_modern" | Color theme (dark_modern / dark_classic / light) |
+
+Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Tab size is 4 spaces. Word wrap and line numbers are always enabled.
 
 ### Terminal Settings (terminal)
 Settings for the terminal that displays execution results.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `font_family` | "Consolas" | Terminal font name |
 | `font_size` | 9 | Terminal font size |
-| `max_lines` | 1000 | Maximum lines to display in terminal |
-| `auto_scroll` | true | Whether to auto-scroll to new output |
+
+Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Maximum lines is 1000.
 
 ### Search Settings (search)
 Initial settings for find/replace functionality.
@@ -85,13 +79,6 @@ Settings for automatic saving of work.
 | `interval_seconds` | 60 | Autosave interval in seconds |
 | `backup_on_change` | true | Whether to create backup on file change |
 
-### File Settings (files)
-Settings for file management.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `max_recent_files` | 20 | Maximum number of recent files in history |
-
 ### Layout Settings (layout)
 Settings for window layout.
 
@@ -103,21 +90,14 @@ Settings for window layout.
 
 ```json
 {
+  "general": {
+    "language": "JPN"
+  },
   "editor": {
-    "font_family": "Consolas",
-    "font_size": 12,
-    "tab_size": 4,
-    "word_wrap": true,
-    "show_line_numbers": true,
-    "highlight_current_line": true,
-    "auto_indent": true,
-    "theme": "dark_modern"
+    "font_size": 12
   },
   "terminal": {
-    "font_family": "Consolas",
-    "font_size": 10,
-    "max_lines": 1000,
-    "auto_scroll": true
+    "font_size": 10
   },
   "search": {
     "match_case": false,
@@ -138,9 +118,6 @@ Settings for window layout.
     "enabled": true,
     "interval_seconds": 60,
     "backup_on_change": true
-  },
-  "files": {
-    "max_recent_files": 20
   },
   "layout": {
     "terminal_at_bottom": true

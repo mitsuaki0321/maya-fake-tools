@@ -28,24 +28,18 @@ lang-ref: code_editor_settings
 
 | 設定名 | デフォルト値 | 説明 |
 |--------|------------|------|
-| `font_family` | "Consolas" | エディタのフォント名 |
 | `font_size` | 10 | エディタの文字サイズ |
-| `tab_size` | 4 | タブキーを押したときの空白文字数 |
-| `word_wrap` | true | 長い行を折り返して表示するか |
-| `show_line_numbers` | true | 行番号を表示するか |
-| `highlight_current_line` | true | カーソルがある行をハイライト表示するか |
-| `auto_indent` | true | 改行時に自動でインデントを行うか |
-| `theme` | "dark_modern" | カラーテーマ（dark_modern / dark_classic / light） |
+
+※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。タブサイズは4スペース。折り返し表示と行番号は常に有効です。
 
 ### ターミナル設定 (terminal)
 実行結果を表示するターミナルの設定です。
 
 | 設定名 | デフォルト値 | 説明 |
 |--------|------------|------|
-| `font_family` | "Consolas" | ターミナルのフォント名 |
 | `font_size` | 9 | ターミナルの文字サイズ |
-| `max_lines` | 1000 | ターミナルに表示する最大行数 |
-| `auto_scroll` | true | 新しい出力を自動でスクロールして表示するか |
+
+※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。最大行数は1000行です。
 
 ### 検索設定 (search)
 検索・置換機能の初期設定です。
@@ -85,13 +79,6 @@ MCP Serverなどのツールと連携する場合に使用します。
 | `interval_seconds` | 60 | 自動保存の間隔（秒） |
 | `backup_on_change` | true | ファイル変更時にバックアップを作成するか |
 
-### ファイル設定 (files)
-ファイル管理に関する設定です。
-
-| 設定名 | デフォルト値 | 説明 |
-|--------|------------|------|
-| `max_recent_files` | 20 | 最近使ったファイルの履歴の最大数 |
-
 ### レイアウト設定 (layout)
 ウィンドウのレイアウトに関する設定です。
 
@@ -103,21 +90,14 @@ MCP Serverなどのツールと連携する場合に使用します。
 
 ```json
 {
+  "general": {
+    "language": "JPN"
+  },
   "editor": {
-    "font_family": "Consolas",
-    "font_size": 12,
-    "tab_size": 4,
-    "word_wrap": true,
-    "show_line_numbers": true,
-    "highlight_current_line": true,
-    "auto_indent": true,
-    "theme": "dark_modern"
+    "font_size": 12
   },
   "terminal": {
-    "font_family": "Consolas",
-    "font_size": 10,
-    "max_lines": 1000,
-    "auto_scroll": true
+    "font_size": 10
   },
   "search": {
     "match_case": false,
@@ -138,9 +118,6 @@ MCP Serverなどのツールと連携する場合に使用します。
     "enabled": true,
     "interval_seconds": 60,
     "backup_on_change": true
-  },
-  "files": {
-    "max_recent_files": 20
   },
   "layout": {
     "terminal_at_bottom": true

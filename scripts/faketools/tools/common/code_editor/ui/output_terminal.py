@@ -7,6 +7,10 @@ Supports both Maya native terminal and fallback QTextEdit.
 from .....lib_ui.qt_compat import QApplication, QColor, QFont, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
 from ..themes import AppTheme
 
+# Terminal constants
+DEFAULT_FONT_FAMILY = "Consolas"
+MAX_OUTPUT_LINES = 1000
+
 # Try to import Maya terminal widget
 try:
     from .maya_terminal_widget import MAYA_AVAILABLE, MayaTerminalWidget
@@ -24,7 +28,7 @@ class OutputTerminal(QWidget):
         self.output_display = None
         self.maya_terminal = None
         self.use_maya_terminal = False
-        self.max_lines = 1000  # Limit output lines to prevent memory issues
+        self.max_lines = MAX_OUTPUT_LINES
 
         # Font size management
         self.default_font_size = 9  # Will be set from settings
@@ -66,9 +70,9 @@ class OutputTerminal(QWidget):
         self.output_display.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Set font for terminal-like appearance
-        font = QFont("Consolas", 9)
+        font = QFont(DEFAULT_FONT_FAMILY, self.default_font_size)
         if not font.exactMatch():
-            font = QFont("Courier New", 9)
+            font = QFont("Courier New", self.default_font_size)
         self.output_display.setFont(font)
 
         # Set colors for terminal appearance with scrollbar styling
@@ -218,7 +222,7 @@ class OutputTerminal(QWidget):
 
         # Update terminal font
         if self.output_display:
-            font = QFont("Consolas", size)
+            font = QFont(DEFAULT_FONT_FAMILY, size)
             if not font.exactMatch():
                 font = QFont("Courier New", size)
             self.output_display.setFont(font)

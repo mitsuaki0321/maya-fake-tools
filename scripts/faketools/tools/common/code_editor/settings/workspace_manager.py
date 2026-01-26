@@ -25,8 +25,6 @@ class WorkspaceManager:
             # Workspace settings
             "workspace": {
                 "root_directory": "",  # Will be set to default workspace on first run
-                "name": "Default Workspace",
-                "description": "Code Editor workspace",
                 "created_date": "",
                 "last_accessed": "",
             },
@@ -260,8 +258,6 @@ class WorkspaceManager:
     def get_workspace_info(self) -> dict[str, Any]:
         """Get workspace information."""
         return {
-            "name": self.get("workspace.name", "Unknown Workspace"),
-            "description": self.get("workspace.description", ""),
             "root_directory": self.get_workspace_directory(),
             "created_date": self.get("workspace.created_date", ""),
             "last_accessed": self.get("workspace.last_accessed", ""),

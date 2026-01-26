@@ -28,32 +28,29 @@ class UserSettings:
             },
             # Editor settings
             "editor": {
-                "font_family": "Consolas",
                 "font_size": 10,
-                "tab_size": 4,
-                "word_wrap": True,
-                "show_line_numbers": True,
-                "highlight_current_line": True,
-                "auto_indent": True,
-                "theme": "dark_modern",
             },
             # Terminal settings
-            "terminal": {"font_family": "Consolas", "font_size": 9, "max_lines": 1000, "auto_scroll": True},
+            "terminal": {
+                "font_size": 9,
+            },
             # Search settings
-            "search": {"match_case": False, "whole_words": False, "use_regex": False, "search_direction": "down"},
+            "search": {
+                "match_case": False,
+                "whole_words": False,
+                "use_regex": False,
+                "search_direction": "down",
+            },
             # Auto-save settings
             "autosave": {
                 "enabled": True,
                 "interval_seconds": 60,
                 "backup_on_change": True,
             },
-            # File settings
-            "files": {"max_recent_files": 20},
             # Layout settings
             "layout": {
                 "terminal_at_bottom": True,  # True: editor top/terminal bottom, False: terminal top/editor bottom
             },
-            # Snippets settings removed - no longer needed
         }
 
     def load_settings(self) -> dict[str, Any]:
@@ -125,13 +122,13 @@ class UserSettings:
         # Set the final value
         setting_dict[keys[-1]] = value
 
-    def get_editor_font_info(self) -> dict[str, Any]:
-        """Get editor font information as dictionary."""
-        return {"family": self.get("editor.font_family", "Consolas"), "size": self.get("editor.font_size", 10)}
+    def get_editor_font_size(self) -> int:
+        """Get editor font size."""
+        return self.get("editor.font_size", 10)
 
-    def get_terminal_font_info(self) -> dict[str, Any]:
-        """Get terminal font information as dictionary."""
-        return {"family": self.get("terminal.font_family", "Consolas"), "size": self.get("terminal.font_size", 9)}
+    def get_terminal_font_size(self) -> int:
+        """Get terminal font size."""
+        return self.get("terminal.font_size", 9)
 
     def get_search_settings(self) -> dict[str, Any]:
         """Get search dialog settings."""

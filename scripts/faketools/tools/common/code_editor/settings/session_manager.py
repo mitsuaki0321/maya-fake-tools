@@ -10,6 +10,9 @@ from typing import Any
 
 logger = getLogger(__name__)
 
+# Constants
+MAX_RECENT_FILES = 20
+
 
 class SessionManager:
     """Manages session state and temporary data."""
@@ -144,7 +147,6 @@ class SessionManager:
     def add_recent_file(self, file_path: str):
         """Add a file to the recent files list."""
         recent_files = self.get("recent_files", [])
-        max_recent = 20  # Default max recent files
 
         # Remove if already exists
         if file_path in recent_files:
@@ -154,7 +156,7 @@ class SessionManager:
         recent_files.insert(0, file_path)
 
         # Trim to max length
-        recent_files = recent_files[:max_recent]
+        recent_files = recent_files[:MAX_RECENT_FILES]
 
         self.set("recent_files", recent_files)
 
