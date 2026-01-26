@@ -38,12 +38,12 @@ class VSCodeButton(QPushButton):
         """Load all icon states."""
         self.icons = {}
         for state in ["normal", "hover", "pressed"]:
-            icon_path = os.path.join(self.icon_base_path, f"{self.icon_name}_{state}.png")
+            icon_path = os.path.join(self.icon_base_path, f"{self.icon_name}_{state}.svg")
             if os.path.exists(icon_path):
                 self.icons[state] = QIcon(icon_path)
             else:
                 # Fallback to normal if specific state doesn't exist
-                normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.png")
+                normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.svg")
                 if os.path.exists(normal_path):
                     self.icons[state] = QIcon(normal_path)
 
@@ -166,27 +166,7 @@ class ToolBar(QWidget):
         """)
 
         # Toggle explorer button (leftmost)
-        self.toggle_explorer_button = QPushButton("≡")
-        self.toggle_explorer_button.setFixedSize(26, 20)
-        self.toggle_explorer_button.setToolTip("Toggle File Explorer")
-        self.toggle_explorer_button.setCursor(Qt.PointingHandCursor)
-        self.toggle_explorer_button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: 1px solid transparent;
-                border-radius: 3px;
-                padding: 2px;
-                color: #CCCCCC;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #3c3c3c;
-            }
-            QPushButton:pressed {
-                background-color: #094771;
-            }
-        """)
+        self.toggle_explorer_button = VSCodeButton("toggle", "Toggle File Explorer")
 
         # First separator (after toggle explorer)
         sep0 = ToolBarSeparator()
@@ -219,27 +199,7 @@ class ToolBar(QWidget):
         sep5 = ToolBarSeparator()
 
         # Swap layout button
-        self.swap_layout_button = QPushButton("⇅")
-        self.swap_layout_button.setFixedSize(26, 20)
-        self.swap_layout_button.setToolTip("Swap Editor/Terminal Position")
-        self.swap_layout_button.setCursor(Qt.PointingHandCursor)
-        self.swap_layout_button.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border: 1px solid transparent;
-                border-radius: 3px;
-                padding: 2px;
-                color: #CCCCCC;
-                font-size: 14px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #3c3c3c;
-            }
-            QPushButton:pressed {
-                background-color: #094771;
-            }
-        """)
+        self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 
         # Add widgets to layout following the specified order
         layout.addWidget(self.toggle_explorer_button)
