@@ -222,7 +222,7 @@ In PNG mode, you can add annotations (arrows, shapes, etc.) to captured images.
 
 ### Launching the Annotation Editor
 
-After capturing an image in PNG mode, select **Edit Annotations** from the option menu, or Shift+click the Save/Copy button to open the annotation editor.
+After capturing an image in PNG mode, enable the **Edit Annotations** option, then click the **Save button** to launch the annotation editor.
 
 ### Toolbar
 
@@ -236,13 +236,38 @@ The annotation editor toolbar has the following features:
 
 | Tool | Icon | Description |
 |------|------|-------------|
-| Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select and drag to move annotations |
+| Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select annotations, drag to move, Ctrl+middle wheel to scale |
 | Freehand | ![image](../../images/common/snapshot_capture/tool_freehand.svg) | Draw freehand lines |
 | Line | ![image](../../images/common/snapshot_capture/tool_line.svg) | Draw a straight line |
 | Arrow | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | Draw an arrow |
 | Rectangle | ![image](../../images/common/snapshot_capture/tool_rect.svg) | Draw a rectangle |
 | Ellipse | ![image](../../images/common/snapshot_capture/tool_ellipse.svg) | Draw a circle or ellipse |
 | Number | ![image](../../images/common/snapshot_capture/tool_number.svg) | Draw a numbered circle (auto-increments) |
+| Text | ![image](../../images/common/snapshot_capture/tool_text.svg) | Add text |
+
+#### Select Tool
+
+When the select tool is active, click on an annotation to select it.
+The following operations are available for selected annotations:
+
+- **Move**: Drag to move position
+- **Scale**: Hold Ctrl and scroll middle wheel to enlarge/shrink
+- **Multiple selection**: Drag to select multiple items
+- **Delete**: Press Delete / Backspace to delete
+
+**Selection state**
+![image](../../images/common/snapshot_capture/image020.png)
+
+#### Text Tool
+
+When the text tool is active, click on the image to display the text input dialog.
+
+![image](../../images/common/snapshot_capture/image018.png)
+
+Press `Enter` to insert a new line.
+Press `Ctrl + Enter` to confirm the text.
+
+![image](../../images/common/snapshot_capture/image019.png)
 
 #### Color Selection
 
@@ -270,6 +295,8 @@ Select from 3 presets (thin, medium, thick).
 | Clear All | ![image](../../images/common/snapshot_capture/action_clear.svg) | Delete all annotations |
 
 ### Footer Buttons
+
+![image](../../images/common/snapshot_capture/image017.png)
 
 | Button | Icon | Description |
 |--------|------|-------------|

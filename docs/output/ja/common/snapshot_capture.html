@@ -512,11 +512,10 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 alt="image" /></p>
                 <h3
                 id="アノテーションエディターの起動">アノテーションエディターの起動</h3>
-                <p>PNG
-                モードで画像をキャプチャした後、オプションメニューから
-                <strong>Annotation Editor</strong>
-                を選択するか、Save/Copy ボタンを
-                Shift+クリックすることでアノテーションエディターが開きます。</p>
+                <p>PNG モードで画像をキャプチャした後、オプションの
+                <strong>Edit Annotations</strong> を有効にしたのち、に
+                <strong>Save ボタン</strong>
+                をクリックすると、アノテーションエディターが起動します。</p>
                 <h3 id="ツールバー">ツールバー</h3>
                 <p>アノテーションエディターのツールバーには以下の機能があります。</p>
                 <p><img
@@ -545,7 +544,7 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 <td><img
                 src="../../images/common/snapshot_capture/tool_select.svg"
                 alt="image" /></td>
-                <td>描画したアノテーションを選択・ドラッグで移動</td>
+                <td>描画したアノテーションを選択・ドラッグで移動・Ctrl+中ホイールでスケール</td>
                 </tr>
                 <tr>
                 <td>フリーハンド</td>
@@ -589,8 +588,42 @@ faketools.tools.common.snapshot_capture.ui.show_ui()</code></pre>
                 alt="image" /></td>
                 <td>番号付きの丸を描画（自動でインクリメント）</td>
                 </tr>
+                <tr>
+                <td>テキスト</td>
+                <td><img
+                src="../../images/common/snapshot_capture/tool_text.svg"
+                alt="image" /></td>
+                <td>テキストを追加</td>
+                </tr>
                 </tbody>
                 </table>
+                <h4 id="選択ツール">選択ツール</h4>
+                <p>選択ツールがアクティブな状態でアノテーションをクリックすると、そのアノテーションが選択されます。<br />
+                選択中のアノテーションに対しては、以下の操作が可能です。</p>
+                <ul>
+                <li><strong>移動</strong>: ドラッグで位置を移動</li>
+                <li><strong>スケール</strong>: Ctrl
+                キーを押しながら中ホイールを回転させて拡大・縮小</li>
+                <li><strong>複数選択</strong>: ドラッグで複数選択　</li>
+                <li><strong>削除</strong>: Delete / Backspace
+                キーで削除</li>
+                </ul>
+                <p><strong>選択状態</strong><br />
+                <img
+                src="../../images/common/snapshot_capture/image020.png"
+                alt="image" /></p>
+                <h4 id="テキストツール">テキストツール</h4>
+                <p>テキストツールがアクティブな状態で画像をクリックすると、テキスト入力ダイアログが表示されます。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image018.png"
+                alt="image" /></p>
+                <p>改行する場合は、<code>Enter</code>
+                キーを押してください。
+                テキストの決定は、<code>Ctrl + Enter</code>
+                キーで行います。</p>
+                <p><img
+                src="../../images/common/snapshot_capture/image019.png"
+                alt="image" /></p>
                 <h4 id="色の選択">色の選択</h4>
                 <p><img
                 src="../../images/common/snapshot_capture/image012.png"

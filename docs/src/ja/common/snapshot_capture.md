@@ -224,7 +224,7 @@ PNG モードでは、キャプチャした画像に矢印や図形などのア�
 
 ### アノテーションエディターの起動
 
-PNG モードで画像をキャプチャした後、オプションメニューから **Annotation Editor** を選択するか、Save/Copy ボタンを Shift+クリックすることでアノテーションエディターが開きます。
+PNG モードで画像をキャプチャした後、オプションの **Edit Annotations** を有効にしたのち、に **Save ボタン** をクリックすると、アノテーションエディターが起動します。
 
 ### ツールバー
 
@@ -238,13 +238,38 @@ PNG モードで画像をキャプチャした後、オプションメニュー�
 
 | ツール | アイコン | 説明 |
 |--------|----------|------|
-| 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・ドラッグで移動 |
+| 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・ドラッグで移動・Ctrl+中ホイールでスケール |
 | フリーハンド | ![image](../../images/common/snapshot_capture/tool_freehand.svg) | フリーハンドで線を描画 |
 | 線 | ![image](../../images/common/snapshot_capture/tool_line.svg) | 直線を描画 |
 | 矢印 | ![image](../../images/common/snapshot_capture/tool_arrow.svg) | 矢印を描画 |
 | 矩形 | ![image](../../images/common/snapshot_capture/tool_rect.svg) | 四角形を描画 |
 | 楕円 | ![image](../../images/common/snapshot_capture/tool_ellipse.svg) | 円・楕円を描画 |
 | 番号 | ![image](../../images/common/snapshot_capture/tool_number.svg) | 番号付きの丸を描画（自動でインクリメント） |
+| テキスト | ![image](../../images/common/snapshot_capture/tool_text.svg) | テキストを追加 |
+
+#### 選択ツール
+
+選択ツールがアクティブな状態でアノテーションをクリックすると、そのアノテーションが選択されます。  
+選択中のアノテーションに対しては、以下の操作が可能です。
+
+- **移動**: ドラッグで位置を移動
+- **スケール**: Ctrl キーを押しながら中ホイールを回転させて拡大・縮小
+- **複数選択**: ドラッグで複数選択　
+- **削除**: Delete / Backspace キーで削除
+
+**選択状態**  
+![image](../../images/common/snapshot_capture/image020.png)
+
+#### テキストツール
+
+テキストツールがアクティブな状態で画像をクリックすると、テキスト入力ダイアログが表示されます。
+
+![image](../../images/common/snapshot_capture/image018.png)
+
+改行する場合は、`Enter` キーを押してください。
+テキストの決定は、`Ctrl + Enter` キーで行います。
+
+![image](../../images/common/snapshot_capture/image019.png)
 
 #### 色の選択
 
