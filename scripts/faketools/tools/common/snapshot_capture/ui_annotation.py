@@ -312,6 +312,25 @@ class TextInputWidget(QWidget):
         """Accept the current text (for external calls like outside click)."""
         self._on_accept()
 
+    def get_text_offset(self) -> tuple[float, float]:
+        """Get the offset from widget origin to where text actually starts.
+
+        Returns:
+            Tuple of (x_offset, y_offset) in pixels.
+        """
+        # Get the cursor rect at position 0 to find where text starts
+        cursor = self._text_edit.textCursor()
+        cursor.setPosition(0)
+        cursor_rect = self._text_edit.cursorRect(cursor)
+
+        # Add the viewport offset within the QPlainTextEdit
+        viewport_pos = self._text_edit.viewport().pos()
+
+        return (
+            viewport_pos.x() + cursor_rect.x(),
+            viewport_pos.y() + cursor_rect.y(),
+        )
+
 
 class AnnotationEditorDialog(QDialog):
     """Dialog for editing annotations on an image."""
@@ -2016,12 +2035,34 @@ class AnnotationGraphicsView(QGraphicsView):
         # Add to scene via proxy widget
         self._text_input_proxy = QGraphicsProxyWidget()
         self._text_input_proxy.setWidget(self._text_input_widget)
-        self._text_input_proxy.setPos(self._text_input_pos)
         self._text_input_proxy.setZValue(1000)  # Above other items
         self.scene().addItem(self._text_input_proxy)
 
+        # Position widget so text starts at click position
+        # Need to defer positioning until widget is laid out
+        self._text_input_proxy.setPos(self._text_input_pos)
+        QTimer.singleShot(0, self._adjust_text_input_position)
+
         # Set focus to input
         self._text_input_widget.set_focus()
+
+    def _adjust_text_input_position(self):
+        """Adjust text input widget position after layout is complete."""
+        if not self._text_input_widget or not self._text_input_proxy or not self._text_input_pos:
+            return
+
+        # Get the offset from widget origin to where text actually starts
+        offset_x, offset_y = self._text_input_widget.get_text_offset()
+
+        # Save the y offset for use when creating final text item
+        self._text_input_offset = (offset_x, offset_y)
+
+        # Adjust position so text starts at click position
+        adjusted_pos = QPointF(
+            self._text_input_pos.x() - offset_x,
+            self._text_input_pos.y() - offset_y,
+        )
+        self._text_input_proxy.setPos(adjusted_pos)
 
     def _finalize_text_input(self, text: str):
         """Finalize text input and create annotation.
@@ -2116,6 +2157,7 @@ class AnnotationGraphicsView(QGraphicsView):
             self._text_input_widget = None
 
         self._text_input_pos = None
+        self._text_input_offset = None
 
     def _create_text_item(self, annotation: TextAnnotation, x: float, y: float):
         """Create a visual text item for a text annotation.
@@ -2134,11 +2176,25 @@ class AnnotationGraphicsView(QGraphicsView):
         font.setBold(getattr(annotation, "bold", False))
         text_item.setFont(font)
 
+        # Remove internal document margin so text starts exactly at position
+        text_item.document().setDocumentMargin(0)
+
+        # Calculate vertical position adjustment using input widget offset
+        # The y offset from input widget ensures vertical alignment with where cursor was displayed
+        # The x offset is not used because QGraphicsTextItem text starts at origin,
+        # while input widget has padding/border that shifts cursor position
+        input_offset_y = 0.0
+        if hasattr(self, "_text_input_offset") and self._text_input_offset:
+            _, input_offset_y = self._text_input_offset
+
+        adjusted_x = x
+        adjusted_y = y - input_offset_y
+
         # Create container for selection/movement
         text_rect = text_item.boundingRect()
         container = MovableTextItem(text_item, 0, 0, text_rect.width(), text_rect.height())
         container.annotation_id = annotation.id
-        container.setPos(x, y)
+        container.setPos(adjusted_x, adjusted_y)
 
         self.scene().addItem(container)
 
