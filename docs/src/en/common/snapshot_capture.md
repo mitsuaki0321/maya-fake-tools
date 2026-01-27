@@ -234,6 +234,11 @@ The annotation editor toolbar has the following features:
 
 ![image](../../images/common/snapshot_capture/image011.png)
 
+Click each icon to open a popup menu to select a drawing tool.
+
+![image](../../images/common/snapshot_capture/image022.png)
+
+
 | Tool | Icon | Description |
 |------|------|-------------|
 | Select | ![image](../../images/common/snapshot_capture/tool_select.svg) | Select annotations, drag to move, Ctrl+middle wheel to scale |

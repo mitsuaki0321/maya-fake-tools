@@ -236,6 +236,11 @@ PNG モードで画像をキャプチャした後、オプションの **Edit An
 
 ![image](../../images/common/snapshot_capture/image011.png)
 
+各アイコンをクリックしてポップアップするメニューから描画ツールを選択します。
+
+![image](../../images/common/snapshot_capture/image022.png)
+
+
 | ツール | アイコン | 説明 |
 |--------|----------|------|
 | 選択 | ![image](../../images/common/snapshot_capture/tool_select.svg) | 描画したアノテーションを選択・ドラッグで移動・Ctrl+中ホイールでスケール |
