@@ -311,6 +311,7 @@ Select from 3 presets (thin, medium, thick).
 | Ctrl + Z | Undo the last action (supports create and move operations) |
 | Delete / Backspace | Delete the selected annotation |
 | Shift + drag | Snap lines/arrows to 45-degree angles, constrain rectangles/ellipses to squares/circles, snap number radius to 10px increments |
+| Space (hold) | Temporarily switch to selection tool while held (returns to previous tool on release) |
 
 ### Settings Persistence
 
