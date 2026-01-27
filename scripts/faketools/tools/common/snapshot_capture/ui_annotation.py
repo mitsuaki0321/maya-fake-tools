@@ -815,6 +815,19 @@ class AnnotationEditorDialog(QDialog):
         # Update button styles
         self._update_tool_button_styles()
 
+    def _update_tool_buttons(self, tool: str):
+        """Update tool button visual states without triggering set_tool.
+
+        Used by AnnotationGraphicsView for spacebar temporary tool switch.
+
+        Args:
+            tool: Tool identifier to show as selected.
+        """
+        self._current_tool = tool
+        for t, btn in self._tool_buttons.items():
+            btn.setChecked(t == tool)
+        self._update_tool_button_styles()
+
     def _on_color_preset(self, color: tuple[int, int, int]):
         """Handle color preset selection.
 
@@ -1169,6 +1182,10 @@ class AnnotationGraphicsView(QGraphicsView):
         self._current_item = None
         self._shift_pressed = False
 
+        # Spacebar temporary tool switch state
+        self._spacebar_pressed = False
+        self._tool_before_spacebar: str | None = None
+
         # Freehand drawing state
         self._freehand_path: QPainterPath | None = None
         self._freehand_points: list[tuple[float, float]] = []
@@ -1193,6 +1210,11 @@ class AnnotationGraphicsView(QGraphicsView):
         Args:
             tool: Tool identifier.
         """
+        # Clear spacebar state if tool is changed manually (e.g., via toolbar button)
+        if self._spacebar_pressed:
+            self._spacebar_pressed = False
+            self._tool_before_spacebar = None
+
         # Cancel any pending text input when switching tools
         if self._current_tool == TOOL_TEXT and tool != TOOL_TEXT:
             self._cancel_text_input()
@@ -1243,6 +1265,33 @@ class AnnotationGraphicsView(QGraphicsView):
         Args:
             event: Key event.
         """
+        # Handle spacebar for temporary tool switch
+        if event.key() == Qt.Key.Key_Space:
+            # Ignore auto-repeat events (key held down)
+            if event.isAutoRepeat():
+                return
+            # Ignore if text input is active (allow space character input)
+            if self._text_input_widget is not None:
+                super().keyPressEvent(event)
+                return
+            # Ignore if drawing in progress
+            if self._drawing:
+                return
+            # Ignore if already in spacebar mode or already using select tool
+            if self._spacebar_pressed or self._current_tool == TOOL_SELECT:
+                return
+            # Save current tool and switch to select tool
+            self._spacebar_pressed = True
+            self._tool_before_spacebar = self._current_tool
+            self._current_tool = TOOL_SELECT
+            self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            self._update_cursor()
+            # Notify parent to update toolbar button state
+            parent = self.parent()
+            if parent and hasattr(parent, "_update_tool_buttons"):
+                parent._update_tool_buttons(TOOL_SELECT)
+            return
+
         if event.key() == Qt.Key.Key_Shift:
             self._shift_pressed = True
         elif event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
@@ -1272,9 +1321,55 @@ class AnnotationGraphicsView(QGraphicsView):
         Args:
             event: Key event.
         """
+        # Handle spacebar release to restore original tool
+        if event.key() == Qt.Key.Key_Space:
+            # Ignore auto-repeat events (key held down)
+            if event.isAutoRepeat():
+                return
+            if self._spacebar_pressed and self._tool_before_spacebar is not None:
+                original_tool = self._tool_before_spacebar
+                self._spacebar_pressed = False
+                self._tool_before_spacebar = None
+                self._current_tool = original_tool
+                if original_tool == TOOL_SELECT:
+                    self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+                else:
+                    self.setDragMode(QGraphicsView.DragMode.NoDrag)
+                self._update_cursor()
+                # Notify parent to update toolbar button state
+                parent = self.parent()
+                if parent and hasattr(parent, "_update_tool_buttons"):
+                    parent._update_tool_buttons(original_tool)
+            return
+
         if event.key() == Qt.Key.Key_Shift:
             self._shift_pressed = False
         super().keyReleaseEvent(event)
+
+    def focusOutEvent(self, event):
+        """Handle focus out events.
+
+        Restores the original tool if spacebar was pressed when focus is lost.
+
+        Args:
+            event: Focus event.
+        """
+        # Restore original tool if spacebar mode is active
+        if self._spacebar_pressed and self._tool_before_spacebar is not None:
+            original_tool = self._tool_before_spacebar
+            self._spacebar_pressed = False
+            self._tool_before_spacebar = None
+            self._current_tool = original_tool
+            if original_tool == TOOL_SELECT:
+                self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
+            else:
+                self.setDragMode(QGraphicsView.DragMode.NoDrag)
+            self._update_cursor()
+            # Notify parent to update toolbar button state
+            parent = self.parent()
+            if parent and hasattr(parent, "_update_tool_buttons"):
+                parent._update_tool_buttons(original_tool)
+        super().focusOutEvent(event)
 
     def wheelEvent(self, event):
         """Handle wheel events for scaling selected items.
