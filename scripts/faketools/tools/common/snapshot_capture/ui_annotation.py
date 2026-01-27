@@ -664,7 +664,7 @@ class AnnotationEditorDialog(QDialog):
 
             popup = QWidget(self)
             popup.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
-            popup.setStyleSheet("QWidget { background: #2e2e2e; border: 1px solid #555; border-radius: 4px; }")
+            popup.setStyleSheet("QWidget { background: #2e2e2e; border: 1px solid #555; }")
             popup_layout = QHBoxLayout(popup)
             popup_layout.setContentsMargins(4, 4, 4, 4)
             popup_layout.setSpacing(2)
@@ -816,7 +816,7 @@ class AnnotationEditorDialog(QDialog):
 
         # Calculate position below the group button
         btn_global_pos = btn.mapToGlobal(btn.rect().bottomLeft())
-        popup.move(btn_global_pos.x(), btn_global_pos.y() + 2)
+        popup.move(btn_global_pos.x(), btn_global_pos.y() + 6)
         popup.show()
         self._active_popup = group_id
 
