@@ -2193,9 +2193,17 @@ class AnnotationGraphicsView(QGraphicsView):
         pos_x = self._text_input_pos.x()
         pos_y = self._text_input_pos.y()
 
-        # Convert to ratio coordinates
+        # Get input offset for vertical alignment adjustment
+        input_offset_y = 0.0
+        if hasattr(self, "_text_input_offset") and self._text_input_offset:
+            _, input_offset_y = self._text_input_offset
+
+        # Calculate adjusted position (same adjustment as _create_text_item)
+        adjusted_y = pos_y - input_offset_y
+
+        # Convert to ratio coordinates using adjusted position
         ratio_x = pos_x / width
-        ratio_y = pos_y / height
+        ratio_y = adjusted_y / height
 
         # Create text annotation (bold if line width >= 4)
         use_bold = self._line_width >= 4
@@ -2209,8 +2217,8 @@ class AnnotationGraphicsView(QGraphicsView):
             bold=use_bold,
         )
 
-        # Create visual text item
-        self._create_text_item(annotation, pos_x, pos_y)
+        # Create visual text item (uses annotation.x/y which now have adjusted coords)
+        self._create_text_item(annotation, pos_x, adjusted_y)
 
         # Emit signal
         self.annotation_created.emit(annotation)
@@ -2285,22 +2293,14 @@ class AnnotationGraphicsView(QGraphicsView):
         # Remove internal document margin so text starts exactly at position
         text_item.document().setDocumentMargin(0)
 
-        # Calculate vertical position adjustment using input widget offset
-        # The y offset from input widget ensures vertical alignment with where cursor was displayed
-        # The x offset is not used because QGraphicsTextItem text starts at origin,
-        # while input widget has padding/border that shifts cursor position
-        input_offset_y = 0.0
-        if hasattr(self, "_text_input_offset") and self._text_input_offset:
-            _, input_offset_y = self._text_input_offset
-
-        adjusted_x = x
-        adjusted_y = y - input_offset_y
-
         # Create container for selection/movement
+        # Position is already adjusted by caller (x, y are the final display coordinates)
         text_rect = text_item.boundingRect()
         container = MovableTextItem(text_item, 0, 0, text_rect.width(), text_rect.height())
         container.annotation_id = annotation.id
-        container.setPos(adjusted_x, adjusted_y)
+        container.setPos(x, y)
+        # Clear _original_pos to prevent _finalize_item_moves from adding duplicate offset
+        container._original_pos = None
 
         self.scene().addItem(container)
 
