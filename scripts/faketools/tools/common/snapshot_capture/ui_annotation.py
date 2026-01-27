@@ -130,6 +130,20 @@ LINE_WIDTH_PRESETS = [
 # Tooltip style (Maya's default)
 TOOLTIP_STYLE = "QToolTip { background-color: #FFFFDC; color: #000000; border: 1px solid #767676; border-radius: 0px; }"
 
+# Tool groups for slide-down submenu (ordered)
+TOOL_GROUPS = [
+    ("select", "Select", [(TOOL_SELECT, "Select")]),
+    ("draw", "Draw", [(TOOL_FREEHAND, "Freehand"), (TOOL_LINE, "Line"), (TOOL_ARROW, "Arrow")]),
+    ("shape", "Shape", [(TOOL_RECT, "Rectangle"), (TOOL_ELLIPSE, "Ellipse")]),
+    ("text", "Text", [(TOOL_NUMBER, "Number"), (TOOL_TEXT, "Text")]),
+]
+
+# Map tool to its group
+TOOL_TO_GROUP = {}
+for group_id, _label, tools in TOOL_GROUPS:
+    for tool, _tooltip in tools:
+        TOOL_TO_GROUP[tool] = group_id
+
 
 class MovableLineItem(QGraphicsLineItem):
     """Line item that tracks movement for undo support."""
@@ -483,48 +497,42 @@ class AnnotationEditorDialog(QDialog):
         layout.addLayout(button_layout)
 
     def _create_toolbar(self) -> QWidget:
-        """Create the toolbar widget.
+        """Create the toolbar widget with slide-down submenu.
 
         Returns:
-            Toolbar widget.
+            Toolbar container widget.
         """
-        toolbar = QWidget()
-        layout = QHBoxLayout(toolbar)
-        layout.setContentsMargins(4, 1, 4, 1)
-        layout.setSpacing(4)
+        # Main container for toolbar + submenu
+        toolbar_container = QWidget()
+        container_layout = QVBoxLayout(toolbar_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
 
-        # Tool group container with background
+        # Main toolbar row
+        main_toolbar = QWidget()
+        main_layout = QHBoxLayout(main_toolbar)
+        main_layout.setContentsMargins(4, 1, 4, 1)
+        main_layout.setSpacing(4)
+
+        # Tool group buttons container with background
         tool_group = QWidget()
         tool_group.setStyleSheet("background: #2e2e2e; border-radius: 5px;")
         tool_group_layout = QHBoxLayout(tool_group)
         tool_group_layout.setContentsMargins(2, 1, 2, 1)
         tool_group_layout.setSpacing(1)
 
-        # Tool buttons with icons
-        tools = [
-            (TOOL_SELECT, "Select"),
-            (TOOL_FREEHAND, "Freehand"),
-            (TOOL_LINE, "Line"),
-            (TOOL_ARROW, "Arrow"),
-            (TOOL_RECT, "Rectangle"),
-            (TOOL_ELLIPSE, "Ellipse"),
-            (TOOL_NUMBER, "Number"),
-            (TOOL_TEXT, "Text"),
-        ]
-
-        for tool, tooltip in tools:
-            btn = self._create_tool_button(TOOL_ICONS[tool], tool, tooltip)
-            self._tool_buttons[tool] = btn
+        # Group buttons (Select, Draw, Shape, Text)
+        self._group_buttons: dict[str, QToolButton] = {}
+        for group_id, label, tools in TOOL_GROUPS:
+            first_tool, _first_tooltip = tools[0]
+            btn = self._create_group_button(group_id, label, TOOL_ICONS[first_tool])
+            self._group_buttons[group_id] = btn
             tool_group_layout.addWidget(btn)
 
-        layout.addWidget(tool_group)
-
-        # Set select tool as default
-        self._tool_buttons[TOOL_SELECT].setChecked(True)
-        self._update_tool_button_styles()
+        main_layout.addWidget(tool_group)
 
         # Divider
-        layout.addWidget(self._create_divider())
+        main_layout.addWidget(self._create_divider())
 
         # Color group
         color_group = QWidget()
@@ -556,10 +564,10 @@ class AnnotationEditorDialog(QDialog):
         self._custom_color_btn.customContextMenuRequested.connect(self._on_custom_color_picker)
         color_group_layout.addWidget(self._custom_color_btn)
 
-        layout.addWidget(color_group)
+        main_layout.addWidget(color_group)
 
         # Divider
-        layout.addWidget(self._create_divider())
+        main_layout.addWidget(self._create_divider())
 
         # Stroke width group container with background
         stroke_group = QWidget()
@@ -574,10 +582,10 @@ class AnnotationEditorDialog(QDialog):
             self._width_buttons.append(btn)
             stroke_group_layout.addWidget(btn)
 
-        layout.addWidget(stroke_group)
+        main_layout.addWidget(stroke_group)
 
         # Spacer to push action buttons to the right
-        layout.addStretch()
+        main_layout.addStretch()
 
         # Action group container with background
         action_group = QWidget()
@@ -637,9 +645,46 @@ class AnnotationEditorDialog(QDialog):
         clear_btn.clicked.connect(self._on_clear_all)
         action_group_layout.addWidget(clear_btn)
 
-        layout.addWidget(action_group)
+        main_layout.addWidget(action_group)
 
-        return toolbar
+        container_layout.addWidget(main_toolbar)
+
+        # Create popup submenus for each group (floating widgets)
+        self._popup_widgets: dict[str, QWidget] = {}
+        self._active_popup: str | None = None
+
+        for group_id, _label, tools in TOOL_GROUPS:
+            # Skip select group - it has no popup
+            if group_id == "select":
+                # Still need to register the tool button
+                for tool, tooltip in tools:
+                    btn = self._create_tool_button(TOOL_ICONS[tool], tool, tooltip)
+                    self._tool_buttons[tool] = btn
+                continue
+
+            popup = QWidget(self)
+            popup.setWindowFlags(Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint)
+            popup.setStyleSheet("QWidget { background: #2e2e2e; border: 1px solid #555; border-radius: 4px; }")
+            popup_layout = QHBoxLayout(popup)
+            popup_layout.setContentsMargins(4, 4, 4, 4)
+            popup_layout.setSpacing(2)
+
+            for tool, tooltip in tools:
+                btn = self._create_tool_button(TOOL_ICONS[tool], tool, tooltip)
+                self._tool_buttons[tool] = btn
+                popup_layout.addWidget(btn)
+
+            # Size popup to fit contents
+            popup.adjustSize()
+            self._popup_widgets[group_id] = popup
+
+        # Set select tool as default
+        self._current_group = "select"
+        self._current_tool = TOOL_SELECT
+        self._update_group_button_styles()
+        self._update_tool_button_styles()
+
+        return toolbar_container
 
     def _create_divider(self) -> QWidget:
         """Create a vertical divider between tool groups.
@@ -695,10 +740,114 @@ class AnnotationEditorDialog(QDialog):
         btn.clicked.connect(lambda: self._on_tool_selected(tool))
         return btn
 
+    def _create_group_button(self, group_id: str, label: str, icon_file: str) -> QToolButton:
+        """Create a group button for the main toolbar.
+
+        Args:
+            group_id: Group identifier (e.g., "select", "draw", "shape", "text").
+            label: Display label for the group.
+            icon_file: Icon filename for the group.
+
+        Returns:
+            Configured QToolButton.
+        """
+        btn = QToolButton()
+        btn.setCheckable(True)
+        btn.setFixedSize(26, 26)
+        btn.setToolTip(f"{label} Tools")
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        icon_path = self._get_icon_path(icon_file)
+        if icon_path:
+            btn.setIcon(QIcon(icon_path))
+            btn.setIconSize(QSize(20, 20))
+        else:
+            btn.setText(label[0])
+
+        btn.clicked.connect(lambda: self._on_group_selected(group_id))
+        return btn
+
+    def _on_group_selected(self, group_id: str):
+        """Handle group button selection.
+
+        Args:
+            group_id: Selected group identifier.
+        """
+        # Select group has no popup - just select the tool directly
+        if group_id == "select":
+            self._hide_popup()
+            self._current_group = group_id
+            self._on_tool_selected(TOOL_SELECT)
+            self._update_group_button_styles()
+            return
+
+        # If clicking the same group, toggle popup visibility
+        if self._active_popup == group_id:
+            self._hide_popup()
+            return
+
+        self._current_group = group_id
+        self._show_popup(group_id)
+        self._update_group_button_styles()
+
+        # Select the first tool in the group if current tool is not in this group
+        if TOOL_TO_GROUP.get(self._current_tool) != group_id:
+            # Find first tool in this group
+            for gid, _label, tools in TOOL_GROUPS:
+                if gid == group_id:
+                    first_tool, _tooltip = tools[0]
+                    self._on_tool_selected(first_tool)
+                    break
+
+    def _show_popup(self, group_id: str):
+        """Show the popup submenu for the selected group.
+
+        Args:
+            group_id: Group identifier to show popup for.
+        """
+        # Hide any existing popup
+        self._hide_popup()
+
+        # Get the popup widget and group button
+        popup = self._popup_widgets.get(group_id)
+        btn = self._group_buttons.get(group_id)
+        if not popup or not btn:
+            return
+
+        # Calculate position below the group button
+        btn_global_pos = btn.mapToGlobal(btn.rect().bottomLeft())
+        popup.move(btn_global_pos.x(), btn_global_pos.y() + 2)
+        popup.show()
+        self._active_popup = group_id
+
+    def _hide_popup(self):
+        """Hide the currently active popup."""
+        if self._active_popup:
+            popup = self._popup_widgets.get(self._active_popup)
+            if popup:
+                popup.hide()
+            self._active_popup = None
+
+    def _update_group_button_styles(self):
+        """Update group button styles based on selection state."""
+        for gid, btn in self._group_buttons.items():
+            is_active = gid == self._current_group
+            btn.setChecked(is_active)
+
+            if is_active:
+                btn.setStyleSheet(f"QToolButton {{ background: #505050; border: none; border-radius: 4px; }}{TOOLTIP_STYLE}")
+            else:
+                btn.setStyleSheet(
+                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+                )
+
     def _update_tool_button_styles(self):
         """Update tool button styles based on selection state."""
-        for _tool, btn in self._tool_buttons.items():
-            if btn.isChecked():
+        for tool, btn in self._tool_buttons.items():
+            is_active = tool == self._current_tool
+            btn.setChecked(is_active)
+
+            if is_active:
                 btn.setStyleSheet(f"QToolButton {{ background: #505050; border: none; border-radius: 4px; }}{TOOLTIP_STYLE}")
             else:
                 btn.setStyleSheet(
@@ -808,11 +957,13 @@ class AnnotationEditorDialog(QDialog):
         self._current_tool = tool
         self._view.set_tool(tool)
 
-        # Update button states
-        for t, btn in self._tool_buttons.items():
-            btn.setChecked(t == tool)
+        # Switch to the appropriate group if needed
+        tool_group = TOOL_TO_GROUP.get(tool)
+        if tool_group and hasattr(self, "_current_group") and tool_group != self._current_group:
+            self._current_group = tool_group
+            self._update_group_button_styles()
 
-        # Update button styles
+        # Update tool button styles
         self._update_tool_button_styles()
 
     def _update_tool_buttons(self, tool: str):
@@ -824,8 +975,13 @@ class AnnotationEditorDialog(QDialog):
             tool: Tool identifier to show as selected.
         """
         self._current_tool = tool
-        for t, btn in self._tool_buttons.items():
-            btn.setChecked(t == tool)
+
+        # Switch to the appropriate group if needed
+        tool_group = TOOL_TO_GROUP.get(tool)
+        if tool_group and hasattr(self, "_current_group") and tool_group != self._current_group:
+            self._current_group = tool_group
+            self._update_group_button_styles()
+
         self._update_tool_button_styles()
 
     def _on_color_preset(self, color: tuple[int, int, int]):
