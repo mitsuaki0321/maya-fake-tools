@@ -2387,6 +2387,10 @@ class AnnotationGraphicsView(QGraphicsView):
         y2 = annotation.end_y * height
 
         if isinstance(item, MovableLineItem):
+            # Reset item position to use absolute coordinates
+            item.setPos(0, 0)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
+
             # For arrows, shorten line and update arrowhead
             if annotation.annotation_type == "arrow":
                 arrow_length = annotation.line_width * 4
@@ -2478,6 +2482,9 @@ class AnnotationGraphicsView(QGraphicsView):
         h_px = annotation.height * height
 
         if isinstance(item, MovableRectItem):
+            # Reset item position to use absolute coordinates
+            item.setPos(0, 0)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
             item.setRect(left_px, top_px, w_px, h_px)
 
     def _scale_ellipse_annotation(self, item, annotation, scale_factor: float):
@@ -2503,6 +2510,9 @@ class AnnotationGraphicsView(QGraphicsView):
         ry = annotation.radius_y * height
 
         if isinstance(item, MovableEllipseItem):
+            # Reset item position to use absolute coordinates
+            item.setPos(0, 0)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
             item.setRect(cx - rx, cy - ry, rx * 2, ry * 2)
 
     def _scale_number_annotation(self, item, annotation, scale_factor: float):
@@ -2525,6 +2535,9 @@ class AnnotationGraphicsView(QGraphicsView):
         r = annotation.radius * width
 
         if isinstance(item, MovableEllipseItem):
+            # Reset item position to use absolute coordinates
+            item.setPos(0, 0)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
             item.setRect(cx - r, cy - r, r * 2, r * 2)
 
             # Update text size
@@ -2570,6 +2583,9 @@ class AnnotationGraphicsView(QGraphicsView):
                 path.lineTo(px, py)
 
         if isinstance(item, MovablePathItem):
+            # Reset item position to use absolute coordinates
+            item.setPos(0, 0)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
             item.setPath(path)
 
     def _scale_text_annotation(self, item, annotation, scale_factor: float):
@@ -2590,6 +2606,13 @@ class AnnotationGraphicsView(QGraphicsView):
             font = text_item.font()
             font.setPixelSize(annotation.font_size)
             text_item.setFont(font)
+
+            # Reset item position to annotation coordinates
+            scene_rect = self.scene().sceneRect()
+            x = annotation.x * scene_rect.width()
+            y = annotation.y * scene_rect.height()
+            item.setPos(x, y)
+            item._original_pos = None  # Clear to avoid affecting next move calculation
 
             # Update container rect
             text_rect = text_item.boundingRect()
