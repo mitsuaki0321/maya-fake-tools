@@ -2533,9 +2533,9 @@ class AnnotationGraphicsView(QGraphicsView):
                     font = child.font()
                     font.setPixelSize(max(10, int(r * 1.2)))
                     child.setFont(font)
-                    # Re-center text
+                    # Re-center text in circle (position relative to parent's local coords)
                     text_rect = child.boundingRect()
-                    child.setPos(-text_rect.width() / 2, -text_rect.height() / 2)
+                    child.setPos(cx - text_rect.width() / 2, cy - text_rect.height() / 2)
 
     def _scale_freehand_annotation(self, item, annotation, scale_factor: float):
         """Scale freehand annotation from centroid.
