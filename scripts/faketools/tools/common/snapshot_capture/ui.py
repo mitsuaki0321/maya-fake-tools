@@ -17,7 +17,7 @@ try:
 except ImportError:
     PIL_AVAILABLE = False
 
-from ....lib_ui import ToolDataManager, ToolSettingsManager, get_maya_main_window
+from ....lib_ui import ToolDataManager, ToolSettingsManager, center_on_screen, get_maya_main_window
 from ....lib_ui.maya_qt import qt_widget_from_maya_control, qt_widget_from_maya_layout
 from ....lib_ui.qt_compat import (
     QApplication,
@@ -102,6 +102,9 @@ class SnapshotCaptureWindow(QMainWindow):
         # Window configuration
         self.setObjectName(self._ui_name("MainWindow"))
         self.setWindowTitle("Snapshot Capture")
+
+        # Centering flag
+        self._first_show = True
 
         # State variables
         self._current_mode: str = "png"
@@ -1124,6 +1127,11 @@ class SnapshotCaptureWindow(QMainWindow):
                     self.adjustSize()
                     self.resize(self.sizeHint())
                     self.setFixedSize(self.size())
+
+                # Center window on first show
+                if self._first_show:
+                    self._first_show = False
+                    center_on_screen(self, target="maya")
             except Exception as e:
                 logger.warning(f"Failed during window lock: {e}")
 

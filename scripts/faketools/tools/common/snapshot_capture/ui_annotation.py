@@ -11,7 +11,7 @@ import math
 import os
 from typing import TYPE_CHECKING
 
-from ....lib_ui import ToolSettingsManager, get_maya_main_window
+from ....lib_ui import ToolSettingsManager, center_on_screen, get_maya_main_window
 from ....lib_ui.qt_compat import (
     QApplication,
     QBrush,
@@ -355,6 +355,9 @@ class AnnotationEditorDialog(QDialog):
         super().__init__(parent or get_maya_main_window())
         self.setWindowTitle("Annotation Editor")
         self.setModal(True)
+
+        # Centering flag
+        self._first_show = True
 
         self._image = image
         self._background_color = background_color
@@ -1112,6 +1115,14 @@ class AnnotationEditorDialog(QDialog):
         else:
             # No callback, just accept
             self.accept()
+
+    def showEvent(self, event):
+        """Handle show event to center dialog on first display."""
+        super().showEvent(event)
+        if self._first_show:
+            self._first_show = False
+            # Defer centering to ensure dialog size is finalized
+            QTimer.singleShot(0, lambda: center_on_screen(self, target="maya"))
 
     def accept(self):
         """Accept dialog and save settings."""
