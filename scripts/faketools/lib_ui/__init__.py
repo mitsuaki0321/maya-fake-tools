@@ -15,10 +15,10 @@ This module provides convenient imports for common UI components:
 - Maya UI functions: get_channels, get_modifiers
 - Maya Qt utilities: qt_widget_from_maya_control, maya_name_from_qt_widget, qt_widget_from_maya_window, get_maya_main_window
 - Qt compatibility layer: Unified Qt imports for PySide2/6
-- Resolution-independent UI utilities: get_spacing, get_margins
+- Resolution-independent UI utilities: get_spacing, get_margins, center_on_screen
 """
 
-from .base_window import BaseFramelessWindow, BaseMainWindow, get_margins, get_spacing
+from .base_window import BaseFramelessWindow, BaseMainWindow, center_on_screen, get_margins, get_spacing
 from .maya_decorator import disable_undo, error_handler, repeatable, undo_chunk
 from .maya_dialog import confirm_dialog, show_error_dialog, show_info_dialog, show_warning_dialog
 from .maya_qt import get_maya_main_window, maya_name_from_qt_widget, qt_widget_from_maya_control, qt_widget_from_maya_window
@@ -75,6 +75,7 @@ __all__ = [
     # Resolution-independent UI utilities
     "get_spacing",
     "get_margins",
+    "center_on_screen",
     "get_relative_size",
     "get_default_button_size",
     "get_text_width",

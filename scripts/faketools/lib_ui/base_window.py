@@ -5,7 +5,65 @@ Provides standard window classes with resolution-independent UI setup.
 """
 
 from .icons import get_path
-from .qt_compat import QApplication, QHBoxLayout, QIcon, QLabel, QMainWindow, QPushButton, Qt, QVBoxLayout, QWidget
+from .maya_qt import get_maya_main_window
+from .qt_compat import QApplication, QHBoxLayout, QIcon, QLabel, QMainWindow, QPushButton, Qt, QVBoxLayout, QWidget, is_pyside2
+
+
+def _get_target_screen_geometry(target="maya"):
+    """
+    Get the geometry of the target screen.
+
+    Args:
+        target (str): "maya" - Screen containing Maya main window
+                      "primary" - Primary screen
+
+    Returns:
+        QRect: The screen geometry
+    """
+    if target == "maya":
+        maya_window = get_maya_main_window()
+        if maya_window is not None:
+            # Get the center point of Maya window
+            maya_center = maya_window.frameGeometry().center()
+
+            if is_pyside2():
+                # PySide2: Use QDesktopWidget
+                desktop = QApplication.desktop()
+                screen_num = desktop.screenNumber(maya_center)
+                return desktop.screenGeometry(screen_num)
+            else:
+                # PySide6: Use QScreen
+                screen = QApplication.screenAt(maya_center)
+                if screen is not None:
+                    return screen.geometry()
+
+    # Fallback to primary screen
+    if is_pyside2():
+        desktop = QApplication.desktop()
+        return desktop.screenGeometry(desktop.primaryScreen())
+    else:
+        primary_screen = QApplication.primaryScreen()
+        if primary_screen is not None:
+            return primary_screen.geometry()
+
+    # Ultimate fallback
+    return QApplication.desktop().screenGeometry() if is_pyside2() else QApplication.primaryScreen().geometry()
+
+
+def center_on_screen(widget, target="maya"):
+    """
+    Center a widget on the target screen.
+
+    Args:
+        widget (QWidget): The widget to center
+        target (str): "maya" - Screen containing Maya main window (default)
+                      "primary" - Primary screen
+    """
+    screen_geometry = _get_target_screen_geometry(target)
+    frame_geometry = widget.frameGeometry()
+    center_point = screen_geometry.center()
+    frame_geometry.moveCenter(center_point)
+    widget.move(frame_geometry.topLeft())
 
 
 class BaseMainWindow(QMainWindow):
@@ -17,13 +75,14 @@ class BaseMainWindow(QMainWindow):
     - Resolution-independent spacing
     - Proper cleanup on close (WA_DeleteOnClose)
     - Menu bar, status bar, toolbar support from QMainWindow
+    - Automatic centering on first show (can be disabled)
 
     Attributes:
         central_widget (QWidget): The central widget of the main window
         central_layout (Union[QVBoxLayout, QHBoxLayout]): The main layout (vertical or horizontal)
     """
 
-    def __init__(self, parent=None, object_name="MainWindow", window_title="Main Window", central_layout="vertical"):
+    def __init__(self, parent=None, object_name="MainWindow", window_title="Main Window", central_layout="vertical", center_on_show=True):
         """
         Initialize the base main window.
 
@@ -32,12 +91,17 @@ class BaseMainWindow(QMainWindow):
             object_name (str): Object name for the window (used for identification)
             window_title (str): Title displayed in window title bar
             central_layout (str): Layout orientation - "vertical" or "horizontal"
+            center_on_show (bool): If True, center window on Maya's screen on first show
         """
         super().__init__(parent=parent)
 
         self.setObjectName(object_name)
         self.setWindowTitle(window_title)
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+        # Centering flags
+        self._center_on_show = center_on_show
+        self._first_show = True
 
         # Setup central widget and layout
         self.central_widget = QWidget()
@@ -53,6 +117,13 @@ class BaseMainWindow(QMainWindow):
         # Apply resolution-independent spacing
         default_spacing = get_spacing(self.central_widget)
         self.central_layout.setSpacing(int(default_spacing * 0.75))
+
+    def showEvent(self, event):
+        """Handle show event to center window on first display."""
+        super().showEvent(event)
+        if self._first_show and self._center_on_show:
+            self._first_show = False
+            center_on_screen(self, target="maya")
 
 
 def get_spacing(widget, direction="vertical"):
@@ -127,6 +198,7 @@ class BaseFramelessWindow(QWidget):
     - Resolution-independent spacing
     - Proper cleanup on close (WA_DeleteOnClose)
     - Normal window behavior (can go behind other apps)
+    - Automatic centering on first show (can be disabled)
 
     Attributes:
         central_layout (Union[QVBoxLayout, QHBoxLayout]): The main layout (vertical or horizontal)
@@ -134,7 +206,7 @@ class BaseFramelessWindow(QWidget):
         title_label (QLabel): The title label in the title bar
     """
 
-    def __init__(self, parent=None, object_name="FramelessWindow", window_title="Window", central_layout="vertical"):
+    def __init__(self, parent=None, object_name="FramelessWindow", window_title="Window", central_layout="vertical", center_on_show=True):
         """
         Initialize the frameless window.
 
@@ -143,10 +215,15 @@ class BaseFramelessWindow(QWidget):
             object_name (str): Object name for the window (used for identification)
             window_title (str): Title displayed in custom title bar
             central_layout (str): Layout orientation - "vertical" or "horizontal"
+            center_on_show (bool): If True, center window on Maya's screen on first show
         """
         super().__init__(parent=parent)
 
         self.setObjectName(object_name)
+
+        # Centering flags
+        self._center_on_show = center_on_show
+        self._first_show = True
 
         # Set attribute for proper cleanup (compatible with PySide2/6)
         delete_on_close = getattr(Qt, "WA_DeleteOnClose", None) or Qt.WidgetAttribute.WA_DeleteOnClose
@@ -237,6 +314,13 @@ class BaseFramelessWindow(QWidget):
 
         return title_bar
 
+    def showEvent(self, event):
+        """Handle show event to center window on first display."""
+        super().showEvent(event)
+        if self._first_show and self._center_on_show:
+            self._first_show = False
+            center_on_screen(self, target="maya")
+
     def mousePressEvent(self, event):
         """Handle mouse press for dragging."""
         # Get global position (compatible with PySide2/6)
@@ -286,4 +370,4 @@ class BaseFramelessWindow(QWidget):
             super().keyPressEvent(event)
 
 
-__all__ = ["BaseMainWindow", "BaseFramelessWindow", "get_spacing", "get_margins"]
+__all__ = ["BaseMainWindow", "BaseFramelessWindow", "get_spacing", "get_margins", "center_on_screen"]
