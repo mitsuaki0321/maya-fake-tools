@@ -94,6 +94,14 @@ TOOL_ICONS = {
     TOOL_TEXT: "tool_text.svg",
 }
 
+# Group button icons (SVG filenames)
+GROUP_ICONS = {
+    "select": "tool_select.svg",
+    "draw": "group_draw.svg",
+    "shape": "group_shape.svg",
+    "text": "tool_text.svg",
+}
+
 # Stroke width icons (SVG filenames)
 STROKE_ICONS = {
     2: "stroke_thin.svg",
@@ -524,8 +532,7 @@ class AnnotationEditorDialog(QDialog):
         # Group buttons (Select, Draw, Shape, Text)
         self._group_buttons: dict[str, QToolButton] = {}
         for group_id, label, tools in TOOL_GROUPS:
-            first_tool, _first_tooltip = tools[0]
-            btn = self._create_group_button(group_id, label, TOOL_ICONS[first_tool])
+            btn = self._create_group_button(group_id, label, GROUP_ICONS[group_id])
             self._group_buttons[group_id] = btn
             tool_group_layout.addWidget(btn)
 
