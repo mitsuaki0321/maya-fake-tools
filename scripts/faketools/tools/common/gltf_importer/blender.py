@@ -96,12 +96,19 @@ def find_blender_executable() -> str | None:
     return None
 
 
-def convert_glb_to_fbx(glb_path: str, output_dir: str | None = None) -> tuple[str, str] | None:
+def convert_glb_to_fbx(
+    glb_path: str,
+    output_dir: str | None = None,
+    axis_forward: str = "-Z",
+    axis_up: str = "Y",
+) -> tuple[str, str] | None:
     """Convert GLB file to FBX using Blender headless mode.
 
     Args:
         glb_path: Path to the GLB file.
         output_dir: Output directory (default: same directory as GLB).
+        axis_forward: Forward axis for FBX export (default: '-Z').
+        axis_up: Up axis for FBX export (default: 'Y').
 
     Returns:
         tuple[str, str] | None: (fbx_path, texture_dir) on success, None on failure.
@@ -154,6 +161,8 @@ def convert_glb_to_fbx(glb_path: str, output_dir: str | None = None) -> tuple[st
             str(glb_path),
             str(output_fbx),
             str(texture_dir),
+            axis_forward,
+            axis_up,
         ]
 
         logger.info("Running conversion command...")

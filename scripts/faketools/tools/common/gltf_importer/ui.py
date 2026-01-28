@@ -9,7 +9,6 @@ from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_dialog import show_info_dialog, show_warning_dialog
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
-    QCheckBox,
     QComboBox,
     QFileDialog,
     QGridLayout,
@@ -21,7 +20,7 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from . import command
-from .constants import SHADER_TYPES
+from .constants import AXIS_OPTIONS, DEFAULT_AXIS_FORWARD, DEFAULT_AXIS_UP, SHADER_TYPES
 
 logger = getLogger(__name__)
 
@@ -105,13 +104,42 @@ class MainWindow(BaseMainWindow):
         grid_layout.addWidget(self.shader_combo, row, 1)
         row += 1
 
-        # Keep Temp Files checkbox
-        keep_temp_label = QLabel("")  # Empty label for alignment
-        self.keep_temp_checkbox = QCheckBox("Keep Temporary Files")
-        self.keep_temp_checkbox.setToolTip("Keep intermediate FBX and texture files for debugging")
+        # Axis Conversion
+        axis_label = QLabel("Axis Forward:")
+        axis_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        axis_label.setToolTip("Forward axis for FBX export (Blender standard)")
 
-        grid_layout.addWidget(keep_temp_label, row, 0)
-        grid_layout.addWidget(self.keep_temp_checkbox, row, 1)
+        axis_layout = QHBoxLayout()
+        axis_layout.setSpacing(4)
+
+        # Axis Forward combo
+        self.axis_forward_combo = QComboBox()
+        for axis in AXIS_OPTIONS:
+            self.axis_forward_combo.addItem(axis)
+        # Set default
+        forward_index = self.axis_forward_combo.findText(DEFAULT_AXIS_FORWARD)
+        if forward_index >= 0:
+            self.axis_forward_combo.setCurrentIndex(forward_index)
+        axis_layout.addWidget(self.axis_forward_combo)
+
+        # Axis Up label and combo
+        axis_up_label = QLabel("Axis Up:")
+        axis_up_label.setToolTip("Up axis for FBX export (Blender standard)")
+        axis_layout.addWidget(axis_up_label)
+
+        self.axis_up_combo = QComboBox()
+        for axis in AXIS_OPTIONS:
+            self.axis_up_combo.addItem(axis)
+        # Set default
+        up_index = self.axis_up_combo.findText(DEFAULT_AXIS_UP)
+        if up_index >= 0:
+            self.axis_up_combo.setCurrentIndex(up_index)
+        axis_layout.addWidget(self.axis_up_combo)
+
+        axis_layout.addStretch()
+
+        grid_layout.addWidget(axis_label, row, 0)
+        grid_layout.addLayout(axis_layout, row, 1)
 
         # Set column stretch so the middle column expands
         grid_layout.setColumnStretch(1, 1)
@@ -181,13 +209,15 @@ class MainWindow(BaseMainWindow):
 
         output_dir = self.output_edit.text().strip() or None
         shader_type = self._get_shader_key()
-        keep_temp = self.keep_temp_checkbox.isChecked()
+        axis_forward = self.axis_forward_combo.currentText()
+        axis_up = self.axis_up_combo.currentText()
 
         result = command.import_gltf_file(
             file_path=file_path,
             output_dir=output_dir,
             shader_type=shader_type,
-            keep_temp_files=keep_temp,
+            axis_forward=axis_forward,
+            axis_up=axis_up,
         )
 
         if result:
@@ -205,7 +235,8 @@ class MainWindow(BaseMainWindow):
             "input_file": self.input_edit.text(),
             "output_dir": self.output_edit.text(),
             "shader_type": self.shader_combo.currentText(),
-            "keep_temp_files": self.keep_temp_checkbox.isChecked(),
+            "axis_forward": self.axis_forward_combo.currentText(),
+            "axis_up": self.axis_up_combo.currentText(),
         }
 
     def _apply_settings(self, settings_data: dict):
@@ -222,8 +253,15 @@ class MainWindow(BaseMainWindow):
         if index >= 0:
             self.shader_combo.setCurrentIndex(index)
 
-        self.keep_temp_files = settings_data.get("keep_temp_files", False)
-        self.keep_temp_checkbox.setChecked(self.keep_temp_files)
+        axis_forward = settings_data.get("axis_forward", DEFAULT_AXIS_FORWARD)
+        forward_index = self.axis_forward_combo.findText(axis_forward)
+        if forward_index >= 0:
+            self.axis_forward_combo.setCurrentIndex(forward_index)
+
+        axis_up = settings_data.get("axis_up", DEFAULT_AXIS_UP)
+        up_index = self.axis_up_combo.findText(axis_up)
+        if up_index >= 0:
+            self.axis_up_combo.setCurrentIndex(up_index)
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
