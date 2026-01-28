@@ -407,6 +407,8 @@ def _render_line(image: Image.Image, annotation) -> Image.Image:
 def _render_freehand(image: Image.Image, annotation) -> Image.Image:
     """Render freehand annotation with antialiasing.
 
+    Supports pressure-sensitive strokes when pressure data is available.
+
     Args:
         image: PIL Image to draw on.
         annotation: FreehandAnnotation object.
@@ -422,10 +424,34 @@ def _render_freehand(image: Image.Image, annotation) -> Image.Image:
 
     # Scale line width based on image resolution
     scale_factor = max(image.width / 640, image.height / 360)
-    line_width = max(1, int(annotation.line_width * scale_factor))
+    base_line_width = max(1, int(annotation.line_width * scale_factor))
 
     color = annotation.color
 
+    # Check if we have pressure data
+    pressures = getattr(annotation, "pressures", None)
+    has_pressure = pressures is not None and len(pressures) == len(annotation.points)
+
+    if has_pressure:
+        # Render with variable width based on pressure
+        return _render_freehand_with_pressure(image, pixel_points, pressures, color, base_line_width, scale_factor)
+    else:
+        # Render with uniform width (original behavior)
+        return _render_freehand_uniform(image, pixel_points, color, base_line_width)
+
+
+def _render_freehand_uniform(image: Image.Image, pixel_points: list[tuple[float, float]], color: tuple, line_width: int) -> Image.Image:
+    """Render freehand path with uniform line width.
+
+    Args:
+        image: PIL Image to draw on.
+        pixel_points: List of pixel coordinates.
+        color: Line color.
+        line_width: Line width in pixels.
+
+    Returns:
+        Image with freehand path rendered.
+    """
     if AGGDRAW_AVAILABLE:
         draw = aggdraw.Draw(image)
         pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
@@ -469,6 +495,134 @@ def _render_freehand(image: Image.Image, annotation) -> Image.Image:
             draw.ellipse([end_x - radius, end_y - radius, end_x + radius, end_y + radius], fill=color)
 
     return image
+
+
+def _render_freehand_with_pressure(
+    image: Image.Image,
+    pixel_points: list[tuple[float, float]],
+    pressures: list[float],
+    color: tuple,
+    base_line_width: int,
+    scale_factor: float,
+) -> Image.Image:
+    """Render freehand path with pressure-sensitive variable width.
+
+    Args:
+        image: PIL Image to draw on.
+        pixel_points: List of pixel coordinates.
+        pressures: List of pressure values (0.0-1.0) for each point.
+        color: Line color.
+        base_line_width: Base line width (maximum width at full pressure).
+        scale_factor: Resolution scale factor.
+
+    Returns:
+        Image with pressure-sensitive freehand path rendered.
+    """
+    # Minimum width as a fraction of base width
+    min_width_ratio = 0.2
+    min_width = max(1, int(base_line_width * min_width_ratio))
+
+    # Interpolate points and pressures using Catmull-Rom spline
+    interpolated_points = _catmull_rom_spline(pixel_points, segments_per_curve=4)
+    interpolated_pressures = _interpolate_pressures(pressures, len(pixel_points), len(interpolated_points))
+
+    if AGGDRAW_AVAILABLE:
+        draw = aggdraw.Draw(image)
+
+        # Draw segments with varying width
+        for i in range(len(interpolated_points) - 1):
+            x1, y1 = interpolated_points[i]
+            x2, y2 = interpolated_points[i + 1]
+
+            # Calculate width based on average pressure of segment
+            p1 = interpolated_pressures[i]
+            p2 = interpolated_pressures[i + 1]
+            avg_pressure = (p1 + p2) / 2.0
+
+            # Map pressure to width (pressure 0 -> min_width, pressure 1 -> base_line_width)
+            segment_width = min_width + avg_pressure * (base_line_width - min_width)
+            segment_width = max(1, int(round(segment_width)))
+
+            pen = aggdraw.Pen(_color_to_aggdraw(color), segment_width)
+            draw.line([x1, y1, x2, y2], pen)
+
+            # Draw circle at joint for smooth connection
+            if i > 0:
+                radius = segment_width / 2.0
+                brush = aggdraw.Brush(_color_to_aggdraw(color))
+                draw.ellipse([x1 - radius, y1 - radius, x1 + radius, y1 + radius], brush)
+
+        draw.flush()
+
+        # Draw circles at endpoints for round caps
+        start_width = max(1, int(min_width + interpolated_pressures[0] * (base_line_width - min_width)))
+        end_width = max(1, int(min_width + interpolated_pressures[-1] * (base_line_width - min_width)))
+
+        brush = aggdraw.Brush(_color_to_aggdraw(color))
+        sx, sy = interpolated_points[0]
+        ex, ey = interpolated_points[-1]
+        sr = start_width / 2.0
+        er = end_width / 2.0
+        draw.ellipse([sx - sr, sy - sr, sx + sr, sy + sr], brush)
+        draw.ellipse([ex - er, ey - er, ex + er, ey + er], brush)
+        draw.flush()
+
+    else:
+        # PIL fallback: draw circles along the path with varying size
+        draw = ImageDraw.Draw(image)
+
+        for i, (x, y) in enumerate(interpolated_points):
+            pressure = interpolated_pressures[i]
+            width = min_width + pressure * (base_line_width - min_width)
+            radius = max(1, int(width / 2))
+            draw.ellipse([x - radius, y - radius, x + radius, y + radius], fill=color)
+
+        # Also draw lines between points for continuity
+        for i in range(len(interpolated_points) - 1):
+            x1, y1 = interpolated_points[i]
+            x2, y2 = interpolated_points[i + 1]
+            p1 = interpolated_pressures[i]
+            p2 = interpolated_pressures[i + 1]
+            avg_pressure = (p1 + p2) / 2.0
+            segment_width = max(1, int(min_width + avg_pressure * (base_line_width - min_width)))
+            draw.line([(int(x1), int(y1)), (int(x2), int(y2))], fill=color, width=segment_width)
+
+    return image
+
+
+def _interpolate_pressures(pressures: list[float], original_count: int, target_count: int) -> list[float]:
+    """Interpolate pressure values to match interpolated point count.
+
+    Args:
+        pressures: Original pressure values.
+        original_count: Number of original points.
+        target_count: Number of interpolated points.
+
+    Returns:
+        List of interpolated pressure values.
+    """
+    if target_count <= 1:
+        return pressures[:target_count] if pressures else [1.0]
+
+    if len(pressures) < 2:
+        return [pressures[0] if pressures else 1.0] * target_count
+
+    result = []
+    for i in range(target_count):
+        # Map target index to original index range
+        t = i / (target_count - 1) * (len(pressures) - 1)
+        idx = int(t)
+        frac = t - idx
+
+        if idx >= len(pressures) - 1:
+            result.append(pressures[-1])
+        else:
+            # Linear interpolation between adjacent pressure values
+            p1 = pressures[idx]
+            p2 = pressures[idx + 1]
+            result.append(p1 + frac * (p2 - p1))
+
+    return result
 
 
 def _catmull_rom_spline(points: list[tuple[float, float]], segments_per_curve: int = 4) -> list[tuple[float, float]]:

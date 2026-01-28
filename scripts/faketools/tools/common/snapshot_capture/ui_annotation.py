@@ -19,6 +19,7 @@ from ....lib_ui.qt_compat import (
     QColor,
     QColorDialog,
     QDialog,
+    QEvent,
     QFont,
     QFrame,
     QGraphicsEllipseItem,
@@ -45,6 +46,7 @@ from ....lib_ui.qt_compat import (
     QPushButton,
     QSize,
     Qt,
+    QtGui,
     QTimer,
     QToolButton,
     QVBoxLayout,
@@ -1352,9 +1354,15 @@ class AnnotationGraphicsView(QGraphicsView):
         # Freehand drawing state
         self._freehand_path: QPainterPath | None = None
         self._freehand_points: list[tuple[float, float]] = []
+        self._freehand_pressures: list[float] = []  # Pressure values for each point
         self._freehand_last_point: tuple[float, float] | None = None
         self._freehand_last_midpoint: tuple[float, float] | None = None
         self._freehand_min_distance_sq = 0.0
+
+        # Tablet/pressure state
+        self._tablet_active = False  # True when tablet is being used
+        self._current_pressure = 1.0  # Current pressure value (0.0-1.0)
+        self._pressure_sensitive = True  # Enable/disable pressure sensitivity
 
         # Text input state
         self._text_input_proxy: QGraphicsProxyWidget | None = None
@@ -1620,6 +1628,111 @@ class AnnotationGraphicsView(QGraphicsView):
             self._drawing = False
             end_pos = self.mapToScene(event.pos())
             self._finalize_item(end_pos)
+            # Reset tablet state after drawing
+            self._tablet_active = False
+            self._current_pressure = 1.0
+
+    def tabletEvent(self, event: QtGui.QTabletEvent):
+        """Handle tablet events for pressure-sensitive drawing.
+
+        Args:
+            event: Tablet event.
+        """
+        event_type = event.type()
+        pressure = event.pressure()
+
+        if event_type == QEvent.Type.TabletPress:
+            self._tablet_active = True
+            self._current_pressure = pressure
+
+            # Convert tablet event to mouse press for consistent handling
+            if self._current_tool == TOOL_FREEHAND:
+                self._drawing = True
+                self._start_pos = self.mapToScene(event.position().toPoint())
+                self._create_preview_item()
+                # Record the first point with pressure
+                if self._freehand_points and self._pressure_sensitive:
+                    self._freehand_pressures = [pressure]
+            event.accept()
+
+        elif event_type == QEvent.Type.TabletMove:
+            if self._tablet_active:
+                self._current_pressure = pressure
+
+                if self._drawing and self._current_item and self._current_tool == TOOL_FREEHAND:
+                    current_pos = self.mapToScene(event.position().toPoint())
+                    self._update_preview_item_with_pressure(current_pos, pressure)
+            event.accept()
+
+        elif event_type == QEvent.Type.TabletRelease:
+            if self._tablet_active and self._drawing:
+                self._drawing = False
+                end_pos = self.mapToScene(event.position().toPoint())
+                self._finalize_item(end_pos)
+
+            self._tablet_active = False
+            self._current_pressure = 1.0
+            event.accept()
+
+        else:
+            event.ignore()
+
+    def _update_preview_item_with_pressure(self, current_pos, pressure: float):
+        """Update the freehand preview item with pressure-sensitive width.
+
+        Args:
+            current_pos: Current position in scene coordinates.
+            pressure: Current tablet pressure (0.0-1.0).
+        """
+        if not self._current_item or self._freehand_path is None:
+            return
+
+        x, y = current_pos.x(), current_pos.y()
+
+        # Append point with pressure
+        if self._append_freehand_point_with_pressure(x, y, pressure):
+            self._current_item.setPath(self._freehand_path)
+
+    def _append_freehand_point_with_pressure(self, x: float, y: float, pressure: float) -> bool:
+        """Append a point with pressure data to the freehand path.
+
+        Args:
+            x: X coordinate in scene pixels.
+            y: Y coordinate in scene pixels.
+            pressure: Tablet pressure value (0.0-1.0).
+
+        Returns:
+            True if point was added, False if filtered out.
+        """
+        if self._freehand_points:
+            last_x, last_y = self._freehand_points[-1]
+            dx = x - last_x
+            dy = y - last_y
+            if dx * dx + dy * dy < self._freehand_min_distance_sq:
+                return False
+
+        self._freehand_points.append((x, y))
+        if self._pressure_sensitive:
+            self._freehand_pressures.append(pressure)
+
+        if self._freehand_path is None:
+            return True
+
+        if self._freehand_last_point is None:
+            self._freehand_last_point = (x, y)
+            return True
+
+        mid_x = (self._freehand_last_point[0] + x) / 2.0
+        mid_y = (self._freehand_last_point[1] + y) / 2.0
+
+        if self._freehand_last_midpoint is None:
+            self._freehand_path.lineTo(mid_x, mid_y)
+        else:
+            self._freehand_path.quadTo(self._freehand_last_point[0], self._freehand_last_point[1], mid_x, mid_y)
+
+        self._freehand_last_midpoint = (mid_x, mid_y)
+        self._freehand_last_point = (x, y)
+        return True
 
     def _snap_to_angle(self, start_x: float, start_y: float, end_x: float, end_y: float) -> tuple[float, float]:
         """Snap line to 45-degree increments.
@@ -1712,6 +1825,8 @@ class AnnotationGraphicsView(QGraphicsView):
             self._freehand_path = QPainterPath()
             self._freehand_path.moveTo(x, y)
             self._freehand_points = [(x, y)]
+            # Initialize pressure with current value (from tablet or default 1.0)
+            self._freehand_pressures = [self._current_pressure] if self._pressure_sensitive else []
             self._freehand_last_point = (x, y)
             self._freehand_last_midpoint = None
             min_distance = max(1.5, self._line_width * 0.35)
@@ -1770,7 +1885,10 @@ class AnnotationGraphicsView(QGraphicsView):
                 self._current_item.setPath(self._freehand_path)
 
     def _append_freehand_point(self, x: float, y: float) -> bool:
-        """Append a filtered point to the freehand path with light smoothing."""
+        """Append a filtered point to the freehand path with light smoothing.
+
+        Uses current pressure value for pressure-sensitive drawing.
+        """
         if self._freehand_points:
             last_x, last_y = self._freehand_points[-1]
             dx = x - last_x
@@ -1779,6 +1897,9 @@ class AnnotationGraphicsView(QGraphicsView):
                 return False
 
         self._freehand_points.append((x, y))
+        # Add pressure data (use current pressure from tablet or default 1.0)
+        if self._pressure_sensitive:
+            self._freehand_pressures.append(self._current_pressure)
 
         if self._freehand_path is None:
             return True
@@ -1996,21 +2117,28 @@ class AnnotationGraphicsView(QGraphicsView):
                 self._current_item = None
                 self._freehand_path = None
                 self._freehand_points = []
+                self._freehand_pressures = []
                 self._freehand_last_point = None
                 self._freehand_last_midpoint = None
                 self._freehand_min_distance_sq = 0.0
                 return
 
             # Simplify path using Douglas-Peucker algorithm
-            simplified_points = self._simplify_path(self._freehand_points, epsilon=2.0)
+            simplified_points, simplified_indices = self._simplify_path_with_indices(self._freehand_points, epsilon=2.0)
 
             # Convert pixel coordinates to ratio coordinates
             ratio_points = [(px / width, py / height) for px, py in simplified_points]
+
+            # Get corresponding pressure values for simplified points
+            simplified_pressures = None
+            if self._pressure_sensitive and self._freehand_pressures and len(self._freehand_pressures) == len(self._freehand_points):
+                simplified_pressures = [self._freehand_pressures[i] for i in simplified_indices]
 
             annotation = FreehandAnnotation(
                 points=ratio_points,
                 color=self._current_color,
                 line_width=self._line_width,
+                pressures=simplified_pressures,
             )
 
             if self._current_item:
@@ -2019,6 +2147,7 @@ class AnnotationGraphicsView(QGraphicsView):
             # Reset freehand state
             self._freehand_path = None
             self._freehand_points = []
+            self._freehand_pressures = []
             self._freehand_last_point = None
             self._freehand_last_midpoint = None
             self._freehand_min_distance_sq = 0.0
@@ -2281,6 +2410,63 @@ class AnnotationGraphicsView(QGraphicsView):
         denominator = math.sqrt(line_len_sq)
 
         return numerator / denominator
+
+    def _simplify_path_with_indices(self, points: list[tuple[float, float]], epsilon: float = 2.0) -> tuple[list[tuple[float, float]], list[int]]:
+        """Simplify path using the Douglas-Peucker algorithm, returning indices.
+
+        Reduces the number of points in a path while preserving its shape.
+        Also returns the original indices of the kept points.
+
+        Args:
+            points: List of (x, y) tuples.
+            epsilon: Maximum distance threshold for simplification.
+
+        Returns:
+            Tuple of (simplified points, original indices).
+        """
+        if len(points) < 3:
+            return points, list(range(len(points)))
+
+        # Use recursive helper that tracks indices
+        indices = list(range(len(points)))
+        result_indices = self._douglas_peucker_with_indices(points, indices, epsilon)
+
+        # Build simplified points and indices lists
+        simplified_points = [points[i] for i in result_indices]
+        return simplified_points, result_indices
+
+    def _douglas_peucker_with_indices(self, points: list[tuple[float, float]], indices: list[int], epsilon: float) -> list[int]:
+        """Recursive Douglas-Peucker algorithm that preserves original indices.
+
+        Args:
+            points: List of (x, y) tuples.
+            indices: Original indices corresponding to points.
+            epsilon: Maximum distance threshold.
+
+        Returns:
+            List of original indices for the simplified path.
+        """
+        if len(points) < 3:
+            return indices
+
+        first = points[0]
+        last = points[-1]
+
+        max_dist = 0.0
+        max_idx = 0
+
+        for i in range(1, len(points) - 1):
+            dist = self._perpendicular_distance(points[i], first, last)
+            if dist > max_dist:
+                max_dist = dist
+                max_idx = i
+
+        if max_dist > epsilon:
+            left = self._douglas_peucker_with_indices(points[: max_idx + 1], indices[: max_idx + 1], epsilon)
+            right = self._douglas_peucker_with_indices(points[max_idx:], indices[max_idx:], epsilon)
+            return left[:-1] + right
+        else:
+            return [indices[0], indices[-1]]
 
     # ==================== Text Input Methods ====================
 

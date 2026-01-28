@@ -199,12 +199,16 @@ class FreehandAnnotation:
         id: Unique identifier.
         points: List of (x, y) ratio tuples (0.0-1.0).
         color: Line color as RGB tuple.
-        line_width: Line thickness in pixels.
+        line_width: Line thickness in pixels (base width for pressure-sensitive strokes).
+        pressures: Optional list of pressure values (0.0-1.0) for each point.
+            If provided, line width varies based on pressure.
+            If None, uniform line width is used.
     """
 
     points: list[tuple[float, float]]
     color: tuple[int, int, int] = (255, 0, 0)
     line_width: int = 3
+    pressures: list[float] | None = None
     id: str = field(default_factory=_generate_id)
 
     @property
