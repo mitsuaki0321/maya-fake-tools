@@ -40,13 +40,11 @@ def import_gltf_file(
     file_path: str | None = None,
     output_dir: str | None = None,
     shader_type: str = "auto",
-    axis_forward: str = "-Z",
-    axis_up: str = "Y",
 ) -> list[str]:
     """Import glTF/GLB file into Maya.
 
     Main import function that orchestrates the entire import process:
-    1. Convert GLB to FBX using Blender (with axis conversion options)
+    1. Convert GLB to FBX using Blender
     2. Import FBX into Maya
     3. Update texture paths
     4. Optionally convert materials
@@ -55,8 +53,6 @@ def import_gltf_file(
         file_path: Path to glTF/GLB file. If None, opens file dialog.
         output_dir: Directory for FBX output. If None, uses same directory as input file.
         shader_type: Material shader type ('arnold', 'stingray', 'standard', 'auto').
-        axis_forward: Forward axis for FBX export (default: '-Z').
-        axis_up: Up axis for FBX export (default: 'Y').
 
     Returns:
         list[str]: List of imported node names.
@@ -84,10 +80,9 @@ def import_gltf_file(
         file_path = Path(file_path)
         logger.info(f"Input file: {file_path}")
         logger.info(f"Shader type: {shader_type}")
-        logger.info(f"Axis conversion: forward={axis_forward}, up={axis_up}")
 
         # Convert GLB to FBX
-        result = convert_glb_to_fbx(str(file_path), output_dir=output_dir, axis_forward=axis_forward, axis_up=axis_up)
+        result = convert_glb_to_fbx(str(file_path), output_dir=output_dir)
         if not result:
             logger.error("FBX conversion failed")
             cmds.warning("glTF Importer: FBX conversion failed. Check if Blender is installed.")

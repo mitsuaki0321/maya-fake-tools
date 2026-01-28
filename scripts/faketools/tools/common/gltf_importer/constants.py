@@ -10,13 +10,6 @@ SHADER_TYPES = {
     "auto": "Auto Detect",
 }
 
-# Axis options for FBX export (Blender standard)
-AXIS_OPTIONS = ["X", "-X", "Y", "-Y", "Z", "-Z"]
-
-# Default axis values (Maya compatible)
-DEFAULT_AXIS_FORWARD = "-Z"
-DEFAULT_AXIS_UP = "Y"
-
 # Supported image extensions for texture files
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp", ".tga", ".tiff", ".exr", ".hdr"}
 
@@ -45,7 +38,7 @@ This script runs in Blender headless mode to convert GLB files to FBX.
 Optimized for Maya 2022+ compatibility.
 
 Usage:
-    blender --background --python script.py -- <input.glb> <output.fbx> [texture_dir] [axis_forward] [axis_up]
+    blender --background --python script.py -- <input.glb> <output.fbx> [texture_dir]
 """
 
 import bpy
@@ -145,13 +138,11 @@ def ensure_objects_exportable():
     print(f"Export preparation complete: {len(bpy.data.objects)} objects")
 
 
-def export_fbx(fbx_path, axis_forward='-Z', axis_up='Y', export_settings=None):
+def export_fbx(fbx_path, export_settings=None):
     """Export FBX file.
 
     Args:
         fbx_path: Output FBX file path.
-        axis_forward: Forward axis for export (default: '-Z').
-        axis_up: Up axis for export (default: 'Y').
         export_settings: Optional export settings dict.
 
     Returns:
@@ -189,8 +180,8 @@ def export_fbx(fbx_path, axis_forward='-Z', axis_up='Y', export_settings=None):
             'embed_textures': True,
             'batch_mode': 'OFF',
             'use_batch_own_dir': False,
-            'axis_forward': axis_forward,
-            'axis_up': axis_up,
+            'axis_forward': '-Z',
+            'axis_up': 'Y',
         }
 
         if export_settings:
@@ -268,20 +259,17 @@ def main():
 
     if len(args) < 2:
         print("ERROR: Please specify input and output files")
-        print("Usage: blender --background --python script.py -- <input.glb> <output.fbx> [texture_dir] [axis_forward] [axis_up]")
+        print("Usage: blender --background --python script.py -- <input.glb> <output.fbx> [texture_dir]")
         sys.exit(1)
 
     input_glb = args[0]
     output_fbx = args[1]
     texture_dir = args[2] if len(args) > 2 else None
-    axis_forward = args[3] if len(args) > 3 else '-Z'
-    axis_up = args[4] if len(args) > 4 else 'Y'
 
     print(f"Input GLB: {input_glb}")
     print(f"Output FBX: {output_fbx}")
     if texture_dir:
         print(f"Texture directory: {texture_dir}")
-    print(f"Axis conversion: forward={axis_forward}, up={axis_up}")
 
     print("\\nClearing scene...")
     clear_scene()
@@ -304,7 +292,7 @@ def main():
             extract_textures(default_texture_dir)
 
     print("\\n" + "=" * 60)
-    if not export_fbx(output_fbx, axis_forward=axis_forward, axis_up=axis_up):
+    if not export_fbx(output_fbx):
         print("ERROR: FBX export failed")
         sys.exit(1)
 
