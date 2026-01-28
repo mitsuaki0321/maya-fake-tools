@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>glTF Importer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Import glTF/GLB files into Maya via Blender conversion">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/gltf_importer.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li class="active">glTF Importer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#requirements"
+                    id="toc-requirements">Requirements</a>
+                    <ul>
+                    <li><a href="#blender-path-detection-order"
+                    id="toc-blender-path-detection-order">Blender Path
+                    Detection Order</a></li>
+                    </ul></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#interface"
+                    id="toc-interface">Interface</a>
+                    <ul>
+                    <li><a href="#input-file" id="toc-input-file">Input
+                    File</a></li>
+                    <li><a href="#output-directory"
+                    id="toc-output-directory">Output Directory</a></li>
+                    <li><a href="#shader-type"
+                    id="toc-shader-type">Shader Type</a></li>
+                    <li><a href="#import-button"
+                    id="toc-import-button">Import Button</a></li>
+                    </ul></li>
+                    <li><a href="#processing-flow"
+                    id="toc-processing-flow">Processing Flow</a></li>
+                    <li><a href="#command-line-usage"
+                    id="toc-command-line-usage">Command Line
+                    Usage</a></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">glTF Importer</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool that converts glTF/GLB files to FBX using
+                Blender and imports them into Maya.</p>
+                <p>Maya does not natively support the glTF format, but
+                this tool enables seamless import of glTF/GLB files by
+                leveraging Blender as a conversion backend.</p>
+                <h2 id="requirements">Requirements</h2>
+                <ul>
+                <li><strong>Blender</strong> must be installed</li>
+                </ul>
+                <h3 id="blender-path-detection-order">Blender Path
+                Detection Order</h3>
+                <p>Blender is automatically detected in the following
+                order:</p>
+                <ol type="1">
+                <li><strong>Environment variable
+                <code>BLENDER_PATH</code></strong> (highest priority)
+                <ul>
+                <li>Uses the path explicitly set by the user</li>
+                </ul></li>
+                <li><strong>Standard installation directories</strong>
+                <ul>
+                <li><strong>Windows</strong>:
+                <code>C:/Program Files/Blender Foundation/Blender X.X/blender.exe</code>
+                <ul>
+                <li>If multiple versions exist, the latest version is
+                preferred</li>
+                </ul></li>
+                <li><strong>macOS</strong>:
+                <code>/Applications/Blender.app/Contents/MacOS/Blender</code></li>
+                <li><strong>Linux</strong>:
+                <code>/usr/bin/blender</code> or
+                <code>/usr/local/bin/blender</code></li>
+                </ul></li>
+                <li><strong>System PATH</strong> (lowest priority)
+                <ul>
+                <li>Searches using <code>where blender</code> (Windows)
+                or <code>which blender</code> (macOS/Linux)</li>
+                </ul></li>
+                </ol>
+                <p>Steam versions or portable versions of Blender may
+                not be automatically detected. In such cases, please set
+                the <code>BLENDER_PATH</code> environment variable.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch from the dedicated menu or with the following
+                command.</p>
+                <pre class="python"><code>import faketools.tools.common.gltf_importer.ui
+faketools.tools.common.gltf_importer.ui.show_ui()</code></pre>
+                <h2 id="interface">Interface</h2>
+                <h3 id="input-file">Input File</h3>
+                <p>Specify the glTF/GLB file to import. Click the
+                <code>...</code> button to select from the file
+                browser.</p>
+                <h3 id="output-directory">Output Directory</h3>
+                <p>Specify the output directory for FBX files and
+                textures. If left empty, outputs to the same directory
+                as the input file.</p>
+                <h3 id="shader-type">Shader Type</h3>
+                <p>Select the shader type to use during import.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Option</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Auto Detect</td>
+                <td>Use materials as included in the FBX</td>
+                </tr>
+                <tr>
+                <td>Arnold</td>
+                <td>Convert to Arnold shaders</td>
+                </tr>
+                <tr>
+                <td>Stingray PBS</td>
+                <td>Convert to Stingray PBS shaders</td>
+                </tr>
+                <tr>
+                <td>Standard</td>
+                <td>Convert to Standard shaders</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="import-button">Import Button</h3>
+                <p>Execute the import based on the current settings.</p>
+                <h2 id="processing-flow">Processing Flow</h2>
+                <ol type="1">
+                <li><strong>GLB to FBX Conversion</strong>: Convert
+                glTF/GLB file to FBX using Blender’s headless mode</li>
+                <li><strong>FBX Import</strong>: Import the converted
+                FBX file into Maya</li>
+                <li><strong>Texture Processing</strong>: Extract
+                embedded textures and update paths</li>
+                <li><strong>Material Conversion</strong>: Convert
+                materials based on selected shader type (except Auto
+                Detect)</li>
+                </ol>
+                <h2 id="command-line-usage">Command Line Usage</h2>
+                <p>You can also import directly from scripts without
+                using the UI.</p>
+                <pre class="python"><code>from faketools.tools.common.gltf_importer import command
+
+# Basic usage
+imported_nodes = command.import_gltf_file(
+    file_path=&quot;path/to/model.glb&quot;,
+    shader_type=&quot;auto&quot;
+)
+
+# With output directory
+imported_nodes = command.import_gltf_file(
+    file_path=&quot;path/to/model.glb&quot;,
+    output_dir=&quot;path/to/output&quot;,
+    shader_type=&quot;arnold&quot;
+)</code></pre>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Blender runs in the background during
+                conversion</li>
+                <li>Large files may take longer to convert (timeout: 5
+                minutes)</li>
+                <li>Textures are extracted to a
+                <code>{filename}.fbm</code> directory</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

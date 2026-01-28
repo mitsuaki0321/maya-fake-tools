@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>glTF Importer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Blender経由でglTF/GLBファイルをMayaにインポート">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/gltf_importer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li class="active">glTF Importer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#必要条件"
+                    id="toc-必要条件">必要条件</a>
+                    <ul>
+                    <li><a href="#blenderパスの検知順序"
+                    id="toc-blenderパスの検知順序">Blenderパスの検知順序</a></li>
+                    </ul></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#インターフェース"
+                    id="toc-インターフェース">インターフェース</a>
+                    <ul>
+                    <li><a href="#input-file" id="toc-input-file">Input
+                    File</a></li>
+                    <li><a href="#output-directory"
+                    id="toc-output-directory">Output Directory</a></li>
+                    <li><a href="#shader-type"
+                    id="toc-shader-type">Shader Type</a></li>
+                    <li><a href="#import-ボタン"
+                    id="toc-import-ボタン">Import ボタン</a></li>
+                    </ul></li>
+                    <li><a href="#処理フロー"
+                    id="toc-処理フロー">処理フロー</a></li>
+                    <li><a href="#コマンドラインからの使用"
+                    id="toc-コマンドラインからの使用">コマンドラインからの使用</a></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">glTF Importer</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>glTF/GLBファイルをBlenderを使用してFBXに変換し、Mayaにインポートするツールです。</p>
+                <p>MayaはglTF形式を直接サポートしていませんが、このツールを使用することで、Blenderをバックエンドとして活用し、glTF/GLBファイルをシームレスにインポートできます。</p>
+                <h2 id="必要条件">必要条件</h2>
+                <ul>
+                <li><strong>Blender</strong>
+                がインストールされている必要があります</li>
+                </ul>
+                <h3
+                id="blenderパスの検知順序">Blenderパスの検知順序</h3>
+                <p>Blenderは以下の順序で自動検出されます：</p>
+                <ol type="1">
+                <li><strong>環境変数
+                <code>BLENDER_PATH</code></strong>（優先度: 最高）
+                <ul>
+                <li>ユーザーが明示的に設定したパスを使用</li>
+                </ul></li>
+                <li><strong>標準インストールディレクトリ</strong>
+                <ul>
+                <li><strong>Windows</strong>:
+                <code>C:/Program Files/Blender Foundation/Blender X.X/blender.exe</code>
+                <ul>
+                <li>複数バージョンがある場合、最新バージョンを優先</li>
+                </ul></li>
+                <li><strong>macOS</strong>:
+                <code>/Applications/Blender.app/Contents/MacOS/Blender</code></li>
+                <li><strong>Linux</strong>:
+                <code>/usr/bin/blender</code> または
+                <code>/usr/local/bin/blender</code></li>
+                </ul></li>
+                <li><strong>システムPATH</strong>（優先度: 最低）
+                <ul>
+                <li><code>where blender</code>（Windows）または
+                <code>which blender</code>（macOS/Linux）で検索</li>
+                </ul></li>
+                </ol>
+                <p>Steam版やポータブル版のBlenderは自動検出されない場合があります。その場合は
+                <code>BLENDER_PATH</code>
+                環境変数を設定してください。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用メニューか以下のコマンドで起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.gltf_importer.ui
+faketools.tools.common.gltf_importer.ui.show_ui()</code></pre>
+                <h2 id="インターフェース">インターフェース</h2>
+                <h3 id="input-file">Input File</h3>
+                <p>インポートするglTF/GLBファイルを指定します。<code>...</code>
+                ボタンをクリックしてファイルブラウザから選択できます。</p>
+                <h3 id="output-directory">Output Directory</h3>
+                <p>FBXファイルとテクスチャの出力先ディレクトリを指定します。空のままにすると、入力ファイルと同じディレクトリに出力されます。</p>
+                <h3 id="shader-type">Shader Type</h3>
+                <p>インポート時に使用するシェーダータイプを選択します。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Auto Detect</td>
+                <td>FBXに含まれるマテリアルをそのまま使用</td>
+                </tr>
+                <tr>
+                <td>Arnold</td>
+                <td>Arnoldシェーダーに変換</td>
+                </tr>
+                <tr>
+                <td>Stingray PBS</td>
+                <td>Stingray PBSシェーダーに変換</td>
+                </tr>
+                <tr>
+                <td>Standard</td>
+                <td>Standardシェーダーに変換</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="import-ボタン">Import ボタン</h3>
+                <p>設定に基づいてインポートを実行します。</p>
+                <h2 id="処理フロー">処理フロー</h2>
+                <ol type="1">
+                <li><strong>GLB→FBX変換</strong>:
+                BlenderのヘッドレスモードでglTF/GLBファイルをFBXに変換</li>
+                <li><strong>FBXインポート</strong>:
+                変換されたFBXファイルをMayaにインポート</li>
+                <li><strong>テクスチャ処理</strong>:
+                埋め込みテクスチャを抽出し、パスを更新</li>
+                <li><strong>マテリアル変換</strong>:
+                選択したシェーダータイプに応じてマテリアルを変換（Auto
+                Detect以外の場合）</li>
+                </ol>
+                <h2
+                id="コマンドラインからの使用">コマンドラインからの使用</h2>
+                <p>UIを使用せずにスクリプトから直接インポートすることも可能です。</p>
+                <pre class="python"><code>from faketools.tools.common.gltf_importer import command
+
+# 基本的な使用方法
+imported_nodes = command.import_gltf_file(
+    file_path=&quot;path/to/model.glb&quot;,
+    shader_type=&quot;auto&quot;
+)
+
+# 出力ディレクトリを指定
+imported_nodes = command.import_gltf_file(
+    file_path=&quot;path/to/model.glb&quot;,
+    output_dir=&quot;path/to/output&quot;,
+    shader_type=&quot;arnold&quot;
+)</code></pre>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>変換中にBlenderがバックグラウンドで実行されます</li>
+                <li>大きなファイルの場合、変換に時間がかかることがあります（タイムアウト:
+                5分）</li>
+                <li>テクスチャは <code>{ファイル名}.fbm</code>
+                ディレクトリに抽出されます</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
