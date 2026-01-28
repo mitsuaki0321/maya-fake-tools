@@ -143,7 +143,7 @@ TOOL_GROUPS = [
     ("select", "Select", [(TOOL_SELECT, "Select")]),
     ("draw", "Draw", [(TOOL_FREEHAND, "Freehand"), (TOOL_LINE, "Line"), (TOOL_ARROW, "Arrow")]),
     ("shape", "Shape", [(TOOL_RECT, "Rectangle"), (TOOL_ELLIPSE, "Ellipse")]),
-    ("text", "Text", [(TOOL_NUMBER, "Number"), (TOOL_TEXT, "Text")]),
+    ("text", "Text", [(TOOL_TEXT, "Text"), (TOOL_NUMBER, "Number")]),
 ]
 
 # Map tool to its group
