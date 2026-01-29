@@ -403,6 +403,13 @@ class AnnotationEditorDialog(QDialog):
         self._custom_color_btn: QPushButton | None = None
         self._width_buttons: list[QToolButton] = []
 
+        # Timer for handling popup during window move
+        self._move_timer = QTimer(self)
+        self._move_timer.setSingleShot(True)
+        self._move_timer.setInterval(100)  # 100ms delay after move stops
+        self._move_timer.timeout.connect(self._on_move_finished)
+        self._popup_before_move: str | None = None
+
         self._setup_ui()
         self._load_image()
 
@@ -1305,12 +1312,43 @@ class AnnotationEditorDialog(QDialog):
     def accept(self):
         """Accept dialog and save settings."""
         self._save_settings()
+        self._cleanup_popups()
         super().accept()
 
     def reject(self):
         """Reject dialog and save settings."""
         self._save_settings()
+        self._cleanup_popups()
         super().reject()
+
+    def moveEvent(self, event):
+        """Handle dialog move to hide popup during movement.
+
+        Args:
+            event: QMoveEvent containing move information.
+        """
+        super().moveEvent(event)
+        # Hide popup during move, remember which one was open
+        if self._active_popup and self._popup_before_move is None:
+            self._popup_before_move = self._active_popup
+            self._hide_popup()
+        # Restart timer to detect when move stops
+        if self._popup_before_move:
+            self._move_timer.start()
+
+    def _on_move_finished(self):
+        """Reopen popup after window move is finished."""
+        if self._popup_before_move:
+            self._show_popup(self._popup_before_move)
+            self._popup_before_move = None
+
+    def _cleanup_popups(self):
+        """Close and delete all popup widgets."""
+        self._hide_popup()
+        for popup in self._popup_widgets.values():
+            popup.close()
+            popup.deleteLater()
+        self._popup_widgets.clear()
 
 
 class AnnotationGraphicsView(QGraphicsView):
