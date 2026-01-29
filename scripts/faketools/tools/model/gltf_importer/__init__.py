@@ -8,7 +8,7 @@ TOOL_CONFIG = {
     "menu_order": 40,
     "requires_selection": False,
     "author": "FakeTools",
-    "category": "common",
+    "category": "model",
 }
 
 __all__ = ["TOOL_CONFIG"]
