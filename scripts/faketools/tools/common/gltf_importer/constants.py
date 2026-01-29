@@ -157,7 +157,7 @@ def export_fbx(fbx_path, export_settings=None):
             'global_scale': 1.0,
             'apply_unit_scale': True,
             'apply_scale_options': 'FBX_SCALE_ALL',
-            'bake_space_transform': False,
+            'bake_space_transform': True,
             'object_types': {'MESH', 'ARMATURE', 'EMPTY', 'LIGHT', 'CAMERA'},
             'use_mesh_modifiers': True,
             'use_mesh_modifiers_render': True,
