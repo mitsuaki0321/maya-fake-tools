@@ -2,6 +2,7 @@
 
 import contextlib
 from logging import getLogger
+from pathlib import Path
 
 import maya.cmds as cmds
 
@@ -9,7 +10,6 @@ from ....lib import lib_skinCluster
 from ....lib_ui import BaseMainWindow, error_handler, get_margins, get_maya_main_window, get_spacing, undo_chunk
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
-    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -19,8 +19,10 @@ from ....lib_ui.qt_compat import (
     QVBoxLayout,
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
-from ....lib_ui.widgets import FieldSliderWidget, extra_widgets
+from ....lib_ui.widgets import FieldSliderWidget, IconButton, IconToggleButton, extra_widgets
 from . import command
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 logger = getLogger(__name__)
 
@@ -87,7 +89,7 @@ class MainWindow(BaseMainWindow):
         self._inf_filter.textChanged.connect(self._on_filter_changed)
         filter_layout.addWidget(self._inf_filter, 1)
 
-        self._affected_checkbox = QCheckBox("Affected Only")
+        self._affected_checkbox = IconToggleButton(icon_on="affected-on", icon_off="affected-off", icon_dir=_IMAGES_DIR)
         self._affected_checkbox.setToolTip("Show only influences with non-zero weights on selected components")
         self._affected_checkbox.toggled.connect(self._on_affected_toggled)
         filter_layout.addWidget(self._affected_checkbox)
@@ -141,7 +143,7 @@ class MainWindow(BaseMainWindow):
         self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
         bottom_layout.addWidget(self._amount_widget, 1)
 
-        execute_button = QPushButton("Move Weights")
+        execute_button = IconButton(icon_name="move-weights", icon_dir=_IMAGES_DIR)
         execute_button.setToolTip("Transfer weights from source to target influences on selected components")
         execute_button.clicked.connect(self._on_execute)
         bottom_layout.addWidget(execute_button)
@@ -150,6 +152,10 @@ class MainWindow(BaseMainWindow):
 
         # --- ScriptJob ---
         self._script_job_id = cmds.scriptJob(event=["SelectionChanged", self._on_selection_changed])
+
+        # --- Initial window size ---
+        self.adjustSize()
+        self.resize(int(self.width() * 0.75), self.height())
 
     # --- Slots ---
 
