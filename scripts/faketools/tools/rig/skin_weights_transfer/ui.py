@@ -205,6 +205,11 @@ class MainWindow(BaseMainWindow):
 
         self._inf_filter.clear()
 
+        # Apply affected-only filter if it was already enabled
+        if self._affected_checkbox.isChecked():
+            self._update_affected_influences()
+        self._apply_filters()
+
     def _on_filter_changed(self, text: str):
         """Filter both influence lists by text (case-insensitive).
 
