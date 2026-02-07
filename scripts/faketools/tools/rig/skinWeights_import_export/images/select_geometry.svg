@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#CCCCCC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Mesh / cube icon -->
+  <path d="M8 2 L14 5 L14 11 L8 14 L2 11 L2 5 Z"/>
+  <line x1="8" y1="2" x2="8" y2="14"/>
+  <line x1="2" y1="5" x2="14" y2="5"/>
+</svg>

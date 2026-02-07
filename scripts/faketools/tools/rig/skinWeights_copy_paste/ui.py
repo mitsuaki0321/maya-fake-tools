@@ -1,6 +1,7 @@
 """Skin weights copy and paste tool."""
 
 from logging import getLogger
+from pathlib import Path
 
 from maya.api.OpenMaya import MGlobal
 import maya.cmds as cmds
@@ -10,6 +11,8 @@ from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QCursor, QEvent, QIcon, QPushButton, QSizePolicy, QSlider, Qt, Signal
 from ....lib_ui.widgets import IconButton, IconToggleButton, extra_widgets
 from .command import SkinWeightsCopyPaste
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 logger = getLogger(__name__)
 _instance = None
@@ -56,7 +59,7 @@ class MainWindow(BaseFramelessWindow):
         self.central_layout.addWidget(separator)
 
         # Paste button
-        self.paste_button = IconButton(icon_name="skinWeights_copy_paste_005")
+        self.paste_button = IconButton(icon_name="skinWeights_copy_paste_005", icon_dir=_IMAGES_DIR)
         self.paste_button.setEnabled(False)
         self.central_layout.addWidget(self.paste_button)
 
@@ -470,14 +473,14 @@ class SourceClipboardButton(IconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(icon_name="skinWeights_copy_paste_001", parent=parent)
+        super().__init__(icon_name="skinWeights_copy_paste_001", icon_dir=_IMAGES_DIR, parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
 
         self._skinWeights_copy_paste = skinWeights_copy_paste
-        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_001"))
-        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_002"))
+        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_001", base_dir=_IMAGES_DIR))
+        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_002", base_dir=_IMAGES_DIR))
 
         self.setText("0")
         self.setIcon(self._select_icon)
@@ -528,14 +531,14 @@ class DestinationClipboardButton(IconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(icon_name="skinWeights_copy_paste_003", parent=parent)
+        super().__init__(icon_name="skinWeights_copy_paste_003", icon_dir=_IMAGES_DIR, parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
 
         self._skinWeights_copy_paste = skinWeights_copy_paste
-        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_003"))
-        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_004"))
+        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_003", base_dir=_IMAGES_DIR))
+        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_004", base_dir=_IMAGES_DIR))
 
         self.setText("0")
         self.setIcon(self._select_icon)
@@ -593,7 +596,7 @@ class OnlyUnlockInfluencesButton(IconToggleButton):
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
             parent (QWidget, optional): The parent widget. Defaults to None.
         """
-        super().__init__(icon_on="lock", icon_off="lock-open", parent=parent)
+        super().__init__(icon_on="lock", icon_off="lock-open", icon_dir=_IMAGES_DIR, parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")

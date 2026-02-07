@@ -1,11 +1,14 @@
 """File item widget for the skin weights import/export tool."""
 
 import os
+from pathlib import Path
 
 from ....lib_ui import icons
 from ....lib_ui.base_window import get_margins, get_spacing
-from ....lib_ui.qt_compat import QHBoxLayout, QIcon, QLabel, QPushButton, QSize, QSizePolicy, Qt, QWidget
+from ....lib_ui.qt_compat import QHBoxLayout, QIcon, QLabel, QPixmap, QPushButton, QSize, QSizePolicy, Qt, QWidget
 from ....lib_ui.ui_utils import scale_by_dpi
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 
 class FileItemWidget(QWidget):
@@ -39,28 +42,10 @@ class FileItemWidget(QWidget):
         icon_label = QLabel()
         icon_size = scale_by_dpi(16, self)
 
-        # Select appropriate icon size based on DPI
-        if icon_size <= 16:
-            size_suffix = "16_16"
-        else:
-            size_suffix = "32_32"
-
-        if os.path.isdir(self.file_path):
-            # Directory icon
-            icon_name = f"folder_{size_suffix}"
-        else:
-            # File icon
-            icon_name = f"file_{size_suffix}"
-
-        icon_path = icons.get_path(icon_name)
-        if icon_path and os.path.exists(icon_path):
-            from ....lib_ui.qt_compat import QPixmap
-
-            pixmap = QPixmap(icon_path).scaled(icon_size, icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            icon_label.setPixmap(pixmap)
-        else:
-            # Fallback to emoji if icon not found
-            icon_label.setText("📄" if os.path.isfile(self.file_path) else "📁")
+        icon_name = "folder" if os.path.isdir(self.file_path) else "file"
+        icon_path = icons.get_path(icon_name, base_dir=_IMAGES_DIR)
+        pixmap = QPixmap(icon_path).scaled(icon_size, icon_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        icon_label.setPixmap(pixmap)
 
         icon_label.setFixedSize(icon_size, icon_size)
         layout.addWidget(icon_label)
@@ -78,13 +63,10 @@ class FileItemWidget(QWidget):
         # Select Influences button (icon only)
         influences_button = QPushButton()
         influences_button.setToolTip("Select Influences")
-        influences_icon_path = icons.get_path(f"select_influences_{size_suffix}")
-        if influences_icon_path and os.path.exists(influences_icon_path):
-            influences_button.setIcon(QIcon(influences_icon_path))
-            button_icon_size = int(icon_size * 1.2)
-            influences_button.setIconSize(QSize(button_icon_size, button_icon_size))
-        else:
-            influences_button.setText("I")
+        influences_icon_path = icons.get_path("select_influences", base_dir=_IMAGES_DIR)
+        influences_button.setIcon(QIcon(influences_icon_path))
+        button_icon_size = int(icon_size * 1.2)
+        influences_button.setIconSize(QSize(button_icon_size, button_icon_size))
         influences_button.setFixedSize(int(icon_size * 1.5), int(icon_size * 1.5))
         influences_button.clicked.connect(self._on_influences_clicked)
         # Apply transparent background style
@@ -109,13 +91,10 @@ class FileItemWidget(QWidget):
         # Select Geometry button (icon only)
         geometry_button = QPushButton()
         geometry_button.setToolTip("Select Geometry")
-        geometry_icon_path = icons.get_path(f"select_geometry_{size_suffix}")
-        if geometry_icon_path and os.path.exists(geometry_icon_path):
-            geometry_button.setIcon(QIcon(geometry_icon_path))
-            button_icon_size = int(icon_size * 1.2)
-            geometry_button.setIconSize(QSize(button_icon_size, button_icon_size))
-        else:
-            geometry_button.setText("G")
+        geometry_icon_path = icons.get_path("select_geometry", base_dir=_IMAGES_DIR)
+        geometry_button.setIcon(QIcon(geometry_icon_path))
+        button_icon_size = int(icon_size * 1.2)
+        geometry_button.setIconSize(QSize(button_icon_size, button_icon_size))
         geometry_button.setFixedSize(int(icon_size * 1.5), int(icon_size * 1.5))
         geometry_button.clicked.connect(self._on_geometry_clicked)
         # Apply transparent background style

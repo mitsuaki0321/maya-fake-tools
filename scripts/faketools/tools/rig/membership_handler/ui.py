@@ -3,6 +3,7 @@ Membership Handler for deformer tags tool.
 """
 
 from logging import getLogger
+from pathlib import Path
 
 import maya.cmds as cmds
 
@@ -10,6 +11,8 @@ from ....lib import lib_memberShip, lib_selection
 from ....lib_ui import BaseFramelessWindow, get_maya_main_window, maya_decorator
 from ....lib_ui.qt_compat import QCursor, QEvent, QLineEdit, QSizePolicy, Qt
 from ....lib_ui.widgets import IconButton
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 logger = getLogger(__name__)
 
@@ -42,7 +45,7 @@ class MainWindow(BaseFramelessWindow):
         # Enable window resizing for frameless window
         self._enable_window_resize()
 
-        set_deformer_button = IconButton(icon_name="membership_handler_001")
+        set_deformer_button = IconButton(icon_name="membership_handler_001", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(set_deformer_button)
 
         self.deformer_field = QLineEdit()
@@ -50,10 +53,10 @@ class MainWindow(BaseFramelessWindow):
         self.deformer_field.setPlaceholderText("Deformer")
         self.central_layout.addWidget(self.deformer_field, stretch=1)
 
-        update_button = IconButton(icon_name="membership_handler_002")
+        update_button = IconButton(icon_name="membership_handler_002", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(update_button)
 
-        select_button = IconButton(icon_name="membership_handler_003")
+        select_button = IconButton(icon_name="membership_handler_003", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(select_button)
 
         # Signal & Slot

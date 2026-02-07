@@ -2,6 +2,7 @@
 
 from logging import getLogger
 import os
+from pathlib import Path
 import shutil
 import tempfile
 
@@ -28,6 +29,7 @@ from .file_item_widget import FileItemWidget
 
 logger = getLogger(__name__)
 _instance = None
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 TEMP_DIR = os.path.normpath(os.path.join(tempfile.gettempdir(), "skinWeights"))
 
@@ -97,7 +99,7 @@ class MainWindow(BaseMainWindow):
 
         layout = QHBoxLayout()
 
-        self.format_checkBox = IconToggleButton(icon_on="binary", icon_off="ascii")
+        self.format_checkBox = IconToggleButton(icon_on="binary", icon_off="ascii", icon_dir=_IMAGES_DIR)
         self.format_checkBox.setChecked(True)
         layout.addWidget(self.format_checkBox)
 

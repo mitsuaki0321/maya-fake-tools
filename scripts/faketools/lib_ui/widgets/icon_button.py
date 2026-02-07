@@ -75,6 +75,7 @@ class IconButtonMixin:
         icon_name: str | None = None,
         style_mode: IconButtonStyle = IconButtonStyle.PALETTE,
         auto_size: bool = True,
+        icon_dir: str | None = None,
     ):
         """Initialize icon button functionality.
 
@@ -84,6 +85,7 @@ class IconButtonMixin:
             style_mode: Style mode to use (TRANSPARENT or PALETTE).
             auto_size: Whether to auto-size based on icon dimensions.
                        Only applicable when style_mode is PALETTE and icon_name is provided.
+            icon_dir: Directory to search for icons. None uses the default lib_ui/images/ directory.
         """
         self._style_mode = style_mode
         self._auto_size = auto_size
@@ -91,7 +93,7 @@ class IconButtonMixin:
 
         # Load icon if provided
         if icon_name:
-            icon_path = icons.get_path(icon_name)
+            icon_path = icons.get_path(icon_name, base_dir=icon_dir)
             self._icon_pixmap = QPixmap(icon_path)
             icon = QIcon(icon_path)
             self.setIcon(icon)
@@ -182,6 +184,7 @@ class IconButton(IconButtonMixin, QPushButton):
         icon_name: str | None = None,
         style_mode: IconButtonStyle = IconButtonStyle.PALETTE,
         auto_size: bool = True,
+        icon_dir: str | None = None,
         parent=None,
     ):
         """Initialize the icon button.
@@ -192,10 +195,11 @@ class IconButton(IconButtonMixin, QPushButton):
             style_mode: Style mode to use (TRANSPARENT or PALETTE).
             auto_size: Whether to auto-size based on icon dimensions.
                        Only applicable when style_mode is PALETTE and icon_name is provided.
+            icon_dir: Directory to search for icons. None uses the default lib_ui/images/ directory.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self._init_icon_button(icon_name, style_mode, auto_size)
+        self._init_icon_button(icon_name, style_mode, auto_size, icon_dir=icon_dir)
 
 
 class IconToolButton(IconButtonMixin, QToolButton):
@@ -220,6 +224,7 @@ class IconToolButton(IconButtonMixin, QToolButton):
         icon_name: str | None = None,
         style_mode: IconButtonStyle = IconButtonStyle.PALETTE,
         auto_size: bool = True,
+        icon_dir: str | None = None,
         parent=None,
     ):
         """Initialize the icon tool button.
@@ -230,10 +235,11 @@ class IconToolButton(IconButtonMixin, QToolButton):
             style_mode: Style mode to use (TRANSPARENT or PALETTE).
             auto_size: Whether to auto-size based on icon dimensions.
                        Only applicable when style_mode is PALETTE and icon_name is provided.
+            icon_dir: Directory to search for icons. None uses the default lib_ui/images/ directory.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
-        self._init_icon_button(icon_name, style_mode, auto_size)
+        self._init_icon_button(icon_name, style_mode, auto_size, icon_dir=icon_dir)
 
 
 class IconToggleButton(IconButtonMixin, QPushButton):
@@ -260,6 +266,7 @@ class IconToggleButton(IconButtonMixin, QPushButton):
         icon_off: str,
         style_mode: IconButtonStyle = IconButtonStyle.PALETTE,
         auto_size: bool = True,
+        icon_dir: str | None = None,
         parent=None,
     ):
         """Initialize the icon toggle button.
@@ -269,18 +276,19 @@ class IconToggleButton(IconButtonMixin, QPushButton):
             icon_off: Icon name for the unchecked (off) state.
             style_mode: Style mode to use (TRANSPARENT or PALETTE).
             auto_size: Whether to auto-size based on icon dimensions.
+            icon_dir: Directory to search for icons. None uses the default lib_ui/images/ directory.
             parent: Parent widget.
         """
         super().__init__(parent=parent)
 
-        self._icon_on = QIcon(icons.get_path(icon_on))
-        self._icon_off = QIcon(icons.get_path(icon_off))
+        self._icon_on = QIcon(icons.get_path(icon_on, base_dir=icon_dir))
+        self._icon_off = QIcon(icons.get_path(icon_off, base_dir=icon_dir))
 
         self.setCheckable(True)
         self.setChecked(False)
 
         # Initialize mixin with the off icon (default unchecked state)
-        self._init_icon_button(icon_off, style_mode, auto_size)
+        self._init_icon_button(icon_off, style_mode, auto_size, icon_dir=icon_dir)
 
         self.toggled.connect(self._update_icon)
 
