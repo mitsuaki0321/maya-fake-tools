@@ -1,12 +1,12 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- より曲線的なフリーハンドパス -->
   <path d="M3 18C4 16 5 14 7 12C9 10 11 9 13 8.5C15 8 17 8 18.5 9C19.5 9.7 20 10.5 20.5 11.5" 
-        stroke="#CCCCCC" 
+        stroke="#F3F3F3" 
         stroke-width="2" 
         stroke-linecap="round" 
         stroke-linejoin="round"
         fill="none"/>
   
   <!-- ペン先を表現する小さな円 -->
-  <circle cx="20.5" cy="11.5" r="2" fill="#CCCCCC"/>
+  <circle cx="20.5" cy="11.5" r="2" fill="#F3F3F3"/>
 </svg>

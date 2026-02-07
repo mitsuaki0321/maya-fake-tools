@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
   <!-- Pencil body -->
   <line x1="4" y1="16" x2="14" y2="6"
-        stroke="#CCCCCC"
+        stroke="#F3F3F3"
         stroke-width="1.5"
         stroke-linecap="round"/>
   <!-- Pencil tip -->
   <polygon points="4,16 6,14.5 4.5,13"
-           fill="#CCCCCC"/>
+           fill="#F3F3F3"/>
   <!-- Pencil top -->
   <line x1="13" y1="7" x2="16" y2="4"
-        stroke="#CCCCCC"
+        stroke="#F3F3F3"
         stroke-width="2.5"
         stroke-linecap="round"/>
 </svg>

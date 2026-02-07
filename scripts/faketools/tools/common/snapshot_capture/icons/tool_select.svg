@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
   <path d="M4 2 L4 16 L8 12 L11 18 L13 17 L10 11 L15 11 Z" 
         fill="none" 
-        stroke="#CCCCCC" 
+        stroke="#F3F3F3" 
         stroke-width="1.5" 
         stroke-linejoin="round"
         stroke-linecap="round"/>
