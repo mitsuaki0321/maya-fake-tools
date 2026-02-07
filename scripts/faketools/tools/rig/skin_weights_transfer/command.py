@@ -99,3 +99,34 @@ def move_skin_weights(
 
     logger.info(f"Moved weights from {src_infs} to {tgt_inf} on {len(components)} components")
     return len(components)
+
+
+def get_affected_influences(
+    skin_cluster: str,
+    components: Sequence[str],
+) -> list[str]:
+    """Get influences that have non-zero weights on the specified components.
+
+    Args:
+        skin_cluster (str): The skinCluster node name.
+        components (Sequence[str]): Components to check.
+
+    Returns:
+        list[str]: Influence names with non-zero weights, in skinCluster order.
+    """
+    all_infs = cmds.skinCluster(skin_cluster, query=True, influence=True)
+    if not all_infs:
+        return []
+
+    num_infs = len(all_infs)
+    affected = set()
+
+    for component in cmds.ls(components, flatten=True):
+        weights = cmds.skinPercent(skin_cluster, component, query=True, value=True)
+        for i, w in enumerate(weights):
+            if w > 1e-6:
+                affected.add(i)
+        if len(affected) >= num_infs:
+            break
+
+    return [all_infs[i] for i in sorted(affected)]

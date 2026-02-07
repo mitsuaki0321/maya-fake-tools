@@ -9,6 +9,7 @@ from ....lib import lib_skinCluster
 from ....lib_ui import BaseMainWindow, error_handler, get_margins, get_maya_main_window, get_spacing, undo_chunk
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -39,6 +40,8 @@ class MainWindow(BaseMainWindow):
         self.settings = ToolSettingsManager(tool_name="skin_weights_transfer", category="rig")
         self._skin_cluster = ""
         self._hilite_nodes = []
+        self._affected_infs = None
+        self._script_job_id = None
         self._setup_ui()
         self._restore_settings()
 
@@ -59,9 +62,11 @@ class MainWindow(BaseMainWindow):
         self._sc_field = QLineEdit()
         self._sc_field.setReadOnly(True)
         self._sc_field.setPlaceholderText("Select a mesh and click SET")
+        self._sc_field.setToolTip("The skinCluster node to operate on")
         sc_layout.addWidget(self._sc_field, 1)
 
         sc_set_button = QPushButton("SET")
+        sc_set_button.setToolTip("Set skinCluster from the selected mesh or components")
         sc_set_button.clicked.connect(self._on_set_skin_cluster)
         sc_layout.addWidget(sc_set_button)
 
@@ -71,11 +76,22 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addWidget(separator)
 
         # --- Influence Filter ---
+        filter_layout = QHBoxLayout()
+        filter_layout.setSpacing(int(spacing * 0.5))
+
         self._inf_filter = QLineEdit()
         self._inf_filter.setPlaceholderText("Filter (space-separated)...")
         self._inf_filter.setClearButtonEnabled(True)
+        self._inf_filter.setToolTip("Filter influences by name (space-separated keywords, OR logic)")
         self._inf_filter.textChanged.connect(self._on_filter_changed)
-        self.central_layout.addWidget(self._inf_filter)
+        filter_layout.addWidget(self._inf_filter, 1)
+
+        self._affected_checkbox = QCheckBox("Affected Only")
+        self._affected_checkbox.setToolTip("Show only influences with non-zero weights on selected components")
+        self._affected_checkbox.toggled.connect(self._on_affected_toggled)
+        filter_layout.addWidget(self._affected_checkbox)
+
+        self.central_layout.addLayout(filter_layout)
 
         # --- Influence Lists Section ---
         lists_layout = QHBoxLayout()
@@ -83,12 +99,14 @@ class MainWindow(BaseMainWindow):
 
         # Source (left)
         src_layout = QVBoxLayout()
-        src_label = QLabel("Source (from)")
-        src_label.setAlignment(Qt.AlignCenter)
-        src_layout.addWidget(src_label)
+        src_layout.setSpacing(int(spacing * 0.25))
+        self._src_label = QLabel("Source (from)")
+        self._src_label.setAlignment(Qt.AlignCenter)
+        src_layout.addWidget(self._src_label)
 
         self._src_list = QListWidget()
         self._src_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._src_list.setToolTip("Multi-select: Ctrl+click / Shift+click")
         self._src_list.itemSelectionChanged.connect(self._on_influence_selection_changed)
         src_layout.addWidget(self._src_list)
 
@@ -96,12 +114,14 @@ class MainWindow(BaseMainWindow):
 
         # Target (right)
         tgt_layout = QVBoxLayout()
-        tgt_label = QLabel("Target (to)")
-        tgt_label.setAlignment(Qt.AlignCenter)
-        tgt_layout.addWidget(tgt_label)
+        tgt_layout.setSpacing(int(spacing * 0.25))
+        self._tgt_label = QLabel("Target (to)")
+        self._tgt_label.setAlignment(Qt.AlignCenter)
+        tgt_layout.addWidget(self._tgt_label)
 
         self._tgt_list = QListWidget()
         self._tgt_list.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._tgt_list.setToolTip("Single-select: click to choose target influence")
         self._tgt_list.itemSelectionChanged.connect(self._on_influence_selection_changed)
         tgt_layout.addWidget(self._tgt_list)
 
@@ -109,28 +129,26 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addLayout(lists_layout, 1)
 
-        separator2 = extra_widgets.HorizontalSeparator()
-        self.central_layout.addWidget(separator2)
+        # --- Amount + Execute Row ---
+        bottom_layout = QHBoxLayout()
+        bottom_layout.setSpacing(int(spacing * 0.5))
 
-        # --- Amount Section ---
-        amount_layout = QHBoxLayout()
-        amount_layout.setSpacing(int(spacing * 0.5))
-
-        amount_label = QLabel("Amount (%):")
-        amount_layout.addWidget(amount_label)
+        amount_label = QLabel("Amount:")
+        bottom_layout.addWidget(amount_label)
 
         self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
-        amount_layout.addWidget(self._amount_widget, 1)
+        self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
+        bottom_layout.addWidget(self._amount_widget, 1)
 
-        self.central_layout.addLayout(amount_layout)
-
-        separator3 = extra_widgets.HorizontalSeparator()
-        self.central_layout.addWidget(separator3)
-
-        # --- Execute Button ---
         execute_button = QPushButton("Move Weights")
+        execute_button.setToolTip("Transfer weights from source to target influences on selected components")
         execute_button.clicked.connect(self._on_execute)
-        self.central_layout.addWidget(execute_button)
+        bottom_layout.addWidget(execute_button)
+
+        self.central_layout.addLayout(bottom_layout)
+
+        # --- ScriptJob ---
+        self._script_job_id = cmds.scriptJob(event=["SelectionChanged", self._on_selection_changed])
 
     # --- Slots ---
 
@@ -184,16 +202,67 @@ class MainWindow(BaseMainWindow):
         Args:
             text (str): Filter text.
         """
-        keywords = text.lower().split()
+        self._apply_filters()
+
+    def _on_selection_changed(self):
+        """Handle Maya selection change for affected-only filtering."""
+        if not self._affected_checkbox.isChecked():
+            return
+        self._update_affected_influences()
+        self._apply_filters()
+
+    def _on_affected_toggled(self, checked: bool):
+        """Handle affected-only checkbox toggle.
+
+        Args:
+            checked (bool): Checkbox state.
+        """
+        if checked:
+            self._update_affected_influences()
+        else:
+            self._affected_infs = None
+        self._apply_filters()
+
+    def _update_affected_influences(self):
+        """Query affected influences from the current component selection."""
+        if not self._skin_cluster or not cmds.objExists(self._skin_cluster):
+            self._affected_infs = None
+            return
+
+        components = cmds.filterExpand(selectionMask=[28, 31, 46]) or []
+        if not components:
+            self._affected_infs = None
+            return
+
+        affected = command.get_affected_influences(
+            skin_cluster=self._skin_cluster,
+            components=components,
+        )
+        self._affected_infs = set(affected)
+
+    def _apply_filters(self):
+        """Apply combined text and affected-only filters to both lists."""
+        keywords = self._inf_filter.text().lower().split()
+        use_affected = self._affected_checkbox.isChecked() and self._affected_infs is not None
+
         for list_widget in (self._src_list, self._tgt_list):
             for i in range(list_widget.count()):
                 item = list_widget.item(i)
-                item_text = item.text().lower()
-                hidden = bool(keywords) and not any(kw in item_text for kw in keywords)
-                item.setHidden(hidden)
+                item_text = item.text()
+
+                text_hidden = bool(keywords) and not any(kw in item_text.lower() for kw in keywords)
+                affected_hidden = use_affected and item_text not in self._affected_infs
+
+                item.setHidden(text_hidden or affected_hidden)
 
     def _on_influence_selection_changed(self):
         """Highlight the chosen influences in Maya viewport using cmds.hilite."""
+        # Update selection count labels
+        src_count = len(self._src_list.selectedItems())
+        tgt_count = len(self._tgt_list.selectedItems())
+        self._src_label.setText(f"Source (from) [{src_count}]" if src_count else "Source (from)")
+        self._tgt_label.setText(f"Target (to) [{tgt_count}]" if tgt_count else "Target (to)")
+
         # Unhighlight previous
         if self._hilite_nodes:
             cmds.hilite(self._hilite_nodes, u=True)
@@ -286,6 +355,8 @@ class MainWindow(BaseMainWindow):
             if amount is not None and amount != "":
                 with contextlib.suppress(ValueError, TypeError):
                     self._amount_widget.setValue(int(amount))
+        if "affected_only" in settings_data:
+            self._affected_checkbox.setChecked(bool(settings_data["affected_only"]))
 
     def _collect_settings(self) -> dict:
         """Collect current widget settings.
@@ -295,6 +366,7 @@ class MainWindow(BaseMainWindow):
         """
         return {
             "amount": self._amount_widget.value(),
+            "affected_only": self._affected_checkbox.isChecked(),
         }
 
     def _save_settings(self):
@@ -303,7 +375,11 @@ class MainWindow(BaseMainWindow):
         self.settings.save_settings(settings_data, "default")
 
     def closeEvent(self, event):
-        """Save settings and clear hilite on close."""
+        """Save settings, kill scriptJob, and clear hilite on close."""
+        if self._script_job_id is not None:
+            with contextlib.suppress(RuntimeError):
+                cmds.scriptJob(kill=self._script_job_id, force=True)
+            self._script_job_id = None
         if self._hilite_nodes:
             cmds.hilite(self._hilite_nodes, u=True)
             self._hilite_nodes = []
