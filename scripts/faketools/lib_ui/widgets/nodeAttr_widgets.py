@@ -150,9 +150,19 @@ class NodeListView(BaseListView):
         Args:
             nodes (list[str]): The nodes to add.
         """
+        if not nodes:
+            return
+
+        # Use beginInsertRows/endInsertRows for batch processing
+        from ...lib_ui.qt_compat import QModelIndex
+
+        first = self.node_model.rowCount()
+        last = first + len(nodes) - 1
+        self.node_model.beginInsertRows(QModelIndex(), first, last)
         for node in nodes:
             item = QStandardItem(node)
             self.node_model.appendRow(item)
+        self.node_model.endInsertRows()
 
         self.node_changed.emit()
 
@@ -162,8 +172,14 @@ class NodeListView(BaseListView):
         Args:
             nodes (list[str]): The nodes to replace.
         """
+        # Use beginResetModel/endResetModel for batch processing
+        self.node_model.beginResetModel()
         self.node_model.clear()
-        self.add_nodes(nodes)
+        for node in nodes:
+            item = QStandardItem(node)
+            self.node_model.appendRow(item)
+        self.node_model.endResetModel()
+        self.node_changed.emit()
 
     def _remove_nodes(self) -> None:
         """Remove the selected nodes from the node list."""
@@ -403,22 +419,35 @@ class NodeAttributeWidgets(QWidget):
 
         Shows only attributes that are common to all selected nodes.
         """
-        self.attr_list.model().sourceModel().clear()
+        source_model = self.attr_list.model().sourceModel()
         selected_indexes = self.node_list.selectionModel().selectedIndexes()
         if not selected_indexes:
+            source_model.beginResetModel()
+            source_model.clear()
+            source_model.endResetModel()
             return
 
         selected_nodes = [index.data() for index in selected_indexes]
-        common_attributes = self._list_attributes(selected_nodes[0])
+        first_node_attrs = self._list_attributes(selected_nodes[0])
 
+        # Use set for O(1) lookup when computing common attributes
         if len(selected_nodes) > 1:
+            common_attrs_set = set(first_node_attrs)
             for node in selected_nodes[1:]:
-                node_attrs = self._list_attributes(node)
-                common_attributes = [attr for attr in common_attributes if attr in node_attrs]
+                node_attrs_set = set(self._list_attributes(node))
+                common_attrs_set &= node_attrs_set
+            # Preserve order from the first node's attributes
+            common_attributes = [attr for attr in first_node_attrs if attr in common_attrs_set]
+        else:
+            common_attributes = first_node_attrs
 
+        # Batch update using beginResetModel/endResetModel
+        source_model.beginResetModel()
+        source_model.clear()
         for attr in common_attributes:
             item = QStandardItem(attr)
-            self.attr_list.model().sourceModel().appendRow(item)
+            source_model.appendRow(item)
+        source_model.endResetModel()
 
     def _list_attributes(self, node: str, **kwargs) -> list[str]:
         """List writable attributes of a node.
