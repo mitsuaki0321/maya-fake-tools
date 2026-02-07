@@ -104,6 +104,9 @@ class MainWindow(BaseMainWindow):
         action = edit_menu.addAction("Prune Small Weights")
         action.triggered.connect(self.prune_small_weights)
 
+        action = edit_menu.addAction("Add Influences")
+        action.triggered.connect(self.add_influences)
+
         action = edit_menu.addAction("Remove Unused Influences")
         action.triggered.connect(self.remove_unused_influences)
 
@@ -156,6 +159,27 @@ class MainWindow(BaseMainWindow):
             cmds.error("Select geometry to prune small weights.")
 
         prune_small_weights(sel_dag_nodes, threshold=0.005)
+
+    @error_handler
+    @undo_chunk("Add Influences")
+    @repeatable("Add Influences")
+    def add_influences(self):
+        """Add influences."""
+        shapes = cmds.ls(sl=True, dag=True, shapes=True, ni=True)
+        if not shapes:
+            cmds.error("Select geometry to add influences.")
+
+        joints = cmds.ls(sl=True, type="joint")
+        if not joints:
+            cmds.error("Select joints to add as influences.")
+
+        for shape in shapes:
+            skinCluster = lib_skinCluster.get_skinCluster(shape)
+            if not skinCluster:
+                cmds.warning(f"No skinCluster found: {shape}")
+                continue
+
+            lib_skinCluster.add_influences(skinCluster, joints)
 
     @error_handler
     @undo_chunk("Remove Unused Influences")

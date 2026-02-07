@@ -516,6 +516,35 @@ def is_bound_to_skinCluster(skinCluster: str, components: Sequence[str]) -> bool
     return not diff_components
 
 
+def add_influences(skinCluster: str, infs: Sequence[str]) -> None:
+    """Add the influences to the skinCluster node.
+
+    Args:
+        skinCluster (str): The skinCluster node.
+        infs (Sequence[str]): The influences to add.
+    """
+    if not skinCluster:
+        raise ValueError("No skinCluster node specified")
+
+    if not cmds.objExists(skinCluster):
+        cmds.error(f"Node does not exist: {skinCluster}")
+
+    if cmds.nodeType(skinCluster) != "skinCluster":
+        cmds.error(f"Node is not a skinCluster: {skinCluster}")
+
+    not_exists = [inf for inf in infs if not cmds.objExists(inf)]
+    if not_exists:
+        cmds.error(f"Node does not exist: {not_exists}")
+
+    current_infs = cmds.skinCluster(skinCluster, query=True, influence=True)
+    add_infs = list(set(infs) - set(current_infs))
+    if not add_infs:
+        return
+    cmds.skinCluster(skinCluster, e=True, lw=True, wt=0.0, ai=add_infs)
+
+    logger.debug(f"Add influences: {skinCluster} >> {infs}")
+
+
 def remove_unused_influences(skinCluster: str) -> None:
     """Remove the unused influences from the skinCluster node.
 

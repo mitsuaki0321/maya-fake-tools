@@ -35,6 +35,8 @@ faketools.tools.rig.skin_tools.ui.show_ui()
   - When you select geometry and vertices (multiple objects allowed) and execute, rebinds skinCluster set for them at the positions of its influences.
 - **Prune Small Weights**
   - When you select geometry and execute, sets weights of influences with weights less than 0.005 to 0. Unlike Maya's standard function, ignores locked influences.
+- **Add Influences**
+  - When you select geometry (multiple selection allowed) and select joints (multiple selection allowed) you want to add and execute, adds those joints as influences to skinCluster of selected geometry.
 - **Remove Unused Influences**
   - When you select geometry (multiple selection allowed) and execute, removes influences with all weights of 0 from that skinCluster.
 - **Average Skin Weights**
