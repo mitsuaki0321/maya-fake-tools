@@ -35,14 +35,12 @@ class ToolBar(QWidget):
 
         self.main_layout = QHBoxLayout()
         self.main_layout.setContentsMargins(0, 0, 0, 0)
+        self.main_layout.setSpacing(2)
 
-        spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        self.main_layout.addItem(spacer)
-
-        self.clear_button = IconButton(icon_name="node_stocker_008", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
+        self.clear_button = IconButton(icon_name="clear", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
         self.main_layout.addWidget(self.clear_button)
 
-        self.refresh_button = IconButton(icon_name="node_stocker_003", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
+        self.refresh_button = IconButton(icon_name="refresh", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
         self.main_layout.addWidget(self.refresh_button)
 
         self.setLayout(self.main_layout)
@@ -172,13 +170,13 @@ class NameReplaceField(QWidget):
         self.search_field = QLineEdit()
         layout.addWidget(self.search_field)
 
-        self.switch_button = IconToggleButton(icon_on="node_stocker_005", icon_off="node_stocker_004", icon_dir=_IMAGES_DIR)
+        self.switch_button = IconToggleButton(icon_on="switch-on", icon_off="switch-off", icon_dir=_IMAGES_DIR)
         layout.addWidget(self.switch_button)
 
         self.replace_field = QLineEdit()
         layout.addWidget(self.replace_field)
 
-        self.re_button = IconToggleButton(icon_on="node_stocker_007", icon_off="node_stocker_006", icon_dir=_IMAGES_DIR)
+        self.re_button = IconToggleButton(icon_on="regex-on", icon_off="regex-off", icon_dir=_IMAGES_DIR)
         layout.addWidget(self.re_button)
 
         self.main_layout.addLayout(layout)

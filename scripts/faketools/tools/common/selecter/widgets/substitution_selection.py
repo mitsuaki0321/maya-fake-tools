@@ -1,5 +1,7 @@
 """Substitution selection widget for selecter tool."""
 
+from pathlib import Path
+
 import maya.cmds as cmds
 
 from .....lib import lib_name, lib_transform
@@ -12,6 +14,8 @@ from .....operations import mirror_transforms
 from .. import command
 from .constants import LEFT_TO_RIGHT, RIGHT_TO_LEFT, SUBSTITUTION_COLOR, selecter_handler
 from .selecter_button import SelecterButton
+
+_IMAGES_DIR = Path(__file__).resolve().parent.parent / "images"
 
 
 class SubstitutionSelectionWidget(QWidget):
@@ -54,7 +58,7 @@ class SubstitutionSelectionWidget(QWidget):
         main_layout.addWidget(self.search_text_field)
 
         # Arrow direction toggle
-        self.arrow_button = IconToggleButton(icon_on="arrow-left", icon_off="arrow-right")
+        self.arrow_button = IconToggleButton(icon_on="arrow-left", icon_off="arrow-right", icon_dir=_IMAGES_DIR)
         main_layout.addWidget(self.arrow_button)
 
         # Replace text field

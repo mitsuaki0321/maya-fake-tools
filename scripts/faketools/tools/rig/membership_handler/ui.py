@@ -45,7 +45,7 @@ class MainWindow(BaseFramelessWindow):
         # Enable window resizing for frameless window
         self._enable_window_resize()
 
-        set_deformer_button = IconButton(icon_name="membership_handler_001", icon_dir=_IMAGES_DIR)
+        set_deformer_button = IconButton(icon_name="pin", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(set_deformer_button)
 
         self.deformer_field = QLineEdit()
@@ -53,10 +53,10 @@ class MainWindow(BaseFramelessWindow):
         self.deformer_field.setPlaceholderText("Deformer")
         self.central_layout.addWidget(self.deformer_field, stretch=1)
 
-        update_button = IconButton(icon_name="membership_handler_002", icon_dir=_IMAGES_DIR)
+        update_button = IconButton(icon_name="refresh", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(update_button)
 
-        select_button = IconButton(icon_name="membership_handler_003", icon_dir=_IMAGES_DIR)
+        select_button = IconButton(icon_name="select", icon_dir=_IMAGES_DIR)
         self.central_layout.addWidget(select_button)
 
         # Signal & Slot

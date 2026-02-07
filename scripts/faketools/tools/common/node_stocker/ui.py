@@ -9,7 +9,7 @@ import maya.cmds as cmds
 from ....lib import lib_name
 from ....lib_ui import maya_decorator, maya_dialog, maya_qt, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
-from ....lib_ui.qt_compat import QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QStatusBar, QStyle, Qt, QTabWidget, QVBoxLayout, QWidget
+from ....lib_ui.qt_compat import QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QSpacerItem, QStatusBar, QStyle, Qt, QTabWidget, QVBoxLayout, QWidget
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import extra_widgets
 from .button import NodeStockPushButton
@@ -53,7 +53,7 @@ class MainWindow(BaseMainWindow):
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)  # Remove spacing between widgets
+        layout.setSpacing(0)
 
         # Stock area switch buttons
         self.switch_buttons = StockAreaSwitchButtons(num_buttons=num_areas)
@@ -62,10 +62,13 @@ class MainWindow(BaseMainWindow):
         self.switch_buttons.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout.addWidget(self.switch_buttons)
 
+        spacer = QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        layout.addItem(spacer)
+
         # Tool bar
         self.tool_bar = ToolBar()
         # Disable vertical stretch - keep minimum height
-        self.tool_bar.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.tool_bar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         layout.addWidget(self.tool_bar)
 
         self.central_layout.addLayout(layout, stretch=0)  # No vertical stretch for toolbar area

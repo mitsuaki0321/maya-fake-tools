@@ -59,7 +59,7 @@ class MainWindow(BaseFramelessWindow):
         self.central_layout.addWidget(separator)
 
         # Paste button
-        self.paste_button = IconButton(icon_name="skinWeights_copy_paste_005", icon_dir=_IMAGES_DIR)
+        self.paste_button = IconButton(icon_name="paste", icon_dir=_IMAGES_DIR)
         self.paste_button.setEnabled(False)
         self.central_layout.addWidget(self.paste_button)
 
@@ -473,14 +473,14 @@ class SourceClipboardButton(IconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(icon_name="skinWeights_copy_paste_001", icon_dir=_IMAGES_DIR, parent=parent)
+        super().__init__(icon_name="source", icon_dir=_IMAGES_DIR, parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
 
         self._skinWeights_copy_paste = skinWeights_copy_paste
-        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_001", base_dir=_IMAGES_DIR))
-        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_002", base_dir=_IMAGES_DIR))
+        self._select_icon = QIcon(icons.get_path("source", base_dir=_IMAGES_DIR))
+        self._selected_icon = QIcon(icons.get_path("source-checked", base_dir=_IMAGES_DIR))
 
         self.setText("0")
         self.setIcon(self._select_icon)
@@ -531,14 +531,14 @@ class DestinationClipboardButton(IconButton):
         Args:
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
         """
-        super().__init__(icon_name="skinWeights_copy_paste_003", icon_dir=_IMAGES_DIR, parent=parent)
+        super().__init__(icon_name="destination", icon_dir=_IMAGES_DIR, parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
 
         self._skinWeights_copy_paste = skinWeights_copy_paste
-        self._select_icon = QIcon(icons.get_path("skinWeights_copy_paste_003", base_dir=_IMAGES_DIR))
-        self._selected_icon = QIcon(icons.get_path("skinWeights_copy_paste_004", base_dir=_IMAGES_DIR))
+        self._select_icon = QIcon(icons.get_path("destination", base_dir=_IMAGES_DIR))
+        self._selected_icon = QIcon(icons.get_path("destination-checked", base_dir=_IMAGES_DIR))
 
         self.setText("0")
         self.setIcon(self._select_icon)

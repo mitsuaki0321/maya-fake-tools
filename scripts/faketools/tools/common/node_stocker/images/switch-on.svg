@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#CCCCCC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Clear / X icon -->
-  <line x1="4" y1="4" x2="12" y2="12"/>
-  <line x1="12" y1="4" x2="4" y2="12"/>
+  <!-- Right arrow (bright / ON state) -->
+  <line x1="3" y1="8" x2="13" y2="8"/>
+  <polyline points="9 4 13 8 9 12"/>
 </svg>
