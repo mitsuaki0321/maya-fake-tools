@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Transfer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="インフルエンス間でスキンウェイトを移動するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/skin_weights_transfer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>リグ</li>
+                        <li class="active">Skin Weights Transfer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#オプション"
+                    id="toc-オプション">オプション</a>
+                    <ul>
+                    <li><a href="#skincluster"
+                    id="toc-skincluster">SkinCluster</a></li>
+                    <li><a href="#インフルエンスフィルター"
+                    id="toc-インフルエンスフィルター">インフルエンスフィルター</a></li>
+                    <li><a href="#source-from-リスト"
+                    id="toc-source-from-リスト">Source (from)
+                    リスト</a></li>
+                    <li><a href="#target-to-リスト"
+                    id="toc-target-to-リスト">Target (to)
+                    リスト</a></li>
+                    <li><a href="#amount"
+                    id="toc-amount">Amount</a></li>
+                    </ul></li>
+                    <li><a href="#ウェイト移動の仕組み"
+                    id="toc-ウェイト移動の仕組み">ウェイト移動の仕組み</a></li>
+                    <li><a href="#対象コンポーネント"
+                    id="toc-対象コンポーネント">対象コンポーネント</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Transfer</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Skin Weights Transfer
+                は、選択したコンポーネント上で、複数のソースインフルエンスから単一のターゲットインフルエンスにスキンウェイトを移動するツールです。</p>
+                <p>ソースインフルエンスのウェイトは比例配分で減算され、その分がターゲットインフルエンスに加算されます。移動量はスライダーで
+                0〜100% の範囲で調整できます。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.skin_weights_transfer.ui
+faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
+                <h2 id="使用方法">使用方法</h2>
+                <p>ウェイトを移動するには、以下の手順を行います。</p>
+                <ol type="1">
+                <li>skinCluster
+                が設定されたメッシュまたはコンポーネントを選択し、<code>SET</code>
+                ボタンをクリックして skinCluster を設定します。</li>
+                <li>左側の <strong>Source (from)</strong>
+                リストから、ウェイトの移動元となるインフルエンスを選択します（複数選択可:
+                Ctrl+クリック / Shift+クリック）。</li>
+                <li>右側の <strong>Target (to)</strong>
+                リストから、ウェイトの移動先となるインフルエンスを 1
+                つ選択します。</li>
+                <li>対象となる頂点・CV・ラティスポイントを選択します。</li>
+                <li><strong>Amount</strong>
+                スライダーで移動量（0〜100%）を設定します。</li>
+                <li>実行ボタンをクリックしてウェイトを移動します。</li>
+                </ol>
+                <h2 id="オプション">オプション</h2>
+                <h3 id="skincluster">SkinCluster</h3>
+                <p>操作対象の skinCluster を設定します。</p>
+                <ul>
+                <li>メッシュまたはコンポーネントを選択した状態で
+                <code>SET</code>
+                ボタンをクリックすると、選択されたオブジェクトに設定されている
+                skinCluster が自動的に検出されます。</li>
+                <li>検出された skinCluster
+                名がフィールドに表示されます。</li>
+                </ul>
+                <h3
+                id="インフルエンスフィルター">インフルエンスフィルター</h3>
+                <p>インフルエンスリストの表示を絞り込む機能です。</p>
+                <ul>
+                <li><strong>テキストフィルター</strong>:
+                スペース区切りでキーワードを入力すると、いずれかのキーワードを含むインフルエンスのみが表示されます（OR
+                検索）。</li>
+                <li><strong>Affected Only ボタン</strong>:
+                オンにすると、現在選択しているコンポーネントに対してウェイトが
+                0
+                より大きいインフルエンスのみが表示されます。表示順はウェイトの合計値が大きい順にソートされます。Maya
+                の選択を変更するとリアルタイムに更新されます。</li>
+                </ul>
+                <h3 id="source-from-リスト">Source (from) リスト</h3>
+                <p>ウェイトの移動元となるインフルエンスを選択します。</p>
+                <ul>
+                <li>複数のインフルエンスを選択できます（Ctrl+クリック /
+                Shift+クリック）。</li>
+                <li>選択中のインフルエンス数がラベルに <code>[N]</code>
+                の形式で表示されます。</li>
+                <li>リストで選択したインフルエンスは Maya
+                ビューポート上でハイライト表示されます。</li>
+                </ul>
+                <h3 id="target-to-リスト">Target (to) リスト</h3>
+                <p>ウェイトの移動先となるインフルエンスを選択します。</p>
+                <ul>
+                <li>1 つのインフルエンスのみ選択できます。</li>
+                <li>Source と同じインフルエンスを Target
+                に設定することはできません（Source が 1
+                つの場合）。</li>
+                </ul>
+                <h3 id="amount">Amount</h3>
+                <p>ソースインフルエンスのウェイトを移動する割合を
+                0〜100% で指定します。</p>
+                <ul>
+                <li><strong>100%</strong>:
+                ソースインフルエンスのウェイトをすべてターゲットに移動します。</li>
+                <li><strong>50%</strong>:
+                ソースインフルエンスのウェイトの半分をターゲットに移動します。</li>
+                <li><strong>0%</strong>: ウェイトは移動されません。</li>
+                </ul>
+                <p>複数のソースインフルエンスが選択されている場合、各ソースのウェイトは保有比率に応じて比例配分で減算されます。</p>
+                <h2 id="ウェイト移動の仕組み">ウェイト移動の仕組み</h2>
+                <p>各コンポーネントに対して以下の計算が行われます。</p>
+                <ol type="1">
+                <li>すべてのソースインフルエンスのウェイト合計を算出します。</li>
+                <li>合計に Amount
+                の割合を掛けて、移動量を算出します。</li>
+                <li>各ソースインフルエンスから、保有比率に応じてウェイトを比例配分で減算します。</li>
+                <li>減算した合計分をターゲットインフルエンスに加算します。</li>
+                </ol>
+                <p><strong>例:</strong> - Source A のウェイト:
+                0.6、Source B のウェイト: 0.3、Amount: 50% の場合 -
+                移動量: (0.6 + 0.3) × 0.5 = 0.45 - Source A から減算:
+                0.45 × (0.6 / 0.9) = 0.30 → 残り 0.30 - Source B
+                から減算: 0.45 × (0.3 / 0.9) = 0.15 → 残り 0.15 - Target
+                に加算: +0.45</p>
+                <h2 id="対象コンポーネント">対象コンポーネント</h2>
+                <p>以下のコンポーネントタイプに対応しています。</p>
+                <ul>
+                <li>頂点（Vertex）</li>
+                <li>CV（Control Vertex）</li>
+                <li>ラティスポイント（Lattice Point）</li>
+                </ul>
+                <p>選択されたコンポーネントが skinCluster
+                のジオメトリに属していない場合、エラーとなります。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

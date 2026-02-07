@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skin Weights Transfer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Transfer skin weights between influences">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/skin_weights_transfer.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Rig</li>
+                        <li class="active">Skin Weights Transfer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#launch"
+                    id="toc-launch">Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a></li>
+                    <li><a href="#options" id="toc-options">Options</a>
+                    <ul>
+                    <li><a href="#skincluster"
+                    id="toc-skincluster">SkinCluster</a></li>
+                    <li><a href="#influence-filter"
+                    id="toc-influence-filter">Influence Filter</a></li>
+                    <li><a href="#source-from-list"
+                    id="toc-source-from-list">Source (from)
+                    List</a></li>
+                    <li><a href="#target-to-list"
+                    id="toc-target-to-list">Target (to) List</a></li>
+                    <li><a href="#amount"
+                    id="toc-amount">Amount</a></li>
+                    </ul></li>
+                    <li><a href="#how-weight-transfer-works"
+                    id="toc-how-weight-transfer-works">How Weight
+                    Transfer Works</a></li>
+                    <li><a href="#supported-components"
+                    id="toc-supported-components">Supported
+                    Components</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Skin Weights Transfer</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Skin Weights Transfer is a tool for moving skin
+                weights from multiple source influences to a single
+                target influence on selected components.</p>
+                <p>Weights are proportionally removed from source
+                influences and added to the target influence. The
+                transfer amount is adjustable from 0 to 100% using a
+                slider.</p>
+                <h2 id="launch">Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.rig.skin_weights_transfer.ui
+faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
+                <h2 id="usage">Usage</h2>
+                <p>To transfer weights, follow these steps:</p>
+                <ol type="1">
+                <li>Select a mesh or components with a skinCluster and
+                click the <code>SET</code> button to set the
+                skinCluster.</li>
+                <li>In the left <strong>Source (from)</strong> list,
+                select the influences to take weights from
+                (multi-select: Ctrl+click / Shift+click).</li>
+                <li>In the right <strong>Target (to)</strong> list,
+                select a single influence to receive the weights.</li>
+                <li>Select the target vertices, CVs, or lattice
+                points.</li>
+                <li>Set the transfer amount (0-100%) using the
+                <strong>Amount</strong> slider.</li>
+                <li>Click the execute button to transfer the
+                weights.</li>
+                </ol>
+                <h2 id="options">Options</h2>
+                <h3 id="skincluster">SkinCluster</h3>
+                <p>Sets the skinCluster to operate on.</p>
+                <ul>
+                <li>Select a mesh or components and click the
+                <code>SET</code> button to automatically detect the
+                skinCluster assigned to the selected object.</li>
+                <li>The detected skinCluster name is displayed in the
+                field.</li>
+                </ul>
+                <h3 id="influence-filter">Influence Filter</h3>
+                <p>Filters the influence list display.</p>
+                <ul>
+                <li><strong>Text Filter</strong>: Enter space-separated
+                keywords to show only influences containing any of the
+                keywords (OR search).</li>
+                <li><strong>Affected Only button</strong>: When enabled,
+                only influences with non-zero weights on the currently
+                selected components are shown. Items are sorted by total
+                weight in descending order. The list updates in
+                real-time as the Maya selection changes.</li>
+                </ul>
+                <h3 id="source-from-list">Source (from) List</h3>
+                <p>Select the influences to take weights from.</p>
+                <ul>
+                <li>Multiple influences can be selected (Ctrl+click /
+                Shift+click).</li>
+                <li>The number of selected influences is shown in the
+                label as <code>[N]</code>.</li>
+                <li>Selected influences are highlighted in the Maya
+                viewport.</li>
+                </ul>
+                <h3 id="target-to-list">Target (to) List</h3>
+                <p>Select the influence to receive weights.</p>
+                <ul>
+                <li>Only one influence can be selected.</li>
+                <li>The same influence cannot be set as both source and
+                target (when source is a single influence).</li>
+                </ul>
+                <h3 id="amount">Amount</h3>
+                <p>Specifies the percentage of source weights to
+                transfer (0-100%).</p>
+                <ul>
+                <li><strong>100%</strong>: Transfers all weights from
+                source influences to the target.</li>
+                <li><strong>50%</strong>: Transfers half of the source
+                influence weights to the target.</li>
+                <li><strong>0%</strong>: No weights are
+                transferred.</li>
+                </ul>
+                <p>When multiple source influences are selected, each
+                source’s weight is proportionally reduced based on its
+                share of the total.</p>
+                <h2 id="how-weight-transfer-works">How Weight Transfer
+                Works</h2>
+                <p>The following calculation is performed for each
+                component:</p>
+                <ol type="1">
+                <li>Calculate the total weight of all source
+                influences.</li>
+                <li>Multiply the total by the Amount percentage to
+                determine the transfer amount.</li>
+                <li>Proportionally reduce each source influence based on
+                its share of the total.</li>
+                <li>Add the total reduced amount to the target
+                influence.</li>
+                </ol>
+                <p><strong>Example:</strong> - Source A weight: 0.6,
+                Source B weight: 0.3, Amount: 50% - Transfer amount:
+                (0.6 + 0.3) x 0.5 = 0.45 - Reduction from Source A: 0.45
+                x (0.6 / 0.9) = 0.30 → remaining 0.30 - Reduction from
+                Source B: 0.45 x (0.3 / 0.9) = 0.15 → remaining 0.15 -
+                Added to Target: +0.45</p>
+                <h2 id="supported-components">Supported Components</h2>
+                <p>The following component types are supported:</p>
+                <ul>
+                <li>Vertices</li>
+                <li>CVs (Control Vertices)</li>
+                <li>Lattice Points</li>
+                </ul>
+                <p>An error occurs if the selected components do not
+                belong to the skinCluster’s geometry.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
