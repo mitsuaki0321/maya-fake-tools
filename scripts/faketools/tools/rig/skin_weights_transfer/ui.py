@@ -1,5 +1,6 @@
 """Skin Weights Transfer UI layer."""
 
+import contextlib
 from logging import getLogger
 
 import maya.cmds as cmds
@@ -8,8 +9,6 @@ from ....lib import lib_skinCluster
 from ....lib_ui import BaseMainWindow, error_handler, get_margins, get_maya_main_window, get_spacing, undo_chunk
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
-    QComboBox,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -39,6 +38,7 @@ class MainWindow(BaseMainWindow):
         )
         self.settings = ToolSettingsManager(tool_name="skin_weights_transfer", category="rig")
         self._skin_cluster = ""
+        self._hilite_nodes = []
         self._setup_ui()
         self._restore_settings()
 
@@ -89,6 +89,7 @@ class MainWindow(BaseMainWindow):
 
         self._src_list = QListWidget()
         self._src_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._src_list.itemSelectionChanged.connect(self._on_influence_selection_changed)
         src_layout.addWidget(self._src_list)
 
         lists_layout.addLayout(src_layout)
@@ -101,6 +102,7 @@ class MainWindow(BaseMainWindow):
 
         self._tgt_list = QListWidget()
         self._tgt_list.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._tgt_list.itemSelectionChanged.connect(self._on_influence_selection_changed)
         tgt_layout.addWidget(self._tgt_list)
 
         lists_layout.addLayout(tgt_layout)
@@ -110,26 +112,17 @@ class MainWindow(BaseMainWindow):
         separator2 = extra_widgets.HorizontalSeparator()
         self.central_layout.addWidget(separator2)
 
-        # --- Mode / Amount Section ---
-        options_layout = QGridLayout()
-        options_layout.setSpacing(int(spacing * 0.5))
+        # --- Amount Section ---
+        amount_layout = QHBoxLayout()
+        amount_layout.setSpacing(int(spacing * 0.5))
 
-        mode_label = QLabel("Mode:", alignment=Qt.AlignRight | Qt.AlignVCenter)
-        options_layout.addWidget(mode_label, 0, 0)
-
-        self._mode_combo = QComboBox()
-        self._mode_combo.addItems(["Percentage", "Value"])
-        self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
-        options_layout.addWidget(self._mode_combo, 0, 1)
-
-        amount_label = QLabel("Amount:", alignment=Qt.AlignRight | Qt.AlignVCenter)
-        options_layout.addWidget(amount_label, 1, 0)
+        amount_label = QLabel("Amount (%):")
+        amount_layout.addWidget(amount_label)
 
         self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
-        options_layout.addWidget(self._amount_widget, 1, 1)
+        amount_layout.addWidget(self._amount_widget, 1)
 
-        options_layout.setColumnStretch(1, 1)
-        self.central_layout.addLayout(options_layout)
+        self.central_layout.addLayout(amount_layout)
 
         separator3 = extra_widgets.HorizontalSeparator()
         self.central_layout.addWidget(separator3)
@@ -199,38 +192,24 @@ class MainWindow(BaseMainWindow):
                 hidden = bool(keywords) and not any(kw in item_text for kw in keywords)
                 item.setHidden(hidden)
 
-    def _on_mode_changed(self, index: int):
-        """Rebuild the amount widget when mode changes.
+    def _on_influence_selection_changed(self):
+        """Highlight the chosen influences in Maya viewport using cmds.hilite."""
+        # Unhighlight previous
+        if self._hilite_nodes:
+            cmds.hilite(self._hilite_nodes, u=True)
+            self._hilite_nodes = []
 
-        Args:
-            index (int): ComboBox index (0=Percentage, 1=Value).
-        """
-        # Remove old widget
-        self._amount_widget.setParent(None)
-        self._amount_widget.deleteLater()
+        # Collect selected influences from both lists
+        infs = set()
+        for item in self._src_list.selectedItems():
+            infs.add(item.text())
+        for item in self._tgt_list.selectedItems():
+            infs.add(item.text())
 
-        # Create new widget based on mode
-        if index == 0:  # Percentage
-            self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
-        else:  # Value
-            self._amount_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
-
-        # Find the grid layout and replace (row 1, col 1)
-        grid = self.central_layout.itemAt(self._get_options_layout_index()).layout()
-        if grid is not None:
-            grid.addWidget(self._amount_widget, 1, 1)
-
-    def _get_options_layout_index(self) -> int:
-        """Find the index of the options grid layout within central_layout.
-
-        Returns:
-            int: Layout index.
-        """
-        for i in range(self.central_layout.count()):
-            item = self.central_layout.itemAt(i)
-            if item.layout() is not None and isinstance(item.layout(), QGridLayout):
-                return i
-        return -1
+        existing = [inf for inf in infs if cmds.objExists(inf)]
+        if existing:
+            cmds.hilite(existing)
+            self._hilite_nodes = existing
 
     @error_handler
     @undo_chunk("Skin Weights Transfer: Move Weights")
@@ -275,8 +254,6 @@ class MainWindow(BaseMainWindow):
                 cmds.warning(f"Selected components do not belong to the skinCluster's geometry: {shape}")
                 return
 
-        # Get mode and amount
-        mode = "percentage" if self._mode_combo.currentIndex() == 0 else "value"
         amount = self._amount_widget.value()
 
         count = command.move_skin_weights(
@@ -284,7 +261,6 @@ class MainWindow(BaseMainWindow):
             src_infs=src_infs,
             tgt_inf=tgt_inf,
             components=components,
-            mode=mode,
             amount=float(amount),
         )
 
@@ -305,21 +281,11 @@ class MainWindow(BaseMainWindow):
         Args:
             settings_data (dict): Settings to apply.
         """
-        if "mode" in settings_data:
-            mode_index = settings_data["mode"]
-            if isinstance(mode_index, int) and 0 <= mode_index <= 1:
-                self._mode_combo.setCurrentIndex(mode_index)
-
         if "amount" in settings_data:
             amount = settings_data["amount"]
             if amount is not None and amount != "":
-                try:
-                    if self._mode_combo.currentIndex() == 0:
-                        self._amount_widget.setValue(int(amount))
-                    else:
-                        self._amount_widget.setValue(float(amount))
-                except (ValueError, TypeError):
-                    pass
+                with contextlib.suppress(ValueError, TypeError):
+                    self._amount_widget.setValue(int(amount))
 
     def _collect_settings(self) -> dict:
         """Collect current widget settings.
@@ -328,7 +294,6 @@ class MainWindow(BaseMainWindow):
             dict: Current settings data.
         """
         return {
-            "mode": self._mode_combo.currentIndex(),
             "amount": self._amount_widget.value(),
         }
 
@@ -338,7 +303,10 @@ class MainWindow(BaseMainWindow):
         self.settings.save_settings(settings_data, "default")
 
     def closeEvent(self, event):
-        """Save settings on close."""
+        """Save settings and clear hilite on close."""
+        if self._hilite_nodes:
+            cmds.hilite(self._hilite_nodes, u=True)
+            self._hilite_nodes = []
         self._save_settings()
         super().closeEvent(event)
 

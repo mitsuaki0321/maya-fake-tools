@@ -18,7 +18,6 @@ def move_skin_weights(
     src_infs: Sequence[str],
     tgt_inf: str,
     components: Sequence[str],
-    mode: str,
     amount: float,
 ) -> int:
     """Move skin weights from source influences to a target influence.
@@ -31,8 +30,7 @@ def move_skin_weights(
         src_infs (Sequence[str]): Source influence names to take weights from.
         tgt_inf (str): Target influence name to receive weights.
         components (Sequence[str]): Components to operate on.
-        mode (str): Transfer mode - "percentage" or "value".
-        amount (float): Amount to transfer. Percentage: 0-100, Value: 0.0-1.0.
+        amount (float): Percentage of source weights to transfer (0-100).
 
     Returns:
         int: Number of components processed.
@@ -51,9 +49,6 @@ def move_skin_weights(
 
     if not components:
         raise ValueError("No components specified")
-
-    if mode not in ("percentage", "value"):
-        raise ValueError(f"Invalid mode: {mode}. Must be 'percentage' or 'value'.")
 
     # Validate components
     components = cmds.filterExpand(components, selectionMask=[28, 31, 46]) or []
@@ -85,10 +80,7 @@ def move_skin_weights(
             continue
 
         # Calculate amount to move
-        if mode == "percentage":
-            move_amount = total_src * (amount / 100.0)
-        else:
-            move_amount = min(amount, total_src)
+        move_amount = total_src * (amount / 100.0)
 
         if move_amount <= 0.0:
             continue
