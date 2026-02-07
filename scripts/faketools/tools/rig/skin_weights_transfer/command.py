@@ -112,21 +112,22 @@ def get_affected_influences(
         components (Sequence[str]): Components to check.
 
     Returns:
-        list[str]: Influence names with non-zero weights, in skinCluster order.
+        list[str]: Influence names with non-zero weights, sorted by total weight descending.
     """
     all_infs = cmds.skinCluster(skin_cluster, query=True, influence=True)
     if not all_infs:
         return []
 
     num_infs = len(all_infs)
-    affected = set()
+    weight_sums = [0.0] * num_infs
 
     for component in cmds.ls(components, flatten=True):
         weights = cmds.skinPercent(skin_cluster, component, query=True, value=True)
         for i, w in enumerate(weights):
             if w > 1e-6:
-                affected.add(i)
-        if len(affected) >= num_infs:
-            break
+                weight_sums[i] += w
 
-    return [all_infs[i] for i in sorted(affected)]
+    affected = [(i, weight_sums[i]) for i in range(num_infs) if weight_sums[i] > 1e-6]
+    affected.sort(key=lambda x: x[1], reverse=True)
+
+    return [all_infs[i] for i, _ in affected]

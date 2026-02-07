@@ -40,6 +40,7 @@ class MainWindow(BaseMainWindow):
         self.settings = ToolSettingsManager(tool_name="skin_weights_transfer", category="rig")
         self._skin_cluster = ""
         self._hilite_nodes = []
+        self._all_influences = []
         self._affected_infs = None
         self._script_job_id = None
         self._setup_ui()
@@ -185,11 +186,13 @@ class MainWindow(BaseMainWindow):
         """Populate both influence lists from the current skinCluster."""
         self._src_list.clear()
         self._tgt_list.clear()
+        self._all_influences = []
 
         if not self._skin_cluster:
             return
 
         infs = lib_skinCluster.get_influences_from_skinCluster([self._skin_cluster])
+        self._all_influences = list(infs)
         for inf in infs:
             self._src_list.addItem(inf)
             self._tgt_list.addItem(inf)
@@ -238,22 +241,46 @@ class MainWindow(BaseMainWindow):
             skin_cluster=self._skin_cluster,
             components=components,
         )
-        self._affected_infs = set(affected)
+        self._affected_infs = affected
 
     def _apply_filters(self):
-        """Apply combined text and affected-only filters to both lists."""
+        """Apply combined text and affected-only filters to both lists.
+
+        When affected-only is active, items are reordered by total weight descending.
+        """
+        if not self._all_influences:
+            return
+
         keywords = self._inf_filter.text().lower().split()
         use_affected = self._affected_checkbox.isChecked() and self._affected_infs is not None
 
+        # Determine display order
+        if use_affected:
+            affected_set = set(self._affected_infs)
+            ordered = list(self._affected_infs)
+            ordered.extend(inf for inf in self._all_influences if inf not in affected_set)
+        else:
+            ordered = list(self._all_influences)
+
         for list_widget in (self._src_list, self._tgt_list):
-            for i in range(list_widget.count()):
-                item = list_widget.item(i)
-                item_text = item.text()
+            # Save current selection
+            selected = {list_widget.item(i).text() for i in range(list_widget.count()) if list_widget.item(i).isSelected()}
 
-                text_hidden = bool(keywords) and not any(kw in item_text.lower() for kw in keywords)
-                affected_hidden = use_affected and item_text not in self._affected_infs
+            list_widget.blockSignals(True)
+            list_widget.clear()
 
+            for inf in ordered:
+                list_widget.addItem(inf)
+                item = list_widget.item(list_widget.count() - 1)
+
+                text_hidden = bool(keywords) and not any(kw in inf.lower() for kw in keywords)
+                affected_hidden = use_affected and inf not in affected_set
                 item.setHidden(text_hidden or affected_hidden)
+
+                if inf in selected:
+                    item.setSelected(True)
+
+            list_widget.blockSignals(False)
 
     def _on_influence_selection_changed(self):
         """Highlight the chosen influences in Maya viewport using cmds.hilite."""
