@@ -9,7 +9,7 @@ import maya.cmds as cmds
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QPushButton, QSizePolicy, QWidget
 from .....lib_ui.tool_settings import ToolSettingsManager
-from .....lib_ui.widgets import extra_widgets
+from .....lib_ui.widgets import IconToggleButton, extra_widgets
 from .....operations.copy_weights import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
 
 LEFT_TO_RIGHT = ["(.*)(L)", r"\g<1>R"]
@@ -53,7 +53,7 @@ class SkinWeightsBar(QWidget):
         mir_sub_button = QPushButton("MIR SUB")
         self.main_layout.addWidget(mir_sub_button, stretch=1)
 
-        self.mir_dir_checkBox = extra_widgets.CheckBoxButton(icon_on="arrow-right", icon_off="arrow-left")
+        self.mir_dir_checkBox = IconToggleButton(icon_on="arrow-right", icon_off="arrow-left")
         self.mir_dir_checkBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.main_layout.addWidget(self.mir_dir_checkBox)
 
@@ -61,7 +61,7 @@ class SkinWeightsBar(QWidget):
         v_line.setFixedWidth(v_line.sizeHint().width() * 5)
         self.main_layout.addWidget(v_line)
 
-        self.uv_button = extra_widgets.CheckBoxButton(icon_on="uv-checked", icon_off="uv")
+        self.uv_button = IconToggleButton(icon_on="uv-checked", icon_off="uv")
         self.uv_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.main_layout.addWidget(self.uv_button)
 

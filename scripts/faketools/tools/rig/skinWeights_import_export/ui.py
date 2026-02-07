@@ -22,7 +22,7 @@ from ....lib_ui.qt_compat import (
     QTreeWidgetItem,
 )
 from ....lib_ui.ui_utils import scale_by_dpi
-from ....lib_ui.widgets import extra_widgets
+from ....lib_ui.widgets import IconToggleButton, extra_widgets
 from .command import SkinClusterData, SkinClusterDataIO, validate_export_weights
 from .file_item_widget import FileItemWidget
 
@@ -97,7 +97,7 @@ class MainWindow(BaseMainWindow):
 
         layout = QHBoxLayout()
 
-        self.format_checkBox = extra_widgets.CheckBoxButton(icon_on="binary", icon_off="ascii")
+        self.format_checkBox = IconToggleButton(icon_on="binary", icon_off="ascii")
         self.format_checkBox.setChecked(True)
         layout.addWidget(self.format_checkBox)
 

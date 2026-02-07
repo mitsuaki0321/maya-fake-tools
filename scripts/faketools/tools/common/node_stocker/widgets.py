@@ -3,22 +3,19 @@
 from logging import getLogger
 
 from ....lib import lib_name
-from ....lib_ui import icons
 from ....lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
     QComboBox,
     QHBoxLayout,
-    QIcon,
     QLineEdit,
-    QPushButton,
     QRadioButton,
     QSizePolicy,
     QSpacerItem,
     QWidget,
     Signal,
 )
-from ....lib_ui.widgets import extra_widgets
+from ....lib_ui.widgets import IconButton, IconButtonStyle, IconToggleButton
 
 logger = getLogger(__name__)
 
@@ -39,30 +36,10 @@ class ToolBar(QWidget):
         spacer = QSpacerItem(20, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         self.main_layout.addItem(spacer)
 
-        self.clear_button = QPushButton()
-        icon = QIcon(icons.get_path("node_stocker_008"))
-        self.clear_button.setIcon(icon)
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                border: none;
-            }
-            QPushButton:pressed {
-                background-color: #5285a6;
-            }
-        """)
+        self.clear_button = IconButton(icon_name="node_stocker_008", style_mode=IconButtonStyle.TRANSPARENT)
         self.main_layout.addWidget(self.clear_button)
 
-        self.refresh_button = QPushButton()
-        icon = QIcon(icons.get_path("node_stocker_003"))
-        self.refresh_button.setIcon(icon)
-        self.refresh_button.setStyleSheet("""
-            QPushButton {
-                border: none;
-            }
-            QPushButton:pressed {
-                background-color: #5285a6;
-            }
-        """)
+        self.refresh_button = IconButton(icon_name="node_stocker_003", style_mode=IconButtonStyle.TRANSPARENT)
         self.main_layout.addWidget(self.refresh_button)
 
         self.setLayout(self.main_layout)
@@ -192,13 +169,13 @@ class NameReplaceField(QWidget):
         self.search_field = QLineEdit()
         layout.addWidget(self.search_field)
 
-        self.switch_button = extra_widgets.CheckBoxButton(icon_off="node_stocker_004", icon_on="node_stocker_005")
+        self.switch_button = IconToggleButton(icon_on="node_stocker_005", icon_off="node_stocker_004")
         layout.addWidget(self.switch_button)
 
         self.replace_field = QLineEdit()
         layout.addWidget(self.replace_field)
 
-        self.re_button = extra_widgets.CheckBoxButton(icon_off="node_stocker_006", icon_on="node_stocker_007")
+        self.re_button = IconToggleButton(icon_on="node_stocker_007", icon_off="node_stocker_006")
         layout.addWidget(self.re_button)
 
         self.main_layout.addLayout(layout)

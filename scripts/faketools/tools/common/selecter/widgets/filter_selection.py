@@ -8,7 +8,7 @@ from .....lib import lib_selection
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget, Signal
 from .....lib_ui.tool_settings import ToolSettingsManager
-from .....lib_ui.widgets import extra_widgets
+from .....lib_ui.widgets import TextToggleButton
 from .constants import FILTER_COLOR, selecter_handler
 from .selecter_button import SelecterButton
 
@@ -41,14 +41,7 @@ class FilterSelectionWidget(QWidget):
         main_layout.addWidget(self.filter_name_field)
 
         # Case sensitivity toggle
-        from .....lib_ui.ui_utils import get_line_height
-
-        line_height = get_line_height(self)
-        button_size = int(line_height * 2.0)
-        font_size = int(line_height * 0.75)
-        self.filter_name_ignorecase_cb = extra_widgets.TextCheckBoxButton(
-            text="Aa", width=button_size, height=button_size, font_size=font_size, parent=self
-        )
+        self.filter_name_ignorecase_cb = TextToggleButton("Aa", parent=self)
         main_layout.addWidget(self.filter_name_ignorecase_cb)
 
         # Filter by name button

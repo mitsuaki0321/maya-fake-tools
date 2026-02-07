@@ -1,6 +1,6 @@
 """Unified icon button widgets for FakeTools.
 
-Provides IconButton and IconToolButton classes with two styling modes:
+Provides IconButton, IconToolButton, and IconToggleButton classes with two styling modes:
 - TRANSPARENT: Transparent background with rgba overlay on hover/pressed
 - PALETTE: Palette-based dynamic colors with auto-sizing
 """
@@ -18,6 +18,7 @@ from ..qt_compat import (
     QPushButton,
     QToolButton,
 )
+from .color_utils import adjust_lightness
 
 
 class IconButtonStyle(Enum):
@@ -156,9 +157,7 @@ class IconButtonMixin:
         Returns:
             The adjusted color.
         """
-        h, s, v, a = color.getHsv()
-        v = max(0, min(int(v * factor), 255))
-        return QColor.fromHsv(h, s, v, a)
+        return adjust_lightness(color, factor)
 
 
 class IconButton(IconButtonMixin, QPushButton):
@@ -237,7 +236,64 @@ class IconToolButton(IconButtonMixin, QToolButton):
         self._init_icon_button(icon_name, style_mode, auto_size)
 
 
+class IconToggleButton(IconButtonMixin, QPushButton):
+    """Toggle button that switches between two icons based on checked state.
+
+    Combines IconButtonMixin styling (hover/pressed states) with checkable
+    toggle behavior and automatic icon switching.
+
+    Examples:
+        # Basic toggle button
+        button = IconToggleButton(icon_on="checked_icon", icon_off="unchecked_icon")
+        button.toggled.connect(on_toggle)
+
+        # Transparent style toggle
+        button = IconToggleButton(
+            icon_on="on", icon_off="off",
+            style_mode=IconButtonStyle.TRANSPARENT,
+        )
+    """
+
+    def __init__(
+        self,
+        icon_on: str,
+        icon_off: str,
+        style_mode: IconButtonStyle = IconButtonStyle.PALETTE,
+        auto_size: bool = True,
+        parent=None,
+    ):
+        """Initialize the icon toggle button.
+
+        Args:
+            icon_on: Icon name for the checked (on) state.
+            icon_off: Icon name for the unchecked (off) state.
+            style_mode: Style mode to use (TRANSPARENT or PALETTE).
+            auto_size: Whether to auto-size based on icon dimensions.
+            parent: Parent widget.
+        """
+        super().__init__(parent=parent)
+
+        self._icon_on = QIcon(icons.get_path(icon_on))
+        self._icon_off = QIcon(icons.get_path(icon_off))
+
+        self.setCheckable(True)
+        self.setChecked(False)
+
+        # Initialize mixin with the off icon (default unchecked state)
+        self._init_icon_button(icon_off, style_mode, auto_size)
+
+        self.toggled.connect(self._update_icon)
+
+    def _update_icon(self, checked: bool):
+        """Update the icon based on the checked state.
+
+        Args:
+            checked: The checked state.
+        """
+        self.setIcon(self._icon_on if checked else self._icon_off)
+
+
 # Backward compatibility alias
 ToolIconButton = IconButton
 
-__all__ = ["IconButton", "IconButtonStyle", "IconToolButton", "ToolIconButton"]
+__all__ = ["IconButton", "IconButtonStyle", "IconToggleButton", "IconToolButton", "ToolIconButton"]

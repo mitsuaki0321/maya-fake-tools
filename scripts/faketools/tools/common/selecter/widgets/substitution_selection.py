@@ -7,8 +7,7 @@ from .....lib.lib_selection import get_top_nodes
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget, Signal
 from .....lib_ui.tool_settings import ToolSettingsManager
-from .....lib_ui.ui_utils import get_line_height
-from .....lib_ui.widgets import extra_widgets
+from .....lib_ui.widgets import IconToggleButton, TextToggleButton, extra_widgets
 from .....operations import mirror_transforms
 from .. import command
 from .constants import LEFT_TO_RIGHT, RIGHT_TO_LEFT, SUBSTITUTION_COLOR, selecter_handler
@@ -55,7 +54,7 @@ class SubstitutionSelectionWidget(QWidget):
         main_layout.addWidget(self.search_text_field)
 
         # Arrow direction toggle
-        self.arrow_button = extra_widgets.CheckBoxButton(icon_on="arrow-left", icon_off="arrow-right")
+        self.arrow_button = IconToggleButton(icon_on="arrow-left", icon_off="arrow-right")
         main_layout.addWidget(self.arrow_button)
 
         # Replace text field
@@ -83,36 +82,25 @@ class SubstitutionSelectionWidget(QWidget):
         duplicate_button = SelecterButton("DUP", color=SUBSTITUTION_COLOR)
         main_layout.addWidget(duplicate_button)
 
-        # Calculate button size dynamically
-        line_height = get_line_height(self)
-        button_size = int(line_height * 2.0)
-        font_size = int(line_height * 0.75)
-
         # Mirror toggle for duplicate
-        self.mirror_checkbox = extra_widgets.TextCheckBoxButton(text="MIR", width=button_size, height=button_size, font_size=font_size, parent=self)
+        self.mirror_checkbox = TextToggleButton("MIR", parent=self)
         main_layout.addWidget(self.mirror_checkbox)
 
         # World/Local space toggle
-        self.mirror_space_checkbox = extra_widgets.TextCheckBoxButton(
-            text="WRD", width=button_size, height=button_size, font_size=font_size, parent=self
-        )
+        self.mirror_space_checkbox = TextToggleButton("WRD", parent=self)
         self.mirror_space_checkbox.setChecked(True)
         main_layout.addWidget(self.mirror_space_checkbox)
 
         # Position/Rotation checkboxes (horizontal layout)
-        self.mirror_pos_checkbox = extra_widgets.TextCheckBoxButton(
-            text="POS", width=button_size, height=button_size, font_size=font_size, parent=self
-        )
+        self.mirror_pos_checkbox = TextToggleButton("POS", parent=self)
         self.mirror_pos_checkbox.setChecked(True)
         main_layout.addWidget(self.mirror_pos_checkbox)
 
-        self.mirror_rot_checkbox = extra_widgets.TextCheckBoxButton(
-            text="ROT", width=button_size, height=button_size, font_size=font_size, parent=self
-        )
+        self.mirror_rot_checkbox = TextToggleButton("ROT", parent=self)
         main_layout.addWidget(self.mirror_rot_checkbox)
 
         # Freeze transform checkbox
-        self.freeze_checkbox = extra_widgets.TextCheckBoxButton(text="FRZ", width=button_size, height=button_size, font_size=font_size, parent=self)
+        self.freeze_checkbox = TextToggleButton("FRZ", parent=self)
         self.freeze_checkbox.setChecked(True)
         main_layout.addWidget(self.freeze_checkbox)
 

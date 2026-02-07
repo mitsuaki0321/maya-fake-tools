@@ -8,7 +8,7 @@ import maya.cmds as cmds
 from ....lib_ui import BaseFramelessWindow, icons, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QCursor, QEvent, QIcon, QPushButton, QSizePolicy, QSlider, Qt, Signal
-from ....lib_ui.widgets import IconButton, extra_widgets
+from ....lib_ui.widgets import IconButton, IconToggleButton, extra_widgets
 from .command import SkinWeightsCopyPaste
 
 logger = getLogger(__name__)
@@ -583,7 +583,7 @@ class DestinationClipboardButton(IconButton):
         logger.debug("Clear the destination components.")
 
 
-class OnlyUnlockInfluencesButton(IconButton):
+class OnlyUnlockInfluencesButton(IconToggleButton):
     """This button is used to toggle only_unlock_influences mode for SkinWeightsCopyPaste."""
 
     def __init__(self, skinWeights_copy_paste: SkinWeightsCopyPaste, parent=None):
@@ -593,18 +593,12 @@ class OnlyUnlockInfluencesButton(IconButton):
             skinWeights_copy_paste (SkinWeightsCopyPaste): SkinWeightsCopyPaste instance.
             parent (QWidget, optional): The parent widget. Defaults to None.
         """
-        super().__init__(icon_name="lock-open", parent=parent)
+        super().__init__(icon_on="lock", icon_off="lock-open", parent=parent)
 
         if not isinstance(skinWeights_copy_paste, SkinWeightsCopyPaste):
             raise ValueError("Invalid skinWeights_copy_paste.")
 
         self._skinWeights_copy_paste = skinWeights_copy_paste
-        self._unlocked_icon = QIcon(icons.get_path("lock-open"))
-        self._locked_icon = QIcon(icons.get_path("lock"))
-
-        self.setCheckable(True)  # Make it a toggle button
-        self.setChecked(False)  # Start with unlocked (all influences)
-        self.setIcon(self._unlocked_icon)
 
         self.clicked.connect(self._toggle_mode)
 
@@ -613,14 +607,7 @@ class OnlyUnlockInfluencesButton(IconButton):
         """Toggle the only_unlock_influences mode."""
         is_only_unlock = self.isChecked()
         self._skinWeights_copy_paste.set_only_unlock_influences(is_only_unlock)
-
-        # Update icon based on state
-        if is_only_unlock:
-            self.setIcon(self._locked_icon)
-            logger.debug("Only unlock influences mode: ON")
-        else:
-            self.setIcon(self._unlocked_icon)
-            logger.debug("Only unlock influences mode: OFF")
+        logger.debug("Only unlock influences mode: %s", "ON" if is_only_unlock else "OFF")
 
 
 def show_ui():
