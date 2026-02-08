@@ -12,7 +12,7 @@ TOOL_CONFIG = {
     "menu_order": 60,
     "requires_selection": False,
     "author": "FakeTools",
-    "category": "rig",
+    "category": "model",
 }
 
 __all__ = ["TOOL_CONFIG"]
