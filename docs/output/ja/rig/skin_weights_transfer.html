@@ -53,8 +53,14 @@
                     <li><a href="#target-to-リスト"
                     id="toc-target-to-リスト">Target (to)
                     リスト</a></li>
+                    <li><a href="#転送モードpercentage-value"
+                    id="toc-転送モードpercentage-value">転送モード（Percentage
+                    / Value）</a></li>
                     <li><a href="#amount"
                     id="toc-amount">Amount</a></li>
+                    <li><a href="#soft-selection-対応"
+                    id="toc-soft-selection-対応">Soft Selection
+                    対応</a></li>
                     </ul></li>
                     <li><a href="#ウェイト移動の仕組み"
                     id="toc-ウェイト移動の仕組み">ウェイト移動の仕組み</a></li>
@@ -70,12 +76,16 @@
                 <h2 id="概要">概要</h2>
                 <p>Skin Weights Transfer
                 は、選択したコンポーネント上で、複数のソースインフルエンスから単一のターゲットインフルエンスにスキンウェイトを移動するツールです。</p>
-                <p>ソースインフルエンスのウェイトは比例配分で減算され、その分がターゲットインフルエンスに加算されます。移動量はスライダーで
-                0〜100% の範囲で調整できます。</p>
+                <p>ソースインフルエンスのウェイトは比例配分で減算され、その分がターゲットインフルエンスに加算されます。移動量はパーセンテージまたは絶対値で指定できます。</p>
+                <p>Soft Selection
+                に対応しており、フォールオフ領域のコンポーネントも含めて、ウェイト値に応じた量のウェイトが移動されます。</p>
                 <h2 id="起動方法">起動方法</h2>
                 <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
                 <pre class="python"><code>import faketools.tools.rig.skin_weights_transfer.ui
 faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skin_weights_transfer/image001.png"
+                alt="image001" /></p>
                 <h2 id="使用方法">使用方法</h2>
                 <p>ウェイトを移動するには、以下の手順を行います。</p>
                 <ol type="1">
@@ -88,9 +98,12 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 <li>右側の <strong>Target (to)</strong>
                 リストから、ウェイトの移動先となるインフルエンスを 1
                 つ選択します。</li>
-                <li>対象となる頂点・CV・ラティスポイントを選択します。</li>
+                <li>対象となる頂点・CV・ラティスポイントを選択します（Soft
+                Selection 有効時はフォールオフ領域も含まれます）。</li>
+                <li><strong>転送モード</strong>（Percentage /
+                Value）を選択します。</li>
                 <li><strong>Amount</strong>
-                スライダーで移動量（0〜100%）を設定します。</li>
+                スライダーで移動量を設定します。</li>
                 <li>実行ボタンをクリックしてウェイトを移動します。</li>
                 </ol>
                 <h2 id="オプション">オプション</h2>
@@ -135,9 +148,19 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 に設定することはできません（Source が 1
                 つの場合）。</li>
                 </ul>
+                <h3
+                id="転送モードpercentage-value">転送モード（Percentage /
+                Value）</h3>
+                <p>ウェイトの移動方法を選択します。</p>
+                <ul>
+                <li><strong>Percentage</strong>:
+                ソースインフルエンスのウェイト合計に対する割合（0〜100%）で移動量を指定します。</li>
+                <li><strong>Value</strong>:
+                絶対値（0.0〜1.0）で移動量を直接指定します。ソースのウェイト合計を超える場合は、ソースの合計値にクランプされます。</li>
+                </ul>
                 <h3 id="amount">Amount</h3>
-                <p>ソースインフルエンスのウェイトを移動する割合を
-                0〜100% で指定します。</p>
+                <p>転送モードに応じた移動量を指定します。</p>
+                <p><strong>Percentage モード（デフォルト）:</strong></p>
                 <ul>
                 <li><strong>100%</strong>:
                 ソースインフルエンスのウェイトをすべてターゲットに移動します。</li>
@@ -145,22 +168,67 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 ソースインフルエンスのウェイトの半分をターゲットに移動します。</li>
                 <li><strong>0%</strong>: ウェイトは移動されません。</li>
                 </ul>
+                <p><strong>Value モード:</strong></p>
+                <ul>
+                <li><strong>1.0</strong>: 最大 1.0
+                のウェイトをターゲットに移動します（ソースの合計を超えない範囲）。</li>
+                <li><strong>0.1</strong>: 最大 0.1
+                のウェイトをターゲットに移動します。</li>
+                </ul>
                 <p>複数のソースインフルエンスが選択されている場合、各ソースのウェイトは保有比率に応じて比例配分で減算されます。</p>
+                <h3 id="soft-selection-対応">Soft Selection 対応</h3>
+                <p>Maya の Soft Selection
+                が有効な場合、フォールオフ領域のコンポーネントも自動的に対象に含まれます。各コンポーネントの移動量は
+                Soft Selection
+                のウェイト値（0.0〜1.0）に応じて乗算されます。</p>
+                <ul>
+                <li><strong>ウェイト 1.0</strong>（直接選択）: 指定した
+                Amount がそのまま適用されます。</li>
+                <li><strong>ウェイト 0.5</strong>（フォールオフ中間）:
+                Amount の 50% が適用されます。</li>
+                <li><strong>ウェイト 0.0</strong>（範囲外）:
+                ウェイトは移動されません。</li>
+                </ul>
+                <p>Soft Selection
+                が無効の場合は、従来通りすべての選択コンポーネントに対して均等に移動が行われます。</p>
+                <p><strong>注意:</strong> Affected Only フィルターは
+                Soft Selection
+                の影響を受けず、従来通り直接選択されたコンポーネントのみを参照します。</p>
                 <h2 id="ウェイト移動の仕組み">ウェイト移動の仕組み</h2>
                 <p>各コンポーネントに対して以下の計算が行われます。</p>
                 <ol type="1">
                 <li>すべてのソースインフルエンスのウェイト合計を算出します。</li>
-                <li>合計に Amount
-                の割合を掛けて、移動量を算出します。</li>
+                <li>転送モードに応じた移動量を算出し、Soft Selection
+                ウェイトを乗算します。</li>
                 <li>各ソースインフルエンスから、保有比率に応じてウェイトを比例配分で減算します。</li>
                 <li>減算した合計分をターゲットインフルエンスに加算します。</li>
                 </ol>
-                <p><strong>例:</strong> - Source A のウェイト:
-                0.6、Source B のウェイト: 0.3、Amount: 50% の場合 -
-                移動量: (0.6 + 0.3) × 0.5 = 0.45 - Source A から減算:
-                0.45 × (0.6 / 0.9) = 0.30 → 残り 0.30 - Source B
-                から減算: 0.45 × (0.3 / 0.9) = 0.15 → 残り 0.15 - Target
-                に加算: +0.45</p>
+                <p><strong>Percentage モードの計算式:</strong></p>
+                <pre><code>移動量 = ソース合計 × (Amount / 100) × Soft Selection ウェイト</code></pre>
+                <p><strong>Value モードの計算式:</strong></p>
+                <pre><code>移動量 = min(Amount × Soft Selection ウェイト, ソース合計)</code></pre>
+                <p><strong>例（Percentage モード）:</strong></p>
+                <ul>
+                <li>Source A のウェイト: 0.6、Source B のウェイト:
+                0.3、Amount: 50%、Soft Selection ウェイト: 1.0
+                の場合</li>
+                <li>移動量: (0.6 + 0.3) × 0.5 × 1.0 = 0.45</li>
+                <li>Source A から減算: 0.45 × (0.6 / 0.9) = 0.30 → 残り
+                0.30</li>
+                <li>Source B から減算: 0.45 × (0.3 / 0.9) = 0.15 → 残り
+                0.15</li>
+                <li>Target に加算: +0.45</li>
+                </ul>
+                <p><strong>例（Soft Selection 適用時）:</strong></p>
+                <ul>
+                <li>同じ条件で Soft Selection ウェイトが 0.5 の場合</li>
+                <li>移動量: (0.6 + 0.3) × 0.5 × 0.5 = 0.225</li>
+                <li>Source A から減算: 0.225 × (0.6 / 0.9) = 0.15 → 残り
+                0.45</li>
+                <li>Source B から減算: 0.225 × (0.3 / 0.9) = 0.075 →
+                残り 0.225</li>
+                <li>Target に加算: +0.225</li>
+                </ul>
                 <h2 id="対象コンポーネント">対象コンポーネント</h2>
                 <p>以下のコンポーネントタイプに対応しています。</p>
                 <ul>

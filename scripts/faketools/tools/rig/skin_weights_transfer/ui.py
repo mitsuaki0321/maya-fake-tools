@@ -140,9 +140,6 @@ class MainWindow(BaseMainWindow):
         self._mode_combo.setToolTip("Transfer mode: percentage of source weight or absolute value")
         self._bottom_layout.addWidget(self._mode_combo)
 
-        amount_label = QLabel("Amount:")
-        self._bottom_layout.addWidget(amount_label)
-
         self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
         self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
         self._bottom_layout.addWidget(self._amount_widget, 1)
@@ -340,7 +337,7 @@ class MainWindow(BaseMainWindow):
             self._amount_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
             self._amount_widget.setToolTip("Absolute weight value to transfer (0.0-1.0)")
 
-        self._bottom_layout.insertWidget(2, self._amount_widget, 1)
+        self._bottom_layout.insertWidget(1, self._amount_widget, 1)
 
     @error_handler
     @undo_chunk("Skin Weights Transfer: Move Weights")

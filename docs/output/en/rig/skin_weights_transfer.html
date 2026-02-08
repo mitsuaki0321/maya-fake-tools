@@ -51,8 +51,14 @@
                     List</a></li>
                     <li><a href="#target-to-list"
                     id="toc-target-to-list">Target (to) List</a></li>
+                    <li><a href="#transfer-mode-percentage-value"
+                    id="toc-transfer-mode-percentage-value">Transfer
+                    Mode (Percentage / Value)</a></li>
                     <li><a href="#amount"
                     id="toc-amount">Amount</a></li>
+                    <li><a href="#soft-selection-support"
+                    id="toc-soft-selection-support">Soft Selection
+                    Support</a></li>
                     </ul></li>
                     <li><a href="#how-weight-transfer-works"
                     id="toc-how-weight-transfer-works">How Weight
@@ -73,13 +79,20 @@
                 target influence on selected components.</p>
                 <p>Weights are proportionally removed from source
                 influences and added to the target influence. The
-                transfer amount is adjustable from 0 to 100% using a
-                slider.</p>
+                transfer amount can be specified as a percentage or an
+                absolute value.</p>
+                <p>Soft Selection is supported — components in the
+                falloff region are automatically included, and the
+                transfer amount is scaled by each component’s soft
+                selection weight.</p>
                 <h2 id="launch">Launch</h2>
                 <p>Launch the tool from the dedicated menu or with the
                 following command.</p>
                 <pre class="python"><code>import faketools.tools.rig.skin_weights_transfer.ui
 faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/skin_weights_transfer/image001.png"
+                alt="image001" /></p>
                 <h2 id="usage">Usage</h2>
                 <p>To transfer weights, follow these steps:</p>
                 <ol type="1">
@@ -91,9 +104,12 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 (multi-select: Ctrl+click / Shift+click).</li>
                 <li>In the right <strong>Target (to)</strong> list,
                 select a single influence to receive the weights.</li>
-                <li>Select the target vertices, CVs, or lattice
-                points.</li>
-                <li>Set the transfer amount (0-100%) using the
+                <li>Select the target vertices, CVs, or lattice points
+                (when Soft Selection is enabled, components in the
+                falloff region are also included).</li>
+                <li>Select the <strong>transfer mode</strong>
+                (Percentage / Value).</li>
+                <li>Set the transfer amount using the
                 <strong>Amount</strong> slider.</li>
                 <li>Click the execute button to transfer the
                 weights.</li>
@@ -137,9 +153,22 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 <li>The same influence cannot be set as both source and
                 target (when source is a single influence).</li>
                 </ul>
+                <h3 id="transfer-mode-percentage-value">Transfer Mode
+                (Percentage / Value)</h3>
+                <p>Select the transfer method.</p>
+                <ul>
+                <li><strong>Percentage</strong>: Specifies the transfer
+                amount as a percentage (0-100%) of the total source
+                influence weights.</li>
+                <li><strong>Value</strong>: Specifies the transfer
+                amount as an absolute value (0.0-1.0). If the value
+                exceeds the total source weight, it is clamped to the
+                source total.</li>
+                </ul>
                 <h3 id="amount">Amount</h3>
-                <p>Specifies the percentage of source weights to
-                transfer (0-100%).</p>
+                <p>Specifies the transfer amount according to the
+                selected mode.</p>
+                <p><strong>Percentage mode (default):</strong></p>
                 <ul>
                 <li><strong>100%</strong>: Transfers all weights from
                 source influences to the target.</li>
@@ -148,9 +177,35 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 <li><strong>0%</strong>: No weights are
                 transferred.</li>
                 </ul>
+                <p><strong>Value mode:</strong></p>
+                <ul>
+                <li><strong>1.0</strong>: Transfers up to 1.0 weight to
+                the target (clamped to the source total).</li>
+                <li><strong>0.1</strong>: Transfers up to 0.1 weight to
+                the target.</li>
+                </ul>
                 <p>When multiple source influences are selected, each
                 source’s weight is proportionally reduced based on its
                 share of the total.</p>
+                <h3 id="soft-selection-support">Soft Selection
+                Support</h3>
+                <p>When Maya’s Soft Selection is enabled, components in
+                the falloff region are automatically included. The
+                transfer amount for each component is multiplied by its
+                Soft Selection weight (0.0-1.0).</p>
+                <ul>
+                <li><strong>Weight 1.0</strong> (directly selected): The
+                specified Amount is applied in full.</li>
+                <li><strong>Weight 0.5</strong> (mid-falloff): 50% of
+                the Amount is applied.</li>
+                <li><strong>Weight 0.0</strong> (outside range): No
+                weight is transferred.</li>
+                </ul>
+                <p>When Soft Selection is disabled, transfer is applied
+                equally to all selected components as usual.</p>
+                <p><strong>Note:</strong> The Affected Only filter is
+                not affected by Soft Selection and only references
+                directly selected components.</p>
                 <h2 id="how-weight-transfer-works">How Weight Transfer
                 Works</h2>
                 <p>The following calculation is performed for each
@@ -158,19 +213,40 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 <ol type="1">
                 <li>Calculate the total weight of all source
                 influences.</li>
-                <li>Multiply the total by the Amount percentage to
-                determine the transfer amount.</li>
+                <li>Determine the transfer amount based on the mode,
+                then multiply by the Soft Selection weight.</li>
                 <li>Proportionally reduce each source influence based on
                 its share of the total.</li>
                 <li>Add the total reduced amount to the target
                 influence.</li>
                 </ol>
-                <p><strong>Example:</strong> - Source A weight: 0.6,
-                Source B weight: 0.3, Amount: 50% - Transfer amount:
-                (0.6 + 0.3) x 0.5 = 0.45 - Reduction from Source A: 0.45
-                x (0.6 / 0.9) = 0.30 → remaining 0.30 - Reduction from
-                Source B: 0.45 x (0.3 / 0.9) = 0.15 → remaining 0.15 -
-                Added to Target: +0.45</p>
+                <p><strong>Percentage mode formula:</strong></p>
+                <pre><code>transfer_amount = source_total × (Amount / 100) × soft_selection_weight</code></pre>
+                <p><strong>Value mode formula:</strong></p>
+                <pre><code>transfer_amount = min(Amount × soft_selection_weight, source_total)</code></pre>
+                <p><strong>Example (Percentage mode):</strong></p>
+                <ul>
+                <li>Source A weight: 0.6, Source B weight: 0.3, Amount:
+                50%, Soft Selection weight: 1.0</li>
+                <li>Transfer amount: (0.6 + 0.3) × 0.5 × 1.0 = 0.45</li>
+                <li>Reduction from Source A: 0.45 × (0.6 / 0.9) = 0.30 →
+                remaining 0.30</li>
+                <li>Reduction from Source B: 0.45 × (0.3 / 0.9) = 0.15 →
+                remaining 0.15</li>
+                <li>Added to Target: +0.45</li>
+                </ul>
+                <p><strong>Example (with Soft Selection):</strong></p>
+                <ul>
+                <li>Same conditions with Soft Selection weight of
+                0.5</li>
+                <li>Transfer amount: (0.6 + 0.3) × 0.5 × 0.5 =
+                0.225</li>
+                <li>Reduction from Source A: 0.225 × (0.6 / 0.9) = 0.15
+                → remaining 0.45</li>
+                <li>Reduction from Source B: 0.225 × (0.3 / 0.9) = 0.075
+                → remaining 0.225</li>
+                <li>Added to Target: +0.225</li>
+                </ul>
                 <h2 id="supported-components">Supported Components</h2>
                 <p>The following component types are supported:</p>
                 <ul>
