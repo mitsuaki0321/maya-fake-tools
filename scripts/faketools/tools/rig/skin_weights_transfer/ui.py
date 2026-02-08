@@ -10,6 +10,7 @@ from ....lib import lib_skinCluster
 from ....lib_ui import BaseMainWindow, error_handler, get_margins, get_maya_main_window, get_spacing, undo_chunk
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -20,6 +21,7 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import FieldSliderWidget, IconButton, IconToggleButton, extra_widgets
+from ....operations import component_selection
 from . import command
 
 _IMAGES_DIR = Path(__file__).parent / "images"
@@ -59,12 +61,9 @@ class MainWindow(BaseMainWindow):
         sc_layout = QHBoxLayout()
         sc_layout.setSpacing(int(spacing * 0.5))
 
-        sc_label = QLabel("SkinCluster:")
-        sc_layout.addWidget(sc_label)
-
         self._sc_field = QLineEdit()
         self._sc_field.setReadOnly(True)
-        self._sc_field.setPlaceholderText("Select a mesh and click SET")
+        self._sc_field.setPlaceholderText("Select a mesh and click SET to load skinCluster")
         self._sc_field.setToolTip("The skinCluster node to operate on")
         sc_layout.addWidget(self._sc_field, 1)
 
@@ -133,22 +132,29 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addLayout(lists_layout, 1)
 
         # --- Amount + Execute Row ---
-        bottom_layout = QHBoxLayout()
-        bottom_layout.setSpacing(int(spacing * 0.5))
+        self._bottom_layout = QHBoxLayout()
+        self._bottom_layout.setSpacing(int(spacing * 0.5))
+
+        self._mode_combo = QComboBox()
+        self._mode_combo.addItems(["Percentage", "Value"])
+        self._mode_combo.setToolTip("Transfer mode: percentage of source weight or absolute value")
+        self._bottom_layout.addWidget(self._mode_combo)
 
         amount_label = QLabel("Amount:")
-        bottom_layout.addWidget(amount_label)
+        self._bottom_layout.addWidget(amount_label)
 
         self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
         self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
-        bottom_layout.addWidget(self._amount_widget, 1)
+        self._bottom_layout.addWidget(self._amount_widget, 1)
 
         execute_button = IconButton(icon_name="move-weights", icon_dir=_IMAGES_DIR)
         execute_button.setToolTip("Transfer weights from source to target influences on selected components")
         execute_button.clicked.connect(self._on_execute)
-        bottom_layout.addWidget(execute_button)
+        self._bottom_layout.addWidget(execute_button)
 
-        self.central_layout.addLayout(bottom_layout)
+        self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
+
+        self.central_layout.addLayout(self._bottom_layout)
 
         # --- ScriptJob ---
         self._script_job_id = cmds.scriptJob(event=["SelectionChanged", self._on_selection_changed])
@@ -318,6 +324,24 @@ class MainWindow(BaseMainWindow):
             cmds.hilite(existing)
             self._hilite_nodes = existing
 
+    def _on_mode_changed(self, index: int):
+        """Handle transfer mode combo change.
+
+        Args:
+            index (int): Combo index (0=percentage, 1=value).
+        """
+        self._bottom_layout.removeWidget(self._amount_widget)
+        self._amount_widget.deleteLater()
+
+        if index == 0:
+            self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
+            self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
+        else:
+            self._amount_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
+            self._amount_widget.setToolTip("Absolute weight value to transfer (0.0-1.0)")
+
+        self._bottom_layout.insertWidget(2, self._amount_widget, 1)
+
     @error_handler
     @undo_chunk("Skin Weights Transfer: Move Weights")
     def _on_execute(self):
@@ -347,8 +371,14 @@ class MainWindow(BaseMainWindow):
             cmds.warning("Source and target must be different.")
             return
 
-        # Get selected components
-        components = cmds.filterExpand(selectionMask=[28, 31, 46]) or []
+        # Get selected components with soft selection weights
+        soft_weights = component_selection.get_unique_selections()
+        if not soft_weights:
+            cmds.warning("Select vertices, CVs, or lattice points.")
+            return
+
+        # Filter to valid component types (vtx, CV, lattice point)
+        components = cmds.filterExpand(list(soft_weights.keys()), selectionMask=[28, 31, 46]) or []
         if not components:
             cmds.warning("Select vertices, CVs, or lattice points.")
             return
@@ -363,12 +393,16 @@ class MainWindow(BaseMainWindow):
 
         amount = self._amount_widget.value()
 
+        use_percentage = self._mode_combo.currentIndex() == 0
+
         count = command.move_skin_weights(
             skin_cluster=self._skin_cluster,
             src_infs=src_infs,
             tgt_inf=tgt_inf,
             components=components,
             amount=float(amount),
+            use_percentage=use_percentage,
+            soft_weights=soft_weights,
         )
 
         logger.info(f"Transferred weights on {count} components")
@@ -388,11 +422,18 @@ class MainWindow(BaseMainWindow):
         Args:
             settings_data (dict): Settings to apply.
         """
+        if "transfer_mode" in settings_data:
+            mode_index = settings_data["transfer_mode"]
+            if mode_index in (0, 1):
+                self._mode_combo.setCurrentIndex(mode_index)
         if "amount" in settings_data:
             amount = settings_data["amount"]
             if amount is not None and amount != "":
                 with contextlib.suppress(ValueError, TypeError):
-                    self._amount_widget.setValue(int(amount))
+                    if self._mode_combo.currentIndex() == 0:
+                        self._amount_widget.setValue(int(amount))
+                    else:
+                        self._amount_widget.setValue(float(amount))
         if "affected_only" in settings_data:
             self._affected_checkbox.setChecked(bool(settings_data["affected_only"]))
 
@@ -403,6 +444,7 @@ class MainWindow(BaseMainWindow):
             dict: Current settings data.
         """
         return {
+            "transfer_mode": self._mode_combo.currentIndex(),
             "amount": self._amount_widget.value(),
             "affected_only": self._affected_checkbox.isChecked(),
         }
@@ -419,7 +461,9 @@ class MainWindow(BaseMainWindow):
                 cmds.scriptJob(kill=self._script_job_id, force=True)
             self._script_job_id = None
         if self._hilite_nodes:
-            cmds.hilite(self._hilite_nodes, u=True)
+            existing = [n for n in self._hilite_nodes if cmds.objExists(n)]
+            if existing:
+                cmds.hilite(existing, u=True)
             self._hilite_nodes = []
         self._save_settings()
         super().closeEvent(event)

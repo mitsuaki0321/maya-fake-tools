@@ -3,6 +3,8 @@
 Pure Maya operations for transferring skin weights between influences.
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from logging import getLogger
 
@@ -19,6 +21,8 @@ def move_skin_weights(
     tgt_inf: str,
     components: Sequence[str],
     amount: float,
+    use_percentage: bool = True,
+    soft_weights: dict[str, float] | None = None,
 ) -> int:
     """Move skin weights from source influences to a target influence.
 
@@ -30,7 +34,14 @@ def move_skin_weights(
         src_infs (Sequence[str]): Source influence names to take weights from.
         tgt_inf (str): Target influence name to receive weights.
         components (Sequence[str]): Components to operate on.
-        amount (float): Percentage of source weights to transfer (0-100).
+        amount (float): Amount of weight to transfer. Percentage (0-100) when
+            use_percentage is True, absolute value (0.0-1.0) when False.
+        use_percentage (bool): If True, amount is treated as a percentage of
+            source weights. If False, amount is an absolute value clamped to
+            available source weight. Defaults to True.
+        soft_weights (dict[str, float] | None): Per-component soft selection weights
+            (0.0-1.0). When provided, the transfer amount is multiplied by each
+            component's weight. None treats all components equally. Defaults to None.
 
     Returns:
         int: Number of components processed.
@@ -74,13 +85,18 @@ def move_skin_weights(
     weights = get_skin_weights(skin_cluster, components)
 
     # Modify weights
-    for comp_weights in weights:
+    for idx, comp_weights in enumerate(weights):
         total_src = sum(comp_weights[i] for i in src_indices)
         if total_src <= 0.0:
             continue
 
+        soft_w = soft_weights.get(components[idx], 1.0) if soft_weights else 1.0
+
         # Calculate amount to move
-        move_amount = total_src * (amount / 100.0)
+        if use_percentage:
+            move_amount = total_src * (amount / 100.0) * soft_w
+        else:
+            move_amount = min(amount * soft_w, total_src)
 
         if move_amount <= 0.0:
             continue
