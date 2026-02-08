@@ -283,13 +283,11 @@ def substitute_duplicate(nodes: list[str], regex_name: str, replace_name: str) -
         return result_nodes
 
 
-def substitute_duplicate_original(nodes: list[str], regex_name: str, replace_name: str) -> list[str]:
+def substitute_duplicate_original(nodes: list[str]) -> list[str]:
     """Duplicate the original shape of the shape node and replace it with the specified name.
 
     Args:
         nodes (list[str]): The target node list.
-        regex_name (str): The name to substitute.
-        replace_name (str): The new name.
 
     Notes:
         - Target node type is shape node. Only mesh, nurbsSurface, nurbsCurve.
@@ -309,8 +307,7 @@ def substitute_duplicate_original(nodes: list[str], regex_name: str, replace_nam
         cmds.error(f"Nodes do not exist: {not_exists_nodes}")
 
     # Duplicate original shape
-    dup_nodes = []
-    name_nodes = []
+    result_nodes = []
     for node in nodes:
         shp = cmds.listRelatives(node, shapes=True, f=True)
         if not shp:
@@ -322,16 +319,7 @@ def substitute_duplicate_original(nodes: list[str], regex_name: str, replace_nam
             continue
 
         orig_transform = lib_shape.duplicate_original_shape(shp[0])
-        dup_nodes.append(orig_transform)
-        name_nodes.append(node)
-
-    if not dup_nodes:
-        cmds.warning("No original shape duplicated.")
-        return []
-
-    # Substitute name
-    new_names = lib_name.substitute_names(name_nodes, regex_name, replace_name)
-    result_nodes = _rename_non_dag_nodes(dup_nodes, new_names)
+        result_nodes.append(orig_transform)
 
     return result_nodes
 

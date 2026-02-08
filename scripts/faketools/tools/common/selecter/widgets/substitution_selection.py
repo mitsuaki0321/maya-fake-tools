@@ -331,16 +331,12 @@ class SubstitutionSelectionWidget(QWidget):
     @maya_decorator.error_handler
     def duplicate_original_substitution(self):
         """Duplicate the original substitution nodes."""
-        search_text, replace_text = self._get_substitution_option()
-
         nodes = cmds.ls(sl=True, fl=True)
         if not nodes:
             cmds.error("No object selected.")
 
-        result_nodes = command.substitute_duplicate_original(nodes, search_text, replace_text)
-
+        result_nodes = command.substitute_duplicate_original(nodes)
         cmds.select(result_nodes, r=True)
-        self.settings_changed.emit()
 
     def _get_substitution_option(self):
         """Get the substitution option.
