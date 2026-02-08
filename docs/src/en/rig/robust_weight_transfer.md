@@ -101,12 +101,17 @@ Configure matching parameters.
 | Expand Boundary | Number of edge rings to expand around unmatched vertices | 0 |
 | Flip Normals | Allow matching with flipped normals | OFF |
 | Fast Mode (KDTree) | Fast (slightly less accurate) matching using KDTree | OFF |
+| Use Deformed Source | Evaluate source mesh at current pose | OFF |
+| Use Deformed Target | Evaluate target mesh at current pose | OFF |
+
 
 **About Distance Ratio:**
 Smaller values result in stricter matching. 0.05 means matching within 5% of the diagonal length.
 
 **About Expand Boundary:**
-At the boundary between matched and unmatched vertices, weights from vertices that barely passed the threshold can introduce noise. Setting this value to 1 or higher will also treat vertices within N edge rings around unmatched vertices as "unmatched", making them candidates for Weight Inpainting interpolation. This removes noise at the boundary and results in smoother weight transitions.
+At the boundary between matched and unmatched vertices, weights from vertices that barely passed the threshold can introduce noise.
+Setting this value to 1 or higher will also treat vertices within N edge rings around unmatched vertices as "unmatched", making them candidates for Weight Inpainting interpolation.
+This removes noise at the boundary and results in smoother weight transitions.
 
 - **0**: No expansion (default, original behavior)
 - **1-5**: Expand the boundary by the specified number of edge rings
@@ -116,51 +121,39 @@ At the boundary between matched and unmatched vertices, weights from vertices th
 **About Flip Normals:**
 Turn this on when normals are flipped between source and target (e.g., clothing lining).
 
-### Deform Options
+**About Use Deformed Source / Use Deformed Target:**
+Use when transferring weights in a pose other than bind pose.
+With both enabled, matching is performed based on the current pose shapes.
 
-Options for weight transfer in deformed state.
+### Post Processing
+
+Configure processing applied to weights after transfer.
 
 ![image](../../images/rig/robust_weight_transfer/image005.png)
 
-| Option | Description |
-|--------|-------------|
-| Use Deformed Source | Evaluate source mesh at current pose |
-| Use Deformed Target | Evaluate target mesh at current pose |
-
-Use when transferring weights in a pose other than bind pose. With both enabled, matching is performed based on the current pose shapes.
-
-### Smoothing
-
-Weight smoothing options after transfer.
-
-![image](../../images/rig/robust_weight_transfer/image006.png)
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | Enable Smoothing | Enable smoothing | ON |
 | Iterations | Number of smoothing iterations | 10 |
 | Alpha | Smoothing strength (0.01-1.0) | 0.2 |
-
-Smooths weights estimated by Weight Inpainting for more natural results.
-
-### Seam Averaging
-
-Options for averaging seam vertex weights.
-
-![image](../../images/rig/robust_weight_transfer/image007.png)
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
 | Average Seam Weights | Enable seam averaging | OFF |
 | Include Internal Seams | Also average seams within the same mesh | ON |
 | Position Tolerance | Distance tolerance for considering vertices at the same position | 0.0001 |
 
+
+**About Smoothing:**
+Weight smoothing options after transfer.
+Smooths weights estimated by Weight Inpainting for more natural results.
+
+**About Seam Weights:**
+Options for averaging seam vertex weights.
+This option is useful when the mesh is divided into multiple parts.
+Averages weights of vertices at the same position for consistent weights.
+
 **Use Cases:**
 - When clothing collar and body are separate meshes with seam vertices at the same position
 - When vertices are split at UV seams but at the same position
-
-**About Include Internal Seams:**
-When enabled, vertices at the same position within the same mesh (such as UV seams) are also averaged.
 
 ### Status
 

@@ -32,23 +32,24 @@ faketools.tools.common.selecter.ui.show_ui()
 
 ## Usage
 
-### Filter Selection by Name
+### Filter by Name
 
-Filters selected nodes by text.
-Holding `Ctrl` while selecting will deselect matching nodes.
-
-**Example: Select nodes containing the text "Group"**
 ![image002](../../images/common/selecter/image002.png)
 
-When using regular expression strings, filtering is done as regular expressions.
+Filters nodes by text.
+Holding `Ctrl` while selecting will deselect matching nodes.
 
-**Example: Select nodes containing "Group" at the end of the node name**
-![image012](../../images/common/selecter/image012.png)
+- Pressing the `Aa` button performs case-insensitive filtering.
+- Pressing the `All` button filters across all nodes in the scene.
 
-Pressing the `Aa` button performs case-insensitive filtering.
+### Filter by Node Type
 
-![image013](../../images/common/selecter/image013.png)
+![image013](../../images/common/selecter/image003.png)
 
+Filters by selecting a node type.
+Holding `Ctrl` while selecting will deselect matching nodes.
+
+- Pressing the **All** button filters across all node types.
 
 ### Reorder Nodes in Outliner
 
@@ -76,6 +77,7 @@ Holding `Ctrl` while selecting will deselect matching nodes.
 
 ![image003](../../images/common/selecter/image003.png)
 
+
 ### Select Parents, Children, Siblings of Selected Nodes
 
 Selects parents, children, siblings of selected nodes.
@@ -97,7 +99,6 @@ Selects parents, children, siblings of selected nodes.
 
 All can use modifier keys just like selection in Maya's view.
 
-
 ### Select with Name Replacement (Left/Right)
 
 Selects nodes with replaced names between left and right selected nodes.
@@ -107,6 +108,7 @@ Selects nodes with replaced names between left and right selected nodes.
 All can use modifier keys just like selection in Maya's view.
 
 ※ This feature can change the replacement method according to the `LEFT_TO_RIGHT` and `RIGHT_TO_LEFT` settings in settings.json.
+
 
 ### Select, Rename, Duplicate, Duplicate Original Shape with Name Replacement
 
@@ -150,8 +152,9 @@ Renames selected nodes.
 ### Change Selection Order
 
 Changes the selection order of selected nodes.
+Click the button below and select from the displayed menu.
 
-![image014](../../images/common/selecter/image015.png)
+![image015](../../images/common/selecter/image015.png)
 
 - **LF** (Last to First)
   - Moves the last selected node to the first position.

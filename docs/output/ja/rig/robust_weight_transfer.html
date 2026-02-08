@@ -65,12 +65,8 @@
                     id="toc-targets">Targets</a></li>
                     <li><a href="#settings"
                     id="toc-settings">Settings</a></li>
-                    <li><a href="#deform-options"
-                    id="toc-deform-options">Deform Options</a></li>
-                    <li><a href="#smoothing"
-                    id="toc-smoothing">Smoothing</a></li>
-                    <li><a href="#seam-averaging"
-                    id="toc-seam-averaging">Seam Averaging</a></li>
+                    <li><a href="#post-processing"
+                    id="toc-post-processing">Post Processing</a></li>
                     <li><a href="#status"
                     id="toc-status">Status</a></li>
                     <li><a href="#action-buttons"
@@ -242,18 +238,29 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <td>KDTree による高速（やや低精度）なマッチング</td>
                 <td>OFF</td>
                 </tr>
+                <tr>
+                <td>Use Deformed Source</td>
+                <td>ソースメッシュを現在のポーズで評価</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Use Deformed Target</td>
+                <td>ターゲットメッシュを現在のポーズで評価</td>
+                <td>OFF</td>
+                </tr>
                 </tbody>
                 </table>
-                <p><strong>Distance Ratio について:</strong>
+                <p><strong>Distance Ratio について:</strong><br />
                 値が小さいほど厳密なマッチングになります。0.05
                 は対角線の 5%
                 以内の距離でマッチングすることを意味します。</p>
-                <p><strong>Expand Boundary について:</strong>
-                マッチした頂点とマッチしなかった頂点の境界部分では、閾値ギリギリでマッチした頂点のウェイトがノイズとなる場合があります。この値を
-                1 以上に設定すると、マッチしなかった頂点の周囲 N
+                <p><strong>Expand Boundary について:</strong><br />
+                マッチした頂点とマッチしなかった頂点の境界部分では、閾値ギリギリでマッチした頂点のウェイトがノイズとなる場合があります。<br />
+                この値を 1 以上に設定すると、マッチしなかった頂点の周囲
+                N
                 エッジリング分の頂点も「マッチしなかった」として扱い、Weight
-                Inpainting
-                による補間対象にします。これにより、境界部分のノイズを除去し、よりスムーズなウェイト遷移が得られます。</p>
+                Inpainting による補間対象にします。<br />
+                これにより、境界部分のノイズを除去し、よりスムーズなウェイト遷移が得られます。</p>
                 <ul>
                 <li><strong>0</strong>:
                 拡張なし（デフォルト、従来の動作）</li>
@@ -262,36 +269,16 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 </ul>
                 <p>※
                 拡張により全ての頂点がマッチしなくなった場合はエラーとなります。</p>
-                <p><strong>Flip Normals について:</strong>
+                <p><strong>Flip Normals について:</strong><br />
                 ソースとターゲットで法線が反転している場合（例：服の裏地）にオンにします。</p>
-                <h3 id="deform-options">Deform Options</h3>
-                <p>変形状態でのウェイト転送オプションです。</p>
+                <p><strong>Use Deformed Source / Use Deformed Target
+                について:</strong>
+                バインドポーズ以外のポーズでウェイトを転送する場合に使用します。<br />
+                両方をオンにすることで、現在のポーズでの形状に基づいてマッチングが行われます。</p>
+                <h3 id="post-processing">Post Processing</h3>
+                <p>転送後にウェイトに対して行う処理を設定します。</p>
                 <p><img
                 src="../../images/rig/robust_weight_transfer/image005.png"
-                alt="image" /></p>
-                <table>
-                <thead>
-                <tr>
-                <th>オプション</th>
-                <th>説明</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td>Use Deformed Source</td>
-                <td>ソースメッシュを現在のポーズで評価</td>
-                </tr>
-                <tr>
-                <td>Use Deformed Target</td>
-                <td>ターゲットメッシュを現在のポーズで評価</td>
-                </tr>
-                </tbody>
-                </table>
-                <p>バインドポーズ以外のポーズでウェイトを転送する場合に使用します。両方をオンにすることで、現在のポーズでの形状に基づいてマッチングが行われます。</p>
-                <h3 id="smoothing">Smoothing</h3>
-                <p>転送後のウェイトスムージングオプションです。</p>
-                <p><img
-                src="../../images/rig/robust_weight_transfer/image006.png"
                 alt="image" /></p>
                 <table>
                 <thead>
@@ -317,24 +304,6 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <td>スムージングの強度（0.01-1.0）</td>
                 <td>0.2</td>
                 </tr>
-                </tbody>
-                </table>
-                <p>Weight Inpainting
-                で推定されたウェイトをスムージングして、より自然な結果を得ます。</p>
-                <h3 id="seam-averaging">Seam Averaging</h3>
-                <p>シーム（縫い目）の頂点ウェイト平均化オプションです。</p>
-                <p><img
-                src="../../images/rig/robust_weight_transfer/image007.png"
-                alt="image" /></p>
-                <table>
-                <thead>
-                <tr>
-                <th>パラメータ</th>
-                <th>説明</th>
-                <th>デフォルト</th>
-                </tr>
-                </thead>
-                <tbody>
                 <tr>
                 <td>Average Seam Weights</td>
                 <td>シーム平均化を有効化</td>
@@ -352,13 +321,18 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
+                <p><strong>Smoothing について:</strong><br />
+                転送後のウェイトスムージングオプションです。<br />
+                Weight Inpainting
+                で推定されたウェイトをスムージングして、より自然な結果を得ます。</p>
+                <p><strong>Seam Weights について:</strong><br />
+                シーム（縫い目）の頂点ウェイト平均化オプションです。<br />
+                このオプションは、メッシュが複数パーツに分かれている場合に便利です。<br />
+                同じ位置にある頂点のウェイトを平均化して、一貫したウェイトを得ます。</p>
                 <p><strong>使用例:</strong> -
                 服の襟と本体が別メッシュで、縫い目部分の頂点が同じ位置にある場合
                 - UV
                 シームで頂点が分割されているが、同じ位置にある場合</p>
-                <p><strong>Include Internal Seams について:</strong>
-                オンにすると、同じメッシュ内で同じ位置にある頂点（UV
-                シームなど）も平均化されます。</p>
                 <h3 id="status">Status</h3>
                 <p>マッチング結果を表示します。</p>
                 <p><img
@@ -412,7 +386,8 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <h2 id="技術的な詳細">技術的な詳細</h2>
                 <h3 id="weight-inpainting-アルゴリズム">Weight
                 Inpainting アルゴリズム</h3>
-                <p>マッチしなかった頂点のウェイトは、ラプラシアン行列を使用した最適化問題として解かれます。これにより、周囲のウェイト情報から滑らかに補間されたウェイトが計算されます。</p>
+                <p>マッチしなかった頂点のウェイトは、ラプラシアン行列を使用した最適化問題として解かれます。<br />
+                これにより、周囲のウェイト情報から滑らかに補間されたウェイトが計算されます。</p>
                 <h3 id="依存ライブラリ">依存ライブラリ</h3>
                 <ul>
                 <li><strong>numpy</strong>: 数値計算（Maya 2022+

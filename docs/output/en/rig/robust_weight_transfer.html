@@ -66,12 +66,8 @@
                     id="toc-targets">Targets</a></li>
                     <li><a href="#settings"
                     id="toc-settings">Settings</a></li>
-                    <li><a href="#deform-options"
-                    id="toc-deform-options">Deform Options</a></li>
-                    <li><a href="#smoothing"
-                    id="toc-smoothing">Smoothing</a></li>
-                    <li><a href="#seam-averaging"
-                    id="toc-seam-averaging">Seam Averaging</a></li>
+                    <li><a href="#post-processing"
+                    id="toc-post-processing">Post Processing</a></li>
                     <li><a href="#status"
                     id="toc-status">Status</a></li>
                     <li><a href="#action-buttons"
@@ -261,6 +257,16 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 KDTree</td>
                 <td>OFF</td>
                 </tr>
+                <tr>
+                <td>Use Deformed Source</td>
+                <td>Evaluate source mesh at current pose</td>
+                <td>OFF</td>
+                </tr>
+                <tr>
+                <td>Use Deformed Target</td>
+                <td>Evaluate target mesh at current pose</td>
+                <td>OFF</td>
+                </tr>
                 </tbody>
                 </table>
                 <p><strong>About Distance Ratio:</strong> Smaller values
@@ -286,38 +292,22 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <p><strong>About Flip Normals:</strong> Turn this on
                 when normals are flipped between source and target
                 (e.g., clothing lining).</p>
-                <h3 id="deform-options">Deform Options</h3>
-                <p>Options for weight transfer in deformed state.</p>
+                <p><strong>About Use Deformed Source / Use Deformed
+                Target:</strong> Use when transferring weights in a pose
+                other than bind pose. With both enabled, matching is
+                performed based on the current pose shapes.</p>
+                <h3 id="post-processing">Post Processing</h3>
+                <p>Configure processing applied to weights after
+                transfer.</p>
                 <p><img
                 src="../../images/rig/robust_weight_transfer/image005.png"
                 alt="image" /></p>
                 <table>
-                <thead>
-                <tr>
-                <th>Option</th>
-                <th>Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td>Use Deformed Source</td>
-                <td>Evaluate source mesh at current pose</td>
-                </tr>
-                <tr>
-                <td>Use Deformed Target</td>
-                <td>Evaluate target mesh at current pose</td>
-                </tr>
-                </tbody>
-                </table>
-                <p>Use when transferring weights in a pose other than
-                bind pose. With both enabled, matching is performed
-                based on the current pose shapes.</p>
-                <h3 id="smoothing">Smoothing</h3>
-                <p>Weight smoothing options after transfer.</p>
-                <p><img
-                src="../../images/rig/robust_weight_transfer/image006.png"
-                alt="image" /></p>
-                <table>
+                <colgroup>
+                <col style="width: 33%" />
+                <col style="width: 39%" />
+                <col style="width: 27%" />
+                </colgroup>
                 <thead>
                 <tr>
                 <th>Parameter</th>
@@ -341,29 +331,6 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 <td>Smoothing strength (0.01-1.0)</td>
                 <td>0.2</td>
                 </tr>
-                </tbody>
-                </table>
-                <p>Smooths weights estimated by Weight Inpainting for
-                more natural results.</p>
-                <h3 id="seam-averaging">Seam Averaging</h3>
-                <p>Options for averaging seam vertex weights.</p>
-                <p><img
-                src="../../images/rig/robust_weight_transfer/image007.png"
-                alt="image" /></p>
-                <table>
-                <colgroup>
-                <col style="width: 33%" />
-                <col style="width: 39%" />
-                <col style="width: 27%" />
-                </colgroup>
-                <thead>
-                <tr>
-                <th>Parameter</th>
-                <th>Description</th>
-                <th>Default</th>
-                </tr>
-                </thead>
-                <tbody>
                 <tr>
                 <td>Average Seam Weights</td>
                 <td>Enable seam averaging</td>
@@ -382,13 +349,18 @@ faketools.tools.rig.robust_weight_transfer.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
+                <p><strong>About Smoothing:</strong> Weight smoothing
+                options after transfer. Smooths weights estimated by
+                Weight Inpainting for more natural results.</p>
+                <p><strong>About Seam Weights:</strong> Options for
+                averaging seam vertex weights. This option is useful
+                when the mesh is divided into multiple parts. Averages
+                weights of vertices at the same position for consistent
+                weights.</p>
                 <p><strong>Use Cases:</strong> - When clothing collar
                 and body are separate meshes with seam vertices at the
                 same position - When vertices are split at UV seams but
                 at the same position</p>
-                <p><strong>About Include Internal Seams:</strong> When
-                enabled, vertices at the same position within the same
-                mesh (such as UV seams) are also averaged.</p>
                 <h3 id="status">Status</h3>
                 <p>Displays matching results.</p>
                 <p><img

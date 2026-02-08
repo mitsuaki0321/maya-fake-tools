@@ -41,9 +41,11 @@
                     id="toc-how-to-launch">How to Launch</a></li>
                     <li><a href="#usage" id="toc-usage">Usage</a>
                     <ul>
-                    <li><a href="#filter-selection-by-name"
-                    id="toc-filter-selection-by-name">Filter Selection
-                    by Name</a></li>
+                    <li><a href="#filter-by-name"
+                    id="toc-filter-by-name">Filter by Name</a></li>
+                    <li><a href="#filter-by-node-type"
+                    id="toc-filter-by-node-type">Filter by Node
+                    Type</a></li>
                     <li><a href="#reorder-nodes-in-outliner"
                     id="toc-reorder-nodes-in-outliner">Reorder Nodes in
                     Outliner</a></li>
@@ -99,25 +101,27 @@
                 <pre class="python"><code>import faketools.tools.common.selecter.ui
 faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 <h2 id="usage">Usage</h2>
-                <h3 id="filter-selection-by-name">Filter Selection by
-                Name</h3>
-                <p>Filters selected nodes by text. Holding
+                <h3 id="filter-by-name">Filter by Name</h3>
+                <p><img src="../../images/common/selecter/image002.png"
+                alt="image002" /></p>
+                <p>Filters nodes by text. Holding <code>Ctrl</code>
+                while selecting will deselect matching nodes.</p>
+                <ul>
+                <li>Pressing the <code>Aa</code> button performs
+                case-insensitive filtering.</li>
+                <li>Pressing the <code>All</code> button filters across
+                all nodes in the scene.</li>
+                </ul>
+                <h3 id="filter-by-node-type">Filter by Node Type</h3>
+                <p><img src="../../images/common/selecter/image003.png"
+                alt="image013" /></p>
+                <p>Filters by selecting a node type. Holding
                 <code>Ctrl</code> while selecting will deselect matching
                 nodes.</p>
-                <p><strong>Example: Select nodes containing the text
-                “Group”</strong> <img
-                src="../../images/common/selecter/image002.png"
-                alt="image002" /></p>
-                <p>When using regular expression strings, filtering is
-                done as regular expressions.</p>
-                <p><strong>Example: Select nodes containing “Group” at
-                the end of the node name</strong> <img
-                src="../../images/common/selecter/image012.png"
-                alt="image012" /></p>
-                <p>Pressing the <code>Aa</code> button performs
-                case-insensitive filtering.</p>
-                <p><img src="../../images/common/selecter/image013.png"
-                alt="image013" /></p>
+                <ul>
+                <li>Pressing the <strong>All</strong> button filters
+                across all node types.</li>
+                </ul>
                 <h3 id="reorder-nodes-in-outliner">Reorder Nodes in
                 Outliner</h3>
                 <p>Reorders selected nodes in the outliner. All nodes
@@ -290,9 +294,10 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 </table>
                 <h3 id="change-selection-order">Change Selection
                 Order</h3>
-                <p>Changes the selection order of selected nodes.</p>
+                <p>Changes the selection order of selected nodes. Click
+                the button below and select from the displayed menu.</p>
                 <p><img src="../../images/common/selecter/image015.png"
-                alt="image014" /></p>
+                alt="image015" /></p>
                 <ul>
                 <li><strong>LF</strong> (Last to First)
                 <ul>

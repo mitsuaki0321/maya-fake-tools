@@ -41,8 +41,10 @@
                     <li><a href="#使用方法"
                     id="toc-使用方法">使用方法</a>
                     <ul>
-                    <li><a href="#選択を名前でフィルタリング"
-                    id="toc-選択を名前でフィルタリング">選択を名前でフィルタリング</a></li>
+                    <li><a href="#名前でフィルタリング"
+                    id="toc-名前でフィルタリング">名前でフィルタリング</a></li>
+                    <li><a href="#ノードタイプでフィルタリング"
+                    id="toc-ノードタイプでフィルタリング">ノードタイプでフィルタリング</a></li>
                     <li><a href="#アウトライナーでのノード順序変更"
                     id="toc-アウトライナーでのノード順序変更">アウトライナーでのノード順序変更</a></li>
                     <li><a href="#選択をノードタイプでフィルタリング"
@@ -84,24 +86,29 @@
                 <pre class="python"><code>import faketools.tools.common.selecter.ui
 faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 <h2 id="使用方法">使用方法</h2>
-                <h3
-                id="選択を名前でフィルタリング">選択を名前でフィルタリング</h3>
-                <p>選択したノードをテキストでフィルタリングします。<br />
+                <h3 id="名前でフィルタリング">名前でフィルタリング</h3>
+                <p><img src="../../images/common/selecter/image002.png"
+                alt="image002" /></p>
+                <p>ノードをテキストでフィルタリングします。<br />
                 <code>Ctrl</code>
                 キーを押しながら選択すると、該当したノードを選択から外します。</p>
-                <p><strong>例: Group
-                というテキストが含まれているノードを選択</strong><br />
-                <img src="../../images/common/selecter/image002.png"
-                alt="image002" /></p>
-                <p>正規表現文字列を使用した場合は、正規表現としてフィルタリングされます。</p>
-                <p><strong>例: Group
-                というテキストがノードの後方に含まれているノードを選択</strong><br />
-                <img src="../../images/common/selecter/image012.png"
-                alt="image012" /></p>
-                <p><code>Aa</code>
-                ボタンを押すと、大文字と小文字を区別しないフィルタリングを行います。</p>
-                <p><img src="../../images/common/selecter/image013.png"
+                <ul>
+                <li><code>Aa</code>
+                ボタンを押すと、大文字と小文字を区別しないフィルタリングを行います。</li>
+                <li><code>All</code>
+                ボタンを押すと、シーン上のすべてのノードを対象にフィルタリングを行います。</li>
+                </ul>
+                <h3
+                id="ノードタイプでフィルタリング">ノードタイプでフィルタリング</h3>
+                <p><img src="../../images/common/selecter/image003.png"
                 alt="image013" /></p>
+                <p>ノードタイプを選択してフィルタリングします。
+                <code>Ctrl</code>
+                キーを押しながら選択すると、該当したノードを選択から外します。</p>
+                <ul>
+                <li><strong>All</strong>
+                ボタンを押すと、すべてのノードタイプを対象にフィルタリングを行います。</li>
+                </ul>
                 <h3
                 id="アウトライナーでのノード順序変更">アウトライナーでのノード順序変更</h3>
                 <p>選択したノードをアウトライナーで並び替えます。
@@ -212,7 +219,8 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 </ul></li>
                 <li><strong>ORG</strong>
                 <ul>
-                <li>選択したノードの名前を置換してオリジナルシェイプを複製します。</li>
+                <li>選択したノードのオリジナルシェイプを複製します。複製されたノード名は
+                <code>_original</code> が付加されます。</li>
                 </ul></li>
                 </ul>
                 <h3
@@ -262,7 +270,8 @@ faketools.tools.common.selecter.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <h3 id="選択順序の変更">選択順序の変更</h3>
-                <p>選択したノードの選択順序を変更します。</p>
+                <p>選択したノードの選択順序を変更します。<br />
+                以下のボタンをクリックして表示されるメニューから選択します。</p>
                 <p><img src="../../images/common/selecter/image015.png"
                 alt="image015" /></p>
                 <ul>
