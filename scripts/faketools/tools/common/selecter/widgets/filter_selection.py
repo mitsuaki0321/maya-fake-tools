@@ -63,8 +63,8 @@ class FilterSelectionWidget(QWidget):
         filter_name_button.clicked.connect(self.select_by_name)
         filter_type_button.clicked.connect(self.select_by_type)
 
-    @maya_decorator.undo_chunk("Selecter: Filter Name")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Filter Name")
     @selecter_handler
     def select_by_name(self, nodes: list[str]):
         """Select nodes by name filter.
@@ -97,8 +97,8 @@ class FilterSelectionWidget(QWidget):
         self.settings_changed.emit()
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Filter Type")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Filter Type")
     @selecter_handler
     def select_by_type(self, nodes: list[str]):
         """Select nodes by type filter.

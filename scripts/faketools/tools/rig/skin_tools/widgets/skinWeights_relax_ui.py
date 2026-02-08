@@ -78,8 +78,8 @@ class SkinWeightsRelaxWidgets(QWidget):
         # Signal & Slot
         execute_button.clicked.connect(self.relax_weights)
 
-    @maya_decorator.undo_chunk("Relax Skin Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Relax Skin Weights")
     def relax_weights(self):
         """Relax the skin weights using Laplacian smoothing."""
         vertices = cmds.filterExpand(sm=31, ex=True)

@@ -128,8 +128,8 @@ class AdjustCenterSkinWeightsWidgets(QWidget):
 
         field.setText(nodes[0])
 
-    @maya_decorator.undo_chunk("Adjust Center Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Adjust Center Weights")
     def exchange_influences(self):
         """Exchange the influences."""
         components = cmds.filterExpand(sm=[28, 31, 46], ex=True)

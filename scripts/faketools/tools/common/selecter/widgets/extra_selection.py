@@ -52,6 +52,7 @@ class ExtraSelectionWidget(QWidget):
         extra_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         extra_button.setMenu(menu)
 
+    @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Selecter: Last to First Selection")
     def last_to_first_selection(self):
         """Move the last selected item to first position."""
@@ -66,6 +67,7 @@ class ExtraSelectionWidget(QWidget):
         cmds.select(nodes[-1], r=True)
         cmds.select(nodes[:-1], add=True)
 
+    @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Selecter: First to Last Selection")
     def first_to_last_selection(self):
         """Move the first selected item to last position."""
@@ -80,6 +82,7 @@ class ExtraSelectionWidget(QWidget):
         cmds.select(nodes[1:], r=True)
         cmds.select(nodes[0], add=True)
 
+    @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Selecter: Reverse Selection")
     def reverse_selection(self):
         """Reverse the selection order."""

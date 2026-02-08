@@ -76,8 +76,8 @@ class SkinWeightsCopyCustomWidgets(QWidget):
         # Signal & Slot
         execute_button.clicked.connect(self.copy_skin_weights)
 
-    @maya_decorator.undo_chunk("Copy Skin Weights Custom")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Copy Skin Weights Custom")
     def copy_skin_weights(self):
         """Copy the skin weights."""
         shapes = cmds.ls(sl=True, dag=True, type="deformableShape", ni=True, objectsOnly=True)

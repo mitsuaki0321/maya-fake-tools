@@ -74,8 +74,8 @@ class RenameSelectionWidget(QWidget):
         # Connect signals
         rename_button.clicked.connect(self.rename_nodes)
 
-    @maya_decorator.undo_chunk("Selecter: Rename")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Rename")
     def rename_nodes(self):
         """Rename the nodes."""
         new_name = self.name_field.text()

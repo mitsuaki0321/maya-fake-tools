@@ -93,8 +93,8 @@ class CombineSkinWeightsWidgets(QWidget):
 
         field.setText(nodes[0])
 
-    @maya_decorator.undo_chunk("Combine Skin Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Combine Skin Weights")
     def combine_skin_weights(self):
         """Combine the skin weights."""
         src_infs = self.src_infs_field.text().split()

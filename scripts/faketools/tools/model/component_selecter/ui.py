@@ -142,8 +142,8 @@ class MainWindow(BaseMainWindow):
         action = menu.addAction("Toggle Symmetry Selection")
         action.triggered.connect(self.toggle_symmetry_selection)
 
-    @maya_decorator.undo_chunk("Unique selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Unique selection")
     def unique_selection(self):
         """Unique selection."""
         sel_components = cmds.ls(selection=True, flatten=True)
@@ -153,8 +153,8 @@ class MainWindow(BaseMainWindow):
         unique_components = component_selection.unique_selection(sel_components)
         cmds.select(unique_components, r=True)
 
-    @maya_decorator.undo_chunk("Reverse selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Reverse selection")
     def reverse_selection(self):
         """Reverse selection."""
         sel_components = cmds.ls(selection=True, flatten=True)
@@ -164,8 +164,8 @@ class MainWindow(BaseMainWindow):
         reverse_components = component_selection.reverse_selection(sel_components)
         cmds.select(reverse_components, r=True)
 
-    @maya_decorator.undo_chunk("Same selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Same selection")
     def same_selection(self):
         """Same selection."""
         sel_nodes = cmds.ls(selection=True, flatten=True)
@@ -196,8 +196,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.select(same_components, r=True)
 
-    @maya_decorator.undo_chunk("Right area selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Right area selection")
     def right_area_selection(self):
         """Right area selection."""
         sel_components = self._select_objects_to_components()
@@ -210,8 +210,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.select(right_components, r=True)
 
-    @maya_decorator.undo_chunk("Left area selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Left area selection")
     def left_area_selection(self):
         """Left selection."""
         sel_components = self._select_objects_to_components()
@@ -224,8 +224,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.select(left_components, r=True)
 
-    @maya_decorator.undo_chunk("Center area selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Center area selection")
     def center_area_selection(self):
         """Center selection."""
         sel_components = self._select_objects_to_components()
@@ -238,8 +238,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.select(center_components, r=True)
 
-    @maya_decorator.undo_chunk("UV area selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("UV area selection")
     def uv_area_selection(self):
         """UV area selection."""
         sel_components = self._select_objects_to_components(filter_types=["nurbsCurve", "nurbsSurface"])
@@ -257,8 +257,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.select(uv_components, r=True)
 
-    @maya_decorator.undo_chunk("Toggle soft selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Toggle soft selection")
     def toggle_soft_selection(self):
         """Toggle soft selection."""
         current_soft_select = cmds.softSelect(q=True, sse=True)
@@ -267,8 +267,8 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.softSelect(sse=True)
 
-    @maya_decorator.undo_chunk("Toggle symmetry selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Toggle symmetry selection")
     def toggle_symmetry_selection(self):
         """Toggle symmetry selection."""
         current_symmetric = cmds.symmetricModelling(q=True, s=True)

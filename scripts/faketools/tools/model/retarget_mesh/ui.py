@@ -130,8 +130,8 @@ class MainWindow(BaseMainWindow):
         # Signal & Slot
         button.clicked.connect(self._retarget_mesh)
 
-    @maya_decorator.undo_chunk("Retarget Mesh")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Retarget Mesh")
     def _retarget_mesh(self):
         """Retarget the mesh."""
         src_mesh = self.src_node_widgets.get_node()

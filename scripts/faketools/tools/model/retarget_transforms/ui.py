@@ -173,8 +173,8 @@ class MainWindow(BaseMainWindow):
         self._update_file_list()
         self._select_file(file_name)
 
-    @maya_decorator.undo_chunk("Import Transform Position")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Import Transform Position")
     def import_transform_position(self) -> None:
         """Import the positions of the selected objects."""
         sel_file_path = self._get_selected_file_path()

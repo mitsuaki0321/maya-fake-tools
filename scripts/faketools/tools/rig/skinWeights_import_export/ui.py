@@ -488,8 +488,8 @@ class MainWindow(BaseMainWindow):
         # Refresh file list
         self._populate_file_list()
 
-    @maya_decorator.undo_chunk("Import SkinCluster Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Import SkinCluster Weights")
     def import_weights(self):
         """Import the skinCluster weights.
 
@@ -550,8 +550,8 @@ class MainWindow(BaseMainWindow):
 
         logger.debug("Completed export skinCluster weights.")
 
-    @maya_decorator.undo_chunk("Import SkinCluster Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Import SkinCluster Weights")
     def import_weights_quick(self):
         """Import the skinCluster weights quickly."""
         file_path_list = [os.path.join(TEMP_DIR, file) for file in os.listdir(TEMP_DIR)]

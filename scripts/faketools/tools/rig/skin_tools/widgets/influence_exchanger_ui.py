@@ -88,8 +88,8 @@ class InfluenceExchangerWidgets(QWidget):
 
         field.setText(" ".join(nodes))
 
-    @maya_decorator.undo_chunk("Exchange Influences")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Exchange Influences")
     def exchange_influences(self):
         """Exchange the influences."""
         target_skinClusters = self.target_skinCluster_field.text().split()

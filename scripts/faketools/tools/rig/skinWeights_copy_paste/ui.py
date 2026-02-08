@@ -339,8 +339,8 @@ class MainWindow(BaseFramelessWindow):
             cmds.undoInfo(closeChunk=True)
             self.is_value_changed = False
 
-    @maya_decorator.undo_chunk("Skin Weights Copy Paste")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Skin Weights Copy Paste")
     def _change_spin_box_value(self, value):
         """Change the spin box value.
 
@@ -354,8 +354,8 @@ class MainWindow(BaseFramelessWindow):
         self.skinWeights_copy_paste.set_blend_weights(self.blend_slider.value() / 100.0)
         self.skinWeights_copy_paste.paste_skinWeights()
 
-    @maya_decorator.undo_chunk("Skin Weights Copy Paste")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Skin Weights Copy Paste")
     def _paste_skinWeights(self):
         """Paste the skin weights."""
         self.blend_spin_box.setValue(1.0)

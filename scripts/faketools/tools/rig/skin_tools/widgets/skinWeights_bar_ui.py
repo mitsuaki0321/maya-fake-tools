@@ -75,8 +75,8 @@ class SkinWeightsBar(QWidget):
         mir_self_button.clicked.connect(self.mirror_skin_weights)
         mir_sub_button.clicked.connect(self.mirror_skin_weights_sub)
 
-    @maya_decorator.undo_chunk("Copy Skin Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Copy Skin Weights")
     def copy_skin_weights(self):
         """Copy the skin weights."""
         sel_nodes = cmds.ls(sl=True)
@@ -88,8 +88,8 @@ class SkinWeightsBar(QWidget):
 
         copy_skin_weights_with_bind(sel_nodes[0], sel_nodes[1:], uv=self.uv_button.isChecked())
 
-    @maya_decorator.undo_chunk("Mirror Skin Weights")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Mirror Skin Weights")
     def mirror_skin_weights(self):
         """Mirror the skin weights."""
         sel_nodes = cmds.ls(sl=True, type="transform")
@@ -101,8 +101,8 @@ class SkinWeightsBar(QWidget):
                 node, left_right_names=LEFT_TO_RIGHT, right_left_names=RIGHT_TO_LEFT, mirror_inverse=self.mir_dir_checkBox.isChecked()
             )
 
-    @maya_decorator.undo_chunk("Mirror Skin Weights Sub")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Mirror Skin Weights Sub")
     def mirror_skin_weights_sub(self):
         """Mirror the skin weights."""
         sel_nodes = cmds.ls(sl=True, type="transform")

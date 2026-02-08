@@ -63,8 +63,8 @@ class HierarchicalSelectionWidget(QWidget):
         children_bottom_button.clicked.connect(self.children_bottom_selection)
         hierarchy_all_button.clicked.connect(self.hierarchy_all_selection)
 
-    @maya_decorator.undo_chunk("Selecter: Parent Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Parent Selection")
     @selecter_handler
     def parent_selection(self, nodes: list[str]):
         """Select the parent nodes.
@@ -83,8 +83,8 @@ class HierarchicalSelectionWidget(QWidget):
 
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Children Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Children Selection")
     @selecter_handler
     def children_selection(self, nodes: list[str]):
         """Select the children nodes.
@@ -103,8 +103,8 @@ class HierarchicalSelectionWidget(QWidget):
 
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Siblings Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Siblings Selection")
     @selecter_handler
     def siblings_selection(self, nodes: list[str]):
         """Select the siblings nodes.
@@ -123,8 +123,8 @@ class HierarchicalSelectionWidget(QWidget):
 
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Children Transform All Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Children Transform All Selection")
     @selecter_handler
     def children_all_transform_selection(self, nodes: list[str]):
         """Select all transform children nodes.
@@ -143,8 +143,8 @@ class HierarchicalSelectionWidget(QWidget):
 
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Children Bottom Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Children Bottom Selection")
     @selecter_handler
     def children_bottom_selection(self, nodes: list[str]):
         """Select the bottom children nodes (leaf nodes).
@@ -163,8 +163,8 @@ class HierarchicalSelectionWidget(QWidget):
 
         return result_nodes
 
-    @maya_decorator.undo_chunk("Selecter: Hierarchy All Selection")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Selecter: Hierarchy All Selection")
     @selecter_handler
     def hierarchy_all_selection(self, nodes: list[str]):
         """Select the full hierarchy nodes (including shapes).

@@ -84,8 +84,8 @@ class MainWindow(BaseMainWindow):
             self.value_field.setEnabled(True)
             self.value_field.setStyleSheet("")
 
-    @maya_decorator.undo_chunk("Set Attribute Value")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Set Attribute Value")
     def _set_value(self) -> None:
         """Set the value of the selected attribute."""
         nodes = self.view.get_selected_nodes()
@@ -128,8 +128,8 @@ class MainWindow(BaseMainWindow):
         except (ValueError, SyntaxError, TypeError) as e:
             cmds.error(f"Invalid input value: {value}. \n{str(e)}")
 
-    @maya_decorator.undo_chunk("Delete Attributes")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Delete Attributes")
     def delete_attributes(self) -> None:
         """Delete selected attributes."""
         nodes = self.view.get_selected_nodes()

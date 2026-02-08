@@ -178,8 +178,8 @@ class SkinWeightsMeshConverterWidgets(QWidget):
         except Exception as e:
             logger.warning(f"Failed to update preview values: {e}")
 
-    @maya_decorator.undo_chunk("Create Template Mesh")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Create Template Mesh")
     def create_template_mesh(self):
         """Create a template mesh."""
         shapes = cmds.ls(sl=True, dag=True, type="geometryShape", ni=True)
@@ -204,8 +204,8 @@ class SkinWeightsMeshConverterWidgets(QWidget):
 
         logger.debug(f"Created template mesh: {self.preview_mesh}")
 
-    @maya_decorator.undo_chunk("Convert Skin Weights to Mesh")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Convert Skin Weights to Mesh")
     def convert_skin_weights_to_mesh(self):
         """Convert the skin weights to mesh."""
         shapes = cmds.ls(sl=True, dag=True, type="geometryShape", ni=True)

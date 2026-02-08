@@ -111,14 +111,14 @@ class MainWindow(BaseMainWindow):
         for checkbox in self.enable_checkboxes:
             checkbox.setChecked(not checkbox.isChecked())
 
-    @undo_chunk("Optimize Run")
     @error_handler
+    @undo_chunk("Optimize Run")
     def _optimize_run(self, optimize_cls):
         """Run a single optimization operation."""
         optimize_cls(echo=True)
 
-    @undo_chunk("Optimize Scene")
     @error_handler
+    @undo_chunk("Optimize Scene")
     def _execute(self):
         """Execute selected scene optimizations."""
         if not any([checkbox.isChecked() for checkbox in self.enable_checkboxes]):

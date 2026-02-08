@@ -375,14 +375,14 @@ class MainWindow(base_window.BaseMainWindow):
 
         return result_attrs
 
-    @maya_decorator.undo_chunk("Copy Attribute Value")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Copy Attribute Value")
     def _copy_value(self) -> None:
         """Copy the value of the source attribute to the destination attribute."""
         self._transfer_attribute(self._copy_value_impl)
 
-    @maya_decorator.undo_chunk("Connect Attribute")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Connect Attribute")
     def _connect_attribute(self) -> None:
         """Connect the source attribute to the destination attribute."""
         self._transfer_attribute(self._connect_attribute_impl)
@@ -500,8 +500,8 @@ class MainWindow(base_window.BaseMainWindow):
             if locked:
                 cmds.setAttr(dest_plug, lock=True)
 
-    @maya_decorator.undo_chunk("Execute Single Command")
     @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Execute Single Command")
     def _execute_single_command(self, command_name: str) -> None:
         """Execute the single command.
 
