@@ -34,10 +34,8 @@ from ....lib_ui.qt_compat import (
 )
 from . import command
 from .widgets import (
-    DeformOptionsSection,
-    SeamAveragingSection,
+    PostProcessingSection,
     SettingsSection,
-    SmoothingSection,
 )
 
 logger = logging.getLogger(__name__)
@@ -177,20 +175,12 @@ class MainWindow(BaseMainWindow):
         self.settings_section = SettingsSection(self.DEFAULT_SETTINGS)
         self.central_layout.addWidget(self.settings_section)
 
-        # === Deform Options ===
-        self.deform_section = DeformOptionsSection(self.DEFAULT_SETTINGS)
-        self.central_layout.addWidget(self.deform_section)
-
-        # === Smoothing ===
-        self.smoothing_section = SmoothingSection(self.DEFAULT_SETTINGS)
-        self.central_layout.addWidget(self.smoothing_section)
-
-        # === Seam Averaging ===
-        self.seam_section = SeamAveragingSection(self.DEFAULT_SETTINGS)
-        self.central_layout.addWidget(self.seam_section)
+        # === Post Processing ===
+        self.post_processing_section = PostProcessingSection(self.DEFAULT_SETTINGS)
+        self.central_layout.addWidget(self.post_processing_section)
 
         # === Status ===
-        self._setup_status_section(spacing)
+        self._setup_status_row(spacing)
 
         # === Action Buttons ===
         self._setup_action_buttons(spacing)
@@ -255,14 +245,13 @@ class MainWindow(BaseMainWindow):
         # Stretch factor 1 to make targets list expand when window is resized
         self.central_layout.addWidget(targets_group, 1)
 
-    def _setup_status_section(self, spacing: int) -> None:
-        """Setup status display section.
+    def _setup_status_row(self, spacing: int) -> None:
+        """Setup status display row.
 
         Args:
             spacing: Layout spacing value.
         """
-        status_group = QGroupBox("Status")
-        status_layout = QHBoxLayout(status_group)
+        status_layout = QHBoxLayout()
         status_layout.setSpacing(spacing)
 
         status_layout.addWidget(QLabel("Matched:"))
@@ -277,7 +266,7 @@ class MainWindow(BaseMainWindow):
 
         status_layout.addStretch()
 
-        self.central_layout.addWidget(status_group)
+        self.central_layout.addLayout(status_layout)
 
     def _setup_action_buttons(self, spacing: int) -> None:
         """Setup action buttons section.
@@ -327,9 +316,7 @@ class MainWindow(BaseMainWindow):
         """
         settings = {}
         settings.update(self.settings_section.collect_settings())
-        settings.update(self.deform_section.collect_settings())
-        settings.update(self.smoothing_section.collect_settings())
-        settings.update(self.seam_section.collect_settings())
+        settings.update(self.post_processing_section.collect_settings())
         return settings
 
     def _apply_settings(self, settings_data: dict) -> None:
@@ -339,9 +326,7 @@ class MainWindow(BaseMainWindow):
             settings_data: Dictionary of settings values.
         """
         self.settings_section.apply_settings(settings_data)
-        self.deform_section.apply_settings(settings_data)
-        self.smoothing_section.apply_settings(settings_data)
-        self.seam_section.apply_settings(settings_data)
+        self.post_processing_section.apply_settings(settings_data)
 
     def _restore_settings(self) -> None:
         """Restore settings from saved preferences."""
