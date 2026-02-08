@@ -92,24 +92,17 @@ class AdjustCenterSkinWeightsWidgets(QWidget):
 
         # Initialize UI
         self.auto_search_checkbox.setCheckState(Qt.Checked)
-        self._toggle_auto_search(Qt.Checked)
+        self._toggle_auto_search(None)
 
     def _toggle_auto_search(self, state):
         """Toggle the auto search."""
-        if state == Qt.Checked:
-            self.src_label.setEnabled(False)
-            self.src_infs_field.setEnabled(False)
-            self.src_infs_button.setEnabled(False)
-            self.target_label.setEnabled(False)
-            self.target_infs_field.setEnabled(False)
-            self.target_infs_button.setEnabled(False)
-        else:
-            self.src_label.setEnabled(True)
-            self.src_infs_field.setEnabled(True)
-            self.src_infs_button.setEnabled(True)
-            self.target_label.setEnabled(True)
-            self.target_infs_field.setEnabled(True)
-            self.target_infs_button.setEnabled(True)
+        enabled = not self.auto_search_checkbox.isChecked()
+        self.src_label.setEnabled(enabled)
+        self.src_infs_field.setEnabled(enabled)
+        self.src_infs_button.setEnabled(enabled)
+        self.target_label.setEnabled(enabled)
+        self.target_infs_field.setEnabled(enabled)
+        self.target_infs_button.setEnabled(enabled)
 
     @maya_decorator.error_handler
     def _set_selected_nodes(self, field):

@@ -109,10 +109,14 @@ class SkinWeightsBar(QWidget):
         if not sel_nodes:
             cmds.error("No objects selected")
 
+        dst_nodes = []
         for node in sel_nodes:
-            mirror_skin_weights_with_objects(
+            dst = mirror_skin_weights_with_objects(
                 node, left_right_names=LEFT_TO_RIGHT, right_left_names=RIGHT_TO_LEFT, mirror_inverse=self.mir_dir_checkBox.isChecked()
             )
+            dst_nodes.append(dst)
+
+        cmds.select(dst_nodes)
 
     def _collect_settings(self) -> dict:
         """Collect current widget settings.

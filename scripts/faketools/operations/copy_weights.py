@@ -191,7 +191,7 @@ def mirror_skin_weights(
 
 def mirror_skin_weights_with_objects(
     src_obj: str, left_right_names: list[str, str], right_left_names: list[str, str], mirror_inverse: bool = False
-) -> None:
+) -> str:
     """Mirror the skin weights with objects.
 
     Notes:
@@ -204,6 +204,9 @@ def mirror_skin_weights_with_objects(
         left_right_names (list[str, str]): The left and right names. 0 is regex, 1 is replace.
         right_left_names (list[str, str]): The right and left names. 0 is regex, 1 is replace.
         mirrorInverse (bool, optional): Mirror the inverse weights. Defaults to False. If True, mirror the right to left.
+
+    Returns:
+        str: The mirrored destination object name.
     """
     if not left_right_names or not right_left_names:
         raise ValueError("Invalid substitute names.")
@@ -289,3 +292,5 @@ def mirror_skin_weights_with_objects(
         surfaceAssociation="closestPoint",
         influenceAssociation=["label", "closestJoint"],
     )
+
+    return dst_obj

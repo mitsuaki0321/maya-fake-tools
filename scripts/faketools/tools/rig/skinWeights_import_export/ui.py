@@ -8,7 +8,7 @@ import tempfile
 
 import maya.cmds as cmds
 
-from ....lib_ui import maya_decorator, maya_ui, tool_data
+from ....lib_ui import error_handler, maya_decorator, maya_ui, tool_data
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
@@ -212,6 +212,7 @@ class MainWindow(BaseMainWindow):
                     file_tree_item.setSizeHint(0, widget.sizeHint())
                     self.tree_widget.setItemWidget(file_tree_item, 0, widget)
 
+    @error_handler
     def _select_influences_from_item(self, file_path):
         """Select influences from a single file.
 
@@ -220,6 +221,7 @@ class MainWindow(BaseMainWindow):
         """
         self._select_influences_impl([file_path])
 
+    @error_handler
     def _select_geometry_from_item(self, file_path):
         """Select geometry from a single file.
 
