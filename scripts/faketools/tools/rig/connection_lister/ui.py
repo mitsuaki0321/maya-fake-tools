@@ -106,6 +106,7 @@ class MainWindow(base_window.BaseMainWindow):
 
         self.source_filter_line_edit = QLineEdit()
         self.source_filter_line_edit.setPlaceholderText("Filter attributes...")
+        self.source_filter_line_edit.setClearButtonEnabled(True)
         layout.addWidget(self.source_filter_line_edit, 1, 0)
 
         self.dest_attr_list = nodeAttr_widgets.AttributeListView(self.dest_node_list)
@@ -113,6 +114,7 @@ class MainWindow(base_window.BaseMainWindow):
 
         self.dest_filter_line_edit = QLineEdit()
         self.dest_filter_line_edit.setPlaceholderText("Filter attributes...")
+        self.dest_filter_line_edit.setClearButtonEnabled(True)
         layout.addWidget(self.dest_filter_line_edit, 1, 1)
 
         copy_value_button = QPushButton("Copy Value")
@@ -469,27 +471,34 @@ class MainWindow(base_window.BaseMainWindow):
         """
         source_plug = f"{source_node}.{source_attr}"
         dest_plug = f"{dest_node}.{dest_attr}"
-        if cmds.getAttr(dest_plug, lock=True):
-            cmds.error(f"The attribute is locked: {dest_plug}")
 
         if cmds.isConnected(source_plug, dest_plug, iuc=True):
-            cmds.error(f"The attribute is already connected: {dest_plug}")
+            logger.debug(f"Already connected, skipped: {source_plug} -> {dest_plug}")
+            return
 
-        source_type = cmds.getAttr(source_plug, type=True)
-        dest_type = cmds.getAttr(dest_plug, type=True)
+        locked = cmds.getAttr(dest_plug, lock=True)
+        if locked:
+            cmds.setAttr(dest_plug, lock=False)
 
-        if source_type == "string" or dest_type == "string":
-            if source_plug != dest_plug:
-                cmds.error("Both attributes must be strings.")
-            cmds.connectAttr(source_plug, dest_plug, f=True)
-        elif source_type == "matrix" or dest_type == "matrix":
-            if source_plug != dest_plug:
-                cmds.error("Both attributes must be matrices.")
-            cmds.connectAttr(source_plug, dest_plug, f=True)
-        else:
-            cmds.connectAttr(source_plug, dest_plug, f=True)
+        try:
+            source_type = cmds.getAttr(source_plug, type=True)
+            dest_type = cmds.getAttr(dest_plug, type=True)
 
-        logger.debug(f"Connected: {source_plug} -> {dest_plug}")
+            if source_type == "string" or dest_type == "string":
+                if source_type != dest_type:
+                    cmds.error("Both attributes must be strings.")
+                cmds.connectAttr(source_plug, dest_plug, f=True)
+            elif source_type == "matrix" or dest_type == "matrix":
+                if source_type != dest_type:
+                    cmds.error("Both attributes must be matrices.")
+                cmds.connectAttr(source_plug, dest_plug, f=True)
+            else:
+                cmds.connectAttr(source_plug, dest_plug, f=True)
+
+            logger.debug(f"Connected: {source_plug} -> {dest_plug}")
+        finally:
+            if locked:
+                cmds.setAttr(dest_plug, lock=True)
 
     @maya_decorator.undo_chunk("Execute Single Command")
     @maya_decorator.error_handler

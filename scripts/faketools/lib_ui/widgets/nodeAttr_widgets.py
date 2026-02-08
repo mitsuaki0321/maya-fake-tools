@@ -365,6 +365,7 @@ class NodeAttributeWidgets(QWidget):
 
         self.filter_line_edit = QLineEdit()
         self.filter_line_edit.setPlaceholderText("Filter attributes...")
+        self.filter_line_edit.setClearButtonEnabled(True)
         self.main_layout.addWidget(self.filter_line_edit)
 
         self.setLayout(self.main_layout)
