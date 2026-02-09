@@ -9,9 +9,9 @@ order: 125
 
 ## Overview
 
-Skin Weights Transfer is a tool for moving skin weights from multiple source influences to a single target influence on selected components.
+Skin Weights Transfer is a tool for moving skin weights from multiple source influences to multiple target influences on selected components.
 
-Weights are proportionally removed from source influences and added to the target influence. The transfer amount can be specified as a percentage or an absolute value.
+Weights are proportionally removed from source influences and distributed to target influences. The distribution method for multiple targets can be chosen from three options: Even, Proportional, and Distance. The transfer amount can be specified as a percentage or an absolute value.
 
 Soft Selection is supported — components in the falloff region are automatically included, and the transfer amount is scaled by each component's soft selection weight.
 
@@ -33,11 +33,12 @@ To transfer weights, follow these steps:
 
 1. Select a mesh or components with a skinCluster and click the `SET` button to set the skinCluster.
 2. In the left **Source (from)** list, select the influences to take weights from (multi-select: Ctrl+click / Shift+click).
-3. In the right **Target (to)** list, select a single influence to receive the weights.
-4. Select the target vertices, CVs, or lattice points (when Soft Selection is enabled, components in the falloff region are also included).
-5. Select the **transfer mode** (Percentage / Value).
-6. Set the transfer amount using the **Amount** slider.
-7. Click the execute button to transfer the weights.
+3. In the right **Target (to)** list, select the influences to receive the weights (multi-select: Ctrl+click / Shift+click).
+4. Select the **Distribution** method (effective when multiple targets are selected).
+5. Select the target vertices, CVs, or lattice points (when Soft Selection is enabled, components in the falloff region are also included).
+6. Select the **transfer mode** (Percentage / Value).
+7. Set the transfer amount using the **Amount** slider.
+8. Click the execute button to transfer the weights.
 
 ## Options
 
@@ -65,10 +66,19 @@ Select the influences to take weights from.
 
 ### Target (to) List
 
-Select the influence to receive weights.
+Select the influences to receive weights.
 
-- Only one influence can be selected.
-- The same influence cannot be set as both source and target (when source is a single influence).
+- Multiple influences can be selected (Ctrl+click / Shift+click).
+- The number of selected influences is shown in the label as `[N]`.
+- The same influence cannot be selected in both Source and Target (overlapping selections will cause an error).
+
+### Distribution
+
+Select how weights are distributed across multiple target influences. When only one target is selected, the result is the same regardless of the setting.
+
+- **Even**: Distributes the transferred weight equally among all targets.
+- **Proportional**: Distributes based on each target's existing weight ratio. Automatically falls back to Even when all target weights are zero.
+- **Distance**: Distributes based on the distance from each component to each target joint (inverse distance weighting). Closer joints receive more weight.
 
 ### Transfer Mode (Percentage / Value)
 
@@ -113,7 +123,7 @@ The following calculation is performed for each component:
 1. Calculate the total weight of all source influences.
 2. Determine the transfer amount based on the mode, then multiply by the Soft Selection weight.
 3. Proportionally reduce each source influence based on its share of the total.
-4. Add the total reduced amount to the target influence.
+4. Distribute the total reduced amount to target influences based on the selected Distribution method.
 
 **Percentage mode formula:**
 
@@ -126,6 +136,8 @@ transfer_amount = source_total × (Amount / 100) × soft_selection_weight
 ```
 transfer_amount = min(Amount × soft_selection_weight, source_total)
 ```
+
+### Single Target Examples
 
 **Example (Percentage mode):**
 
@@ -142,6 +154,35 @@ transfer_amount = min(Amount × soft_selection_weight, source_total)
 - Reduction from Source A: 0.225 × (0.6 / 0.9) = 0.15 → remaining 0.45
 - Reduction from Source B: 0.225 × (0.3 / 0.9) = 0.075 → remaining 0.225
 - Added to Target: +0.225
+
+### Multiple Target Examples
+
+**Example (Even distribution):**
+
+- Source A weight: 0.9, Amount: 100%, two targets: Target X and Target Y
+- Transfer amount: 0.9
+- Added to Target X: 0.9 × 0.5 = 0.45
+- Added to Target Y: 0.9 × 0.5 = 0.45
+
+**Example (Proportional distribution):**
+
+- Source A weight: 0.6, Amount: 100%, Target X (existing weight 0.3) and Target Y (existing weight 0.1)
+- Transfer amount: 0.6
+- Target X ratio: 0.3 / (0.3 + 0.1) = 0.75
+- Target Y ratio: 0.1 / (0.3 + 0.1) = 0.25
+- Added to Target X: 0.6 × 0.75 = 0.45
+- Added to Target Y: 0.6 × 0.25 = 0.15
+
+**Example (Distance distribution):**
+
+- Source A weight: 0.8, Amount: 100%, Target X (distance 2.0 from vertex) and Target Y (distance 8.0 from vertex)
+- Transfer amount: 0.8
+- Target X inverse distance: 1/2.0 = 0.5
+- Target Y inverse distance: 1/8.0 = 0.125
+- Target X ratio: 0.5 / (0.5 + 0.125) = 0.8
+- Target Y ratio: 0.125 / (0.5 + 0.125) = 0.2
+- Added to Target X: 0.8 × 0.8 = 0.64
+- Added to Target Y: 0.8 × 0.2 = 0.16
 
 ## Supported Components
 

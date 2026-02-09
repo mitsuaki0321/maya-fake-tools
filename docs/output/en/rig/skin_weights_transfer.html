@@ -51,6 +51,8 @@
                     List</a></li>
                     <li><a href="#target-to-list"
                     id="toc-target-to-list">Target (to) List</a></li>
+                    <li><a href="#distribution"
+                    id="toc-distribution">Distribution</a></li>
                     <li><a href="#transfer-mode-percentage-value"
                     id="toc-transfer-mode-percentage-value">Transfer
                     Mode (Percentage / Value)</a></li>
@@ -62,7 +64,15 @@
                     </ul></li>
                     <li><a href="#how-weight-transfer-works"
                     id="toc-how-weight-transfer-works">How Weight
-                    Transfer Works</a></li>
+                    Transfer Works</a>
+                    <ul>
+                    <li><a href="#single-target-examples"
+                    id="toc-single-target-examples">Single Target
+                    Examples</a></li>
+                    <li><a href="#multiple-target-examples"
+                    id="toc-multiple-target-examples">Multiple Target
+                    Examples</a></li>
+                    </ul></li>
                     <li><a href="#supported-components"
                     id="toc-supported-components">Supported
                     Components</a></li>
@@ -75,12 +85,14 @@
                 
                 <h2 id="overview">Overview</h2>
                 <p>Skin Weights Transfer is a tool for moving skin
-                weights from multiple source influences to a single
-                target influence on selected components.</p>
+                weights from multiple source influences to multiple
+                target influences on selected components.</p>
                 <p>Weights are proportionally removed from source
-                influences and added to the target influence. The
-                transfer amount can be specified as a percentage or an
-                absolute value.</p>
+                influences and distributed to target influences. The
+                distribution method for multiple targets can be chosen
+                from three options: Even, Proportional, and Distance.
+                The transfer amount can be specified as a percentage or
+                an absolute value.</p>
                 <p>Soft Selection is supported — components in the
                 falloff region are automatically included, and the
                 transfer amount is scaled by each component’s soft
@@ -103,7 +115,10 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 select the influences to take weights from
                 (multi-select: Ctrl+click / Shift+click).</li>
                 <li>In the right <strong>Target (to)</strong> list,
-                select a single influence to receive the weights.</li>
+                select the influences to receive the weights
+                (multi-select: Ctrl+click / Shift+click).</li>
+                <li>Select the <strong>Distribution</strong> method
+                (effective when multiple targets are selected).</li>
                 <li>Select the target vertices, CVs, or lattice points
                 (when Soft Selection is enabled, components in the
                 falloff region are also included).</li>
@@ -147,11 +162,30 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 viewport.</li>
                 </ul>
                 <h3 id="target-to-list">Target (to) List</h3>
-                <p>Select the influence to receive weights.</p>
+                <p>Select the influences to receive weights.</p>
                 <ul>
-                <li>Only one influence can be selected.</li>
-                <li>The same influence cannot be set as both source and
-                target (when source is a single influence).</li>
+                <li>Multiple influences can be selected (Ctrl+click /
+                Shift+click).</li>
+                <li>The number of selected influences is shown in the
+                label as <code>[N]</code>.</li>
+                <li>The same influence cannot be selected in both Source
+                and Target (overlapping selections will cause an
+                error).</li>
+                </ul>
+                <h3 id="distribution">Distribution</h3>
+                <p>Select how weights are distributed across multiple
+                target influences. When only one target is selected, the
+                result is the same regardless of the setting.</p>
+                <ul>
+                <li><strong>Even</strong>: Distributes the transferred
+                weight equally among all targets.</li>
+                <li><strong>Proportional</strong>: Distributes based on
+                each target’s existing weight ratio. Automatically falls
+                back to Even when all target weights are zero.</li>
+                <li><strong>Distance</strong>: Distributes based on the
+                distance from each component to each target joint
+                (inverse distance weighting). Closer joints receive more
+                weight.</li>
                 </ul>
                 <h3 id="transfer-mode-percentage-value">Transfer Mode
                 (Percentage / Value)</h3>
@@ -217,13 +251,16 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 then multiply by the Soft Selection weight.</li>
                 <li>Proportionally reduce each source influence based on
                 its share of the total.</li>
-                <li>Add the total reduced amount to the target
-                influence.</li>
+                <li>Distribute the total reduced amount to target
+                influences based on the selected Distribution
+                method.</li>
                 </ol>
                 <p><strong>Percentage mode formula:</strong></p>
                 <pre><code>transfer_amount = source_total × (Amount / 100) × soft_selection_weight</code></pre>
                 <p><strong>Value mode formula:</strong></p>
                 <pre><code>transfer_amount = min(Amount × soft_selection_weight, source_total)</code></pre>
+                <h3 id="single-target-examples">Single Target
+                Examples</h3>
                 <p><strong>Example (Percentage mode):</strong></p>
                 <ul>
                 <li>Source A weight: 0.6, Source B weight: 0.3, Amount:
@@ -246,6 +283,41 @@ faketools.tools.rig.skin_weights_transfer.ui.show_ui()</code></pre>
                 <li>Reduction from Source B: 0.225 × (0.3 / 0.9) = 0.075
                 → remaining 0.225</li>
                 <li>Added to Target: +0.225</li>
+                </ul>
+                <h3 id="multiple-target-examples">Multiple Target
+                Examples</h3>
+                <p><strong>Example (Even distribution):</strong></p>
+                <ul>
+                <li>Source A weight: 0.9, Amount: 100%, two targets:
+                Target X and Target Y</li>
+                <li>Transfer amount: 0.9</li>
+                <li>Added to Target X: 0.9 × 0.5 = 0.45</li>
+                <li>Added to Target Y: 0.9 × 0.5 = 0.45</li>
+                </ul>
+                <p><strong>Example (Proportional
+                distribution):</strong></p>
+                <ul>
+                <li>Source A weight: 0.6, Amount: 100%, Target X
+                (existing weight 0.3) and Target Y (existing weight
+                0.1)</li>
+                <li>Transfer amount: 0.6</li>
+                <li>Target X ratio: 0.3 / (0.3 + 0.1) = 0.75</li>
+                <li>Target Y ratio: 0.1 / (0.3 + 0.1) = 0.25</li>
+                <li>Added to Target X: 0.6 × 0.75 = 0.45</li>
+                <li>Added to Target Y: 0.6 × 0.25 = 0.15</li>
+                </ul>
+                <p><strong>Example (Distance distribution):</strong></p>
+                <ul>
+                <li>Source A weight: 0.8, Amount: 100%, Target X
+                (distance 2.0 from vertex) and Target Y (distance 8.0
+                from vertex)</li>
+                <li>Transfer amount: 0.8</li>
+                <li>Target X inverse distance: 1/2.0 = 0.5</li>
+                <li>Target Y inverse distance: 1/8.0 = 0.125</li>
+                <li>Target X ratio: 0.5 / (0.5 + 0.125) = 0.8</li>
+                <li>Target Y ratio: 0.125 / (0.5 + 0.125) = 0.2</li>
+                <li>Added to Target X: 0.8 × 0.8 = 0.64</li>
+                <li>Added to Target Y: 0.8 × 0.2 = 0.16</li>
                 </ul>
                 <h2 id="supported-components">Supported Components</h2>
                 <p>The following component types are supported:</p>
