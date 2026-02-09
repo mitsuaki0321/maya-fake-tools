@@ -122,14 +122,32 @@ class MainWindow(BaseMainWindow):
         tgt_layout.addWidget(self._tgt_label)
 
         self._tgt_list = QListWidget()
-        self._tgt_list.setSelectionMode(QAbstractItemView.SingleSelection)
-        self._tgt_list.setToolTip("Single-select: click to choose target influence")
+        self._tgt_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self._tgt_list.setToolTip("Multi-select: Ctrl+click / Shift+click")
         self._tgt_list.itemSelectionChanged.connect(self._on_influence_selection_changed)
         tgt_layout.addWidget(self._tgt_list)
 
         lists_layout.addLayout(tgt_layout)
 
         self.central_layout.addLayout(lists_layout, 1)
+
+        # --- Distribution Method ---
+        dist_layout = QHBoxLayout()
+        dist_layout.setSpacing(int(spacing * 0.5))
+
+        dist_label = QLabel("Distribution:")
+        dist_layout.addWidget(dist_label)
+
+        self._dist_combo = QComboBox()
+        self._dist_combo.addItems(["Even", "Proportional", "Distance"])
+        self._dist_combo.setToolTip(
+            "Even: split equally among targets\n"
+            "Proportional: distribute by existing weight ratio\n"
+            "Distance: inverse distance weighting from component to joint"
+        )
+        dist_layout.addWidget(self._dist_combo, 1)
+
+        self.central_layout.addLayout(dist_layout)
 
         # --- Amount + Execute Row ---
         self._bottom_layout = QHBoxLayout()
@@ -357,15 +375,16 @@ class MainWindow(BaseMainWindow):
         # Validate target selection
         tgt_items = self._tgt_list.selectedItems()
         if not tgt_items:
-            cmds.warning("Select a target influence.")
+            cmds.warning("Select at least one target influence.")
             return
 
         src_infs = [item.text() for item in src_items]
-        tgt_inf = tgt_items[0].text()
+        tgt_infs = [item.text() for item in tgt_items]
 
-        # Check source != target
-        if len(src_infs) == 1 and src_infs[0] == tgt_inf:
-            cmds.warning("Source and target must be different.")
+        # Check source/target overlap
+        overlap = set(src_infs) & set(tgt_infs)
+        if overlap:
+            cmds.warning(f"Source and target must not overlap: {sorted(overlap)}")
             return
 
         # Get selected components with soft selection weights
@@ -392,14 +411,18 @@ class MainWindow(BaseMainWindow):
 
         use_percentage = self._mode_combo.currentIndex() == 0
 
+        dist_map = {0: command.DistributionMethod.EVEN, 1: command.DistributionMethod.PROPORTIONAL, 2: command.DistributionMethod.DISTANCE}
+        distribution = dist_map[self._dist_combo.currentIndex()]
+
         count = command.move_skin_weights(
             skin_cluster=self._skin_cluster,
             src_infs=src_infs,
-            tgt_inf=tgt_inf,
+            tgt_infs=tgt_infs,
             components=components,
             amount=float(amount),
             use_percentage=use_percentage,
             soft_weights=soft_weights,
+            distribution=distribution,
         )
 
         logger.info(f"Transferred weights on {count} components")
@@ -433,6 +456,10 @@ class MainWindow(BaseMainWindow):
                         self._amount_widget.setValue(float(amount))
         if "affected_only" in settings_data:
             self._affected_checkbox.setChecked(bool(settings_data["affected_only"]))
+        if "distribution_method" in settings_data:
+            dist_index = settings_data["distribution_method"]
+            if dist_index in (0, 1, 2):
+                self._dist_combo.setCurrentIndex(dist_index)
 
     def _collect_settings(self) -> dict:
         """Collect current widget settings.
@@ -444,6 +471,7 @@ class MainWindow(BaseMainWindow):
             "transfer_mode": self._mode_combo.currentIndex(),
             "amount": self._amount_widget.value(),
             "affected_only": self._affected_checkbox.isChecked(),
+            "distribution_method": self._dist_combo.currentIndex(),
         }
 
     def _save_settings(self):
