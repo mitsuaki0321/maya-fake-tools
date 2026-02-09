@@ -357,7 +357,6 @@ faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
                 <p>To smooth and relax weights, follow these steps:</p>
                 <ol type="1">
                 <li>Select components.</li>
-                <li>Select smooth type from top menu.</li>
                 <li>Set options.</li>
                 <li>Press <code>Relax Skin Weights</code> button.</li>
                 </ol>
@@ -373,6 +372,20 @@ faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
                 <li>Sets ratio to blend original weights with smoothed
                 weights after smoothing. 0.0 for original weights, 1.0
                 for smoothed weights.</li>
+                </ul></li>
+                <li><strong>Relax Factor</strong>
+                <ul>
+                <li>Sets the relaxation factor when using Relax
+                Operator. Higher values produce results closer to the
+                neighbor average. Only used when <code>Use Relax</code>
+                is enabled.</li>
+                </ul></li>
+                <li><strong>Use Relax</strong>
+                <ul>
+                <li>When enabled, switches the smoothing method from
+                Laplacian to Relax Operator. Relax Operator blends the
+                original weights with the neighbor average, producing
+                smoother results than Laplacian.</li>
                 </ul></li>
                 <li><strong>Use Only Unlocked Influences</strong>
                 <ul>

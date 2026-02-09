@@ -337,7 +337,6 @@ faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
                 <p>ウエイトをスムース、リラックスさせるには、以下の手順を行います。</p>
                 <ol type="1">
                 <li>コンポーネントを選択します。</li>
-                <li>上部のメニューからスムースの種類を選択します。</li>
                 <li>オプションを設定します。</li>
                 <li><code>Relax Skin Weights</code>
                 ボタンを押します。</li>
@@ -353,6 +352,19 @@ faketools.tools.rig.skin_tools.ui.show_ui()</code></pre>
                 <li>スムース後に、元のウエイトとスムース後のウエイトをブレンドする割合を設定します。0.0
                 で元のウエイト、1.0
                 でスムース後のウエイトになります。</li>
+                </ul></li>
+                <li><strong>Relax Factor</strong>
+                <ul>
+                <li>Relax Operator
+                使用時の緩和係数を設定します。値が大きいほど隣接頂点の平均に近づきます。<code>Use Relax</code>
+                が有効な場合のみ使用されます。</li>
+                </ul></li>
+                <li><strong>Use Relax</strong>
+                <ul>
+                <li>有効にすると、スムース方法が Laplacian から Relax
+                Operator に切り替わります。Relax Operator
+                は元のウエイトと隣接頂点の平均をブレンドするため、Laplacian
+                よりも穏やかなスムース結果になります。</li>
                 </ul></li>
                 <li><strong>Use Only Unlocked Influences</strong>
                 <ul>

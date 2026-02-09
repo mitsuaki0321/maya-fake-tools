@@ -188,9 +188,8 @@ Smooths and relaxes weights.
 To smooth and relax weights, follow these steps:
 
 1. Select components.
-2. Select smooth type from top menu.
-3. Set options.
-4. Press `Relax Skin Weights` button.
+2. Set options.
+3. Press `Relax Skin Weights` button.
 
 ### Options
 
@@ -198,6 +197,10 @@ To smooth and relax weights, follow these steps:
   - Sets smooth iteration count. More iterations smooth weights more.
 - **After Blend**
   - Sets ratio to blend original weights with smoothed weights after smoothing. 0.0 for original weights, 1.0 for smoothed weights.
+- **Relax Factor**
+  - Sets the relaxation factor when using Relax Operator. Higher values produce results closer to the neighbor average. Only used when `Use Relax` is enabled.
+- **Use Relax**
+  - When enabled, switches the smoothing method from Laplacian to Relax Operator. Relax Operator blends the original weights with the neighbor average, producing smoother results than Laplacian.
 - **Use Only Unlocked Influences**
   - Smooths using only unlocked influences. Somewhat experimental feature.
 
