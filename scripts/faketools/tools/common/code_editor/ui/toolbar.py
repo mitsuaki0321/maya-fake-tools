@@ -5,7 +5,37 @@ Provides quick access to common actions with proper icon states and styling.
 
 import os
 
-from .....lib_ui.qt_compat import QFrame, QHBoxLayout, QIcon, QPushButton, Qt, QWidget, Signal
+from .....lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
+
+# Icon color definitions for each button state (applied via dynamic SVG recoloring)
+_ICON_SOURCE_COLOR = "#808080"
+_ICON_STATE_COLORS = {
+    "normal": "#A0A0A0",
+    "hover": "#D0D0D0",
+    "pressed": "#888888",
+}
+
+
+def _create_icon_from_svg(svg_text, source_color, target_color):
+    """Create a QIcon from SVG text with color replacement.
+
+    Args:
+        svg_text (str): SVG file content.
+        source_color (str): Color hex code to replace (e.g. "#808080").
+        target_color (str): Replacement color hex code (e.g. "#A0A0A0").
+
+    Returns:
+        QIcon: Icon rendered from the modified SVG.
+    """
+    modified_svg = svg_text.replace(source_color, target_color)
+    svg_bytes = QByteArray(modified_svg.encode("utf-8"))
+    renderer = QtSvg.QSvgRenderer(svg_bytes)
+    pixmap = QPixmap(16, 16)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
 
 
 class VSCodeButton(QPushButton):
@@ -35,17 +65,15 @@ class VSCodeButton(QPushButton):
         return os.path.join(current_dir, "icons")
 
     def _load_icons(self):
-        """Load all icon states."""
+        """Load icon states with dynamic color replacement from the normal SVG template."""
         self.icons = {}
-        for state in ["normal", "hover", "pressed"]:
-            icon_path = os.path.join(self.icon_base_path, f"{self.icon_name}_{state}.svg")
-            if os.path.exists(icon_path):
-                self.icons[state] = QIcon(icon_path)
-            else:
-                # Fallback to normal if specific state doesn't exist
-                normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.svg")
-                if os.path.exists(normal_path):
-                    self.icons[state] = QIcon(normal_path)
+        normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.svg")
+        if not os.path.exists(normal_path):
+            return
+        with open(normal_path, encoding="utf-8") as f:
+            svg_template = f.read()
+        for state, color in _ICON_STATE_COLORS.items():
+            self.icons[state] = _create_icon_from_svg(svg_template, _ICON_SOURCE_COLOR, color)
 
     def _set_normal_state(self):
         """Set button to normal state."""
@@ -59,10 +87,10 @@ class VSCodeButton(QPushButton):
                 padding: 3px;
             }
             QPushButton:hover {
-                background-color: #3c3c3c;
+                background-color: #484848;
             }
             QPushButton:pressed {
-                background-color: #094771;
+                background-color: #484848;
             }
         """)
 
@@ -93,6 +121,18 @@ class VSCodeButton(QPushButton):
 
 class RunButton(VSCodeButton):
     """Special run button with green theme."""
+
+    def _load_icons(self):
+        """Load all icon states from separate SVG files (no recoloring)."""
+        self.icons = {}
+        for state in ["normal", "hover", "pressed"]:
+            icon_path = os.path.join(self.icon_base_path, f"{self.icon_name}_{state}.svg")
+            if os.path.exists(icon_path):
+                self.icons[state] = QIcon(icon_path)
+            else:
+                normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.svg")
+                if os.path.exists(normal_path):
+                    self.icons[state] = QIcon(normal_path)
 
     def _set_normal_state(self):
         """Set button to normal state with green theme."""
