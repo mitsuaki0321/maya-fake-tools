@@ -158,7 +158,7 @@ class MainWindow(BaseMainWindow):
         self._mode_combo.setToolTip("Transfer mode: percentage of source weight or absolute value")
         self._bottom_layout.addWidget(self._mode_combo)
 
-        self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
+        self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int", shift_step=5)
         self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
         self._bottom_layout.addWidget(self._amount_widget, 1)
 
@@ -345,14 +345,20 @@ class MainWindow(BaseMainWindow):
         Args:
             index (int): Combo index (0=percentage, 1=value).
         """
+        current_value = self._amount_widget.value()
+
         self._bottom_layout.removeWidget(self._amount_widget)
         self._amount_widget.deleteLater()
 
         if index == 0:
-            self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=100, value_type="int")
+            converted = int(round(current_value * 100))
+            converted = max(0, min(100, converted))
+            self._amount_widget = FieldSliderWidget(min_value=0, max_value=100, default_value=converted, value_type="int", shift_step=5)
             self._amount_widget.setToolTip("Percentage of weight to transfer (0-100%)")
         else:
-            self._amount_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=1.0, decimals=2, value_type="float")
+            converted = round(current_value / 100.0, 2)
+            converted = max(0.0, min(1.0, converted))
+            self._amount_widget = FieldSliderWidget(min_value=0.0, max_value=1.0, default_value=converted, decimals=2, value_type="float", shift_step=0.05)
             self._amount_widget.setToolTip("Absolute weight value to transfer (0.0-1.0)")
 
         self._bottom_layout.insertWidget(1, self._amount_widget, 1)

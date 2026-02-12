@@ -102,6 +102,13 @@ Specifies the transfer amount according to the selected mode.
 - **1.0**: Transfers up to 1.0 weight to the target (clamped to the source total).
 - **0.1**: Transfers up to 0.1 weight to the target.
 
+**Shift-key snapping:**
+
+Hold Shift while dragging the slider to snap values in fixed increments.
+
+- **Percentage mode**: Steps of 5 (0, 5, 10, 15, ... 100)
+- **Value mode**: Steps of 0.05 (0.00, 0.05, 0.10, 0.15, ... 1.00)
+
 When multiple source influences are selected, each source's weight is proportionally reduced based on its share of the total.
 
 ### Soft Selection Support

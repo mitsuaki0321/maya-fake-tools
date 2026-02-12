@@ -4,10 +4,12 @@ This module provides a composite widget that combines a QLineEdit and QSlider
 for numeric value input with synchronized updates.
 """
 
+from __future__ import annotations
+
 from logging import getLogger
 
 from ..base_window import get_spacing
-from ..qt_compat import QDoubleValidator, QHBoxLayout, QIntValidator, QLineEdit, QSizePolicy, QSlider, Qt, QWidget, Signal
+from ..qt_compat import QApplication, QDoubleValidator, QHBoxLayout, QIntValidator, QLineEdit, QSizePolicy, QSlider, Qt, QWidget, Signal
 
 logger = getLogger(__name__)
 
@@ -32,6 +34,7 @@ class FieldSliderWidget(QWidget):
         default_value: float = 1.0,
         decimals: int = 2,
         value_type: str = "float",
+        shift_step: float | None = None,
         parent=None,
     ):
         """Initialize the field-slider widget.
@@ -42,6 +45,7 @@ class FieldSliderWidget(QWidget):
             default_value (float): Initial value. Defaults to 1.0.
             decimals (int): Number of decimal places for display (float only). Defaults to 2.
             value_type (str): Value type - "float" or "int". Defaults to "float".
+            shift_step (float | None): Step size when Shift is held during slider drag. None disables. Defaults to None.
             parent (QWidget, optional): Parent widget. Defaults to None.
 
         Raises:
@@ -56,6 +60,7 @@ class FieldSliderWidget(QWidget):
         self._min_value = min_value
         self._max_value = max_value
         self._decimals = decimals
+        self._shift_step = shift_step
 
         # Calculate slider range based on value type
         if value_type == "float":
@@ -143,6 +148,23 @@ class FieldSliderWidget(QWidget):
             value = slider_value / self._slider_multiplier
         else:
             value = slider_value
+
+        # Snap to shift_step when Shift is held
+        if self._shift_step is not None and QApplication.queryKeyboardModifiers() & Qt.ShiftModifier:
+            step = self._shift_step
+            value = round(value / step) * step
+            if self._value_type == "float":
+                value = round(value, self._decimals)
+            else:
+                value = int(value)
+            value = max(self._min_value, min(self._max_value, value))
+            # Update slider position to match snapped value
+            self.slider.blockSignals(True)
+            if self._value_type == "float":
+                self.slider.setValue(int(value * self._slider_multiplier))
+            else:
+                self.slider.setValue(int(value))
+            self.slider.blockSignals(False)
 
         # Block signals to prevent circular updates
         self.field.blockSignals(True)
