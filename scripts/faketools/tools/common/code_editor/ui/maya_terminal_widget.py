@@ -155,6 +155,20 @@ class MayaTerminalWidget(QWidget):
 
         return None
 
+    def set_echo_all(self, enabled):
+        """Toggle echoAllCommands on the reporter.
+
+        Args:
+            enabled (bool): True to echo all commands, False to suppress.
+        """
+        if not self.history_reporter:
+            return
+        try:
+            if cmds.cmdScrollFieldReporter(self.history_reporter, exists=True):
+                cmds.cmdScrollFieldReporter(self.history_reporter, edit=True, echoAllCommands=enabled)
+        except Exception as e:
+            logger.error(f"Error setting echoAllCommands: {e}")
+
     def clear(self):
         """Clear the terminal output."""
         if self.history_reporter:

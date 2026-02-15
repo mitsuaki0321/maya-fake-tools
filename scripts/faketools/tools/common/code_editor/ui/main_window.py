@@ -382,6 +382,15 @@ class MayaCodeEditor(QWidget):
         except Exception as e:
             CodeEditorMessageBox.critical(self, "Error", f"Failed to create file: {e!s}")
 
+    def toggle_echo_all(self, enabled):
+        """Toggle echoAllCommands on the output terminal.
+
+        Args:
+            enabled (bool): True to echo all commands, False to suppress.
+        """
+        if self.output_terminal:
+            self.output_terminal.set_echo_all(enabled)
+
     def clear_terminal(self):
         """Clear the output terminal."""
         if self.output_terminal:

@@ -149,9 +149,75 @@ class RunButton(VSCodeButton):
                 background-color: #3c3c3c;
             }
             QPushButton:pressed {
-                background-color: #094771;
+                background-color: #5A504A;
             }
         """)
+
+
+class ToggleButton(VSCodeButton):
+    """VSCode-style toggle button with active/inactive visual states."""
+
+    _ACTIVE_BG = "#5A504A"
+    _ACTIVE_HOVER_BG = "#6a6058"
+
+    def __init__(self, icon_name, tooltip, parent=None):
+        self._active = False
+        super().__init__(icon_name, tooltip, parent)
+
+    def is_active(self):
+        """Return current toggle state."""
+        return self._active
+
+    def set_active(self, active):
+        """Set active state and update styling."""
+        self._active = active
+        self._apply_style()
+
+    def _set_normal_state(self):
+        """Set initial style based on active state."""
+        if "normal" in self.icons:
+            self.setIcon(self.icons["normal"])
+        self._apply_style()
+
+    def _apply_style(self):
+        """Apply stylesheet based on active state."""
+        if self._active:
+            self.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {self._ACTIVE_BG};
+                    border: none;
+                    border-radius: 3px;
+                    padding: 3px;
+                }}
+                QPushButton:hover {{
+                    background-color: {self._ACTIVE_HOVER_BG};
+                }}
+                QPushButton:pressed {{
+                    background-color: {self._ACTIVE_BG};
+                }}
+            """)
+        else:
+            self.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    border: none;
+                    border-radius: 3px;
+                    padding: 3px;
+                }
+                QPushButton:hover {
+                    background-color: #484848;
+                }
+                QPushButton:pressed {
+                    background-color: #484848;
+                }
+            """)
+
+    def mouseReleaseEvent(self, event):
+        """Toggle active state on click."""
+        if self.rect().contains(event.pos()):
+            self._active = not self._active
+            self._apply_style()
+        super().mouseReleaseEvent(event)
 
 
 class ToolBarSeparator(QFrame):
@@ -184,6 +250,7 @@ class ToolBar(QWidget):
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
+    echo_all_toggled = Signal(bool)  # Signal for toggling echoAllCommands (True=on, False=off)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -230,6 +297,9 @@ class ToolBar(QWidget):
 
         self.clear_button = VSCodeButton("clear", "Clear Terminal")
 
+        # Echo All toggle button
+        self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands")
+
         # Fourth separator
         sep4 = ToolBarSeparator()
 
@@ -252,6 +322,7 @@ class ToolBar(QWidget):
         layout.addWidget(self.save_all_button)
         layout.addWidget(sep3)
         layout.addWidget(self.clear_button)
+        layout.addWidget(self.echo_all_button)
         layout.addWidget(sep4)
         layout.addWidget(self.workspace_button)
         layout.addWidget(sep5)
@@ -277,6 +348,7 @@ class ToolBar(QWidget):
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)
+        self.echo_all_button.clicked.connect(lambda: self.echo_all_toggled.emit(self.echo_all_button.is_active()))
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""

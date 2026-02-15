@@ -167,6 +167,15 @@ class OutputTerminal(QWidget):
         else:
             self.append_output(command, color=AppTheme.OUTPUT_COMMAND)
 
+    def set_echo_all(self, enabled):
+        """Toggle echoAllCommands on the Maya terminal.
+
+        Args:
+            enabled (bool): True to echo all commands, False to suppress.
+        """
+        if self.use_maya_terminal and self.maya_terminal:
+            self.maya_terminal.set_echo_all(enabled)
+
     def clear(self):
         """Clear the output display."""
         if self.use_maya_terminal and self.maya_terminal:

@@ -164,6 +164,7 @@ class UILayoutManager:
             self.main_window.toolbar.clear_clicked.connect(self.main_window.clear_terminal)
             self.main_window.toolbar.workspace_clicked.connect(self.main_window.open_workspace_directory)
             self.main_window.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)
+            self.main_window.toolbar.echo_all_toggled.connect(self.main_window.toggle_echo_all)
 
         if self.main_window.file_explorer:
             self.main_window.file_explorer.file_selected.connect(self.main_window.open_file_permanent)
