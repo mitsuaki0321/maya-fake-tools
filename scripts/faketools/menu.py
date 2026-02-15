@@ -80,7 +80,7 @@ def add_menu():
         for tool in tools:
             cmds.menuItem(
                 label=tool["label"],
-                command=lambda *args, cmd=tool["command"]: exec(cmd),
+                command=tool["command"],
                 annotation=tool.get("description", ""),
             )
 
