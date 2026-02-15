@@ -9,7 +9,6 @@ Usage from Maya Script Editor::
 from __future__ import annotations
 
 from collections.abc import Callable
-import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -80,21 +79,14 @@ def run_fitting(
     if on_progress:
         on_progress("Writing result to Maya...")
     if duplicate_source:
-        from .scene_ops import close_undo_chunk, duplicate_mesh, open_undo_chunk
+        from .scene_ops import duplicate_mesh
 
         if result_name is None:
             result_name = f"{source_name}_fitted"
 
-        with contextlib.suppress(ImportError):
-            open_undo_chunk("meshfit_fitting")
-
-        try:
-            dup_name = duplicate_mesh(source_name, result_name)
-            trimesh_to_maya_mesh(result.fitted_mesh, dup_name, api=api)
-            result.result_mesh_name = dup_name
-        finally:
-            with contextlib.suppress(ImportError):
-                close_undo_chunk()
+        dup_name = duplicate_mesh(source_name, result_name)
+        trimesh_to_maya_mesh(result.fitted_mesh, dup_name, api=api)
+        result.result_mesh_name = dup_name
     else:
         # Overwrite source in-place
         trimesh_to_maya_mesh(result.fitted_mesh, source_name, api=api)
