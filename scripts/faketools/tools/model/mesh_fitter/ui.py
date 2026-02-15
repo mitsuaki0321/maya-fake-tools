@@ -7,6 +7,7 @@ widget creation, layout, and Qt signal wiring.
 from __future__ import annotations
 
 from logging import getLogger
+from pathlib import Path
 
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
@@ -31,12 +32,15 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
+from ....lib_ui.widgets import IconButton, IconButtonStyle
 from . import command
 from .controller import MeshFitController, SceneMeshListProvider
 from .core.algorithms import SCHEDULES
 from .mesh_bridge import OpenMayaMeshAPI
 
 logger = getLogger(__name__)
+
+_IMAGES_DIR = str(Path(__file__).parent / "images")
 
 _instance = None
 
@@ -260,11 +264,13 @@ class MainWindow(BaseMainWindow):
             item = QTreeWidgetItem([src_label, tgt_label])
             self._tree_landmarks.addTopLevelItem(item)
 
-            btn_sel = QPushButton("Sel")
+            btn_sel = IconButton(icon_name="select", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
+            btn_sel.setToolTip("Select pair")
             btn_sel.clicked.connect(lambda _=False, idx=i: self._on_select_pair(idx))
             self._tree_landmarks.setItemWidget(item, 2, btn_sel)
 
-            btn_del = QPushButton("\u00d7")
+            btn_del = IconButton(icon_name="remove", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_IMAGES_DIR)
+            btn_del.setToolTip("Remove pair")
             btn_del.clicked.connect(lambda _=False, idx=i: self._on_remove_pair(idx))
             self._tree_landmarks.setItemWidget(item, 3, btn_del)
 
