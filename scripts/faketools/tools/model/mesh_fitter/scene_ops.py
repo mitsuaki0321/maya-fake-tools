@@ -57,6 +57,17 @@ def get_selected_transforms() -> list[str]:
     return cmds.ls(sl=True, type="transform", long=True) or []
 
 
+def get_selected_mesh() -> str | None:
+    """Return the first selected transform that has a mesh shape, or None."""
+    import maya.cmds as cmds
+
+    for t in cmds.ls(sl=True, type="transform", long=True) or []:
+        shapes = cmds.listRelatives(t, shapes=True, type="mesh", fullPath=True) or []
+        if shapes:
+            return t
+    return None
+
+
 def is_transform(name: str) -> bool:
     """Check whether a node is a transform (or subclass like joint)."""
     import maya.cmds as cmds

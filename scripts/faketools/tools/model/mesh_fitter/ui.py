@@ -20,9 +20,11 @@ from ....lib_ui.qt_compat import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QLineEdit,
     QPushButton,
     QSpinBox,
     QStatusBar,
+    Qt,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -62,10 +64,6 @@ class MainWindow(BaseMainWindow):
         self._connect_signals()
         self._connect_controller_callbacks()
 
-        # Initial mesh list refresh
-        self._controller.refresh_mesh_list()
-        self._populate_combos()
-
         self._restore_settings()
 
     # ------------------------------------------------------------------
@@ -77,18 +75,34 @@ class MainWindow(BaseMainWindow):
         grp_mesh = QGroupBox("Meshes")
         lay_mesh = QVBoxLayout(grp_mesh)
 
+        lbl_source = QLabel("Source:")
+        lbl_target = QLabel("Target:")
+        fm = lbl_source.fontMetrics()
+        label_width = max(fm.horizontalAdvance(lbl_source.text()), fm.horizontalAdvance(lbl_target.text()))
+        label_width += fm.horizontalAdvance("M")
+        lbl_source.setFixedWidth(label_width)
+        lbl_target.setFixedWidth(label_width)
+        lbl_source.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        lbl_target.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
         row_src = QHBoxLayout()
-        row_src.addWidget(QLabel("Source:"))
-        self._combo_source = QComboBox()
-        row_src.addWidget(self._combo_source, 1)
-        self._btn_refresh = QPushButton("Refresh")
-        row_src.addWidget(self._btn_refresh)
+        row_src.addWidget(lbl_source)
+        self._line_source = QLineEdit()
+        self._line_source.setReadOnly(True)
+        self._line_source.setPlaceholderText("Select a mesh and click SET")
+        row_src.addWidget(self._line_source, 1)
+        self._btn_set_source = QPushButton("SET")
+        row_src.addWidget(self._btn_set_source)
         lay_mesh.addLayout(row_src)
 
         row_tgt = QHBoxLayout()
-        row_tgt.addWidget(QLabel("Target:"))
-        self._combo_target = QComboBox()
-        row_tgt.addWidget(self._combo_target, 1)
+        row_tgt.addWidget(lbl_target)
+        self._line_target = QLineEdit()
+        self._line_target.setReadOnly(True)
+        self._line_target.setPlaceholderText("Select a mesh and click SET")
+        row_tgt.addWidget(self._line_target, 1)
+        self._btn_set_target = QPushButton("SET")
+        row_tgt.addWidget(self._btn_set_target)
         lay_mesh.addLayout(row_tgt)
 
         self.central_layout.addWidget(grp_mesh)
@@ -176,9 +190,8 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
-        self._btn_refresh.clicked.connect(self._on_refresh)
-        self._combo_source.currentTextChanged.connect(self._controller.set_source)
-        self._combo_target.currentTextChanged.connect(self._controller.set_target)
+        self._btn_set_source.clicked.connect(self._on_set_source)
+        self._btn_set_target.clicked.connect(self._on_set_target)
 
         self._combo_schedule.currentTextChanged.connect(self._controller.set_schedule)
         self._chk_auto_align.toggled.connect(self._controller.set_auto_align)
@@ -204,26 +217,27 @@ class MainWindow(BaseMainWindow):
     # Slots
     # ------------------------------------------------------------------
 
-    def _on_refresh(self) -> None:
-        names = self._controller.refresh_mesh_list()
-        self._populate_combos(names)
+    def _on_set_source(self) -> None:
+        from .scene_ops import get_selected_mesh
 
-    def _populate_combos(self, names: list[str] | None = None) -> None:
-        if names is None:
-            names = self._controller.mesh_names
+        name = get_selected_mesh()
+        if name is None:
+            self._status_bar.showMessage("Error: Select a mesh transform")
+            return
+        self._line_source.setText(name.rsplit("|", 1)[-1])
+        self._line_source.setToolTip(name)
+        self._controller.set_source(name)
 
-        for combo in (self._combo_source, self._combo_target):
-            combo.blockSignals(True)
-            prev = combo.currentText()
-            combo.clear()
-            combo.addItems(names)
-            if prev in names:
-                combo.setCurrentText(prev)
-            combo.blockSignals(False)
+    def _on_set_target(self) -> None:
+        from .scene_ops import get_selected_mesh
 
-        # Sync controller with final combo values (signals were blocked)
-        self._controller.set_source(self._combo_source.currentText())
-        self._controller.set_target(self._combo_target.currentText())
+        name = get_selected_mesh()
+        if name is None:
+            self._status_bar.showMessage("Error: Select a mesh transform")
+            return
+        self._line_target.setText(name.rsplit("|", 1)[-1])
+        self._line_target.setToolTip(name)
+        self._controller.set_target(name)
 
     def _on_error(self, msg: str) -> None:
         logger.error(msg, exc_info=True)
@@ -304,9 +318,8 @@ class MainWindow(BaseMainWindow):
         """Enable/disable interactive elements during fitting."""
         enabled = not running
         self._btn_run.setEnabled(enabled)
-        self._combo_source.setEnabled(enabled)
-        self._combo_target.setEnabled(enabled)
-        self._btn_refresh.setEnabled(enabled)
+        self._btn_set_source.setEnabled(enabled)
+        self._btn_set_target.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
 
