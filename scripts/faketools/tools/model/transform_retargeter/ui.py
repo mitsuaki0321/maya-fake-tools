@@ -1,4 +1,4 @@
-"""Re target transforms tool."""
+"""Transform Retargeter tool."""
 
 import glob
 from logging import getLogger
@@ -32,7 +32,7 @@ _instance = None
 
 
 class MainWindow(BaseMainWindow):
-    """Retarget Transform Main Window."""
+    """Transform Retargeter Main Window."""
 
     _method_list = ("Default", "Barycentric", "Rbf")
     _create_new_list = ("transform", "locator", "joint")
@@ -42,13 +42,13 @@ class MainWindow(BaseMainWindow):
         """Constructor."""
         super().__init__(
             parent=parent,
-            object_name="RetargetTransformsMainWindow",
-            window_title="Retarget Transforms",
+            object_name="TransformRetargeterMainWindow",
+            window_title="Transform Retargeter",
             central_layout="vertical",
         )
 
-        self.settings = ToolSettingsManager(tool_name="retarget_transforms", category="model")
-        tool_data_manager = tool_data.ToolDataManager("retarget_transforms", "model")
+        self.settings = ToolSettingsManager(tool_name="transform_retargeter", category="model")
+        tool_data_manager = tool_data.ToolDataManager("transform_retargeter", "model")
         tool_data_manager.ensure_data_dir()
         self.output_directory = tool_data_manager.get_data_dir()
 
@@ -439,7 +439,7 @@ class MainWindow(BaseMainWindow):
 
 def show_ui():
     """
-    Show the retarget transforms tool UI.
+    Show the Transform Retargeter UI.
 
     Creates or raises the main window.
 

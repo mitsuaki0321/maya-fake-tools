@@ -1,4 +1,4 @@
-"""MeshFit main window — thin Qt shell over MeshFitController.
+"""Mesh Fitter main window — thin Qt shell over MeshFitController.
 
 All business logic lives in controller.py; this file only handles
 widget creation, layout, and Qt signal wiring.
@@ -40,18 +40,18 @@ _instance = None
 
 
 class MainWindow(BaseMainWindow):
-    """Main GUI window for MeshFit in Maya."""
+    """Main GUI window for Mesh Fitter in Maya."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(
             parent=parent,
-            object_name="MeshFitMainWindow",
-            window_title="MeshFit",
+            object_name="MeshFitterMainWindow",
+            window_title="Mesh Fitter",
             central_layout="vertical",
         )
         self.setMinimumWidth(380)
 
-        self.settings = ToolSettingsManager(tool_name="mesh_fitting", category="model")
+        self.settings = ToolSettingsManager(tool_name="mesh_fitter", category="model")
 
         self._controller = MeshFitController(
             api=OpenMayaMeshAPI(),
@@ -261,7 +261,7 @@ class MainWindow(BaseMainWindow):
         self._controller.remove_landmark_pair(index)
 
     @error_handler
-    @undo_chunk("Mesh Fitting: Run")
+    @undo_chunk("Mesh Fitter: Run")
     def _on_run(self) -> None:
         request = self._controller.build_fitting_request()
         if request is None:
@@ -368,7 +368,7 @@ class MainWindow(BaseMainWindow):
 
 
 def show_ui():
-    """Show the Mesh Fitting UI.
+    """Show the Mesh Fitter UI.
 
     Returns:
         MainWindow: The main window instance

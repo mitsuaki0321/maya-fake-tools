@@ -2,7 +2,7 @@
 
 Usage from Maya Script Editor::
 
-    from faketools.tools.model.mesh_fitting import command
+    from faketools.tools.model.mesh_fitter import command
     result = command.run_fitting("sourceShape", "targetShape")
 """
 

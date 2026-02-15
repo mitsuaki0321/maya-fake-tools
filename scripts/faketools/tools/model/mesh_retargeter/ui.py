@@ -1,4 +1,4 @@
-"""Re target mesh tool."""
+"""Mesh Retargeter tool."""
 
 from logging import getLogger
 
@@ -32,18 +32,18 @@ _instance = None
 
 
 class MainWindow(BaseMainWindow):
-    """Re target Mesh Main Window."""
+    """Mesh Retargeter Main Window."""
 
     def __init__(self, parent=None):
         """Constructor."""
         super().__init__(
             parent=parent,
-            object_name="RetargetMeshMainWindow",
-            window_title="Retarget Mesh",
+            object_name="MeshRetargeterMainWindow",
+            window_title="Mesh Retargeter",
             central_layout="vertical",
         )
 
-        self.settings = ToolSettingsManager(tool_name="retarget_mesh", category="model")
+        self.settings = ToolSettingsManager(tool_name="mesh_retargeter", category="model")
 
         # Setup preset menu using composition
         self.preset_manager = PresetMenuManager(
@@ -395,7 +395,7 @@ class SetNodesWidgets(QWidget):
 
 def show_ui():
     """
-    Show the Re target Mesh UI.
+    Show the Mesh Retargeter UI.
 
     Creates or raises the main window.
 

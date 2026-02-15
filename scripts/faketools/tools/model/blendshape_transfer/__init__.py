@@ -9,7 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Transfer blend shapes between meshes with identical topology",
     "menu_label": "BlendShape Transfer",
-    "menu_order": 31,
+    "menu_order": 20,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",

@@ -1,10 +1,10 @@
 ---
-title: Retarget Transforms
+title: Transform Retargeter
 category: model
 description: 同一トポロジーのオブジェクト間でトランスフォーム階層を転送
 lang: ja
-lang-ref: retarget_transforms
-order: 30
+lang-ref: transform_retargeter
+order: 40
 ---
 
 ## 概要
@@ -39,8 +39,8 @@ order: 30
 専用のメニューか、以下のコマンドでツールを起動します。
 
 ```python
-import faketools.tools.model.retarget_transforms.ui
-faketools.tools.model.retarget_transforms.ui.show_ui()
+import faketools.tools.model.transform_retargeter.ui
+faketools.tools.model.transform_retargeter.ui.show_ui()
 ```
 
 ![image001](../../images/model//retarget_transform/image001.png)

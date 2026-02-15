@@ -1,10 +1,10 @@
 ---
-title: Retarget Transforms
+title: Transform Retargeter
 category: model
 description: Transfer transform hierarchy between objects with identical topology
 lang: en
-lang-ref: retarget_transforms
-order: 30
+lang-ref: transform_retargeter
+order: 40
 ---
 
 ## Overview
@@ -39,8 +39,8 @@ This method is effective when the transform node is inside the mesh.
 Launch the tool from the dedicated menu or with the following command.
 
 ```python
-import faketools.tools.model.retarget_transforms.ui
-faketools.tools.model.retarget_transforms.ui.show_ui()
+import faketools.tools.model.transform_retargeter.ui
+faketools.tools.model.transform_retargeter.ui.show_ui()
 ```
 
 ![image001](../../images/model//retarget_transform/image001.png)

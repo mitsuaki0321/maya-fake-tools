@@ -5,11 +5,11 @@ Includes unique selection, area selection (left/center/right), and CV parameter 
 """
 
 TOOL_CONFIG = {
-    "name": "Component Selecter Tool",
+    "name": "Component Selecter",
     "version": "1.0.0",
     "description": "Tool to select and manage components in Maya",
     "menu_label": "Component Selecter",
-    "menu_order": 60,
+    "menu_order": 50,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",

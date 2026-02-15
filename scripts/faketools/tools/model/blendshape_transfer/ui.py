@@ -24,10 +24,10 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
-from ..mesh_fitting.bs_controller import BSTransferController
-from ..mesh_fitting.bs_worker import TransferWorker
-from ..mesh_fitting.controller import SceneMeshListProvider
-from ..mesh_fitting.mesh_bridge import OpenMayaMeshAPI
+from ..mesh_fitter.bs_controller import BSTransferController
+from ..mesh_fitter.bs_worker import TransferWorker
+from ..mesh_fitter.controller import SceneMeshListProvider
+from ..mesh_fitter.mesh_bridge import OpenMayaMeshAPI
 
 logger = getLogger(__name__)
 

@@ -1,10 +1,10 @@
 ---
-title: Retarget Mesh
+title: Mesh Retargeter
 category: model
 description: 同一トポロジーのメッシュ間で頂点位置を転送するツール
 lang: ja
-lang-ref: retarget_mesh
-order: 20
+lang-ref: mesh_retargeter
+order: 30
 ---
 
 ## 起動方法
@@ -12,11 +12,11 @@ order: 20
 専用のメニューか、以下のコマンドでツールを起動します。
 
 ```python
-import faketools.tools.model.retarget_mesh.ui
-faketools.tools.model.retarget_mesh.ui.show_ui()
+import faketools.tools.model.mesh_retargeter.ui
+faketools.tools.model.mesh_retargeter.ui.show_ui()
 ```
 
-![image001](../../images/model/retarget_mesh/image002.png) 
+![image001](../../images/model/mesh_retargeter/image002.png) 
 
 
 ## 使用方法
@@ -29,7 +29,7 @@ faketools.tools.model.retarget_mesh.ui.show_ui()
 4. 新しいジオメトリを作成する場合は、`Create New Mesh` チェックボックスをオンにします。
 5. `Retarget Mesh` ボタンを押します。
 
-![image001](../../images/model/retarget_mesh/image001.gif) 
+![image001](../../images/model/mesh_retargeter/image001.gif) 
 
 
 ## Advanced Parameters

@@ -1,10 +1,10 @@
 ---
-title: Retarget Mesh
+title: Mesh Retargeter
 category: model
 description: Transfer vertex positions between meshes with identical topology
 lang: en
-lang-ref: retarget_mesh
-order: 20
+lang-ref: mesh_retargeter
+order: 30
 ---
 
 ## How to Launch
@@ -12,11 +12,11 @@ order: 20
 Launch the tool from the dedicated menu or with the following command.
 
 ```python
-import faketools.tools.model.retarget_mesh.ui
-faketools.tools.model.retarget_mesh.ui.show_ui()
+import faketools.tools.model.mesh_retargeter.ui
+faketools.tools.model.mesh_retargeter.ui.show_ui()
 ```
 
-![image001](../../images/model/retarget_mesh/image002.png)
+![image001](../../images/model/mesh_retargeter/image002.png)
 
 
 ## Usage
@@ -29,7 +29,7 @@ To use the tool, follow these steps:
 4. If creating new geometry, check the `Create New Mesh` checkbox.
 5. Press `Retarget Mesh` button.
 
-![image001](../../images/model/retarget_mesh/image001.gif)
+![image001](../../images/model/mesh_retargeter/image001.gif)
 
 
 ## Advanced Parameters

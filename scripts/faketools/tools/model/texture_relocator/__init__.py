@@ -9,7 +9,7 @@ TOOL_CONFIG = {
     "version": "1.0.0",
     "description": "Relocate texture file paths in the scene",
     "menu_label": "Texture Relocator",
-    "menu_order": 40,
+    "menu_order": 70,
     "requires_selection": False,
     "author": "FakeTools",
     "category": "model",
