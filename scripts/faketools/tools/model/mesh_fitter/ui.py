@@ -17,15 +17,18 @@ from ....lib_ui.qt_compat import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QPushButton,
+    QSlider,
     QSpinBox,
     QStatusBar,
     Qt,
+    QTabWidget,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -111,9 +114,25 @@ class MainWindow(BaseMainWindow):
 
         self.central_layout.addWidget(grp_mesh)
 
-        # --- Settings ---
+        # --- Settings (Tab Widget) ---
         grp_settings = QGroupBox("Settings")
         lay_settings = QVBoxLayout(grp_settings)
+
+        self._tab_settings = QTabWidget()
+        lay_settings.addWidget(self._tab_settings)
+
+        # -- Pre tab --
+        tab_pre = QWidget()
+        lay_pre = QVBoxLayout(tab_pre)
+        self._chk_auto_align = QCheckBox("Auto-align (Procrustes + ICP)")
+        self._chk_auto_align.setChecked(True)
+        lay_pre.addWidget(self._chk_auto_align)
+        lay_pre.addStretch()
+        self._tab_settings.addTab(tab_pre, "Pre")
+
+        # -- Main tab --
+        tab_main = QWidget()
+        lay_main = QVBoxLayout(tab_main)
 
         row_sched = QHBoxLayout()
         row_sched.addWidget(QLabel("Schedule:"))
@@ -121,11 +140,83 @@ class MainWindow(BaseMainWindow):
         self._combo_schedule.addItems(list(SCHEDULES.keys()))
         self._combo_schedule.setCurrentText("gentle")
         row_sched.addWidget(self._combo_schedule, 1)
-        lay_settings.addLayout(row_sched)
+        lay_main.addLayout(row_sched)
 
-        self._chk_auto_align = QCheckBox("Auto-align (Procrustes + ICP)")
-        self._chk_auto_align.setChecked(True)
-        lay_settings.addWidget(self._chk_auto_align)
+        # Advanced (nested inside Main tab, under Schedule)
+        self._grp_advanced = QGroupBox("Advanced")
+        self._grp_advanced.setCheckable(True)
+        self._grp_advanced.setChecked(False)
+        lay_adv = QVBoxLayout(self._grp_advanced)
+
+        # Compute uniform label width for Advanced sliders
+        adv_labels = ["Stiffness:", "Landmark Strength:", "Steps:"]
+        fm_adv = self.fontMetrics()
+        adv_label_width = max(fm_adv.horizontalAdvance(t) for t in adv_labels)
+        adv_label_width += fm_adv.horizontalAdvance("M")
+
+        # Stiffness: 0.01–0.20, step 0.01, default from schedule
+        row_stiff = QHBoxLayout()
+        lbl_stiff = QLabel("Stiffness:")
+        lbl_stiff.setFixedWidth(adv_label_width)
+        lbl_stiff.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_stiff.addWidget(lbl_stiff)
+        self._slider_stiffness = QSlider(Qt.Horizontal)
+        self._slider_stiffness.setRange(1, 20)  # maps to 0.01–0.20
+        self._slider_stiffness.setValue(10)
+        row_stiff.addWidget(self._slider_stiffness, 1)
+        self._spin_stiffness = QDoubleSpinBox()
+        self._spin_stiffness.setRange(0.01, 0.20)
+        self._spin_stiffness.setSingleStep(0.01)
+        self._spin_stiffness.setDecimals(2)
+        self._spin_stiffness.setValue(0.10)
+        self._spin_stiffness.setFixedWidth(60)
+        row_stiff.addWidget(self._spin_stiffness)
+        lay_adv.addLayout(row_stiff)
+
+        # Landmark Strength: 0.0–1.0, step 0.05, default 1.0
+        row_lm = QHBoxLayout()
+        lbl_lm = QLabel("Landmark Strength:")
+        lbl_lm.setFixedWidth(adv_label_width)
+        lbl_lm.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_lm.addWidget(lbl_lm)
+        self._slider_landmark_strength = QSlider(Qt.Horizontal)
+        self._slider_landmark_strength.setRange(0, 20)  # maps to 0.0–1.0 (x0.05)
+        self._slider_landmark_strength.setValue(20)
+        row_lm.addWidget(self._slider_landmark_strength, 1)
+        self._spin_landmark_strength = QDoubleSpinBox()
+        self._spin_landmark_strength.setRange(0.0, 1.0)
+        self._spin_landmark_strength.setSingleStep(0.05)
+        self._spin_landmark_strength.setDecimals(2)
+        self._spin_landmark_strength.setValue(1.0)
+        self._spin_landmark_strength.setFixedWidth(60)
+        row_lm.addWidget(self._spin_landmark_strength)
+        lay_adv.addLayout(row_lm)
+
+        # Steps: 3–10, default from schedule
+        row_steps = QHBoxLayout()
+        lbl_steps = QLabel("Steps:")
+        lbl_steps.setFixedWidth(adv_label_width)
+        lbl_steps.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_steps.addWidget(lbl_steps)
+        self._slider_steps = QSlider(Qt.Horizontal)
+        self._slider_steps.setRange(3, 10)
+        self._slider_steps.setValue(7)
+        row_steps.addWidget(self._slider_steps, 1)
+        self._spin_steps = QSpinBox()
+        self._spin_steps.setRange(3, 10)
+        self._spin_steps.setValue(7)
+        self._spin_steps.setFixedWidth(60)
+        row_steps.addWidget(self._spin_steps)
+        lay_adv.addLayout(row_steps)
+
+        self._update_landmark_strength_enabled()
+        lay_main.addWidget(self._grp_advanced)
+        lay_main.addStretch()
+        self._tab_settings.addTab(tab_main, "Main")
+
+        # -- Post tab --
+        tab_post = QWidget()
+        lay_post = QVBoxLayout(tab_post)
 
         row_smooth = QHBoxLayout()
         self._chk_smooth = QCheckBox("Smooth result (Taubin)  iterations:")
@@ -135,10 +226,10 @@ class MainWindow(BaseMainWindow):
         self._spin_smooth.setValue(3)
         self._spin_smooth.setEnabled(False)
         row_smooth.addWidget(self._spin_smooth)
-        lay_settings.addLayout(row_smooth)
+        lay_post.addLayout(row_smooth)
 
         self._chk_snap = QCheckBox("Snap to target (progressive)")
-        lay_settings.addWidget(self._chk_snap)
+        lay_post.addWidget(self._chk_snap)
 
         row_sym = QHBoxLayout()
         self._chk_symmetrize = QCheckBox("Symmetrize")
@@ -147,11 +238,13 @@ class MainWindow(BaseMainWindow):
         self._combo_sym_method.addItems(["position", "topology"])
         self._combo_sym_method.setEnabled(False)
         row_sym.addWidget(self._combo_sym_method)
-        lay_settings.addLayout(row_sym)
+        lay_post.addLayout(row_sym)
 
         self._chk_duplicate = QCheckBox("Duplicate source (preserve original)")
         self._chk_duplicate.setChecked(True)
-        lay_settings.addWidget(self._chk_duplicate)
+        lay_post.addWidget(self._chk_duplicate)
+        lay_post.addStretch()
+        self._tab_settings.addTab(tab_post, "Post")
 
         self.central_layout.addWidget(grp_settings)
 
@@ -197,7 +290,7 @@ class MainWindow(BaseMainWindow):
         self._btn_set_source.clicked.connect(self._on_set_source)
         self._btn_set_target.clicked.connect(self._on_set_target)
 
-        self._combo_schedule.currentTextChanged.connect(self._controller.set_schedule)
+        self._combo_schedule.currentTextChanged.connect(self._on_schedule_changed)
         self._chk_auto_align.toggled.connect(self._controller.set_auto_align)
         self._chk_smooth.toggled.connect(self._on_smooth_toggled)
         self._spin_smooth.valueChanged.connect(self._controller.set_smooth_iterations)
@@ -205,6 +298,14 @@ class MainWindow(BaseMainWindow):
         self._chk_symmetrize.toggled.connect(self._on_symmetrize_toggled)
         self._combo_sym_method.currentTextChanged.connect(self._controller.set_symmetry_method)
         self._chk_duplicate.toggled.connect(self._controller.set_duplicate_source)
+
+        self._grp_advanced.toggled.connect(self._on_advanced_toggled)
+        self._slider_stiffness.valueChanged.connect(self._on_stiffness_slider)
+        self._spin_stiffness.valueChanged.connect(self._on_stiffness_spin)
+        self._slider_landmark_strength.valueChanged.connect(self._on_landmark_strength_slider)
+        self._spin_landmark_strength.valueChanged.connect(self._on_landmark_strength_spin)
+        self._slider_steps.valueChanged.connect(self._on_steps_slider)
+        self._spin_steps.valueChanged.connect(self._on_steps_spin)
 
         self._btn_set_landmarks.clicked.connect(lambda: self._controller.set_landmarks_from_selection())
 
@@ -255,8 +356,81 @@ class MainWindow(BaseMainWindow):
         self._controller.set_symmetrize(checked)
         self._combo_sym_method.setEnabled(checked)
 
+    def _on_schedule_changed(self, text: str) -> None:
+        self._controller.set_schedule(text)
+        if not self._grp_advanced.isChecked():
+            self._sync_advanced_to_schedule()
+
+    def _sync_advanced_to_schedule(self) -> None:
+        """Update advanced sliders/spinboxes to match the current schedule defaults."""
+        stiffness, steps = self._controller.schedule_defaults()
+        for w in (self._slider_stiffness, self._spin_stiffness, self._slider_steps, self._spin_steps):
+            w.blockSignals(True)
+        self._slider_stiffness.setValue(round(stiffness * 100))
+        self._spin_stiffness.setValue(stiffness)
+        self._slider_steps.setValue(steps)
+        self._spin_steps.setValue(steps)
+        for w in (self._slider_stiffness, self._spin_stiffness, self._slider_steps, self._spin_steps):
+            w.blockSignals(False)
+
+    def _on_advanced_toggled(self, checked: bool) -> None:
+        if not checked:
+            self._controller.reset_advanced()
+            # Reset widgets to schedule defaults
+            self._sync_advanced_to_schedule()
+            for w in (self._slider_landmark_strength, self._spin_landmark_strength):
+                w.blockSignals(True)
+            self._slider_landmark_strength.setValue(20)
+            self._spin_landmark_strength.setValue(1.0)
+            for w in (self._slider_landmark_strength, self._spin_landmark_strength):
+                w.blockSignals(False)
+
+    def _on_stiffness_slider(self, value: int) -> None:
+        fval = value / 100.0
+        self._spin_stiffness.blockSignals(True)
+        self._spin_stiffness.setValue(fval)
+        self._spin_stiffness.blockSignals(False)
+        self._controller.set_stiffness(fval)
+
+    def _on_stiffness_spin(self, value: float) -> None:
+        self._slider_stiffness.blockSignals(True)
+        self._slider_stiffness.setValue(round(value * 100))
+        self._slider_stiffness.blockSignals(False)
+        self._controller.set_stiffness(value)
+
+    def _on_landmark_strength_slider(self, value: int) -> None:
+        fval = value * 0.05
+        self._spin_landmark_strength.blockSignals(True)
+        self._spin_landmark_strength.setValue(fval)
+        self._spin_landmark_strength.blockSignals(False)
+        self._controller.set_landmark_strength(fval)
+
+    def _on_landmark_strength_spin(self, value: float) -> None:
+        self._slider_landmark_strength.blockSignals(True)
+        self._slider_landmark_strength.setValue(round(value / 0.05))
+        self._slider_landmark_strength.blockSignals(False)
+        self._controller.set_landmark_strength(value)
+
+    def _on_steps_slider(self, value: int) -> None:
+        self._spin_steps.blockSignals(True)
+        self._spin_steps.setValue(value)
+        self._spin_steps.blockSignals(False)
+        self._controller.set_steps(value)
+
+    def _on_steps_spin(self, value: int) -> None:
+        self._slider_steps.blockSignals(True)
+        self._slider_steps.setValue(value)
+        self._slider_steps.blockSignals(False)
+        self._controller.set_steps(value)
+
+    def _update_landmark_strength_enabled(self) -> None:
+        enabled = self._controller.has_landmarks
+        self._slider_landmark_strength.setEnabled(enabled)
+        self._spin_landmark_strength.setEnabled(enabled)
+
     def _refresh_landmark_tree(self) -> None:
         self._tree_landmarks.clear()
+        self._update_landmark_strength_enabled()
         for i, (src, tgt) in enumerate(self._controller.landmark_pairs):
             # Show short name (last component of DAG path)
             src_label = src.rsplit("|", 1)[-1]

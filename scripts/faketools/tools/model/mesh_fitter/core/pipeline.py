@@ -13,7 +13,7 @@ import trimesh
 
 from ..io.landmark_io import LandmarkData, load_landmarks
 from ..io.mesh_io import load_mesh, mesh_info
-from .algorithms import FittingParams, fit_mesh, surface_landmarks_to_positions
+from .algorithms import FittingParams, fit_mesh, generate_schedule, surface_landmarks_to_positions
 from .postprocessing import multi_stage_snap, taubin_smooth
 from .preprocessing import align_centroids, auto_align, normalize_scale
 from .symmetry import SymmetryMethod, build_symmetry_table, symmetrize_vertices
@@ -44,6 +44,11 @@ class PipelineConfig:
     symmetry_method: str = "position"
     symmetry_threshold: float = 0.001
     symmetry_center_indices: list[int] | None = None
+
+    # Advanced fitting overrides (None = use preset schedule)
+    advanced_stiffness: float | None = None  # 0.01–0.20
+    advanced_landmark_strength: float | None = None  # 0.0–1.0
+    advanced_steps: int | None = None  # 3–10
 
     # Exclusion
     exclusion_mask_path: str | None = None
@@ -148,26 +153,48 @@ def run_pipeline_from_meshes(
     logger.info("[3/4] Fitting (nricp_amberg)...")
     t_fit = time.perf_counter()
 
-    fit_params = FittingParams(schedule=config.schedule)
+    has_lm = bool(landmarks and config.use_landmarks and landmarks.count > 0)
+    use_advanced = any(
+        v is not None
+        for v in (
+            config.advanced_stiffness,
+            config.advanced_landmark_strength,
+            config.advanced_steps,
+        )
+    )
 
-    if landmarks and config.use_landmarks and landmarks.count > 0:
+    if use_advanced:
+        schedule = generate_schedule(
+            initial_stiffness=config.advanced_stiffness if config.advanced_stiffness is not None else 0.10,
+            landmark_strength=config.advanced_landmark_strength if config.advanced_landmark_strength is not None else 1.0,
+            num_steps=config.advanced_steps if config.advanced_steps is not None else 5,
+            has_landmarks=has_lm,
+        )
+        fit_params = FittingParams(schedule=schedule)
+        logger.info("Schedule: custom (advanced), %d steps", len(schedule))
+    else:
+        fit_params = FittingParams(schedule=config.schedule)
+
+    if has_lm:
         if landmarks.is_surface_mode:
             fit_params.source_landmark_triangles = np.array(landmarks.source_triangle_indices)
             fit_params.source_landmark_barycentrics = np.array(landmarks.source_barycentric_coords)
         else:
             fit_params.source_landmarks = landmarks.source_vertex_indices
         fit_params.target_positions = np.array(landmarks.target_positions)
-        schedule_name = config.schedule if isinstance(config.schedule, str) else "custom"
-        # Always use with_landmarks schedule when landmarks are present.
-        # Other schedules (e.g. aggressive) have landmark weights too high
-        # relative to stiffness, causing extreme deformation and OOM in
-        # trimesh's closest_point.
-        if schedule_name != "custom":
-            fit_params.schedule = "with_landmarks"
-        logger.info("Schedule: %s, %d landmarks", fit_params.schedule, landmarks.count)
+        if not use_advanced:
+            schedule_name = config.schedule if isinstance(config.schedule, str) else "custom"
+            # Always use with_landmarks schedule when landmarks are present.
+            # Other schedules (e.g. aggressive) have landmark weights too high
+            # relative to stiffness, causing extreme deformation and OOM in
+            # trimesh's closest_point.
+            if schedule_name != "custom":
+                fit_params.schedule = "with_landmarks"
+        logger.info("Schedule: %s, %d landmarks", fit_params.schedule if isinstance(fit_params.schedule, str) else "custom", landmarks.count)
     else:
-        schedule_name = config.schedule if isinstance(config.schedule, str) else "custom"
-        logger.info("Schedule: %s, no landmarks", schedule_name)
+        if not use_advanced:
+            schedule_name = config.schedule if isinstance(config.schedule, str) else "custom"
+            logger.info("Schedule: %s, no landmarks", schedule_name)
 
     fitted = fit_mesh(source, target, fit_params)
 

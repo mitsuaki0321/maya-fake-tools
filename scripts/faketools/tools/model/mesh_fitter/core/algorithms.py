@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from logging import getLogger
+import math
 
 import numpy as np
 import trimesh
@@ -48,6 +49,53 @@ SCHEDULES: dict[str, list[list[float]]] = {
         [0.002, 0, 0.0, 5],
     ],
 }
+
+
+def generate_schedule(
+    initial_stiffness: float = 0.10,
+    landmark_strength: float = 1.0,
+    num_steps: int = 5,
+    has_landmarks: bool = False,
+) -> list[list[float]]:
+    """Generate a custom stiffness schedule.
+
+    Args:
+        initial_stiffness: Starting stiffness value (decays to 0.002).
+        landmark_strength: Multiplier for landmark weights (0.0–1.0).
+        num_steps: Number of schedule steps (>= 2).
+        has_landmarks: Whether landmarks are present.
+
+    Returns:
+        List of steps [stiffness, landmark_weight, normal_weight, max_iterations].
+    """
+    num_steps = max(2, num_steps)
+    final_stiffness = 0.002
+    steps: list[list[float]] = []
+
+    for i in range(num_steps):
+        # Stiffness: exponential decay from initial_stiffness to 0.002
+        t = i / max(num_steps - 1, 1)
+        stiffness = initial_stiffness * (final_stiffness / initial_stiffness) ** t
+
+        # Landmark weight: linear decay, final step = 0
+        if has_landmarks and i < num_steps - 1:
+            lm_weight = 50.0 * landmark_strength * (1 - i / max(num_steps - 1, 1))
+        else:
+            lm_weight = 0.0
+
+        # Normal weight: first 60% of steps use 0.5, rest use 0.0
+        cutoff = math.ceil(num_steps * 0.6)
+        normal_weight = 0.5 if i < cutoff else 0.0
+
+        # Max iterations: with landmarks → fewer per step; without → more
+        if has_landmarks:
+            max_iter = 3.0 if i < 2 else 5.0
+        else:
+            max_iter = 15.0 if i < 2 else 10.0
+
+        steps.append([stiffness, lm_weight, normal_weight, max_iter])
+
+    return steps
 
 
 @dataclass

@@ -140,6 +140,12 @@ class MeshFitController:
         self._symmetry_method: str = "position"
         self._duplicate_source: bool = True
 
+        # Advanced fitting settings
+        self._stiffness: float = 0.10
+        self._landmark_strength: float = 1.0
+        self._steps: int = 7
+        self._use_advanced: bool = False
+
         # Fitting state
         self._is_fitting: bool = False
         self._last_result: PipelineResult | None = None
@@ -218,6 +224,26 @@ class MeshFitController:
     def landmark_pairs(self) -> list[tuple[str, str]]:
         return list(self._landmark_pairs)
 
+    @property
+    def stiffness(self) -> float:
+        return self._stiffness
+
+    @property
+    def landmark_strength(self) -> float:
+        return self._landmark_strength
+
+    @property
+    def steps(self) -> int:
+        return self._steps
+
+    @property
+    def use_advanced(self) -> bool:
+        return self._use_advanced
+
+    @property
+    def has_landmarks(self) -> bool:
+        return len(self._landmark_pairs) > 0
+
     # ------------------------------------------------------------------
     # Mesh selection
     # ------------------------------------------------------------------
@@ -273,6 +299,32 @@ class MeshFitController:
 
     def set_duplicate_source(self, enabled: bool) -> None:
         self._duplicate_source = enabled
+
+    def set_stiffness(self, value: float) -> None:
+        self._stiffness = max(0.01, min(0.20, value))
+        self._use_advanced = True
+
+    def set_landmark_strength(self, value: float) -> None:
+        self._landmark_strength = max(0.0, min(1.0, value))
+        self._use_advanced = True
+
+    def set_steps(self, value: int) -> None:
+        self._steps = max(3, min(10, value))
+        self._use_advanced = True
+
+    def schedule_defaults(self) -> tuple[float, int]:
+        """Return (initial_stiffness, num_steps) for the current preset schedule."""
+        schedule = SCHEDULES.get(self._schedule)
+        if schedule is None:
+            return (0.10, 5)
+        return (schedule[0][0], len(schedule))
+
+    def reset_advanced(self) -> None:
+        stiffness, steps = self.schedule_defaults()
+        self._stiffness = stiffness
+        self._landmark_strength = 1.0
+        self._steps = steps
+        self._use_advanced = False
 
     # ------------------------------------------------------------------
     # Landmarks (transform-based pairs)
@@ -331,7 +383,7 @@ class MeshFitController:
     # ------------------------------------------------------------------
 
     def build_config(self) -> PipelineConfig:
-        return PipelineConfig(
+        cfg = PipelineConfig(
             schedule=self._schedule,
             auto_align_enabled=self._auto_align,
             smooth_result=self._smooth_result,
@@ -340,6 +392,11 @@ class MeshFitController:
             symmetrize=self._symmetrize,
             symmetry_method=self._symmetry_method,
         )
+        if self._use_advanced:
+            cfg.advanced_stiffness = self._stiffness
+            cfg.advanced_landmark_strength = self._landmark_strength
+            cfg.advanced_steps = self._steps
+        return cfg
 
     def build_fitting_request(self) -> FittingRequest | None:
         if not self.can_run:
