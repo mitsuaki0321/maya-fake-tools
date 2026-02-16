@@ -189,7 +189,7 @@ def run_pipeline_from_meshes(
             # relative to stiffness, causing extreme deformation and OOM in
             # trimesh's closest_point.
             if schedule_name != "custom":
-                fit_params.schedule = "with_landmarks"
+                fit_params.schedule = "landmark"
         logger.info("Schedule: %s, %d landmarks", fit_params.schedule if isinstance(fit_params.schedule, str) else "custom", landmarks.count)
     else:
         if not use_advanced:

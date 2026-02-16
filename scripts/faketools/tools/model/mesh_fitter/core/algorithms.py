@@ -15,14 +15,14 @@ logger = getLogger(__name__)
 # Predefined stiffness schedules
 # Each step: [stiffness(alpha), landmark_weight, normal_weight, max_iterations]
 SCHEDULES: dict[str, list[list[float]]] = {
-    "default": [
+    "standard": [
         [0.1, 0, 0.5, 15],
         [0.05, 0, 0.5, 15],
         [0.02, 0, 0.5, 10],
         [0.01, 0, 0.0, 10],
         [0.005, 0, 0.0, 10],
     ],
-    "aggressive": [
+    "strong": [
         [0.05, 50, 0.5, 10],
         [0.03, 20, 0.5, 10],
         [0.02, 10, 0.5, 10],
@@ -39,7 +39,7 @@ SCHEDULES: dict[str, list[list[float]]] = {
         [0.005, 0, 0.0, 10],
         [0.002, 0, 0.0, 10],
     ],
-    "with_landmarks": [
+    "landmark": [
         [0.1, 50, 0.5, 3],
         [0.05, 20, 0.5, 3],
         [0.03, 10, 0.5, 5],
@@ -102,7 +102,7 @@ def generate_schedule(
 class FittingParams:
     """Parameters for nricp_amberg fitting."""
 
-    schedule: str | list[list[float]] = "default"
+    schedule: str | list[list[float]] = "standard"
     source_landmarks: list[int] | None = None
     target_positions: np.ndarray | None = None
     use_faces: bool = True  # Whether to use face normals for correspondence

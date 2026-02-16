@@ -124,11 +124,11 @@ class MainWindow(BaseMainWindow):
         # -- Pre tab --
         tab_pre = QWidget()
         lay_pre = QVBoxLayout(tab_pre)
-        self._chk_auto_align = QCheckBox("Auto-align (Procrustes + ICP)")
+        self._chk_auto_align = QCheckBox("Auto-align source to target")
         self._chk_auto_align.setChecked(True)
         lay_pre.addWidget(self._chk_auto_align)
         lay_pre.addStretch()
-        self._tab_settings.addTab(tab_pre, "Pre")
+        self._tab_settings.addTab(tab_pre, "Align")
 
         # -- Main tab --
         tab_main = QWidget()
@@ -137,8 +137,8 @@ class MainWindow(BaseMainWindow):
         row_sched = QHBoxLayout()
         row_sched.addWidget(QLabel("Schedule:"))
         self._combo_schedule = QComboBox()
-        self._combo_schedule.addItems(list(SCHEDULES.keys()))
-        self._combo_schedule.setCurrentText("gentle")
+        self._combo_schedule.addItems([k.title() for k in SCHEDULES])
+        self._combo_schedule.setCurrentText("Gentle")
         row_sched.addWidget(self._combo_schedule, 1)
         lay_main.addLayout(row_sched)
 
@@ -149,7 +149,7 @@ class MainWindow(BaseMainWindow):
         lay_adv = QVBoxLayout(self._grp_advanced)
 
         # Compute uniform label width for Advanced sliders
-        adv_labels = ["Stiffness:", "Landmark Strength:", "Steps:"]
+        adv_labels = ["Stiffness:", "Landmark Influence:", "Quality Steps:"]
         fm_adv = self.fontMetrics()
         adv_label_width = max(fm_adv.horizontalAdvance(t) for t in adv_labels)
         adv_label_width += fm_adv.horizontalAdvance("M")
@@ -175,7 +175,7 @@ class MainWindow(BaseMainWindow):
 
         # Landmark Strength: 0.0–1.0, step 0.05, default 1.0
         row_lm = QHBoxLayout()
-        lbl_lm = QLabel("Landmark Strength:")
+        lbl_lm = QLabel("Landmark Influence:")
         lbl_lm.setFixedWidth(adv_label_width)
         lbl_lm.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         row_lm.addWidget(lbl_lm)
@@ -194,7 +194,7 @@ class MainWindow(BaseMainWindow):
 
         # Steps: 3–10, default from schedule
         row_steps = QHBoxLayout()
-        lbl_steps = QLabel("Steps:")
+        lbl_steps = QLabel("Quality Steps:")
         lbl_steps.setFixedWidth(adv_label_width)
         lbl_steps.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         row_steps.addWidget(lbl_steps)
@@ -212,39 +212,55 @@ class MainWindow(BaseMainWindow):
         self._update_landmark_strength_enabled()
         lay_main.addWidget(self._grp_advanced)
         lay_main.addStretch()
-        self._tab_settings.addTab(tab_main, "Main")
+        self._tab_settings.addTab(tab_main, "Fitting")
 
         # -- Post tab --
         tab_post = QWidget()
         lay_post = QVBoxLayout(tab_post)
 
-        row_smooth = QHBoxLayout()
-        self._chk_smooth = QCheckBox("Smooth result (Taubin)  iterations:")
-        row_smooth.addWidget(self._chk_smooth)
+        # Checkbox indicator width for indenting child widgets
+        indicator_indent = self._chk_auto_align.style().pixelMetric(
+            self._chk_auto_align.style().PixelMetric.PM_IndicatorWidth
+        ) + self._chk_auto_align.style().pixelMetric(self._chk_auto_align.style().PixelMetric.PM_CheckBoxLabelSpacing)
+
+        self._chk_smooth = QCheckBox("Smooth Result")
+        lay_post.addWidget(self._chk_smooth)
         self._spin_smooth = QSpinBox()
         self._spin_smooth.setRange(1, 50)
         self._spin_smooth.setValue(3)
         self._spin_smooth.setEnabled(False)
-        row_smooth.addWidget(self._spin_smooth)
-        lay_post.addLayout(row_smooth)
+        self._spin_smooth.setSuffix(" times")
+        row_spin_smooth = QHBoxLayout()
+        row_spin_smooth.setContentsMargins(indicator_indent, 0, 0, 0)
+        row_spin_smooth.addWidget(self._spin_smooth)
+        row_spin_smooth.addStretch()
+        lay_post.addLayout(row_spin_smooth)
 
-        self._chk_snap = QCheckBox("Snap to target (progressive)")
+        self._chk_snap = QCheckBox("Snap to Target Surface")
         lay_post.addWidget(self._chk_snap)
 
-        row_sym = QHBoxLayout()
         self._chk_symmetrize = QCheckBox("Symmetrize")
-        row_sym.addWidget(self._chk_symmetrize)
+        lay_post.addWidget(self._chk_symmetrize)
+        self._SYM_DISPLAY = {"By Position": "position", "By Topology": "topology"}
         self._combo_sym_method = QComboBox()
-        self._combo_sym_method.addItems(["position", "topology"])
+        self._combo_sym_method.addItems(list(self._SYM_DISPLAY.keys()))
         self._combo_sym_method.setEnabled(False)
-        row_sym.addWidget(self._combo_sym_method)
-        lay_post.addLayout(row_sym)
+        row_combo_sym = QHBoxLayout()
+        row_combo_sym.setContentsMargins(indicator_indent, 0, 0, 0)
+        row_combo_sym.addWidget(self._combo_sym_method)
+        row_combo_sym.addStretch()
+        lay_post.addLayout(row_combo_sym)
 
-        self._chk_duplicate = QCheckBox("Duplicate source (preserve original)")
+        # Unify width of spin_smooth and combo_sym_method
+        post_box_width = max(self._spin_smooth.sizeHint().width(), self._combo_sym_method.sizeHint().width())
+        self._spin_smooth.setFixedWidth(post_box_width)
+        self._combo_sym_method.setFixedWidth(post_box_width)
+
+        self._chk_duplicate = QCheckBox("Keep Original Mesh")
         self._chk_duplicate.setChecked(True)
         lay_post.addWidget(self._chk_duplicate)
         lay_post.addStretch()
-        self._tab_settings.addTab(tab_post, "Post")
+        self._tab_settings.addTab(tab_post, "Finish")
 
         self.central_layout.addWidget(grp_settings)
 
@@ -296,7 +312,7 @@ class MainWindow(BaseMainWindow):
         self._spin_smooth.valueChanged.connect(self._controller.set_smooth_iterations)
         self._chk_snap.toggled.connect(self._controller.set_snap_to_target)
         self._chk_symmetrize.toggled.connect(self._on_symmetrize_toggled)
-        self._combo_sym_method.currentTextChanged.connect(self._controller.set_symmetry_method)
+        self._combo_sym_method.currentTextChanged.connect(self._on_symmetrize_method_changed)
         self._chk_duplicate.toggled.connect(self._controller.set_duplicate_source)
 
         self._grp_advanced.toggled.connect(self._on_advanced_toggled)
@@ -356,10 +372,13 @@ class MainWindow(BaseMainWindow):
         self._controller.set_symmetrize(checked)
         self._combo_sym_method.setEnabled(checked)
 
+    def _on_symmetrize_method_changed(self, text: str) -> None:
+        internal = self._SYM_DISPLAY.get(text, "position")
+        self._controller.set_symmetry_method(internal)
+
     def _on_schedule_changed(self, text: str) -> None:
-        self._controller.set_schedule(text)
-        if not self._grp_advanced.isChecked():
-            self._sync_advanced_to_schedule()
+        self._controller.set_schedule(text.lower())
+        self._sync_advanced_to_schedule()
 
     def _sync_advanced_to_schedule(self) -> None:
         """Update advanced sliders/spinboxes to match the current schedule defaults."""
@@ -520,13 +539,13 @@ class MainWindow(BaseMainWindow):
 
     def _collect_settings(self) -> dict:
         return {
-            "schedule": self._combo_schedule.currentText(),
+            "schedule": self._combo_schedule.currentText().lower(),
             "auto_align": self._chk_auto_align.isChecked(),
             "smooth": self._chk_smooth.isChecked(),
             "smooth_iterations": self._spin_smooth.value(),
             "snap": self._chk_snap.isChecked(),
             "symmetrize": self._chk_symmetrize.isChecked(),
-            "symmetry_method": self._combo_sym_method.currentText(),
+            "symmetry_method": self._SYM_DISPLAY.get(self._combo_sym_method.currentText(), "position"),
             "duplicate": self._chk_duplicate.isChecked(),
             "window_geometry": {
                 "size": [self.width(), self.height()],
@@ -535,13 +554,16 @@ class MainWindow(BaseMainWindow):
         }
 
     def _apply_settings(self, settings_data: dict) -> None:
-        self._combo_schedule.setCurrentText(settings_data.get("schedule", "gentle"))
+        self._combo_schedule.setCurrentText(settings_data.get("schedule", "gentle").title())
         self._chk_auto_align.setChecked(settings_data.get("auto_align", True))
         self._chk_smooth.setChecked(settings_data.get("smooth", False))
         self._spin_smooth.setValue(settings_data.get("smooth_iterations", 3))
         self._chk_snap.setChecked(settings_data.get("snap", False))
         self._chk_symmetrize.setChecked(settings_data.get("symmetrize", False))
-        self._combo_sym_method.setCurrentText(settings_data.get("symmetry_method", "position"))
+        # Convert internal symmetry method to display name
+        sym_internal = settings_data.get("symmetry_method", "position")
+        sym_display = next((k for k, v in self._SYM_DISPLAY.items() if v == sym_internal), "By Position")
+        self._combo_sym_method.setCurrentText(sym_display)
         self._chk_duplicate.setChecked(settings_data.get("duplicate", True))
 
         if "window_geometry" in settings_data:
