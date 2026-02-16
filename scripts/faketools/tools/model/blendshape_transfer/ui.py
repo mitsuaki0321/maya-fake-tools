@@ -9,7 +9,7 @@ from __future__ import annotations
 from logging import getLogger
 
 from ....lib_ui.base_window import BaseMainWindow
-from ....lib_ui.maya_decorator import error_handler
+from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
@@ -26,8 +26,6 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ..mesh_fitter.bs_controller import BSTransferController
-from ..mesh_fitter.bs_worker import TransferWorker
-from ..mesh_fitter.controller import SceneMeshListProvider
 from ..mesh_fitter.mesh_bridge import OpenMayaMeshAPI
 
 logger = getLogger(__name__)
@@ -49,11 +47,8 @@ class MainWindow(BaseMainWindow):
 
         self.settings = ToolSettingsManager(tool_name="blendshape_transfer", category="model")
 
-        self._controller = BSTransferController(
-            api=OpenMayaMeshAPI(),
-            mesh_list_provider=SceneMeshListProvider(),
-        )
-        self._worker: TransferWorker | None = None
+        self._api = OpenMayaMeshAPI()
+        self._controller = BSTransferController(api=self._api)
 
         self._build_ui()
         self._connect_signals()
@@ -104,44 +99,18 @@ class MainWindow(BaseMainWindow):
 
         # --- Blend Shapes ---
         grp_bs = QGroupBox("Blend Shapes")
-        lay_bs_outer = QVBoxLayout(grp_bs)
+        lay_bs = QVBoxLayout(grp_bs)
 
         row_bs_header = QHBoxLayout()
         row_bs_header.addStretch()
         self._btn_refresh = QPushButton("Refresh")
+        self._btn_refresh.setEnabled(False)
         row_bs_header.addWidget(self._btn_refresh)
-        lay_bs_outer.addLayout(row_bs_header)
+        lay_bs.addLayout(row_bs_header)
 
-        lay_bs = QHBoxLayout()
-        lay_bs_outer.addLayout(lay_bs)
-
-        # Available list
-        lay_avail = QVBoxLayout()
-        lay_avail.addWidget(QLabel("Available:"))
-        self._list_available = QListWidget()
-        self._list_available.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        lay_avail.addWidget(self._list_available)
-        lay_bs.addLayout(lay_avail, 1)
-
-        # Arrow buttons
-        lay_arrows = QVBoxLayout()
-        lay_arrows.addStretch()
-        self._btn_add = QPushButton(">>")
-        self._btn_add.setFixedWidth(40)
-        lay_arrows.addWidget(self._btn_add)
-        self._btn_remove = QPushButton("<<")
-        self._btn_remove.setFixedWidth(40)
-        lay_arrows.addWidget(self._btn_remove)
-        lay_arrows.addStretch()
-        lay_bs.addLayout(lay_arrows)
-
-        # Selected list
-        lay_sel = QVBoxLayout()
-        lay_sel.addWidget(QLabel("Selected:"))
-        self._list_selected = QListWidget()
-        self._list_selected.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        lay_sel.addWidget(self._list_selected)
-        lay_bs.addLayout(lay_sel, 1)
+        self._list_bs = QListWidget()
+        self._list_bs.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        lay_bs.addWidget(self._list_bs)
 
         self.central_layout.addWidget(grp_bs)
 
@@ -164,17 +133,13 @@ class MainWindow(BaseMainWindow):
         self._btn_set_fitted.clicked.connect(self._on_set_fitted)
         self._btn_refresh.clicked.connect(self._on_refresh)
 
-        self._btn_add.clicked.connect(self._on_add_bs)
-        self._btn_remove.clicked.connect(self._on_remove_bs)
+        self._list_bs.itemSelectionChanged.connect(self._on_bs_selection_changed)
 
         self._btn_transfer.clicked.connect(self._on_transfer)
 
     def _connect_controller_callbacks(self) -> None:
         self._controller.on_status = self._status_bar.showMessage
         self._controller.on_error = self._on_error
-        self._controller.on_progress = self._on_progress
-        self._controller.on_transfer_state_changed = self._set_transfer_ui
-        self._controller.on_transfer_complete = self._on_complete
 
     # ------------------------------------------------------------------
     # Slots
@@ -190,8 +155,8 @@ class MainWindow(BaseMainWindow):
         self._line_source.setText(name.rsplit("|", 1)[-1])
         self._line_source.setToolTip(name)
         self._controller.set_source_base(name)
-        self._refresh_bs_lists()
-        self._update_transfer_button()
+        self._btn_refresh.setEnabled(True)
+        self._on_refresh()
 
     def _on_set_fitted(self) -> None:
         from ..mesh_fitter.scene_ops import get_selected_mesh
@@ -203,41 +168,30 @@ class MainWindow(BaseMainWindow):
         self._line_fitted.setText(name.rsplit("|", 1)[-1])
         self._line_fitted.setToolTip(name)
         self._controller.set_fitted(name)
-        self._refresh_bs_lists()
         self._update_transfer_button()
 
     def _on_refresh(self) -> None:
-        self._controller.refresh_mesh_list()
+        self._controller.refresh_bs_list()
         self._refresh_bs_lists()
         self._update_transfer_button()
 
-    def _on_add_bs(self) -> None:
-        for item in self._list_available.selectedItems():
-            self._controller.add_bs(item.text())
-        self._refresh_bs_lists()
-        self._update_transfer_button()
-
-    def _on_remove_bs(self) -> None:
-        for item in self._list_selected.selectedItems():
-            self._controller.remove_bs(item.text())
-        self._refresh_bs_lists()
+    def _on_bs_selection_changed(self) -> None:
+        names = [item.text() for item in self._list_bs.selectedItems()]
+        self._controller.set_selected_bs(names)
         self._update_transfer_button()
 
     def _on_error(self, msg: str) -> None:
         logger.error(msg, exc_info=True)
         self._status_bar.showMessage(f"Error: {msg}")
 
-    def _on_progress(self, current: int, total: int, name: str) -> None:
-        self._status_bar.showMessage(f"Transferring {current}/{total}: {name}")
-
-    def _on_complete(self, count: int, skipped: list) -> None:
-        if skipped:
-            names = ", ".join(s[0] for s in skipped)
-            logger.warning("Skipped: %s", names)
-
     @error_handler
+    @undo_chunk("BS Transfer")
     def _on_transfer(self) -> None:
-        # Validate before building request
+        import maya.cmds as cmds  # type: ignore[import]
+
+        from ..mesh_fitter.scene_ops import duplicate_mesh
+        from ..mesh_fitter.transfer.delta_transfer import transfer_batch
+
         error = self._controller.validate_selection()
         if error is not None:
             self._on_error(error)
@@ -247,37 +201,58 @@ class MainWindow(BaseMainWindow):
         if request is None:
             return
 
-        self._controller.on_transfer_started()
-        self._worker = TransferWorker(request, parent=self)
-        self._worker.finished.connect(self._controller.on_transfer_finished)
-        self._worker.error.connect(self._controller.on_transfer_error)
-        self._worker.progress.connect(self._controller.on_progress)
-        self._worker.start()
+        # Read vertex data
+        source_base_verts = self._api.get_vertex_positions(request.source_base_name)
+        fitted_verts = self._api.get_vertex_positions(request.fitted_name)
+
+        bs_list = []
+        for name in request.bs_names:
+            verts = self._api.get_vertex_positions(name)
+            bs_list.append((name, verts))
+
+        # Compute deltas
+        batch_result = transfer_batch(source_base_verts, fitted_verts, bs_list)
+
+        # Write results to scene
+        created = []
+        for tr in batch_result.results:
+            new_name = f"{tr.name}_transfer"
+            dup_name = duplicate_mesh(request.fitted_name, new_name)
+            self._api.set_vertex_positions(dup_name, tr.vertices)
+            cmds.setAttr(f"{dup_name}.visibility", True)
+            created.append(dup_name)
+        if created:
+            cmds.select(created, replace=True)
+
+        if batch_result.skipped:
+            names = ", ".join(s[0] for s in batch_result.skipped)
+            logger.warning("Skipped: %s", names)
+
+        count = len(batch_result.results)
+        msg = f"Transfer complete: {count} blend shape{'s' if count != 1 else ''} created"
+        if batch_result.skipped:
+            msg += f", {len(batch_result.skipped)} skipped"
+        self._status_bar.showMessage(msg)
 
     def _refresh_bs_lists(self) -> None:
-        """Update the Available and Selected list widgets from controller."""
-        self._list_available.clear()
+        """Update the blend shape list widget from controller."""
+        previously_selected = set(self._controller.selected_bs_names)
+        self._list_bs.blockSignals(True)
+        self._list_bs.clear()
         for name in self._controller.available_bs_names:
-            self._list_available.addItem(name)
-
-        self._list_selected.clear()
-        for name in self._controller.selected_bs_names:
-            self._list_selected.addItem(name)
+            self._list_bs.addItem(name)
+        # Restore previous selection
+        for i in range(self._list_bs.count()):
+            item = self._list_bs.item(i)
+            if item.text() in previously_selected:
+                item.setSelected(True)
+        self._list_bs.blockSignals(False)
+        # Sync controller with actual selection state
+        names = [item.text() for item in self._list_bs.selectedItems()]
+        self._controller.set_selected_bs(names)
 
     def _update_transfer_button(self) -> None:
         self._btn_transfer.setEnabled(self._controller.can_run)
-
-    def _set_transfer_ui(self, running: bool) -> None:
-        """Enable/disable interactive elements during transfer."""
-        enabled = not running
-        self._btn_transfer.setEnabled(enabled and self._controller.can_run)
-        self._btn_set_source.setEnabled(enabled)
-        self._btn_set_fitted.setEnabled(enabled)
-        self._btn_refresh.setEnabled(enabled)
-        self._btn_add.setEnabled(enabled)
-        self._btn_remove.setEnabled(enabled)
-
-        self._btn_transfer.setText("Transferring..." if running else "Transfer Blend Shapes")
 
     # ------------------------------------------------------------------
     # Settings
@@ -313,8 +288,6 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def closeEvent(self, event) -> None:
-        if self._worker is not None and self._worker.isRunning():
-            self._worker.wait(5000)
         self._save_settings()
         super().closeEvent(event)
 

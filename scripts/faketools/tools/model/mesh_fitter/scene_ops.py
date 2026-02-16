@@ -91,6 +91,32 @@ def select_nodes(names: list[str]) -> None:
     cmds.select(names, replace=True)
 
 
+def get_blendshape_weights(mesh_name: str) -> list[str]:
+    """Return weight alias names from the first blendShape node on the mesh.
+
+    Args:
+        mesh_name: Transform name of the mesh.
+
+    Returns:
+        List of weight alias names (e.g. ["smile", "frown"]).
+        Empty list if no blendShape node is found.
+    """
+    import maya.cmds as cmds
+
+    shapes = cmds.listRelatives(mesh_name, shapes=True, type="mesh", fullPath=True) or []
+    if not shapes:
+        return []
+
+    history = cmds.listHistory(shapes[0], pruneDagObjects=True) or []
+    bs_nodes = cmds.ls(history, type="blendShape") or []
+    if not bs_nodes:
+        return []
+
+    aliases = cmds.aliasAttr(bs_nodes[0], query=True) or []
+    # aliasAttr returns alternating [alias, attr, alias, attr, ...]
+    return [aliases[i] for i in range(0, len(aliases), 2)]
+
+
 def duplicate_mesh(mesh_name: str, new_name: str) -> str:
     """Duplicate a mesh in the Maya scene.
 

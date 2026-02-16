@@ -9,7 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from .controller import MeshListProvider
 from .mesh_bridge import MayaMeshAPI
 
 # ---------------------------------------------------------------------------
@@ -46,18 +45,13 @@ class BSTransferController:
         on_transfer_state_changed(running)       — enable/disable UI
     """
 
-    def __init__(
-        self,
-        api: MayaMeshAPI,
-        mesh_list_provider: MeshListProvider | None = None,
-    ) -> None:
+    def __init__(self, api: MayaMeshAPI) -> None:
         self._api = api
-        self._mesh_list_provider = mesh_list_provider
 
         # Mesh state
-        self._mesh_names: list[str] = []
         self._source_base_name: str = ""
         self._fitted_name: str = ""
+        self._bs_weight_names: list[str] = []
         self._selected_bs_names: list[str] = []
 
         # Transfer state
@@ -87,8 +81,13 @@ class BSTransferController:
         return list(self._selected_bs_names)
 
     @property
-    def mesh_names(self) -> list[str]:
-        return list(self._mesh_names)
+    def available_bs_names(self) -> list[str]:
+        """BlendShape weight names from the source base mesh."""
+        return list(self._bs_weight_names)
+
+    @property
+    def has_source(self) -> bool:
+        return bool(self._source_base_name)
 
     @property
     def is_transferring(self) -> bool:
@@ -104,57 +103,44 @@ class BSTransferController:
             and not self._is_transferring
         )
 
-    @property
-    def available_bs_names(self) -> list[str]:
-        """Mesh names excluding source_base, fitted, and already selected."""
-        exclude = {self._source_base_name, self._fitted_name}
-        exclude.update(self._selected_bs_names)
-        return [n for n in self._mesh_names if n not in exclude]
-
     # ------------------------------------------------------------------
     # Mesh selection
     # ------------------------------------------------------------------
-
-    def refresh_mesh_list(self) -> list[str]:
-        """Fetch mesh list from provider and return it."""
-        if self._mesh_list_provider is not None:
-            self._mesh_names = self._mesh_list_provider.list_meshes()
-        else:
-            self._mesh_names = []
-        self.on_status(f"{len(self._mesh_names)} meshes found")
-        return list(self._mesh_names)
 
     def set_source_base(self, name: str) -> None:
         if name == self._source_base_name:
             return
         self._source_base_name = name
-        # Remove from selected BS if it was there
-        if name in self._selected_bs_names:
-            self._selected_bs_names.remove(name)
+        self._bs_weight_names = []
+        self._selected_bs_names = []
         self.on_status(f"Source base: {name}")
 
     def set_fitted(self, name: str) -> None:
         if name == self._fitted_name:
             return
         self._fitted_name = name
-        # Remove from selected BS if it was there
-        if name in self._selected_bs_names:
-            self._selected_bs_names.remove(name)
         self.on_status(f"Fitted: {name}")
 
     # ------------------------------------------------------------------
-    # Blend shape selection
+    # Blend shape list
     # ------------------------------------------------------------------
 
-    def add_bs(self, name: str) -> None:
-        """Add a blend shape name to the selected list."""
-        if name not in self._selected_bs_names:
-            self._selected_bs_names.append(name)
+    def refresh_bs_list(self) -> list[str]:
+        """Fetch blendShape weight names from the source base mesh.
 
-    def remove_bs(self, name: str) -> None:
-        """Remove a blend shape name from the selected list."""
-        if name in self._selected_bs_names:
-            self._selected_bs_names.remove(name)
+        Returns:
+            List of weight names. Empty if no source base is set.
+        """
+        if not self._source_base_name:
+            self._bs_weight_names = []
+            return []
+
+        from .scene_ops import get_blendshape_weights
+
+        self._bs_weight_names = get_blendshape_weights(self._source_base_name)
+        count = len(self._bs_weight_names)
+        self.on_status(f"{count} blend shape weight{'s' if count != 1 else ''} found")
+        return list(self._bs_weight_names)
 
     def set_selected_bs(self, names: list[str]) -> None:
         """Replace the entire selected BS list."""
