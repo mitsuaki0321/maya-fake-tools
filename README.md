@@ -65,6 +65,8 @@ These tools will not launch if the required libraries are not installed.
 | Snapshot Capture | Common | Pillow |
 
 
+These libraries can be installed from the **Dependency Installer** included in FakeTools (FakeTools > Common > Dependency Installer), or by running `install_dependencies.bat` at the repository root without launching Maya.
+
 Some tools can be enhanced with optional libraries:
 
 | Tool | Category | Optional Libraries | Enhancement |

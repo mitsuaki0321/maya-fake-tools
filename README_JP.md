@@ -65,6 +65,8 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 | Snapshot Capture | Common | Pillow |
 
 
+これらのライブラリは、FakeTools に同梱されている **Dependency Installer**（FakeTools > Common > Dependency Installer）からインストールできます。Maya を起動せずにリポジトリルートの `install_dependencies.bat` を実行してインストールすることも可能です。
+
 また一部のツールで追加ライブラリをインストールすると機能が向上するものがあります。
 
 | ツール | カテゴリ | 追加ライブラリ | 効果 |
