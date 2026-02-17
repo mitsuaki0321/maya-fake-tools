@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlendShape Transfer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="メッシュ間でブレンドシェイプをデルタベースで転送するツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>モデル</li>
+                        <li class="active">BlendShape Transfer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a></li>
+                    <li><a href="#meshes-セクション"
+                    id="toc-meshes-セクション">Meshes
+                    セクション</a></li>
+                    <li><a href="#blend-shapes-セクション"
+                    id="toc-blend-shapes-セクション">Blend Shapes
+                    セクション</a></li>
+                    <li><a href="#転送の仕組み"
+                    id="toc-転送の仕組み">転送の仕組み</a></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">BlendShape Transfer</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>ソースベースメッシュのブレンドシェイプを、フィッティング済みメッシュに転送するツールです。<br />
+                デルタ（頂点の差分）ベースの転送を行い、同一トポロジーのメッシュ間で動作します。</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.model.blendshape_transfer.ui
+faketools.tools.model.blendshape_transfer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/blendshape_transfer/image001.png"
+                alt="image001" /></p>
+                <h2 id="使用方法">使用方法</h2>
+                <ol type="1">
+                <li><p>ブレンドシェイプを持つ元のメッシュをビューポートで選択し、<code>SET</code>
+                ボタンで <strong>Source Base</strong>
+                に登録します。<br />
+                登録すると、ブレンドシェイプのリストが自動的に読み込まれます。</p>
+                <p>[Source Base を設定した状態の画像]</p></li>
+                <li><p>転送先のメッシュ（Mesh Fitter
+                でフィッティング済みのメッシュなど）を選択し、<code>SET</code>
+                ボタンで <strong>Fitted</strong> に登録します。</p></li>
+                <li><p>ブレンドシェイプリストから転送したいブレンドシェイプを選択します（複数選択可能）。</p>
+                <p>[ブレンドシェイプを選択した状態の画像]</p></li>
+                <li><p><code>Transfer Blend Shapes</code>
+                ボタンを押して転送を実行します。</p></li>
+                <li><p>転送結果のメッシュが自動的に作成・選択されます。作成されるメッシュの名前は
+                <code>{元の名前}_transfer</code> になります。</p></li>
+                </ol>
+                <h2 id="meshes-セクション">Meshes セクション</h2>
+                <p>[Meshes セクションの画像]</p>
+                <ul>
+                <li><strong>Source Base</strong>:
+                ブレンドシェイプを持つ元のメッシュ。ビューポートでメッシュを選択し
+                <code>SET</code> ボタンで登録します。</li>
+                <li><strong>Fitted</strong>: 転送先のメッシュ。同様に
+                <code>SET</code> ボタンで登録します。</li>
+                </ul>
+                <h2 id="blend-shapes-セクション">Blend Shapes
+                セクション</h2>
+                <p>[Blend Shapes セクションの画像]</p>
+                <p>Source Base
+                メッシュに接続されているブレンドシェイプの一覧が表示されます。</p>
+                <ul>
+                <li><strong>Refresh ボタン</strong>:
+                ブレンドシェイプリストを再読み込みします。Source Base
+                が登録されている場合のみ有効です。</li>
+                <li><strong>リスト</strong>:
+                利用可能なブレンドシェイプが表示されます。<code>Shift</code>
+                キーや <code>Ctrl</code>
+                キーを使って複数選択が可能です。</li>
+                </ul>
+                <h2 id="転送の仕組み">転送の仕組み</h2>
+                <p>転送はデルタベースの方式で行われます。</p>
+                <ol type="1">
+                <li>ブレンドシェイプの頂点位置からソースベースの頂点位置を引いて、差分（デルタ）を計算します。</li>
+                <li>計算されたデルタをフィッティング済みメッシュの頂点位置に加算します。</li>
+                <li>結果をフィッティング済みメッシュの複製に適用します。</li>
+                </ol>
+                <p>※
+                ソースベースメッシュとフィッティング済みメッシュのトポロジー（頂点数）が一致している必要があります。</p>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>ソースベースとフィッティング済みメッシュの頂点数が異なる場合、転送はスキップされます。</li>
+                <li>転送できなかったブレンドシェイプがある場合、ステータスバーにスキップ数が表示されます。</li>
+                <li><code>Transfer Blend Shapes</code>
+                ボタンは、両方のメッシュが登録され、かつブレンドシェイプが選択されている場合のみ有効になります。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

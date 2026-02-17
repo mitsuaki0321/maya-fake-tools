@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependency Installer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Install optional Python packages required by FakeTools tools">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/dependency_installer.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li class="active">Dependency Installer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#target-packages"
+                    id="toc-target-packages">Target Packages</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a>
+                    <ul>
+                    <li><a href="#from-maya" id="toc-from-maya">From
+                    Maya</a></li>
+                    <li><a href="#standalone"
+                    id="toc-standalone">Standalone</a></li>
+                    </ul></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#basic-procedure"
+                    id="toc-basic-procedure">Basic Procedure</a></li>
+                    </ul></li>
+                    <li><a href="#maya-version-section"
+                    id="toc-maya-version-section">Maya Version
+                    Section</a></li>
+                    <li><a href="#install-location-section"
+                    id="toc-install-location-section">Install Location
+                    Section</a></li>
+                    <li><a href="#proxy-settings-section"
+                    id="toc-proxy-settings-section">Proxy Settings
+                    Section</a></li>
+                    <li><a href="#package-table"
+                    id="toc-package-table">Package Table</a></li>
+                    <li><a href="#buttons"
+                    id="toc-buttons">Buttons</a></li>
+                    <li><a href="#custom-path-auto-loading"
+                    id="toc-custom-path-auto-loading">Custom Path
+                    Auto-Loading</a>
+                    <ul>
+                    <li><a href="#method-1-.env-file-recommended"
+                    id="toc-method-1-.env-file-recommended">Method 1:
+                    .env File (Recommended)</a></li>
+                    <li><a
+                    href="#method-2-manual-addition-via-usersetup.py"
+                    id="toc-method-2-manual-addition-via-usersetup.py">Method
+                    2: Manual Addition via userSetup.py</a></li>
+                    </ul></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Dependency Installer</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Dependency Installer is a tool for installing
+                optional Python packages required by some FakeTools
+                tools directly from within Maya.<br />
+                Instead of running <code>mayapy -m pip install</code> on
+                the command line, you can check package status and
+                install packages through a GUI.</p>
+                <p>Two launch methods are supported:</p>
+                <table>
+                <colgroup>
+                <col style="width: 38%" />
+                <col style="width: 61%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Method</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Maya menu</td>
+                <td>FakeTools &gt; Common &gt; Dependency Installer</td>
+                </tr>
+                <tr>
+                <td>Standalone</td>
+                <td>Double-click <code>install_dependencies.bat</code>
+                at the repository root</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="target-packages">Target Packages</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>Package</th>
+                <th>Used By</th>
+                <th>Required</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>numpy</td>
+                <td>Bounding Box Creator, Mesh Retargeter</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>scipy</td>
+                <td>Bounding Box Creator, Mesh Retargeter</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>trimesh</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>rtree</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>fast-simplification</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>Pillow</td>
+                <td>Snapshot Capture</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>aggdraw</td>
+                <td>Snapshot Capture</td>
+                <td>No</td>
+                </tr>
+                <tr>
+                <td>mss</td>
+                <td>Snapshot Capture</td>
+                <td>No</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <h3 id="from-maya">From Maya</h3>
+                <p>Launch the tool from the dedicated menu or using the
+                following command:</p>
+                <pre class="python"><code>import faketools.tools.common.dependency_installer.ui
+faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/dependency_installer/image001.png"
+                alt="image" /></p>
+                <h3 id="standalone">Standalone</h3>
+                <p>Double-click <code>install_dependencies.bat</code> at
+                the repository root.<br />
+                It automatically detects installed Maya versions
+                (2023-2026) and launches the UI using the latest
+                available mayapy.</p>
+                <h2 id="usage">Usage</h2>
+                <h3 id="basic-procedure">Basic Procedure</h3>
+                <ol type="1">
+                <li><p>Select the target Maya version from the
+                <strong>Maya Version</strong> dropdown. When launched
+                from Maya, the current version is selected by
+                default.</p></li>
+                <li><p>Choose the <strong>Install Location</strong>
+                (Standard or Custom path).</p></li>
+                <li><p>Review the package status in the package
+                table.</p></li>
+                <li><p>Check the packages you want to install, or click
+                <code>Select All Missing</code> to select all missing
+                packages at once.</p></li>
+                <li><p>Click <code>Install Selected</code> to run the
+                installation.</p></li>
+                <li><p>After completion, the table is automatically
+                refreshed.</p></li>
+                </ol>
+                <h2 id="maya-version-section">Maya Version Section</h2>
+                <p>Select the target Maya version. Versions are detected
+                by scanning
+                <code>C:\Program Files\Autodesk\Maya*</code>.</p>
+                <ul>
+                <li><strong>When launched from Maya</strong>: The
+                currently running Maya version is selected by default.
+                Package status is checked within the current Maya
+                process, so paths added by <code>userSetup.py</code> are
+                reflected.</li>
+                <li><strong>When a different version is selected /
+                Standalone</strong>: Package status is checked by
+                running the target version’s mayapy via subprocess.</li>
+                </ul>
+                <h2 id="install-location-section">Install Location
+                Section</h2>
+                <ul>
+                <li><strong>Standard (Maya site-packages)</strong>:
+                Installs to Maya’s default site-packages. May require
+                administrator privileges.</li>
+                <li><strong>Custom path</strong>: Installs to a custom
+                directory. The actual install path is
+                <code>&lt;specified_path&gt;/&lt;maya_version&gt;/site-packages/</code>.</li>
+                </ul>
+                <p>When using a custom path, you need to configure a
+                <code>.env</code> file so that FakeTools automatically
+                loads packages from that path on startup (see
+                below).</p>
+                <h2 id="proxy-settings-section">Proxy Settings
+                Section</h2>
+                <p>Use this section when installing behind a proxy.
+                Enable the checkbox and enter HTTP_PROXY / HTTPS_PROXY
+                values.</p>
+                <ul>
+                <li>Example:
+                <code>http://user:pass@proxy:3128</code></li>
+                <li>Proxy settings are <strong>session-only</strong> and
+                are not saved.</li>
+                </ul>
+                <h2 id="package-table">Package Table</h2>
+                <p>Package status is displayed in 4 columns:</p>
+                <table>
+                <colgroup>
+                <col style="width: 38%" />
+                <col style="width: 61%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Column</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Package</td>
+                <td>Package name. A checkbox is shown for uninstalled
+                packages</td>
+                </tr>
+                <tr>
+                <td>Status</td>
+                <td>Installed (green) / Missing (required: red,
+                optional: orange)</td>
+                </tr>
+                <tr>
+                <td>Version</td>
+                <td>Version number if installed</td>
+                </tr>
+                <tr>
+                <td>Required By</td>
+                <td>Tools that depend on this package</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="buttons">Buttons</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>Button</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Select All Missing</td>
+                <td>Select all uninstalled packages at once</td>
+                </tr>
+                <tr>
+                <td>Install Selected</td>
+                <td>Install the checked packages</td>
+                </tr>
+                <tr>
+                <td>Refresh</td>
+                <td>Re-check package status</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="custom-path-auto-loading">Custom Path
+                Auto-Loading</h2>
+                <p>To load packages installed to a custom path when Maya
+                starts, add the install path to Python’s search path
+                using one of the following methods.</p>
+                <h3 id="method-1-.env-file-recommended">Method 1: .env
+                File (Recommended)</h3>
+                <p>Create a <code>.env</code> file at the repository
+                root. Copy <code>.env.example</code> to
+                <code>.env</code> and set the path:</p>
+                <pre><code>FAKETOOLS_SITE_PACKAGES=D:/my_packages</code></pre>
+                <p>When FakeTools initializes,
+                <code>&lt;FAKETOOLS_SITE_PACKAGES&gt;/&lt;maya_version&gt;/site-packages/</code>
+                is automatically added to <code>sys.path</code>.</p>
+                <blockquote>
+                <p><strong>Note</strong>: The <code>.env</code> file is
+                included in <code>.gitignore</code> and will not be
+                committed to the repository.</p>
+                </blockquote>
+                <h3
+                id="method-2-manual-addition-via-usersetup.py">Method 2:
+                Manual Addition via userSetup.py</h3>
+                <p>You can also add the install path directly to
+                <code>sys.path</code> in Maya’s
+                <code>userSetup.py</code>.</p>
+                <pre class="python"><code>import sys
+sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
+                <blockquote>
+                <p><strong>Note</strong>: <code>userSetup.py</code> is
+                only executed when Maya starts, so paths added this way
+                are not reflected in standalone mode’s status
+                display.</p>
+                </blockquote>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Standard installation may require administrator
+                privileges. Run Maya as administrator if needed.</li>
+                <li>If pip is not available, run
+                <code>mayapy -m ensurepip</code> first.</li>
+                <li>When launched standalone, paths added by
+                <code>userSetup.py</code> are not detected. Paths
+                specified via <code>FAKETOOLS_SITE_PACKAGES</code> in
+                <code>.env</code> are detected.</li>
+                <li>If installation fails, pip error messages are
+                displayed in the status label and logged.</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

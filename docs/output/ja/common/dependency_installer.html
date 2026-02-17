@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependency Installer - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="FakeTools のオプション依存パッケージをインストールするツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/dependency_installer.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li class="active">Dependency Installer</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#対象パッケージ"
+                    id="toc-対象パッケージ">対象パッケージ</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a>
+                    <ul>
+                    <li><a href="#maya-内" id="toc-maya-内">Maya
+                    内</a></li>
+                    <li><a href="#スタンドアロン"
+                    id="toc-スタンドアロン">スタンドアロン</a></li>
+                    </ul></li>
+                    <li><a href="#使用方法"
+                    id="toc-使用方法">使用方法</a>
+                    <ul>
+                    <li><a href="#基本的な手順"
+                    id="toc-基本的な手順">基本的な手順</a></li>
+                    </ul></li>
+                    <li><a href="#maya-version-セクション"
+                    id="toc-maya-version-セクション">Maya Version
+                    セクション</a></li>
+                    <li><a href="#install-location-セクション"
+                    id="toc-install-location-セクション">Install
+                    Location セクション</a></li>
+                    <li><a href="#proxy-settings-セクション"
+                    id="toc-proxy-settings-セクション">Proxy Settings
+                    セクション</a></li>
+                    <li><a href="#パッケージテーブル"
+                    id="toc-パッケージテーブル">パッケージテーブル</a></li>
+                    <li><a href="#ボタン"
+                    id="toc-ボタン">ボタン</a></li>
+                    <li><a href="#カスタムパスの自動読み込み"
+                    id="toc-カスタムパスの自動読み込み">カスタムパスの自動読み込み</a>
+                    <ul>
+                    <li><a href="#方法-1-.env-ファイル推奨"
+                    id="toc-方法-1-.env-ファイル推奨">方法 1: .env
+                    ファイル（推奨）</a></li>
+                    <li><a href="#方法-2-usersetup.py-で手動追加"
+                    id="toc-方法-2-usersetup.py-で手動追加">方法 2:
+                    userSetup.py で手動追加</a></li>
+                    </ul></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Dependency Installer</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Dependency Installer は、FakeTools
+                の一部ツールが必要とするオプションの Python パッケージを
+                Maya
+                内から簡単にインストールするためのツールです。<br />
+                コマンドラインで <code>mayapy -m pip install</code>
+                を実行する代わりに、GUI
+                でパッケージの状態確認とインストールを行えます。</p>
+                <p>以下の起動方法に対応しています。</p>
+                <table>
+                <colgroup>
+                <col style="width: 62%" />
+                <col style="width: 37%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>起動方法</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Maya 内メニュー</td>
+                <td>FakeTools &gt; Common &gt; Dependency Installer</td>
+                </tr>
+                <tr>
+                <td>スタンドアロン</td>
+                <td>リポジトリルートの
+                <code>install_dependencies.bat</code>
+                をダブルクリック</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="対象パッケージ">対象パッケージ</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>パッケージ</th>
+                <th>使用ツール</th>
+                <th>必須</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>numpy</td>
+                <td>Bounding Box Creator, Mesh Retargeter</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>scipy</td>
+                <td>Bounding Box Creator, Mesh Retargeter</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>trimesh</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>rtree</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>fast-simplification</td>
+                <td>Mesh Fitter, BlendShape Transfer</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>Pillow</td>
+                <td>Snapshot Capture</td>
+                <td>Yes</td>
+                </tr>
+                <tr>
+                <td>aggdraw</td>
+                <td>Snapshot Capture</td>
+                <td>No</td>
+                </tr>
+                <tr>
+                <td>mss</td>
+                <td>Snapshot Capture</td>
+                <td>No</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="起動方法">起動方法</h2>
+                <h3 id="maya-内">Maya 内</h3>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.dependency_installer.ui
+faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/dependency_installer/image001.png"
+                alt="image" /></p>
+                <h3 id="スタンドアロン">スタンドアロン</h3>
+                <p>リポジトリルートにある
+                <code>install_dependencies.bat</code>
+                をダブルクリックします。<br />
+                インストール済みの
+                Maya（2023〜2026）を自動検出し、最新バージョンの mayapy
+                で UI を起動します。</p>
+                <h2 id="使用方法">使用方法</h2>
+                <h3 id="基本的な手順">基本的な手順</h3>
+                <ol type="1">
+                <li><p><strong>Maya Version</strong> で対象の Maya
+                バージョンを選択します。Maya
+                内起動時は現在のバージョンがデフォルトで選択されます。</p></li>
+                <li><p><strong>Install Location</strong>
+                でインストール先を選択します。</p></li>
+                <li><p>パッケージテーブルで各パッケージの状態を確認します。</p></li>
+                <li><p>未インストールのパッケージにチェックを入れるか、<code>Select All Missing</code>
+                ボタンで一括選択します。</p></li>
+                <li><p><code>Install Selected</code>
+                ボタンを押してインストールを実行します。</p></li>
+                <li><p>完了後、テーブルが自動的にリフレッシュされます。</p></li>
+                </ol>
+                <h2 id="maya-version-セクション">Maya Version
+                セクション</h2>
+                <p>対象の Maya
+                バージョンを選択します。<code>C:\Program Files\Autodesk\Maya*</code>
+                をスキャンして検出されたバージョンが一覧表示されます。</p>
+                <ul>
+                <li><strong>Maya 内起動時</strong>: 現在実行中の Maya
+                バージョンがデフォルトで選択されます。パッケージのステータスは現在の
+                Maya プロセスで確認されるため、<code>userSetup.py</code>
+                で追加したパスも反映されます。</li>
+                <li><strong>異なるバージョン選択時 /
+                スタンドアロン</strong>: 対象バージョンの mayapy を
+                subprocess で起動してパッケージの状態を確認します。</li>
+                </ul>
+                <h2 id="install-location-セクション">Install Location
+                セクション</h2>
+                <ul>
+                <li><strong>Standard (Maya site-packages)</strong>: Maya
+                標準の site-packages
+                にインストールします。管理者権限が必要な場合があります。</li>
+                <li><strong>Custom path</strong>:
+                任意のディレクトリにインストールします。実際のインストール先は
+                <code>&lt;指定パス&gt;/&lt;Mayaバージョン&gt;/site-packages/</code>
+                になります。</li>
+                </ul>
+                <p>カスタムパスを使用する場合、FakeTools
+                起動時にそのパスを自動的に読み込むように
+                <code>.env</code> ファイルの設定が必要です（後述）。</p>
+                <h2 id="proxy-settings-セクション">Proxy Settings
+                セクション</h2>
+                <p>プロキシ環境でインストールする場合に使用します。チェックボックスで有効化し、HTTP_PROXY
+                / HTTPS_PROXY を入力します。</p>
+                <ul>
+                <li>入力例:
+                <code>http://user:pass@proxy:3128</code></li>
+                <li>プロキシ設定は<strong>セッション限り</strong>で保存されません。</li>
+                </ul>
+                <h2 id="パッケージテーブル">パッケージテーブル</h2>
+                <p>各パッケージの状態が 4 列で表示されます。</p>
+                <table>
+                <colgroup>
+                <col style="width: 40%" />
+                <col style="width: 60%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>列</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Package</td>
+                <td>パッケージ名。未インストールの場合はチェックボックスが表示されます</td>
+                </tr>
+                <tr>
+                <td>Status</td>
+                <td>Installed（緑）/ Missing（必須: 赤、オプション:
+                オレンジ）</td>
+                </tr>
+                <tr>
+                <td>Version</td>
+                <td>インストール済みの場合、バージョン番号</td>
+                </tr>
+                <tr>
+                <td>Required By</td>
+                <td>このパッケージを必要とするツール</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="ボタン">ボタン</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>ボタン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Select All Missing</td>
+                <td>未インストールのパッケージを一括選択</td>
+                </tr>
+                <tr>
+                <td>Install Selected</td>
+                <td>チェックされたパッケージをインストール</td>
+                </tr>
+                <tr>
+                <td>Refresh</td>
+                <td>パッケージ状態を再取得</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2
+                id="カスタムパスの自動読み込み">カスタムパスの自動読み込み</h2>
+                <p>カスタムパスにインストールしたパッケージを Maya
+                起動時に読み込むには、以下のいずれかの方法でインストール先のパスを
+                Python の検索パスに追加してください。</p>
+                <h3 id="方法-1-.env-ファイル推奨">方法 1: .env
+                ファイル（推奨）</h3>
+                <p>リポジトリルートに <code>.env</code>
+                ファイルを作成します。<code>.env.example</code>
+                をコピーして <code>.env</code>
+                にリネームし、パスを設定してください。</p>
+                <pre><code>FAKETOOLS_SITE_PACKAGES=D:/my_packages</code></pre>
+                <p>設定後、FakeTools パッケージの初期化時に
+                <code>&lt;FAKETOOLS_SITE_PACKAGES&gt;/&lt;Mayaバージョン&gt;/site-packages/</code>
+                が <code>sys.path</code> に自動追加されます。</p>
+                <blockquote>
+                <p><strong>Note</strong>: <code>.env</code> ファイルは
+                <code>.gitignore</code>
+                に含まれているため、リポジトリにはコミットされません。</p>
+                </blockquote>
+                <h3 id="方法-2-usersetup.py-で手動追加">方法 2:
+                userSetup.py で手動追加</h3>
+                <p>Maya の <code>userSetup.py</code>
+                でインストール先のパスを <code>sys.path</code>
+                に直接追加することもできます。</p>
+                <pre class="python"><code>import sys
+sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
+                <blockquote>
+                <p><strong>Note</strong>: <code>userSetup.py</code> は
+                Maya
+                起動時にのみ実行されるため、スタンドアロンモードのステータス表示には反映されません。</p>
+                </blockquote>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>Standard
+                インストールでは管理者権限が必要な場合があります。Maya
+                を管理者として実行してください。</li>
+                <li>pip
+                が利用できない場合は、<code>mayapy -m ensurepip</code>
+                を実行してください。</li>
+                <li>スタンドアロン起動時は <code>userSetup.py</code>
+                で追加されたパスは検知されません。<code>.env</code> の
+                <code>FAKETOOLS_SITE_PACKAGES</code>
+                で指定されたパスは検知されます。</li>
+                <li>インストールに失敗した場合、pip
+                のエラーメッセージがステータスラベルとログに表示されます。</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
