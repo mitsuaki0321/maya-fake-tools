@@ -60,6 +60,8 @@ These tools will not launch if the required libraries are not installed.
 | Bounding Box Creator | Model | numpy, scipy |
 | Retarget Mesh | Model | numpy, scipy |
 | Retarget Transforms | Model | numpy |
+| Mesh Fitter | Model | trimesh, rtree, fast-simplification |
+| BlendShape Transfer | Model | trimesh, rtree, fast-simplification |
 | Snapshot Capture | Common | Pillow |
 
 
