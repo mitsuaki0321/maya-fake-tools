@@ -9,6 +9,18 @@ from __future__ import annotations
 from logging import getLogger
 from pathlib import Path
 
+import maya.cmds as cmds  # type: ignore[import]
+
+# Check trimesh/rtree/fast-simplification availability
+try:
+    import fast_simplification  # noqa: F401
+    import rtree  # noqa: F401
+    import trimesh  # noqa: F401
+
+    TRIMESH_AVAILABLE = True
+except ImportError:
+    TRIMESH_AVAILABLE = False
+
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
@@ -36,10 +48,12 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.widgets import HorizontalSeparator, IconButton, IconButtonStyle
-from . import command
-from .controller import MeshFitController, SceneMeshListProvider
-from .core.algorithms import SCHEDULES
-from .mesh_bridge import OpenMayaMeshAPI
+
+if TRIMESH_AVAILABLE:
+    from . import command
+    from .controller import MeshFitController, SceneMeshListProvider
+    from .core.algorithms import SCHEDULES
+    from .mesh_bridge import OpenMayaMeshAPI
 
 logger = getLogger(__name__)
 
@@ -622,9 +636,15 @@ def show_ui():
     """Show the Mesh Fitter UI.
 
     Returns:
-        MainWindow: The main window instance
+        MainWindow: The main window instance, or None if trimesh is not available.
     """
     global _instance
+
+    if not TRIMESH_AVAILABLE:
+        cmds.error(
+            "Mesh Fitter requires trimesh, rtree and fast-simplification. Please install: mayapy -m pip install trimesh rtree fast-simplification"
+        )
+        return None
 
     if _instance is not None:
         try:
