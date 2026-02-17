@@ -35,7 +35,7 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
-from ....lib_ui.widgets import IconButton, IconButtonStyle
+from ....lib_ui.widgets import HorizontalSeparator, IconButton, IconButtonStyle
 from . import command
 from .controller import MeshFitController, SceneMeshListProvider
 from .core.algorithms import SCHEDULES
@@ -209,6 +209,25 @@ class MainWindow(BaseMainWindow):
         row_steps.addWidget(self._spin_steps)
         lay_adv.addLayout(row_steps)
 
+        lay_adv.addWidget(HorizontalSeparator())
+
+        # Simplify Target: checkbox + ratio spinbox
+        row_decimate = QHBoxLayout()
+        self._chk_decimate = QCheckBox("Simplify Target")
+        row_decimate.addWidget(self._chk_decimate)
+        row_decimate.addStretch()
+        lbl_ratio = QLabel("Ratio:")
+        row_decimate.addWidget(lbl_ratio)
+        self._spin_decimate = QDoubleSpinBox()
+        self._spin_decimate.setRange(0.05, 1.0)
+        self._spin_decimate.setSingleStep(0.05)
+        self._spin_decimate.setDecimals(2)
+        self._spin_decimate.setValue(0.25)
+        self._spin_decimate.setEnabled(False)
+        self._spin_decimate.setFixedWidth(60)
+        row_decimate.addWidget(self._spin_decimate)
+        lay_adv.addLayout(row_decimate)
+
         self._update_landmark_strength_enabled()
         lay_main.addWidget(self._grp_advanced)
         lay_main.addStretch()
@@ -322,6 +341,8 @@ class MainWindow(BaseMainWindow):
         self._spin_landmark_strength.valueChanged.connect(self._on_landmark_strength_spin)
         self._slider_steps.valueChanged.connect(self._on_steps_slider)
         self._spin_steps.valueChanged.connect(self._on_steps_spin)
+        self._chk_decimate.toggled.connect(self._on_decimate_toggled)
+        self._spin_decimate.valueChanged.connect(self._controller.set_decimate_ratio)
 
         self._btn_set_landmarks.clicked.connect(lambda: self._controller.set_landmarks_from_selection())
 
@@ -392,6 +413,10 @@ class MainWindow(BaseMainWindow):
         for w in (self._slider_stiffness, self._spin_stiffness, self._slider_steps, self._spin_steps):
             w.blockSignals(False)
 
+    def _on_decimate_toggled(self, checked: bool) -> None:
+        self._controller.set_decimate_target(checked)
+        self._spin_decimate.setEnabled(checked)
+
     def _on_advanced_toggled(self, checked: bool) -> None:
         if not checked:
             self._controller.reset_advanced()
@@ -403,6 +428,13 @@ class MainWindow(BaseMainWindow):
             self._spin_landmark_strength.setValue(1.0)
             for w in (self._slider_landmark_strength, self._spin_landmark_strength):
                 w.blockSignals(False)
+            self._chk_decimate.blockSignals(True)
+            self._chk_decimate.setChecked(False)
+            self._chk_decimate.blockSignals(False)
+            self._spin_decimate.blockSignals(True)
+            self._spin_decimate.setValue(0.25)
+            self._spin_decimate.setEnabled(False)
+            self._spin_decimate.blockSignals(False)
 
     def _on_stiffness_slider(self, value: int) -> None:
         fval = value / 100.0
@@ -547,6 +579,8 @@ class MainWindow(BaseMainWindow):
             "symmetrize": self._chk_symmetrize.isChecked(),
             "symmetry_method": self._SYM_DISPLAY.get(self._combo_sym_method.currentText(), "position"),
             "duplicate": self._chk_duplicate.isChecked(),
+            "decimate_target": self._chk_decimate.isChecked(),
+            "decimate_ratio": self._spin_decimate.value(),
             "window_geometry": {
                 "size": [self.width(), self.height()],
                 "position": [self.x(), self.y()],
@@ -565,6 +599,8 @@ class MainWindow(BaseMainWindow):
         sym_display = next((k for k, v in self._SYM_DISPLAY.items() if v == sym_internal), "By Position")
         self._combo_sym_method.setCurrentText(sym_display)
         self._chk_duplicate.setChecked(settings_data.get("duplicate", True))
+        self._chk_decimate.setChecked(settings_data.get("decimate_target", False))
+        self._spin_decimate.setValue(settings_data.get("decimate_ratio", 0.25))
 
         if "window_geometry" in settings_data:
             geo = settings_data["window_geometry"]

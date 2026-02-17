@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+from logging import getLogger
+
 import numpy as np
 from scipy.spatial import cKDTree
 import trimesh
+
+logger = getLogger(__name__)
 
 
 def compute_scale(mesh: trimesh.Trimesh) -> float:
@@ -153,6 +157,28 @@ def rigid_align_icp(
     aligned = source.copy()
     aligned.vertices = src_pts
     return aligned
+
+
+def decimate_target(target: trimesh.Trimesh, face_ratio: float) -> trimesh.Trimesh:
+    """Decimate target mesh using quadric decimation for faster fitting.
+
+    Args:
+        target: Target mesh to decimate.
+        face_ratio: Ratio of faces to keep (0.0–1.0).
+
+    Returns:
+        Decimated copy, or original if decimation would increase face count.
+    """
+    original_faces = len(target.faces)
+    desired = max(100, int(original_faces * face_ratio))
+
+    if desired >= original_faces:
+        logger.debug("Skipping decimation: desired %d >= original %d faces", desired, original_faces)
+        return target
+
+    decimated = target.simplify_quadric_decimation(face_count=desired)
+    logger.info("Decimated target: %d -> %d faces (ratio=%.2f)", original_faces, len(decimated.faces), face_ratio)
+    return decimated
 
 
 def auto_align(

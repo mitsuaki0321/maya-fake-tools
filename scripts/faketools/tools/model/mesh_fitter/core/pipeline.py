@@ -15,7 +15,7 @@ from ..io.landmark_io import LandmarkData, load_landmarks
 from ..io.mesh_io import load_mesh, mesh_info
 from .algorithms import FittingParams, fit_mesh, generate_schedule, surface_landmarks_to_positions
 from .postprocessing import multi_stage_snap, taubin_smooth
-from .preprocessing import align_centroids, auto_align, normalize_scale
+from .preprocessing import align_centroids, auto_align, decimate_target, normalize_scale
 from .symmetry import SymmetryMethod, build_symmetry_table, symmetrize_vertices
 
 logger = getLogger(__name__)
@@ -49,6 +49,9 @@ class PipelineConfig:
     advanced_stiffness: float | None = None  # 0.01–0.20
     advanced_landmark_strength: float | None = None  # 0.0–1.0
     advanced_steps: int | None = None  # 3–10
+
+    # Target decimation (fitting stage only)
+    target_decimate_ratio: float | None = None  # 0.05–1.0
 
     # Exclusion
     exclusion_mask_path: str | None = None
@@ -153,6 +156,10 @@ def run_pipeline_from_meshes(
     logger.info("[3/4] Fitting (nricp_amberg)...")
     t_fit = time.perf_counter()
 
+    target_for_fit = target
+    if config.target_decimate_ratio is not None:
+        target_for_fit = decimate_target(target, config.target_decimate_ratio)
+
     has_lm = bool(landmarks and config.use_landmarks and landmarks.count > 0)
     use_advanced = any(
         v is not None
@@ -196,7 +203,7 @@ def run_pipeline_from_meshes(
             schedule_name = config.schedule if isinstance(config.schedule, str) else "custom"
             logger.info("Schedule: %s, no landmarks", schedule_name)
 
-    fitted = fit_mesh(source, target, fit_params)
+    fitted = fit_mesh(source, target_for_fit, fit_params)
 
     result.elapsed_fit = time.perf_counter() - t_fit
     logger.info("Fitting completed in %.1fs", result.elapsed_fit)

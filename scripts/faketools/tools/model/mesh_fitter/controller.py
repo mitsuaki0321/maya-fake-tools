@@ -146,6 +146,10 @@ class MeshFitController:
         self._steps: int = 7
         self._use_advanced: bool = False
 
+        # Target decimation
+        self._decimate_target: bool = False
+        self._decimate_ratio: float = 0.25
+
         # Fitting state
         self._is_fitting: bool = False
         self._last_result: PipelineResult | None = None
@@ -241,6 +245,14 @@ class MeshFitController:
         return self._use_advanced
 
     @property
+    def decimate_target(self) -> bool:
+        return self._decimate_target
+
+    @property
+    def decimate_ratio(self) -> float:
+        return self._decimate_ratio
+
+    @property
     def has_landmarks(self) -> bool:
         return len(self._landmark_pairs) > 0
 
@@ -312,6 +324,12 @@ class MeshFitController:
         self._steps = max(3, min(10, value))
         self._use_advanced = True
 
+    def set_decimate_target(self, enabled: bool) -> None:
+        self._decimate_target = enabled
+
+    def set_decimate_ratio(self, value: float) -> None:
+        self._decimate_ratio = max(0.05, min(1.0, value))
+
     def schedule_defaults(self) -> tuple[float, int]:
         """Return (initial_stiffness, num_steps) for the current preset schedule."""
         schedule = SCHEDULES.get(self._schedule)
@@ -325,6 +343,8 @@ class MeshFitController:
         self._landmark_strength = 1.0
         self._steps = steps
         self._use_advanced = False
+        self._decimate_target = False
+        self._decimate_ratio = 0.25
 
     # ------------------------------------------------------------------
     # Landmarks (transform-based pairs)
@@ -391,6 +411,7 @@ class MeshFitController:
             snap_to_target=self._snap_to_target,
             symmetrize=self._symmetrize,
             symmetry_method=self._symmetry_method,
+            target_decimate_ratio=self._decimate_ratio if self._decimate_target else None,
         )
         if self._use_advanced:
             cfg.advanced_stiffness = self._stiffness
