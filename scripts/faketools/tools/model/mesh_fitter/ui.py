@@ -33,6 +33,7 @@ from ....lib_ui.qt_compat import (
     QGroupBox,
     QHBoxLayout,
     QHeaderView,
+    QIcon,
     QLabel,
     QLineEdit,
     QPushButton,
@@ -308,20 +309,24 @@ class MainWindow(BaseMainWindow):
         self._tree_landmarks.setSelectionMode(QAbstractItemView.SingleSelection)
         header = self._tree_landmarks.header()
         header.setStretchLastSection(False)
+        header.setSectionsClickable(True)
+        header.setHighlightSections(False)
+        header.setCursor(Qt.PointingHandCursor)
+        header.setStyleSheet(
+            "QHeaderView::section:hover { background: palette(midlight); }"
+            "QHeaderView::section:pressed { background: palette(mid); }"
+        )
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header_item = self._tree_landmarks.headerItem()
+        header_item.setIcon(2, QIcon(str(Path(_IMAGES_DIR) / "select.svg")))
+        header_item.setIcon(3, QIcon(str(Path(_IMAGES_DIR) / "remove.svg")))
         lay_lm.addWidget(self._tree_landmarks)
 
-        row_lm_btns = QHBoxLayout()
-        self._btn_select_sources = QPushButton("Select Sources")
-        self._btn_select_targets = QPushButton("Select Targets")
         self._btn_set_landmarks = QPushButton("Set")
-        row_lm_btns.addWidget(self._btn_select_sources)
-        row_lm_btns.addWidget(self._btn_select_targets)
-        row_lm_btns.addWidget(self._btn_set_landmarks)
-        lay_lm.addLayout(row_lm_btns)
+        lay_lm.addWidget(self._btn_set_landmarks)
 
         self.central_layout.addWidget(grp_lm, 1)
 
@@ -362,8 +367,7 @@ class MainWindow(BaseMainWindow):
         self._chk_decimate.toggled.connect(self._on_decimate_toggled)
         self._spin_decimate.valueChanged.connect(self._controller.set_decimate_ratio)
 
-        self._btn_select_sources.clicked.connect(self._controller.select_source_landmarks)
-        self._btn_select_targets.clicked.connect(self._controller.select_target_landmarks)
+        self._tree_landmarks.header().sectionClicked.connect(self._on_landmark_header_clicked)
         self._btn_set_landmarks.clicked.connect(lambda: self._controller.set_landmarks_from_selection())
 
         self._btn_run.clicked.connect(self._on_run)
@@ -518,6 +522,16 @@ class MainWindow(BaseMainWindow):
     def _on_remove_pair(self, index: int) -> None:
         self._controller.remove_landmark_pair(index)
 
+    def _on_landmark_header_clicked(self, index: int) -> None:
+        if index == 0:
+            self._controller.select_source_landmarks()
+        elif index == 1:
+            self._controller.select_target_landmarks()
+        elif index == 2:
+            self._controller.select_all_landmarks()
+        elif index == 3:
+            self._controller.clear_all_landmarks()
+
     @error_handler
     @undo_chunk("Mesh Fitter: Run")
     def _on_run(self) -> None:
@@ -564,8 +578,6 @@ class MainWindow(BaseMainWindow):
         self._btn_run.setEnabled(enabled)
         self._btn_set_source.setEnabled(enabled)
         self._btn_set_target.setEnabled(enabled)
-        self._btn_select_sources.setEnabled(enabled)
-        self._btn_select_targets.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
 

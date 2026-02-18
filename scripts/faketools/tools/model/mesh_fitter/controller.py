@@ -388,6 +388,13 @@ class MeshFitController:
             self._landmark_pairs.pop(index)
             self.on_landmarks_changed()
 
+    def clear_all_landmarks(self) -> None:
+        """Remove all landmark pairs."""
+        if self._landmark_pairs:
+            self._landmark_pairs.clear()
+            self.on_landmarks_changed()
+            self.on_status("All landmarks removed")
+
     def select_landmark_pair(self, index: int) -> None:
         """Select the source + target transforms of a pair in Maya."""
         from . import scene_ops
@@ -395,6 +402,14 @@ class MeshFitController:
         if 0 <= index < len(self._landmark_pairs):
             src, tgt = self._landmark_pairs[index]
             scene_ops.select_nodes([src, tgt])
+
+    def select_all_landmarks(self) -> None:
+        """Select all source and target landmark transforms in Maya."""
+        from . import scene_ops
+
+        if self._landmark_pairs:
+            all_nodes = [node for pair in self._landmark_pairs for node in pair]
+            scene_ops.select_nodes(all_nodes)
 
     def select_source_landmarks(self) -> None:
         """Select all source landmark transforms in Maya."""
