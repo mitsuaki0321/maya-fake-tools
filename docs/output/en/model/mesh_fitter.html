@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh Fitter - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Mesh fitting tool using Non-rigid ICP">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/model/mesh_fitter.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Model</li>
+                        <li class="active">Mesh Fitter</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#usage" id="toc-usage">Usage</a>
+                    <ul>
+                    <li><a href="#basic-steps"
+                    id="toc-basic-steps">Basic Steps</a></li>
+                    </ul></li>
+                    <li><a href="#meshes-section"
+                    id="toc-meshes-section">Meshes Section</a></li>
+                    <li><a href="#settings"
+                    id="toc-settings">Settings</a>
+                    <ul>
+                    <li><a href="#align-tab" id="toc-align-tab">Align
+                    Tab</a></li>
+                    <li><a href="#fitting-tab"
+                    id="toc-fitting-tab">Fitting Tab</a></li>
+                    <li><a href="#finish-tab" id="toc-finish-tab">Finish
+                    Tab</a></li>
+                    </ul></li>
+                    <li><a href="#landmarks-section"
+                    id="toc-landmarks-section">Landmarks Section</a>
+                    <ul>
+                    <li><a href="#registering-landmarks"
+                    id="toc-registering-landmarks">Registering
+                    Landmarks</a></li>
+                    <li><a href="#landmark-operations"
+                    id="toc-landmark-operations">Landmark
+                    Operations</a></li>
+                    </ul></li>
+                    <li><a href="#running-via-command"
+                    id="toc-running-via-command">Running via Command</a>
+                    <ul>
+                    <li><a href="#basic-usage"
+                    id="toc-basic-usage">Basic Usage</a></li>
+                    <li><a href="#running-with-custom-parameters"
+                    id="toc-running-with-custom-parameters">Running with
+                    Custom Parameters</a></li>
+                    <li><a href="#run_fitting-parameters"
+                    id="toc-run_fitting-parameters">run_fitting()
+                    Parameters</a></li>
+                    </ul></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    <li><a href="#third-party-assets-and-licensing"
+                    id="toc-third-party-assets-and-licensing">Third-Party
+                    Assets and Licensing</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Mesh Fitter</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>A tool that deforms a template mesh (source) to match
+                the shape of scan data (target). It uses the Non-rigid
+                ICP (nricp_amberg) algorithm and supports
+                landmark-guided fitting.</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or with the
+                following command.</p>
+                <pre class="python"><code>import faketools.tools.model.mesh_fitter.ui
+faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/model/mesh_fitter/image002.png"
+                alt="image" /></p>
+                <h2 id="usage">Usage</h2>
+                <h3 id="basic-steps">Basic Steps</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image001.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>Select a source mesh (template) in the Maya
+                viewport and press the <code>SET</code> button under
+                <code>Source</code> to register it as the
+                source.</p></li>
+                <li><p>Select a target mesh (scan data) and press the
+                <code>SET</code> button under <code>Target</code> to
+                register it as the target.</p></li>
+                <li><p>Adjust fitting parameters in the Settings tabs as
+                needed.</p></li>
+                <li><p>Press the <code>Run Fitting</code> button to
+                execute the fitting.</p></li>
+                <li><p>After fitting is complete, the resulting mesh is
+                automatically selected.</p></li>
+                </ol>
+                <h2 id="meshes-section">Meshes Section</h2>
+                <p>This section is used to register the source mesh and
+                target mesh.</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image003.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Source</strong>: The template mesh to be
+                deformed. Select a mesh in the viewport and press the
+                <code>SET</code> button to register it.</li>
+                <li><strong>Target</strong>: The scan mesh to fit to.
+                Register it the same way using the <code>SET</code>
+                button.</li>
+                </ul>
+                <h2 id="settings">Settings</h2>
+                <p>Configure fitting parameters across three tabs.</p>
+                <h3 id="align-tab">Align Tab</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image004.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Auto-align source to target</strong>:
+                <ul>
+                <li>Automatically aligns the source mesh to the target
+                before fitting. This includes centroid matching, scale
+                normalization, and ICP alignment.</li>
+                <li>Enabled by default.</li>
+                </ul></li>
+                </ul>
+                <p>Note: Although auto-align is available, it is
+                recommended to match the sizes as closely as possible
+                before fitting. Also, fitting is performed in the mesh’s
+                local space. Sizes must be matched with the mesh
+                transforms at zero.</p>
+                <h3 id="fitting-tab">Fitting Tab</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image005.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Schedule</strong>: Select a fitting
+                intensity preset.
+                <ul>
+                <li><code>Gentle</code>: Conservative fitting. Suitable
+                for preserving detail.</li>
+                <li><code>Standard</code>: Balanced fitting.</li>
+                <li><code>Strong</code>: Aggressive fitting. Landmark
+                weights are strongly reflected.</li>
+                <li><code>Landmark</code>: Landmark-driven fitting. Best
+                when landmarks are configured.</li>
+                </ul></li>
+                <li><strong>Simplify Target</strong>: When checked,
+                simplifies the target mesh using quadric decimation
+                before fitting.
+                <ul>
+                <li>Reducing the target polygon count improves fitting
+                computation speed.</li>
+                <li>Use the slider to specify the proportion of faces to
+                retain (0.05 ~ 1.0, default: 0.25). For example, 0.25
+                reduces the face count to 25% of the original.</li>
+                <li>The source mesh is not affected. The original target
+                mesh is also left unchanged.</li>
+                </ul></li>
+                </ul>
+                <h4 id="advanced">Advanced</h4>
+                <p>Check the <code>Advanced</code> group box to manually
+                adjust detailed parameters.<br />
+                Unchecking it resets the values to the defaults for the
+                currently selected schedule.</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image007.png"
+                alt="image" /></p>
+                <ul>
+                <li><strong>Stiffness</strong> (0.01 ~ 0.20): Controls
+                the rigidity of the mesh. Higher values suppress
+                deformation; lower values fit more tightly to the
+                target.</li>
+                <li><strong>Landmark Influence</strong> (0.0 ~ 1.0):
+                Controls the weight of landmark constraints. Only
+                effective when landmarks are registered.</li>
+                <li><strong>Quality Steps</strong> (3 ~ 10): Number of
+                fitting steps. Higher values increase accuracy but also
+                increase computation time.</li>
+                </ul>
+                <h3 id="finish-tab">Finish Tab</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image006.png"
+                alt="image" /></p>
+                <p>Configure post-processing after fitting.</p>
+                <ul>
+                <li><strong>Smooth Result</strong>: Applies smoothing to
+                the fitting result. When checked, you can specify the
+                number of iterations (1 ~ 50).</li>
+                <li><strong>Snap to Target Surface</strong>:
+                Progressively snaps the result mesh vertices to the
+                target surface.</li>
+                <li><strong>Symmetrize</strong>: Symmetrizes the mesh.
+                The following methods are available:
+                <ul>
+                <li><code>By Position</code>: Position-based
+                symmetrization</li>
+                <li><code>By Topology</code>: Topology-based
+                symmetrization that traces face connectivity</li>
+                <li><code>By Position</code> is faster to compute, but
+                may fail when vertices are at identical positions. In
+                that case, use <code>By Topology</code>.</li>
+                </ul></li>
+                <li><strong>Keep Original Mesh</strong>: When enabled,
+                duplicates the original source mesh before fitting. When
+                disabled, deforms the source mesh directly. Enabled by
+                default.</li>
+                </ul>
+                <h2 id="landmarks-section">Landmarks Section</h2>
+                <p>Landmarks specify corresponding points between the
+                source and target.<br />
+                Setting landmarks can improve both fitting accuracy and
+                processing speed.</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image008.png"
+                alt="image" /></p>
+                <h3 id="registering-landmarks">Registering
+                Landmarks</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image009.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>Select an <strong>even number</strong> of
+                transforms (such as locators) for landmarks in the Maya
+                viewport.<br />
+                The landmark transforms can be any transform node,
+                regardless of how they were created.</p></li>
+                <li><p>The first half of the selection order is treated
+                as source-side landmarks, and the second half as
+                target-side landmarks.<br />
+                Example: If you select 4 transforms, the first 2 become
+                source landmarks and the remaining 2 become target
+                landmarks.</p></li>
+                <li><p>Press the <code>Set</code> button to register the
+                landmarks.</p></li>
+                </ol>
+                <h3 id="landmark-operations">Landmark Operations</h3>
+                <p>Registered landmarks are displayed in a tree widget.
+                The following operations are available for each
+                pair.</p>
+                <p><strong>Header</strong></p>
+                <p>Click the header to execute commands for each
+                column.</p>
+                <ul>
+                <li><strong>Source</strong>: Selects all landmarks in
+                the Source column.</li>
+                <li><strong>Target</strong>: Selects all landmarks in
+                the Target column.</li>
+                <li><strong>Select icon</strong>: Selects all
+                landmarks.</li>
+                <li><strong>X icon</strong>: Clears the list.</li>
+                </ul>
+                <p><strong>List Items</strong></p>
+                <ul>
+                <li><strong>Select icon</strong>: Selects the landmark
+                pair in the viewport.</li>
+                <li><strong>Remove icon</strong>: Removes the landmark
+                pair.</li>
+                </ul>
+                <h2 id="running-via-command">Running via Command</h2>
+                <p>You can also run fitting from a script without using
+                the UI.</p>
+                <h3 id="basic-usage">Basic Usage</h3>
+                <pre class="python"><code>from faketools.tools.model.mesh_fitter import command
+
+result = command.run_fitting(&quot;source_mesh&quot;, &quot;target_mesh&quot;)
+print(result.result_mesh_name)  # &quot;source_mesh_fitted&quot;</code></pre>
+                <h3 id="running-with-custom-parameters">Running with
+                Custom Parameters</h3>
+                <pre class="python"><code>from faketools.tools.model.mesh_fitter import command
+from faketools.tools.model.mesh_fitter.core.pipeline import PipelineConfig
+
+config = PipelineConfig(
+    schedule=&quot;gentle&quot;,
+    auto_align_enabled=True,
+    smooth_result=True,
+    smooth_iterations=5,
+    snap_to_target=True,
+    target_decimate_ratio=0.25,
+    symmetrize=True,
+    symmetry_method=&quot;position&quot;,
+)
+
+result = command.run_fitting(
+    source_name=&quot;source_mesh&quot;,
+    target_name=&quot;target_mesh&quot;,
+    config=config,
+    duplicate_source=True,
+    result_name=&quot;fitted_result&quot;,
+)
+
+print(f&quot;Result: {result.result_mesh_name}&quot;)
+print(f&quot;Time: {result.elapsed_total:.1f}s&quot;)</code></pre>
+                <h3 id="run_fitting-parameters">run_fitting()
+                Parameters</h3>
+                <table>
+                <colgroup>
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Parameter</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>source_name</code></td>
+                <td>str</td>
+                <td>(required)</td>
+                <td>Transform name of the source mesh</td>
+                </tr>
+                <tr>
+                <td><code>target_name</code></td>
+                <td>str</td>
+                <td>(required)</td>
+                <td>Transform name of the target mesh</td>
+                </tr>
+                <tr>
+                <td><code>config</code></td>
+                <td>PipelineConfig | None</td>
+                <td>None</td>
+                <td>Pipeline configuration. Uses defaults if None</td>
+                </tr>
+                <tr>
+                <td><code>landmarks</code></td>
+                <td>LandmarkData | None</td>
+                <td>None</td>
+                <td>Landmark data</td>
+                </tr>
+                <tr>
+                <td><code>schedule</code></td>
+                <td>str | None</td>
+                <td>None</td>
+                <td>Override config.schedule with a schedule name</td>
+                </tr>
+                <tr>
+                <td><code>duplicate_source</code></td>
+                <td>bool</td>
+                <td>True</td>
+                <td>If True, duplicates the source before fitting</td>
+                </tr>
+                <tr>
+                <td><code>result_name</code></td>
+                <td>str | None</td>
+                <td>None</td>
+                <td>Name for the result mesh. Defaults to
+                <code>"{source_name}_fitted"</code></td>
+                </tr>
+                <tr>
+                <td><code>on_progress</code></td>
+                <td>Callable[[str], None] | None</td>
+                <td>None</td>
+                <td>Progress callback function</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Can be used even when the source mesh and target
+                mesh have different topologies.</li>
+                <li>Fitting is more likely to fail if the size
+                difference between source and target is too large.</li>
+                <li>During fitting, buttons are disabled and progress is
+                shown in the status bar.</li>
+                <li>Processing may take time for meshes with a high
+                vertex count.</li>
+                <li>Landmarks must be near the mesh surface (within 10%
+                of the bounding box diagonal).</li>
+                </ul>
+                <h2 id="third-party-assets-and-licensing">Third-Party
+                Assets and Licensing</h2>
+                <p>The screenshots in this document were generated using
+                models modified from third-party 3D meshes.</p>
+                <p>The original meshes were obtained from the following
+                sources:</p>
+                <ol type="1">
+                <li><p>3D Scan Store – Free Base Mesh
+                https://www.3dscanstore.com/blog/Free-Base-Mesh</p></li>
+                <li><p>FLAME (Faces Learned with an Articulated Model
+                and Expressions) https://flame.is.tue.mpg.de/</p></li>
+                </ol>
+                <p>The original data is not included in this
+                repository.</p>
+                <p>For the purpose of illustrating the behavior of the
+                ICP algorithm, the meshes were modified through
+                deformation and transformation, and only screenshots are
+                included.</p>
+                <p>Licensing:</p>
+                <ul>
+                <li><p>The Free Base Mesh is subject to 3D Scan Store’s
+                terms and conditions. For details, see:
+                https://www.3dscanstore.com/terms-and-conditions-licensing</p></li>
+                <li><p>The FLAME model is subject to the model license
+                defined by the Max Planck Institute for Intelligent
+                Systems.
+                https://flame.is.tue.mpg.de/modellicense.html</p></li>
+                </ul>
+                <p>The MIT license of this repository applies only to
+                the source code and tools, and does not apply to the
+                above third-party assets.</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

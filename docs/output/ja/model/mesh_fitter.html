@@ -16,6 +16,7 @@
                 <a href="../../index.html">FakeTools ヘルプ</a>
             </div>
             <nav class="language-switcher">
+                                <a href="../../en/model/mesh_fitter.html" class="lang-switch-btn">English</a>
                             </nav>
         </div>
     </header>
@@ -65,8 +66,22 @@
                     <li><a href="#ランドマークの操作"
                     id="toc-ランドマークの操作">ランドマークの操作</a></li>
                     </ul></li>
+                    <li><a href="#コマンドによる実行"
+                    id="toc-コマンドによる実行">コマンドによる実行</a>
+                    <ul>
+                    <li><a href="#基本的な実行"
+                    id="toc-基本的な実行">基本的な実行</a></li>
+                    <li><a href="#パラメータを指定して実行"
+                    id="toc-パラメータを指定して実行">パラメータを指定して実行</a></li>
+                    <li><a href="#run_fitting-のパラメータ"
+                    id="toc-run_fitting-のパラメータ">run_fitting()
+                    のパラメータ</a></li>
+                    </ul></li>
                     <li><a href="#注意事項"
                     id="toc-注意事項">注意事項</a></li>
+                    <li><a
+                    href="#サードパーティ製アセットおよびライセンスについて"
+                    id="toc-サードパーティ製アセットおよびライセンスについて">サードパーティ製アセットおよびライセンスについて</a></li>
                     </ul>
                 </div>
             </aside>
@@ -83,15 +98,20 @@
                 <pre class="python"><code>import faketools.tools.model.mesh_fitter.ui
 faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 <p><img
-                src="../../images/model/mesh_fitter/image001.png"
-                alt="image001" /></p>
+                src="../../images/model/mesh_fitter/image002.png"
+                alt="image" /></p>
                 <h2 id="使用方法">使用方法</h2>
                 <h3 id="基本的な手順">基本的な手順</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image001.png"
+                alt="image" /></p>
                 <ol type="1">
                 <li><p>Maya
-                のビューポートでソースメッシュ（テンプレート）を選択し、<code>SET</code>
+                のビューポートでソースメッシュ（テンプレート）を選択し、<code>Source</code>
+                の <code>SET</code>
                 ボタンを押してソースに登録します。</p></li>
-                <li><p>ターゲットメッシュ（スキャンデータ）を選択し、<code>SET</code>
+                <li><p>ターゲットメッシュ（スキャンデータ）を選択し、<code>Target</code>
+                の <code>SET</code>
                 ボタンを押してターゲットに登録します。</p></li>
                 <li><p>必要に応じて、Settings
                 タブでフィッティングのパラメータを調整します。</p></li>
@@ -99,10 +119,11 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 ボタンを押してフィッティングを実行します。</p></li>
                 <li><p>フィッティング完了後、結果のメッシュが自動的に選択されます。</p></li>
                 </ol>
-                <p>[フィッティング前後の比較画像]</p>
                 <h2 id="meshes-セクション">Meshes セクション</h2>
                 <p>ソースメッシュとターゲットメッシュを登録するセクションです。</p>
-                <p>[Meshes セクションの画像]</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image003.png"
+                alt="image" /></p>
                 <ul>
                 <li><strong>Source</strong>:
                 変形させるテンプレートメッシュ。ビューポートでメッシュを選択し
@@ -115,14 +136,25 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 <p>フィッティングのパラメータを 3
                 つのタブで設定します。</p>
                 <h3 id="align-タブ">Align タブ</h3>
-                <p>[Align タブの画像]</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image004.png"
+                alt="image" /></p>
                 <ul>
                 <li><strong>Auto-align source to target</strong>:
-                フィッティング前にソースメッシュを自動でターゲットに位置合わせします。重心の一致、スケールの正規化、ICP
-                アライメントが行われます。デフォルトでオンです。</li>
+                <ul>
+                <li>フィッティング前にソースメッシュを自動でターゲットに位置合わせします。重心の一致、スケールの正規化、ICP
+                アライメントが行われます。</li>
+                <li>デフォルトでオンです。</li>
+                </ul></li>
                 </ul>
+                <p>※ Auto-align
+                の機能はありますが、フィッティング前にできるだけ大きさを合わせておくことを推奨します。<br />
+                また、フィッティングはメッシュのローカル空間で行われます。大きさは、メッシュのトランスフォームが
+                0 の状態で合わしておく必要があります。</p>
                 <h3 id="fitting-タブ">Fitting タブ</h3>
-                <p>[Fitting タブの画像]</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image005.png"
+                alt="image" /></p>
                 <ul>
                 <li><strong>Schedule</strong>:
                 フィッティングの強度プリセットを選択します。
@@ -136,12 +168,24 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 <li><code>Landmark</code>:
                 ランドマーク主導のフィッティング。ランドマークが設定されている場合に最適です。</li>
                 </ul></li>
+                <li><strong>Simplify Target</strong>:
+                チェックすると、フィッティング前にターゲットメッシュを四角面デシメーション（Quadric
+                Decimation）で簡略化します。
+                <ul>
+                <li>ターゲットのポリゴン数を削減することで、フィッティングの計算速度が向上します。</li>
+                <li>スライダーで保持するフェースの割合を指定します（0.05
+                ～ 1.0、デフォルト: 0.25）。例えば 0.25
+                の場合、フェース数を元の 25% に削減します。</li>
+                <li>ソースメッシュには影響しません。また、元のターゲットメッシュも変更されません。</li>
+                </ul></li>
                 </ul>
                 <h4 id="advanced">Advanced</h4>
                 <p><code>Advanced</code>
                 グループボックスをチェックすると、詳細なパラメータを手動で調整できます。<br />
                 チェックを外すと、選択中のスケジュールのデフォルト値にリセットされます。</p>
-                <p>[Advanced セクションの画像]</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image007.png"
+                alt="image" /></p>
                 <ul>
                 <li><strong>Stiffness</strong> (0.01 ～ 0.20):
                 メッシュの剛性を制御します。値が大きいほど変形が抑えられ、値が小さいほどターゲットに強くフィットします。</li>
@@ -151,57 +195,214 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 フィッティングのステップ数です。値が大きいほど精度は上がりますが、計算時間が長くなります。</li>
                 </ul>
                 <h3 id="finish-タブ">Finish タブ</h3>
-                <p>[Finish タブの画像]</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image006.png"
+                alt="image" /></p>
                 <p>フィッティング後の後処理を設定します。</p>
                 <ul>
-                <li><strong>Smooth Result</strong>: フィッティング結果に
-                Taubin スムージングを適用します。チェック時に回数（1 ～
-                50）を指定できます。</li>
+                <li><strong>Smooth Result</strong>:
+                フィッティング結果にスムージングを適用します。チェック時に回数（1
+                ～ 50）を指定できます。</li>
                 <li><strong>Snap to Target Surface</strong>:
                 結果メッシュの頂点をターゲットサーフェスに段階的にスナップします。</li>
                 <li><strong>Symmetrize</strong>:
                 メッシュの対称化を行います。以下の方式を選択できます。
                 <ul>
-                <li><code>By Position</code>: KDTree
-                を使用した位置ベースの対称化</li>
+                <li><code>By Position</code>: 位置ベースの対称化</li>
                 <li><code>By Topology</code>:
                 フェース接続性を辿るトポロジーベースの対称化</li>
+                <li><code>By Position</code>
+                のほうが計算が高速ですが、頂点位置が同位置の場合は失敗することがあるためその場合は、<code>By Topology</code>
+                を使用します。</li>
                 </ul></li>
                 <li><strong>Keep Original Mesh</strong>:
                 オンの場合、元のソースメッシュを複製してからフィッティングを行います。オフの場合、ソースメッシュを直接変形します。デフォルトでオンです。</li>
                 </ul>
                 <h2 id="landmarks-セクション">Landmarks セクション</h2>
                 <p>ランドマークはソースとターゲットの対応点を指定する機能です。<br />
-                ランドマークを設定することで、フィッティングの精度を向上させることができます。</p>
-                <p>[Landmarks セクションの画像]</p>
+                ランドマークを設定することで、フィッティングの精度を処理速度を向上させることができます。</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image008.png"
+                alt="image" /></p>
                 <h3
                 id="ランドマークを登録する">ランドマークを登録する</h3>
+                <p><img
+                src="../../images/model/mesh_fitter/image009.png"
+                alt="image" /></p>
                 <ol type="1">
-                <li>Maya
+                <li><p>Maya
                 のビューポートでランドマーク用のトランスフォーム（ロケーターなど）を
-                <strong>偶数個</strong> 選択します。</li>
-                <li>選択順の前半がソース側、後半がターゲット側のランドマークとして扱われます。<br />
+                <strong>偶数個</strong> 選択します。<br />
+                ランドマーク用のトランスフォームは、トランスフォームノードであればどのように作成しても構いません。</p></li>
+                <li><p>選択順の前半がソース側、後半がターゲット側のランドマークとして扱われます。<br />
                 例：4 つ選択した場合、最初の 2 つがソース、残りの 2
-                つがターゲットになります。</li>
-                <li><code>Set</code>
-                ボタンを押してランドマークを登録します。</li>
+                つがターゲットになります。</p></li>
+                <li><p><code>Set</code>
+                ボタンを押してランドマークを登録します。</p></li>
                 </ol>
                 <h3 id="ランドマークの操作">ランドマークの操作</h3>
                 <p>登録されたランドマークはツリーウィジェットに表示されます。各ペアに対して以下の操作が可能です。</p>
+                <p><strong>ヘッダー部分</strong></p>
+                <p>ヘッダーをクリックすることによりそれぞれの列に対するコマンドが実行できます。</p>
+                <ul>
+                <li><strong>Source</strong>: Source
+                列のランドマークをすべて選択します。</li>
+                <li><strong>Target</strong>: Target
+                列のランドマークをすべて選択します。</li>
+                <li><strong>選択 アイコン</strong>:
+                すべてのランドマークを選択します。</li>
+                <li><strong>☓ アイコン</strong>:
+                リストをクリアします。</li>
+                </ul>
+                <p><strong>リスト内</strong></p>
                 <ul>
                 <li><strong>Select アイコン</strong>:
                 ランドマークペアをビューポートで選択します。</li>
                 <li><strong>Remove アイコン</strong>:
                 ランドマークペアを削除します。</li>
                 </ul>
+                <h2 id="コマンドによる実行">コマンドによる実行</h2>
+                <p>UI
+                を使わずにスクリプトからフィッティングを実行することもできます。</p>
+                <h3 id="基本的な実行">基本的な実行</h3>
+                <pre class="python"><code>from faketools.tools.model.mesh_fitter import command
+
+result = command.run_fitting(&quot;source_mesh&quot;, &quot;target_mesh&quot;)
+print(result.result_mesh_name)  # &quot;source_mesh_fitted&quot;</code></pre>
+                <h3
+                id="パラメータを指定して実行">パラメータを指定して実行</h3>
+                <pre class="python"><code>from faketools.tools.model.mesh_fitter import command
+from faketools.tools.model.mesh_fitter.core.pipeline import PipelineConfig
+
+config = PipelineConfig(
+    schedule=&quot;gentle&quot;,
+    auto_align_enabled=True,
+    smooth_result=True,
+    smooth_iterations=5,
+    snap_to_target=True,
+    target_decimate_ratio=0.25,
+    symmetrize=True,
+    symmetry_method=&quot;position&quot;,
+)
+
+result = command.run_fitting(
+    source_name=&quot;source_mesh&quot;,
+    target_name=&quot;target_mesh&quot;,
+    config=config,
+    duplicate_source=True,
+    result_name=&quot;fitted_result&quot;,
+)
+
+print(f&quot;Result: {result.result_mesh_name}&quot;)
+print(f&quot;Time: {result.elapsed_total:.1f}s&quot;)</code></pre>
+                <h3 id="run_fitting-のパラメータ">run_fitting()
+                のパラメータ</h3>
+                <table>
+                <colgroup>
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                <col style="width: 25%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>パラメータ</th>
+                <th>型</th>
+                <th>デフォルト</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>source_name</code></td>
+                <td>str</td>
+                <td>（必須）</td>
+                <td>ソースメッシュのトランスフォーム名</td>
+                </tr>
+                <tr>
+                <td><code>target_name</code></td>
+                <td>str</td>
+                <td>（必須）</td>
+                <td>ターゲットメッシュのトランスフォーム名</td>
+                </tr>
+                <tr>
+                <td><code>config</code></td>
+                <td>PipelineConfig | None</td>
+                <td>None</td>
+                <td>パイプライン設定。None
+                の場合はデフォルト値を使用</td>
+                </tr>
+                <tr>
+                <td><code>landmarks</code></td>
+                <td>LandmarkData | None</td>
+                <td>None</td>
+                <td>ランドマークデータ</td>
+                </tr>
+                <tr>
+                <td><code>schedule</code></td>
+                <td>str | None</td>
+                <td>None</td>
+                <td>スケジュール名で config.schedule を上書き</td>
+                </tr>
+                <tr>
+                <td><code>duplicate_source</code></td>
+                <td>bool</td>
+                <td>True</td>
+                <td>True の場合、ソースを複製してからフィッティング</td>
+                </tr>
+                <tr>
+                <td><code>result_name</code></td>
+                <td>str | None</td>
+                <td>None</td>
+                <td>結果メッシュの名前。None の場合は
+                <code>"{source_name}_fitted"</code></td>
+                </tr>
+                <tr>
+                <td><code>on_progress</code></td>
+                <td>Callable[[str], None] | None</td>
+                <td>None</td>
+                <td>進捗コールバック関数</td>
+                </tr>
+                </tbody>
+                </table>
                 <h2 id="注意事項">注意事項</h2>
                 <ul>
                 <li>ソースメッシュとターゲットメッシュのトポロジーが異なっていても使用できます。</li>
+                <li>ソースとターゲットの大きさの差異が大きすぎると失敗する可能性が高くなります。</li>
                 <li>フィッティング中はボタンが無効化され、ステータスバーに進捗が表示されます。</li>
                 <li>頂点数が多いメッシュの場合、処理に時間がかかることがあります。</li>
                 <li>ランドマークはメッシュサーフェスの近傍にある必要があります（バウンディングボックス対角線の
                 10% 以内）。</li>
                 </ul>
+                <h2
+                id="サードパーティ製アセットおよびライセンスについて">サードパーティ製アセットおよびライセンスについて</h2>
+                <p>本ドキュメント内のスクリーンショットは、
+                サードパーティ製の3Dメッシュを改変したモデルを用いて生成されています。</p>
+                <p>元のメッシュは以下のサイトから取得しました。</p>
+                <ol type="1">
+                <li><p>3D Scan Store – Free Base Mesh<br />
+                https://www.3dscanstore.com/blog/Free-Base-Mesh</p></li>
+                <li><p>FLAME (Faces Learned with an Articulated Model
+                and Expressions)<br />
+                https://flame.is.tue.mpg.de/</p></li>
+                </ol>
+                <p>これらの元データは本リポジトリには含まれていません。</p>
+                <p>ICPアルゴリズムの挙動を説明する目的で、
+                メッシュに変形・変換などの改変を加えた上で、
+                スクリーンショットのみを掲載しています。</p>
+                <p>ライセンスについて：</p>
+                <ul>
+                <li><p>Free Base Mesh は 3D Scan Store
+                の利用規約に従います。 詳細は以下をご確認ください。
+                https://www.3dscanstore.com/terms-and-conditions-licensing</p></li>
+                <li><p>FLAME モデルは Max Planck Institute for
+                Intelligent Systems が定める
+                モデルライセンスに従います。
+                https://flame.is.tue.mpg.de/modellicense.html</p></li>
+                </ul>
+                <p>本リポジトリの MIT ライセンスは、
+                ソースコードおよびツールにのみ適用され、
+                上記のサードパーティ製アセットには適用されません。</p>
             </main>
         </div>
     </div>
