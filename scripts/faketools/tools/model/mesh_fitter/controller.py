@@ -343,8 +343,6 @@ class MeshFitController:
         self._landmark_strength = 1.0
         self._steps = steps
         self._use_advanced = False
-        self._decimate_target = False
-        self._decimate_ratio = 0.25
 
     # ------------------------------------------------------------------
     # Landmarks (transform-based pairs)

@@ -47,7 +47,7 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
-from ....lib_ui.widgets import HorizontalSeparator, IconButton, IconButtonStyle
+from ....lib_ui.widgets import IconButton, IconButtonStyle
 
 if TRIMESH_AVAILABLE:
     from . import command
@@ -223,9 +223,10 @@ class MainWindow(BaseMainWindow):
         row_steps.addWidget(self._spin_steps)
         lay_adv.addLayout(row_steps)
 
-        lay_adv.addWidget(HorizontalSeparator())
+        self._update_landmark_strength_enabled()
+        lay_main.addWidget(self._grp_advanced)
 
-        # Simplify Target: checkbox + ratio spinbox
+        # Simplify Target: checkbox + ratio spinbox (independent of Advanced)
         row_decimate = QHBoxLayout()
         self._chk_decimate = QCheckBox("Simplify Target")
         row_decimate.addWidget(self._chk_decimate)
@@ -240,10 +241,8 @@ class MainWindow(BaseMainWindow):
         self._spin_decimate.setEnabled(False)
         self._spin_decimate.setFixedWidth(60)
         row_decimate.addWidget(self._spin_decimate)
-        lay_adv.addLayout(row_decimate)
+        lay_main.addLayout(row_decimate)
 
-        self._update_landmark_strength_enabled()
-        lay_main.addWidget(self._grp_advanced)
         lay_main.addStretch()
         self._tab_settings.addTab(tab_main, "Fitting")
 
@@ -442,13 +441,6 @@ class MainWindow(BaseMainWindow):
             self._spin_landmark_strength.setValue(1.0)
             for w in (self._slider_landmark_strength, self._spin_landmark_strength):
                 w.blockSignals(False)
-            self._chk_decimate.blockSignals(True)
-            self._chk_decimate.setChecked(False)
-            self._chk_decimate.blockSignals(False)
-            self._spin_decimate.blockSignals(True)
-            self._spin_decimate.setValue(0.25)
-            self._spin_decimate.setEnabled(False)
-            self._spin_decimate.blockSignals(False)
 
     def _on_stiffness_slider(self, value: int) -> None:
         fval = value / 100.0
