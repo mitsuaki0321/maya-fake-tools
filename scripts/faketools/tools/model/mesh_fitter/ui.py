@@ -313,8 +313,8 @@ class MainWindow(BaseMainWindow):
         header.setHighlightSections(False)
         header.setCursor(Qt.PointingHandCursor)
         header.setStyleSheet(
-            "QHeaderView::section:hover { background: palette(midlight); }"
-            "QHeaderView::section:pressed { background: palette(mid); }"
+            "QHeaderView::section { background: palette(button); border: none; }"
+            "QHeaderView::section:hover { background: #707070; }"
         )
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
