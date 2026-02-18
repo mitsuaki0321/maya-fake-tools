@@ -306,7 +306,6 @@ class MainWindow(BaseMainWindow):
         self._tree_landmarks.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self._tree_landmarks.setRootIsDecorated(False)
         self._tree_landmarks.setSelectionMode(QAbstractItemView.SingleSelection)
-        self._tree_landmarks.setMaximumHeight(150)
         header = self._tree_landmarks.header()
         header.setStretchLastSection(False)
         header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -318,7 +317,7 @@ class MainWindow(BaseMainWindow):
         self._btn_set_landmarks = QPushButton("Set")
         lay_lm.addWidget(self._btn_set_landmarks)
 
-        self.central_layout.addWidget(grp_lm)
+        self.central_layout.addWidget(grp_lm, 1)
 
         # --- Run button ---
         self._btn_run = QPushButton("Run Fitting")
