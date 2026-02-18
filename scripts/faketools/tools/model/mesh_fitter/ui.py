@@ -314,8 +314,14 @@ class MainWindow(BaseMainWindow):
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         lay_lm.addWidget(self._tree_landmarks)
 
+        row_lm_btns = QHBoxLayout()
+        self._btn_select_sources = QPushButton("Select Sources")
+        self._btn_select_targets = QPushButton("Select Targets")
         self._btn_set_landmarks = QPushButton("Set")
-        lay_lm.addWidget(self._btn_set_landmarks)
+        row_lm_btns.addWidget(self._btn_select_sources)
+        row_lm_btns.addWidget(self._btn_select_targets)
+        row_lm_btns.addWidget(self._btn_set_landmarks)
+        lay_lm.addLayout(row_lm_btns)
 
         self.central_layout.addWidget(grp_lm, 1)
 
@@ -356,6 +362,8 @@ class MainWindow(BaseMainWindow):
         self._chk_decimate.toggled.connect(self._on_decimate_toggled)
         self._spin_decimate.valueChanged.connect(self._controller.set_decimate_ratio)
 
+        self._btn_select_sources.clicked.connect(self._controller.select_source_landmarks)
+        self._btn_select_targets.clicked.connect(self._controller.select_target_landmarks)
         self._btn_set_landmarks.clicked.connect(lambda: self._controller.set_landmarks_from_selection())
 
         self._btn_run.clicked.connect(self._on_run)
@@ -556,6 +564,8 @@ class MainWindow(BaseMainWindow):
         self._btn_run.setEnabled(enabled)
         self._btn_set_source.setEnabled(enabled)
         self._btn_set_target.setEnabled(enabled)
+        self._btn_select_sources.setEnabled(enabled)
+        self._btn_select_targets.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
 

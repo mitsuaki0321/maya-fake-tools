@@ -396,6 +396,20 @@ class MeshFitController:
             src, tgt = self._landmark_pairs[index]
             scene_ops.select_nodes([src, tgt])
 
+    def select_source_landmarks(self) -> None:
+        """Select all source landmark transforms in Maya."""
+        from . import scene_ops
+
+        if self._landmark_pairs:
+            scene_ops.select_nodes([src for src, _ in self._landmark_pairs])
+
+    def select_target_landmarks(self) -> None:
+        """Select all target landmark transforms in Maya."""
+        from . import scene_ops
+
+        if self._landmark_pairs:
+            scene_ops.select_nodes([tgt for _, tgt in self._landmark_pairs])
+
     # ------------------------------------------------------------------
     # Config / Request construction
     # ------------------------------------------------------------------
