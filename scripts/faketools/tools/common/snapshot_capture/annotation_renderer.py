@@ -223,19 +223,30 @@ def _render_arrow(image: Image.Image, annotation) -> Image.Image:
     end_x = int(annotation.end_x * image.width)
     end_y = int(annotation.end_y * image.height)
 
-    # Scale line width based on image resolution
-    scale_factor = max(image.width / 640, image.height / 360)
-    line_width = max(1, int(annotation.line_width * scale_factor))
+    # Use annotation's line_width directly (no scaling) to match editor behavior.
+    # The editor scene operates at the image's native resolution, so the renderer
+    # must use the same pixel values for both stroke width and arrow geometry.
+    line_width = max(1, annotation.line_width)
 
     color = annotation.color
+
+    # Shorten line so it doesn't overlap with arrowhead.
+    # The editor uses Qt's SquareCap which extends the stroke by line_width/2
+    # beyond the endpoint. PIL/aggdraw uses butt cap (no extension), so we
+    # reduce the shortening by line_width/2 to match the editor's visual result.
+    angle = math.atan2(end_y - start_y, end_x - start_x)
+    arrow_length = line_width * 4
+    shorten = arrow_length - line_width / 2
+    line_end_x = int(end_x - shorten * math.cos(angle))
+    line_end_y = int(end_y - shorten * math.sin(angle))
 
     if AGGDRAW_AVAILABLE:
         draw = aggdraw.Draw(image)
         pen = aggdraw.Pen(_color_to_aggdraw(color), line_width)
         brush = aggdraw.Brush(_color_to_aggdraw(color))
 
-        # Draw main line
-        draw.line([start_x, start_y, end_x, end_y], pen)
+        # Draw main line (shortened to arrowhead base)
+        draw.line([start_x, start_y, line_end_x, line_end_y], pen)
 
         # Draw arrowhead
         _draw_arrowhead_aggdraw(draw, start_x, start_y, end_x, end_y, brush, line_width)
@@ -243,13 +254,13 @@ def _render_arrow(image: Image.Image, annotation) -> Image.Image:
         draw.flush()
     else:
         draw = ImageDraw.Draw(image)
-        draw.line([(start_x, start_y), (end_x, end_y)], fill=color, width=line_width)
+        draw.line([(start_x, start_y), (line_end_x, line_end_y)], fill=color, width=line_width)
         _draw_arrowhead_pil(draw, start_x, start_y, end_x, end_y, color, line_width)
 
     return image
 
 
-def _draw_arrowhead_aggdraw(draw, start_x: int, start_y: int, end_x: int, end_y: int, brush, line_width: int):
+def _draw_arrowhead_aggdraw(draw, start_x: int, start_y: int, end_x: int, end_y: int, brush, arrow_line_width: int):
     """Draw an arrowhead using aggdraw.
 
     Args:
@@ -259,10 +270,10 @@ def _draw_arrowhead_aggdraw(draw, start_x: int, start_y: int, end_x: int, end_y:
         end_x: Line end X (arrow tip).
         end_y: Line end Y (arrow tip).
         brush: aggdraw.Brush for fill.
-        line_width: Line width for scaling.
+        arrow_line_width: Unscaled line width for arrowhead geometry.
     """
     angle = math.atan2(end_y - start_y, end_x - start_x)
-    arrow_length = line_width * 4
+    arrow_length = arrow_line_width * 4
     arrow_angle = math.pi / 6  # 30 degrees
 
     left_x = end_x - arrow_length * math.cos(angle - arrow_angle)
@@ -273,7 +284,7 @@ def _draw_arrowhead_aggdraw(draw, start_x: int, start_y: int, end_x: int, end_y:
     draw.polygon([end_x, end_y, left_x, left_y, right_x, right_y], brush)
 
 
-def _draw_arrowhead_pil(draw, start_x: int, start_y: int, end_x: int, end_y: int, color: tuple, line_width: int):
+def _draw_arrowhead_pil(draw, start_x: int, start_y: int, end_x: int, end_y: int, color: tuple, arrow_line_width: int):
     """Draw an arrowhead using PIL (fallback).
 
     Args:
@@ -283,10 +294,10 @@ def _draw_arrowhead_pil(draw, start_x: int, start_y: int, end_x: int, end_y: int
         end_x: Line end X (arrow tip).
         end_y: Line end Y (arrow tip).
         color: Arrow color.
-        line_width: Line width for scaling.
+        arrow_line_width: Unscaled line width for arrowhead geometry.
     """
     angle = math.atan2(end_y - start_y, end_x - start_x)
-    arrow_length = line_width * 4
+    arrow_length = arrow_line_width * 4
     arrow_angle = math.pi / 6  # 30 degrees
 
     left_x = end_x - arrow_length * math.cos(angle - arrow_angle)
@@ -708,7 +719,7 @@ def _render_number(image: Image.Image, annotation) -> Image.Image:
     # Draw number text using PIL (aggdraw has limited text support)
     pil_draw = ImageDraw.Draw(image)
     font_size = max(10, int(r * 1.2))
-    font = _get_font(font_size)
+    font = _get_font(font_size, bold=True)
     text = str(annotation.number)
 
     # Use anchor="mm" for middle-middle alignment
