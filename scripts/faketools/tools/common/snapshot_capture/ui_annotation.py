@@ -471,7 +471,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             save_btn.setText("S")
         save_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         save_btn.clicked.connect(self._on_save_clicked)
         footer_action_layout.addWidget(save_btn)
@@ -488,7 +488,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             copy_btn.setText("C")
         copy_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         copy_btn.clicked.connect(self._on_copy_to_clipboard)
         footer_action_layout.addWidget(copy_btn)
@@ -505,7 +505,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             cancel_btn.setText("X")
         cancel_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         cancel_btn.clicked.connect(self.reject)
         footer_action_layout.addWidget(cancel_btn)
@@ -622,7 +622,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             undo_btn.setText("U")
         undo_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         undo_btn.clicked.connect(self._on_undo)
         action_group_layout.addWidget(undo_btn)
@@ -639,7 +639,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             delete_btn.setText("D")
         delete_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         delete_btn.clicked.connect(self._on_delete_selected)
         action_group_layout.addWidget(delete_btn)
@@ -656,7 +656,7 @@ class AnnotationEditorDialog(QDialog):
         else:
             clear_btn.setText("C")
         clear_btn.setStyleSheet(
-            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+            f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
         )
         clear_btn.clicked.connect(self._on_clear_all)
         action_group_layout.addWidget(clear_btn)
@@ -854,7 +854,7 @@ class AnnotationEditorDialog(QDialog):
                 btn.setStyleSheet(f"QToolButton {{ background: #505050; border: none; border-radius: 4px; }}{TOOLTIP_STYLE}")
             else:
                 btn.setStyleSheet(
-                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
                 )
 
     def _update_tool_button_styles(self):
@@ -867,7 +867,7 @@ class AnnotationEditorDialog(QDialog):
                 btn.setStyleSheet(f"QToolButton {{ background: #505050; border: none; border-radius: 4px; }}{TOOLTIP_STYLE}")
             else:
                 btn.setStyleSheet(
-                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+                    f"QToolButton {{ background: transparent; border: none; border-radius: 4px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
                 )
 
     def _create_stroke_button(self, width: int, visual_height: int, name: str) -> QToolButton:
@@ -915,7 +915,7 @@ class AnnotationEditorDialog(QDialog):
             btn.setStyleSheet(f"QToolButton {{ background: #4a4a4a; border: none; border-radius: 3px; }}{TOOLTIP_STYLE}")
         else:
             btn.setStyleSheet(
-                f"QToolButton {{ background: transparent; border: none; border-radius: 3px; }}QToolButton:hover {{ background: #404040; }}{TOOLTIP_STYLE}"
+                f"QToolButton {{ background: transparent; border: none; border-radius: 3px; }}QToolButton:hover {{ background: #404040; }}QToolButton:pressed {{ background: #333333; }}{TOOLTIP_STYLE}"
             )
 
     def _update_color_button_style(self, btn: QPushButton, color: tuple[int, int, int], selected: bool = False):
