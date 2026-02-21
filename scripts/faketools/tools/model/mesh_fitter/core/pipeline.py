@@ -37,7 +37,7 @@ class PipelineConfig:
     smooth_result: bool = False
     smooth_iterations: int = 3
     snap_to_target: bool = False
-    snap_stages: list[float] = field(default_factory=lambda: [0.3, 0.5])
+    snap_stages: list[float] = field(default_factory=lambda: [1.0])
 
     # Symmetrize
     symmetrize: bool = False
@@ -223,7 +223,6 @@ def run_pipeline_from_meshes(
             fitted,
             target,
             stages=config.snap_stages,
-            smooth_between=True,
         )
         logger.info("Progressive snap (%d stages)", len(config.snap_stages))
 

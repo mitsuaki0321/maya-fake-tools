@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import numpy as np
 from scipy.sparse import coo_matrix, diags
-from scipy.spatial import cKDTree
 import trimesh
 
 
@@ -66,6 +65,10 @@ def progressive_snap(
 ) -> trimesh.Trimesh:
     """Move fitted vertices towards nearest target surface points.
 
+    Projects each fitted vertex to the closest point on the target **surface**
+    (not just the nearest vertex), then moves by *snap_fraction* of the
+    displacement.
+
     Args:
         fitted: Fitted mesh to snap.
         target: Target mesh to snap towards.
@@ -76,11 +79,8 @@ def progressive_snap(
         Snapped mesh copy.
     """
     result = fitted.copy()
-    tree = cKDTree(target.vertices)
-    distances, indices = tree.query(fitted.vertices)
-
-    target_positions = target.vertices[indices]
-    displacement = target_positions - fitted.vertices
+    closest_points, distances, _ = trimesh.proximity.closest_point(target, fitted.vertices)
+    displacement = closest_points - fitted.vertices
 
     if distance_threshold is not None:
         mask = distances < distance_threshold
@@ -97,53 +97,81 @@ def multi_stage_snap(
     fitted: trimesh.Trimesh,
     target: trimesh.Trimesh,
     stages: list[float] | None = None,
-    smooth_between: bool = True,
 ) -> trimesh.Trimesh:
-    """Progressive snap in multiple stages with optional smoothing.
+    """Progressive snap in multiple stages.
+
+    Each stage projects fitted vertices onto the target surface and moves
+    them by the given fraction.
 
     Args:
         fitted: Fitted mesh.
         target: Target mesh.
-        stages: List of snap fractions per stage. Default: [0.3, 0.5, 0.7].
-        smooth_between: Apply Taubin smoothing between stages.
+        stages: List of snap fractions per stage. Default: [1.0].
     """
     if stages is None:
-        stages = [0.3, 0.5, 0.7]
+        stages = [1.0]
 
     result = fitted.copy()
     for fraction in stages:
         result = progressive_snap(result, target, snap_fraction=fraction)
-        if smooth_between:
-            result = taubin_smooth(result, iterations=2)
 
     return result
 
 
 def _build_adjacency_sparse(mesh: trimesh.Trimesh):
-    """Build row-normalised adjacency matrix (CSR) from faces.
+    """Build row-normalised cotangent-weighted adjacency matrix (CSR).
 
-    Returns a sparse matrix L where ``L @ vertices`` gives the neighbour-
-    centroid for every vertex (isolated vertices map to themselves).
+    Uses cotangent weights so that diagonal edges introduced by fan
+    triangulation of quads receive near-zero weight, preserving the
+    original quad-like neighbourhood structure during smoothing.
+
+    Returns a sparse matrix L where ``L @ vertices`` gives the weighted
+    neighbour-centroid for every vertex (isolated vertices map to
+    themselves).
     """
+    vertices = mesh.vertices
     faces = mesh.faces
-    n_verts = len(mesh.vertices)
+    n_verts = len(vertices)
 
-    # Build all directed edge pairs from triangular faces
-    # Each triangle (a, b, c) contributes edges: a->b, b->a, b->c, c->b, a->c, c->a
     i0, i1, i2 = faces[:, 0], faces[:, 1], faces[:, 2]
-    rows = np.concatenate([i0, i1, i1, i2, i0, i2])
-    cols = np.concatenate([i1, i0, i2, i1, i2, i0])
-    data = np.ones(len(rows), dtype=np.float64)
+    v0, v1, v2 = vertices[i0], vertices[i1], vertices[i2]
 
-    adj = coo_matrix((data, (rows, cols)), shape=(n_verts, n_verts)).tocsr()
-    # Collapse duplicate edges to binary adjacency
-    adj.data[:] = 1.0
+    # Edge vectors
+    e01 = v1 - v0
+    e02 = v2 - v0
+    e12 = v2 - v1
 
-    # Row-normalise: each row sums to 1 (neighbour average)
+    # Cotangent at vertex 0 -> weights edge v1-v2
+    cross0 = np.linalg.norm(np.cross(e01, e02), axis=1)
+    cot0 = np.sum(e01 * e02, axis=1) / (cross0 + 1e-10)
+
+    # Cotangent at vertex 1 -> weights edge v0-v2
+    cross1 = np.linalg.norm(np.cross(-e01, e12), axis=1)
+    cot1 = np.sum(-e01 * e12, axis=1) / (cross1 + 1e-10)
+
+    # Cotangent at vertex 2 -> weights edge v0-v1
+    e20 = -e02
+    e21 = -e12
+    cross2 = np.linalg.norm(np.cross(e20, e21), axis=1)
+    cot2 = np.sum(e20 * e21, axis=1) / (cross2 + 1e-10)
+
+    # Clamp to [0, 10] — negative values come from obtuse angles
+    cot0 = np.clip(cot0, 0.0, 10.0)
+    cot1 = np.clip(cot1, 0.0, 10.0)
+    cot2 = np.clip(cot2, 0.0, 10.0)
+
+    # cot_at_v0 weights edge v1-v2, cot_at_v1 weights edge v0-v2, etc.
+    rows = np.concatenate([i1, i2, i0, i2, i0, i1])
+    cols = np.concatenate([i2, i1, i2, i0, i1, i0])
+    weights = np.concatenate([cot0, cot0, cot1, cot1, cot2, cot2])
+
+    adj = coo_matrix((weights, (rows, cols)), shape=(n_verts, n_verts)).tocsr()
+
+    # Row-normalise: each row sums to 1 (weighted neighbour average)
     degree = np.asarray(adj.sum(axis=1)).ravel()
 
     # Inject self-loops for isolated vertices so L @ v = v
-    isolated = degree == 0
+    isolated = degree < 1e-10
     if isolated.any():
         iso_idx = np.where(isolated)[0]
         iso_coo = coo_matrix(
