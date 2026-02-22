@@ -580,8 +580,7 @@ class MeshFitController:
     def on_fitting_error(self, error_msg: str) -> None:
         self._is_fitting = False
         self.on_fitting_state_changed(False)
-        self.on_error(error_msg)
-        self.on_status(f"Fitting failed: {error_msg}")
+        self.on_error(f"Fitting failed: {error_msg}")
 
     # ------------------------------------------------------------------
     # Internal helpers

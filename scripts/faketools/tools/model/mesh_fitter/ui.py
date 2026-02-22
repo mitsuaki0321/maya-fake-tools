@@ -36,10 +36,10 @@ from ....lib_ui.qt_compat import (
     QIcon,
     QLabel,
     QLineEdit,
+    QProgressBar,
     QPushButton,
     QSlider,
     QSpinBox,
-    QStatusBar,
     Qt,
     QTabWidget,
     QTreeWidget,
@@ -373,10 +373,11 @@ class MainWindow(BaseMainWindow):
         self._btn_run.setMinimumHeight(36)
         self.central_layout.addWidget(self._btn_run)
 
-        # --- Status bar ---
-        self._status_bar = QStatusBar()
-        self._status_bar.showMessage("Ready")
-        self.central_layout.addWidget(self._status_bar)
+        # --- Progress ---
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setTextVisible(True)
+        self._progress_bar.hide()
+        self.central_layout.addWidget(self._progress_bar)
 
     # ------------------------------------------------------------------
     # Signal wiring
@@ -416,7 +417,6 @@ class MainWindow(BaseMainWindow):
         self._btn_run.clicked.connect(self._on_run)
 
     def _connect_controller_callbacks(self) -> None:
-        self._controller.on_status = self._status_bar.showMessage
         self._controller.on_error = self._on_error
         self._controller.on_landmarks_changed = self._refresh_landmark_tree
         self._controller.on_fitting_state_changed = self._set_fitting_ui
@@ -432,7 +432,7 @@ class MainWindow(BaseMainWindow):
 
         name = get_selected_mesh()
         if name is None:
-            self._status_bar.showMessage("Error: Select a mesh transform")
+            self._on_error("Select a mesh transform")
             return
         self._line_source.setText(name.rsplit("|", 1)[-1])
         self._line_source.setToolTip(name)
@@ -443,7 +443,7 @@ class MainWindow(BaseMainWindow):
 
         name = get_selected_mesh()
         if name is None:
-            self._status_bar.showMessage("Error: Select a mesh transform")
+            self._on_error("Select a mesh transform")
             return
         self._line_target.setText(name.rsplit("|", 1)[-1])
         self._line_target.setToolTip(name)
@@ -487,8 +487,9 @@ class MainWindow(BaseMainWindow):
             self._line_region.clear()
 
     def _on_error(self, msg: str) -> None:
-        logger.error(msg, exc_info=True)
-        self._status_bar.showMessage(f"Error: {msg}")
+        """Show error via Maya warning and logger."""
+        logger.error(msg)
+        cmds.warning(f"Mesh Fitter: {msg}")
 
     def _on_smooth_toggled(self, checked: bool) -> None:
         self._controller.set_smooth_result(checked)
@@ -625,6 +626,9 @@ class MainWindow(BaseMainWindow):
             return
 
         self._controller.on_fitting_started()
+        self._progress_bar.setValue(0)
+        self._progress_bar.setFormat("")
+        self._progress_bar.show()
         QApplication.processEvents()
 
         from .scene_ops import wait_cursor
@@ -641,15 +645,24 @@ class MainWindow(BaseMainWindow):
                 target_face_indices=request.target_face_indices,
                 on_progress=self._on_fitting_progress,
             )
+            self._progress_bar.setValue(100)
+            QApplication.processEvents()
             self._controller.on_fitting_finished(result)
         except Exception as exc:
             logger.error("Fitting failed", exc_info=True)
             self._controller.on_fitting_error(str(exc))
         finally:
+            self._progress_bar.hide()
             wait_cursor(False)
 
+    _PROGRESS_MAP = {"[1/4]": 5, "[2/4]": 15, "[3/4]": 60, "[4/4]": 90, "Writing": 95}
+
     def _on_fitting_progress(self, message: str) -> None:
-        self._status_bar.showMessage(message)
+        for prefix, pct in self._PROGRESS_MAP.items():
+            if prefix in message:
+                self._progress_bar.setValue(pct)
+                break
+        self._progress_bar.setFormat(message)
         QApplication.processEvents()
 
     def _on_fitting_complete(self, result) -> None:
@@ -671,8 +684,6 @@ class MainWindow(BaseMainWindow):
         self._btn_sel_region.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
-
-        self._btn_run.setText("Fitting..." if running else "Run Fitting")
 
     # ------------------------------------------------------------------
     # Settings
