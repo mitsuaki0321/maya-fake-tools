@@ -125,13 +125,24 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 src="../../images/model/mesh_fitter/image003.png"
                 alt="image" /></p>
                 <ul>
-                <li><strong>Source</strong>:
+                <li><p><strong>Source</strong>:
                 変形させるテンプレートメッシュ。ビューポートでメッシュを選択し
-                <code>SET</code> ボタンで登録します。</li>
-                <li><strong>Target</strong>:
+                <code>SET</code> ボタンで登録します。</p></li>
+                <li><p><strong>Target</strong>:
                 フィッティング先のスキャンメッシュ。同様に
-                <code>SET</code> ボタンで登録します。</li>
+                <code>SET</code> ボタンで登録します。</p></li>
+                <li><p><strong>Region</strong>:
+                ターゲットメッシュのうちの選択したフェースのみをフィッティングのターゲット対象に指定します。ターゲット内のフェースを選択して
+                <code>SET</code> でフェースを登録します。</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image0031.png"
+                alt="image" /></p>
+                <p><img
+                src="../../images/model/mesh_fitter/image0032.png"
+                alt="image" /></p></li>
                 </ul>
+                <p>※ それぞれ <code>SEL</code>
+                ボタンで登録したオブジェクトを選択することが可能です。</p>
                 <h2 id="settings">Settings</h2>
                 <p>フィッティングのパラメータを 3
                 つのタブで設定します。</p>
@@ -200,6 +211,16 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 alt="image" /></p>
                 <p>フィッティング後の後処理を設定します。</p>
                 <ul>
+                <li><strong>Output Space</strong>:
+                フィッティング結果のメッシュをソースとターゲットのどちらのスペース内で生成するかを指定します。
+                <ul>
+                <li><code>Source</code>:
+                ソースメッシュの空間でメッシュを生成します。</li>
+                <li><code>Target</code>:
+                ターゲットメッシュの空間でメッシュを生成します。</li>
+                </ul></li>
+                <li><strong>Keep Original Mesh</strong>:
+                オンの場合、元のソースメッシュを複製してからフィッティングを行います。オフの場合、ソースメッシュを直接変形します。デフォルトでオンです。</li>
                 <li><strong>Smooth Result</strong>:
                 フィッティング結果にスムージングを適用します。チェック時に回数（1
                 ～ 50）を指定できます。</li>
@@ -215,8 +236,6 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 のほうが計算が高速ですが、頂点位置が同位置の場合は失敗することがあるためその場合は、<code>By Topology</code>
                 を使用します。</li>
                 </ul></li>
-                <li><strong>Keep Original Mesh</strong>:
-                オンの場合、元のソースメッシュを複製してからフィッティングを行います。オフの場合、ソースメッシュを直接変形します。デフォルトでオンです。</li>
                 </ul>
                 <h2 id="landmarks-セクション">Landmarks セクション</h2>
                 <p>ランドマークはソースとターゲットの対応点を指定する機能です。<br />
@@ -369,7 +388,9 @@ print(f&quot;Time: {result.elapsed_total:.1f}s&quot;)</code></pre>
                 <ul>
                 <li>ソースメッシュとターゲットメッシュのトポロジーが異なっていても使用できます。</li>
                 <li>ソースとターゲットの大きさの差異が大きすぎると失敗する可能性が高くなります。</li>
-                <li>フィッティング中はボタンが無効化され、ステータスバーに進捗が表示されます。</li>
+                <li>フィッティング中はボタンが無効化され、プログレスバーに進捗が表示されます。エラー発生時は
+                Maya
+                のコマンドライン及びスクリプトエディタに警告が表示されます。</li>
                 <li>頂点数が多いメッシュの場合、処理に時間がかかることがあります。</li>
                 <li>ランドマークはメッシュサーフェスの近傍にある必要があります（バウンディングボックス対角線の
                 10% 以内）。</li>

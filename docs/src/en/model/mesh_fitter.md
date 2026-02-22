@@ -50,6 +50,13 @@ This section is used to register the source mesh and target mesh.
 
 - **Source**: The template mesh to be deformed. Select a mesh in the viewport and press the `SET` button to register it.
 - **Target**: The scan mesh to fit to. Register it the same way using the `SET` button.
+- **Region**: Specifies only the selected faces of the target mesh as the fitting target. Select faces on the target and press `SET` to register them.
+
+  ![image](../../images/model/mesh_fitter/image0031.png)
+
+  ![image](../../images/model/mesh_fitter/image0032.png)
+
+Note: You can use the `SEL` button on each row to select the registered object.
 
 
 ## Settings
@@ -99,13 +106,16 @@ Unchecking it resets the values to the defaults for the currently selected sched
 
 Configure post-processing after fitting.
 
+- **Output Space**: Specifies which space the fitting result mesh is placed in.
+  - `Source`: Places the result in the source mesh's space.
+  - `Target`: Places the result in the target mesh's space.
+- **Keep Original Mesh**: When enabled, duplicates the original source mesh before fitting. When disabled, deforms the source mesh directly. Enabled by default.
 - **Smooth Result**: Applies smoothing to the fitting result. When checked, you can specify the number of iterations (1 ~ 50).
 - **Snap to Target Surface**: Progressively snaps the result mesh vertices to the target surface.
 - **Symmetrize**: Symmetrizes the mesh. The following methods are available:
   - `By Position`: Position-based symmetrization
   - `By Topology`: Topology-based symmetrization that traces face connectivity
   - `By Position` is faster to compute, but may fail when vertices are at identical positions. In that case, use `By Topology`.
-- **Keep Original Mesh**: When enabled, duplicates the original source mesh before fitting. When disabled, deforms the source mesh directly. Enabled by default.
 
 
 ## Landmarks Section
@@ -206,7 +216,7 @@ print(f"Time: {result.elapsed_total:.1f}s")
 
 - Can be used even when the source mesh and target mesh have different topologies.
 - Fitting is more likely to fail if the size difference between source and target is too large.
-- During fitting, buttons are disabled and progress is shown in the status bar.
+- During fitting, buttons are disabled and progress is shown in the progress bar. Errors are displayed as warnings in Maya's command line and Script Editor.
 - Processing may take time for meshes with a high vertex count.
 - Landmarks must be near the mesh surface (within 10% of the bounding box diagonal).
 

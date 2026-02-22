@@ -129,13 +129,25 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 src="../../images/model/mesh_fitter/image003.png"
                 alt="image" /></p>
                 <ul>
-                <li><strong>Source</strong>: The template mesh to be
+                <li><p><strong>Source</strong>: The template mesh to be
                 deformed. Select a mesh in the viewport and press the
-                <code>SET</code> button to register it.</li>
-                <li><strong>Target</strong>: The scan mesh to fit to.
+                <code>SET</code> button to register it.</p></li>
+                <li><p><strong>Target</strong>: The scan mesh to fit to.
                 Register it the same way using the <code>SET</code>
-                button.</li>
+                button.</p></li>
+                <li><p><strong>Region</strong>: Specifies only the
+                selected faces of the target mesh as the fitting target.
+                Select faces on the target and press <code>SET</code> to
+                register them.</p>
+                <p><img
+                src="../../images/model/mesh_fitter/image0031.png"
+                alt="image" /></p>
+                <p><img
+                src="../../images/model/mesh_fitter/image0032.png"
+                alt="image" /></p></li>
                 </ul>
+                <p>Note: You can use the <code>SEL</code> button on each
+                row to select the registered object.</p>
                 <h2 id="settings">Settings</h2>
                 <p>Configure fitting parameters across three tabs.</p>
                 <h3 id="align-tab">Align Tab</h3>
@@ -211,6 +223,18 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 alt="image" /></p>
                 <p>Configure post-processing after fitting.</p>
                 <ul>
+                <li><strong>Output Space</strong>: Specifies which space
+                the fitting result mesh is placed in.
+                <ul>
+                <li><code>Source</code>: Places the result in the source
+                mesh’s space.</li>
+                <li><code>Target</code>: Places the result in the target
+                mesh’s space.</li>
+                </ul></li>
+                <li><strong>Keep Original Mesh</strong>: When enabled,
+                duplicates the original source mesh before fitting. When
+                disabled, deforms the source mesh directly. Enabled by
+                default.</li>
                 <li><strong>Smooth Result</strong>: Applies smoothing to
                 the fitting result. When checked, you can specify the
                 number of iterations (1 ~ 50).</li>
@@ -228,10 +252,6 @@ faketools.tools.model.mesh_fitter.ui.show_ui()</code></pre>
                 may fail when vertices are at identical positions. In
                 that case, use <code>By Topology</code>.</li>
                 </ul></li>
-                <li><strong>Keep Original Mesh</strong>: When enabled,
-                duplicates the original source mesh before fitting. When
-                disabled, deforms the source mesh directly. Enabled by
-                default.</li>
                 </ul>
                 <h2 id="landmarks-section">Landmarks Section</h2>
                 <p>Landmarks specify corresponding points between the
@@ -394,7 +414,8 @@ print(f&quot;Time: {result.elapsed_total:.1f}s&quot;)</code></pre>
                 <li>Fitting is more likely to fail if the size
                 difference between source and target is too large.</li>
                 <li>During fitting, buttons are disabled and progress is
-                shown in the status bar.</li>
+                shown in the progress bar. Errors are displayed as
+                warnings in Maya’s command line and Script Editor.</li>
                 <li>Processing may take time for meshes with a high
                 vertex count.</li>
                 <li>Landmarks must be near the mesh surface (within 10%
