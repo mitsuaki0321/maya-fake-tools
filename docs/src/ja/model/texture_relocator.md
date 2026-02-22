@@ -4,7 +4,7 @@ category: model
 description: シーン内のテクスチャファイルパスを一括で再配置
 lang: ja
 lang-ref: texture_relocator
-order: 40
+order: 70
 ---
 
 ## 概要

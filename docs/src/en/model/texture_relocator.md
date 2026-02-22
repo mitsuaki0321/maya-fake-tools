@@ -4,7 +4,7 @@ category: model
 description: Batch relocate texture file paths in the scene
 lang: en
 lang-ref: texture_relocator
-order: 40
+order: 70
 ---
 
 ## Overview
