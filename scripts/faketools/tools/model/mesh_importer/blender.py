@@ -1,4 +1,4 @@
-"""Blender discovery and GLB to FBX conversion."""
+"""Blender discovery and GLB to FBX conversion for mesh importer."""
 
 from __future__ import annotations
 

@@ -32,7 +32,7 @@ PACKAGE_REGISTRY = [
     {
         "pip_name": "trimesh",
         "import_name": "trimesh",
-        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
+        "required_by": ["Mesh Fitter", "BlendShape Transfer", "Mesh Importer"],
         "optional": False,
     },
     {

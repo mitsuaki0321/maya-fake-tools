@@ -1,4 +1,4 @@
-"""Texture path management for glTF importer."""
+"""Texture path management for mesh importer."""
 
 from logging import getLogger
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""Maya FBX import functionality."""
+"""Maya FBX import functionality for mesh importer."""
 
 from logging import getLogger
 from pathlib import Path

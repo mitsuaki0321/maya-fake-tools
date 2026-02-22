@@ -1,4 +1,4 @@
-"""Material conversion for glTF importer.
+"""Material conversion for mesh importer.
 
 Converts glTF PBR materials to Maya shaders (Arnold/Stingray/Standard).
 """
