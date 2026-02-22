@@ -21,7 +21,7 @@ try:
 except ImportError:
     TRIMESH_AVAILABLE = False
 
-from ....lib_ui.base_window import BaseMainWindow
+from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
@@ -96,6 +96,8 @@ class MainWindow(BaseMainWindow):
         # --- Meshes ---
         grp_mesh = QGroupBox("Meshes")
         lay_mesh = QVBoxLayout(grp_mesh)
+        mesh_spacing = get_spacing(grp_mesh, direction="vertical")
+        lay_mesh.setSpacing(int(mesh_spacing * 0.5))
 
         lbl_source = QLabel("Source:")
         lbl_target = QLabel("Target:")
@@ -120,8 +122,13 @@ class MainWindow(BaseMainWindow):
         self._line_source.setReadOnly(True)
         self._line_source.setPlaceholderText("Select a mesh and click SET")
         row_src.addWidget(self._line_source, 1)
+        btn_h = self._line_source.sizeHint().height()
         self._btn_set_source = QPushButton("SET")
+        self._btn_set_source.setFixedHeight(btn_h)
         row_src.addWidget(self._btn_set_source)
+        self._btn_sel_source = QPushButton("SEL")
+        self._btn_sel_source.setFixedHeight(btn_h)
+        row_src.addWidget(self._btn_sel_source)
         lay_mesh.addLayout(row_src)
 
         row_tgt = QHBoxLayout()
@@ -131,7 +138,11 @@ class MainWindow(BaseMainWindow):
         self._line_target.setPlaceholderText("Select a mesh and click SET")
         row_tgt.addWidget(self._line_target, 1)
         self._btn_set_target = QPushButton("SET")
+        self._btn_set_target.setFixedHeight(btn_h)
         row_tgt.addWidget(self._btn_set_target)
+        self._btn_sel_target = QPushButton("SEL")
+        self._btn_sel_target.setFixedHeight(btn_h)
+        row_tgt.addWidget(self._btn_sel_target)
         lay_mesh.addLayout(row_tgt)
 
         row_region = QHBoxLayout()
@@ -141,7 +152,11 @@ class MainWindow(BaseMainWindow):
         self._line_region.setPlaceholderText("Select target faces and click SET")
         row_region.addWidget(self._line_region, 1)
         self._btn_set_region = QPushButton("SET")
+        self._btn_set_region.setFixedHeight(btn_h)
         row_region.addWidget(self._btn_set_region)
+        self._btn_sel_region = QPushButton("SEL")
+        self._btn_sel_region.setFixedHeight(btn_h)
+        row_region.addWidget(self._btn_sel_region)
         lay_mesh.addLayout(row_region)
 
         self.central_layout.addWidget(grp_mesh)
@@ -268,6 +283,18 @@ class MainWindow(BaseMainWindow):
         tab_post = QWidget()
         lay_post = QVBoxLayout(tab_post)
 
+        self._OUTPUT_SPACE_DISPLAY = {"Source": "source", "Target": "target"}
+        row_output_space = QHBoxLayout()
+        row_output_space.addWidget(QLabel("Output Space:"))
+        self._combo_output_space = QComboBox()
+        self._combo_output_space.addItems(list(self._OUTPUT_SPACE_DISPLAY.keys()))
+        row_output_space.addWidget(self._combo_output_space, 1)
+        lay_post.addLayout(row_output_space)
+
+        self._chk_duplicate = QCheckBox("Keep Original Mesh")
+        self._chk_duplicate.setChecked(True)
+        lay_post.addWidget(self._chk_duplicate)
+
         # Checkbox indicator width for indenting child widgets
         indicator_indent = self._chk_auto_align.style().pixelMetric(
             self._chk_auto_align.style().PixelMetric.PM_IndicatorWidth
@@ -305,18 +332,6 @@ class MainWindow(BaseMainWindow):
         post_box_width = max(self._spin_smooth.sizeHint().width(), self._combo_sym_method.sizeHint().width())
         self._spin_smooth.setFixedWidth(post_box_width)
         self._combo_sym_method.setFixedWidth(post_box_width)
-
-        self._chk_duplicate = QCheckBox("Keep Original Mesh")
-        self._chk_duplicate.setChecked(True)
-        lay_post.addWidget(self._chk_duplicate)
-
-        self._OUTPUT_SPACE_DISPLAY = {"Source": "source", "Target": "target"}
-        row_output_space = QHBoxLayout()
-        row_output_space.addWidget(QLabel("Output Space:"))
-        self._combo_output_space = QComboBox()
-        self._combo_output_space.addItems(list(self._OUTPUT_SPACE_DISPLAY.keys()))
-        row_output_space.addWidget(self._combo_output_space, 1)
-        lay_post.addLayout(row_output_space)
 
         lay_post.addStretch()
         self._tab_settings.addTab(tab_post, "Finish")
@@ -371,6 +386,9 @@ class MainWindow(BaseMainWindow):
         self._btn_set_source.clicked.connect(self._on_set_source)
         self._btn_set_target.clicked.connect(self._on_set_target)
         self._btn_set_region.clicked.connect(self._on_set_region)
+        self._btn_sel_source.clicked.connect(self._on_sel_source)
+        self._btn_sel_target.clicked.connect(self._on_sel_target)
+        self._btn_sel_region.clicked.connect(self._on_sel_region)
 
         self._combo_schedule.currentTextChanged.connect(self._on_schedule_changed)
         self._chk_auto_align.toggled.connect(self._controller.set_auto_align)
@@ -431,9 +449,34 @@ class MainWindow(BaseMainWindow):
         self._line_target.setToolTip(name)
         self._controller.set_target(name)
 
+    def _on_sel_source(self) -> None:
+        """Select the current source mesh in Maya."""
+        name = self._controller.source_name
+        if name:
+            from .scene_ops import select_mesh
+
+            select_mesh(name)
+
+    def _on_sel_target(self) -> None:
+        """Select the current target mesh in Maya."""
+        name = self._controller.target_name
+        if name:
+            from .scene_ops import select_mesh
+
+            select_mesh(name)
+
     def _on_set_region(self) -> None:
         """SET clicked: faces selected -> set region, nothing selected -> clear."""
         self._controller.set_target_faces_from_selection()
+
+    def _on_sel_region(self) -> None:
+        """Select the stored target region faces in Maya."""
+        indices = self._controller.target_face_indices
+        name = self._controller.target_name
+        if indices and name:
+            from .scene_ops import select_faces
+
+            select_faces(name, indices)
 
     def _refresh_region_display(self) -> None:
         """Update the region QLineEdit based on controller state."""
@@ -623,6 +666,9 @@ class MainWindow(BaseMainWindow):
         self._btn_set_source.setEnabled(enabled)
         self._btn_set_target.setEnabled(enabled)
         self._btn_set_region.setEnabled(enabled)
+        self._btn_sel_source.setEnabled(enabled)
+        self._btn_sel_target.setEnabled(enabled)
+        self._btn_sel_region.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
 

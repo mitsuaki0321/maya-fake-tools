@@ -158,6 +158,19 @@ def get_selected_face_indices() -> tuple[str, list[int]] | None:
     return mesh_name, sorted(indices)
 
 
+def select_faces(mesh_name: str, face_indices: list[int]) -> None:
+    """Select face components on a mesh in Maya.
+
+    Args:
+        mesh_name: Transform name of the mesh.
+        face_indices: List of face indices to select.
+    """
+    import maya.cmds as cmds
+
+    components = [f"{mesh_name}.f[{i}]" for i in face_indices]
+    cmds.select(components, replace=True)
+
+
 def duplicate_mesh(mesh_name: str, new_name: str) -> str:
     """Duplicate a mesh in the Maya scene.
 
