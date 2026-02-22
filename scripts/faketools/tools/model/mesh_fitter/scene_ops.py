@@ -130,6 +130,34 @@ def match_transform(node: str, target: str) -> None:
     cmds.xform(node, worldSpace=True, matrix=mat)
 
 
+def get_selected_face_indices() -> tuple[str, list[int]] | None:
+    """Return (mesh_long_name, [face_indices]) from current face selection, or None if no faces selected.
+
+    Raises:
+        ValueError: If faces from multiple meshes are selected.
+    """
+    import maya.cmds as cmds
+
+    faces = cmds.filterExpand(selectionMask=34, expand=True) or []
+    if not faces:
+        return None
+
+    mesh_names = set()
+    indices = []
+    for f in faces:
+        mesh, comp = f.split(".f[")
+        mesh_names.add(mesh)
+        indices.append(int(comp.rstrip("]")))
+
+    if len(mesh_names) > 1:
+        raise ValueError("Faces from multiple meshes selected")
+
+    mesh_name = mesh_names.pop()
+    long_names = cmds.ls(mesh_name, long=True)
+    mesh_name = long_names[0] if long_names else mesh_name
+    return mesh_name, sorted(indices)
+
+
 def duplicate_mesh(mesh_name: str, new_name: str) -> str:
     """Duplicate a mesh in the Maya scene.
 

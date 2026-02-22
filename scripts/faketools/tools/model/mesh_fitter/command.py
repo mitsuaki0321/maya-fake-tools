@@ -26,6 +26,7 @@ def run_fitting(
     api: MayaMeshAPI | None = None,
     duplicate_source: bool = True,
     output_space: str = "source",
+    target_face_indices: list[int] | None = None,
     result_name: str | None = None,
     on_progress: Callable[[str], None] | None = None,
 ) -> PipelineResult:
@@ -40,6 +41,7 @@ def run_fitting(
         api: MayaMeshAPI implementation. Defaults to OpenMayaMeshAPI().
         duplicate_source: If True, duplicate source before fitting to preserve original.
         output_space: "source" to keep result at source transform, "target" to match target transform.
+        target_face_indices: Optional face indices to use as target region (submesh).
         result_name: Name for the result mesh. Defaults to "{source_name}_fitted".
         on_progress: Optional progress callback.
 
@@ -66,7 +68,7 @@ def run_fitting(
     if on_progress:
         on_progress("[1/4] Converting meshes...")
     source_tri = maya_mesh_to_trimesh(source_name, api=api)
-    target_tri = maya_mesh_to_trimesh(target_name, api=api)
+    target_tri = maya_mesh_to_trimesh(target_name, api=api, face_indices=target_face_indices)
 
     # Run the core pipeline
     result = run_pipeline_from_meshes(

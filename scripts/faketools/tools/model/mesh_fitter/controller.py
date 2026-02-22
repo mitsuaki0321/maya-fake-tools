@@ -20,6 +20,8 @@ from .core.pipeline import PipelineConfig
 from .io.landmark_io import LandmarkData
 from .mesh_bridge import MayaMeshAPI, maya_mesh_to_trimesh
 
+_MIN_TARGET_REGION_FACES = 100
+
 # ---------------------------------------------------------------------------
 # MeshListProvider protocol
 # ---------------------------------------------------------------------------
@@ -96,6 +98,7 @@ class FittingRequest:
     landmarks: LandmarkData | None
     duplicate_source: bool
     output_space: str
+    target_face_indices: list[int] | None
 
 
 # ---------------------------------------------------------------------------
@@ -142,6 +145,9 @@ class MeshFitController:
         self._duplicate_source: bool = True
         self._output_space: str = "source"
 
+        # Target region (face selection)
+        self._target_face_indices: list[int] | None = None
+
         # Advanced fitting settings
         self._stiffness: float = 0.10
         self._landmark_strength: float = 1.0
@@ -165,6 +171,7 @@ class MeshFitController:
         self.on_landmarks_changed: Callable[[], None] = _noop
         self.on_fitting_complete: Callable[[PipelineResult], None] = _noop
         self.on_fitting_state_changed: Callable[[bool], None] = _noop
+        self.on_target_region_changed: Callable[[], None] = _noop
 
     # ------------------------------------------------------------------
     # Read-only properties
@@ -217,6 +224,10 @@ class MeshFitController:
     @property
     def output_space(self) -> str:
         return self._output_space
+
+    @property
+    def target_face_indices(self) -> list[int] | None:
+        return self._target_face_indices
 
     @property
     def is_fitting(self) -> bool:
@@ -285,6 +296,8 @@ class MeshFitController:
         if name == self._target_name:
             return
         self._target_name = name
+        self._target_face_indices = None
+        self.on_target_region_changed()
         self.on_status(f"Target: {name}")
 
     # ------------------------------------------------------------------
@@ -320,6 +333,76 @@ class MeshFitController:
 
     def set_output_space(self, space: str) -> None:
         self._output_space = space
+
+    # ------------------------------------------------------------------
+    # Target region (face selection)
+    # ------------------------------------------------------------------
+
+    def set_target_faces_from_selection(self) -> None:
+        """Set target region from current Maya face selection.
+
+        If no faces are selected, clears the region. Validates that the
+        selected faces belong to the current target mesh, meet minimum
+        count, and have no isolated faces.
+        """
+        from . import scene_ops
+
+        result = scene_ops.get_selected_face_indices()
+        if result is None:
+            self.clear_target_faces()
+            return
+
+        mesh_name, indices = result
+
+        if not self._target_name:
+            self.on_error("Set a target mesh before selecting a region")
+            return
+
+        if mesh_name != self._target_name:
+            self.on_error(f"Selected faces belong to '{mesh_name}', not the target '{self._target_name}'")
+            return
+
+        if len(indices) < _MIN_TARGET_REGION_FACES:
+            self.on_error(f"Select at least {_MIN_TARGET_REGION_FACES} faces (got {len(indices)})")
+            return
+
+        self._validate_face_connectivity(indices)
+
+        self._target_face_indices = indices
+        self.on_target_region_changed()
+        self.on_status(f"Target region: {len(indices)} faces")
+
+    def clear_target_faces(self) -> None:
+        """Clear the target region."""
+        self._target_face_indices = None
+        self.on_target_region_changed()
+        self.on_status("Target region cleared")
+
+    def _validate_face_connectivity(self, face_indices: list[int]) -> None:
+        """Check that no face is completely isolated (shares no vertex with another selected face).
+
+        Raises:
+            ValueError: If an isolated face is detected.
+        """
+        raw_faces = self._api.get_face_vertex_indices(self._target_name)
+        selected = raw_faces[face_indices]
+
+        # Count how many selected faces each vertex belongs to
+        vert_count: dict[int, int] = {}
+        face_vert_sets: list[set[int]] = []
+        for row in selected:
+            verts = set(int(v) for v in row if v >= 0)
+            face_vert_sets.append(verts)
+            for v in verts:
+                vert_count[v] = vert_count.get(v, 0) + 1
+
+        # A face is isolated if all its vertices appear only once
+        for i, verts in enumerate(face_vert_sets):
+            if all(vert_count[v] == 1 for v in verts):
+                raise ValueError(
+                    f"Isolated face detected (face index {face_indices[i]}). "
+                    "All selected faces must share at least one vertex with another selected face."
+                )
 
     def set_stiffness(self, value: float) -> None:
         self._stiffness = max(0.01, min(0.20, value))
@@ -474,6 +557,7 @@ class MeshFitController:
             landmarks=landmarks,
             duplicate_source=self._duplicate_source,
             output_space=self._output_space,
+            target_face_indices=self._target_face_indices,
         )
 
     # ------------------------------------------------------------------

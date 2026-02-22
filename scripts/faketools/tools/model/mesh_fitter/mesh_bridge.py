@@ -224,12 +224,16 @@ def _triangulate_faces(faces: np.ndarray) -> np.ndarray:
 def maya_mesh_to_trimesh(
     mesh_name: str,
     api: MayaMeshAPI | None = None,
+    face_indices: list[int] | None = None,
 ) -> trimesh.Trimesh:
     """Convert a Maya mesh to a trimesh.Trimesh.
 
     Args:
         mesh_name: Name of the Maya mesh shape or transform.
         api: MayaMeshAPI implementation. Defaults to OpenMayaMeshAPI().
+        face_indices: Optional list of Maya face indices to extract as a submesh.
+            When provided, only the specified faces are included and unreferenced
+            vertices are removed.
 
     Returns:
         trimesh.Trimesh with triangulated faces.
@@ -238,15 +242,28 @@ def maya_mesh_to_trimesh(
         api = OpenMayaMeshAPI()
 
     vertices = api.get_vertex_positions(mesh_name)
-    faces = api.get_face_vertex_indices(mesh_name)
+    raw_faces = api.get_face_vertex_indices(mesh_name)
 
-    # Triangulate if faces have more than 3 verts per face
-    if faces.shape[1] > 3:
+    if face_indices is not None:
+        # Extract only the selected faces, then triangulate
+        faces = raw_faces[face_indices]
         faces = _triangulate_faces(faces)
-    elif faces.shape[1] == 3:
-        # Already triangles, remove any -1 padding rows
-        valid = np.all(faces >= 0, axis=1)
-        faces = faces[valid]
+        # Remove unreferenced vertices and remap indices
+        used = np.unique(faces)
+        remap = np.full(len(vertices), -1, dtype=np.int64)
+        remap[used] = np.arange(len(used))
+        vertices = vertices[used]
+        faces = remap[faces]
+    else:
+        # Full mesh path
+        if raw_faces.shape[1] > 3:
+            faces = _triangulate_faces(raw_faces)
+        elif raw_faces.shape[1] == 3:
+            # Already triangles, remove any -1 padding rows
+            valid = np.all(raw_faces >= 0, axis=1)
+            faces = raw_faces[valid]
+        else:
+            faces = raw_faces
 
     return trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
 

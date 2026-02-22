@@ -99,13 +99,20 @@ class MainWindow(BaseMainWindow):
 
         lbl_source = QLabel("Source:")
         lbl_target = QLabel("Target:")
+        lbl_region = QLabel("Region:")
         fm = lbl_source.fontMetrics()
-        label_width = max(fm.horizontalAdvance(lbl_source.text()), fm.horizontalAdvance(lbl_target.text()))
+        label_width = max(
+            fm.horizontalAdvance("Source:"),
+            fm.horizontalAdvance("Target:"),
+            fm.horizontalAdvance("Region:"),
+        )
         label_width += fm.horizontalAdvance("M")
         lbl_source.setFixedWidth(label_width)
         lbl_target.setFixedWidth(label_width)
+        lbl_region.setFixedWidth(label_width)
         lbl_source.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         lbl_target.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        lbl_region.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         row_src = QHBoxLayout()
         row_src.addWidget(lbl_source)
@@ -126,6 +133,16 @@ class MainWindow(BaseMainWindow):
         self._btn_set_target = QPushButton("SET")
         row_tgt.addWidget(self._btn_set_target)
         lay_mesh.addLayout(row_tgt)
+
+        row_region = QHBoxLayout()
+        row_region.addWidget(lbl_region)
+        self._line_region = QLineEdit()
+        self._line_region.setReadOnly(True)
+        self._line_region.setPlaceholderText("Select target faces and click SET")
+        row_region.addWidget(self._line_region, 1)
+        self._btn_set_region = QPushButton("SET")
+        row_region.addWidget(self._btn_set_region)
+        lay_mesh.addLayout(row_region)
 
         self.central_layout.addWidget(grp_mesh)
 
@@ -353,6 +370,7 @@ class MainWindow(BaseMainWindow):
     def _connect_signals(self) -> None:
         self._btn_set_source.clicked.connect(self._on_set_source)
         self._btn_set_target.clicked.connect(self._on_set_target)
+        self._btn_set_region.clicked.connect(self._on_set_region)
 
         self._combo_schedule.currentTextChanged.connect(self._on_schedule_changed)
         self._chk_auto_align.toggled.connect(self._controller.set_auto_align)
@@ -384,6 +402,7 @@ class MainWindow(BaseMainWindow):
         self._controller.on_error = self._on_error
         self._controller.on_landmarks_changed = self._refresh_landmark_tree
         self._controller.on_fitting_state_changed = self._set_fitting_ui
+        self._controller.on_target_region_changed = self._refresh_region_display
         self._controller.on_fitting_complete = self._on_fitting_complete
 
     # ------------------------------------------------------------------
@@ -411,6 +430,18 @@ class MainWindow(BaseMainWindow):
         self._line_target.setText(name.rsplit("|", 1)[-1])
         self._line_target.setToolTip(name)
         self._controller.set_target(name)
+
+    def _on_set_region(self) -> None:
+        """SET clicked: faces selected -> set region, nothing selected -> clear."""
+        self._controller.set_target_faces_from_selection()
+
+    def _refresh_region_display(self) -> None:
+        """Update the region QLineEdit based on controller state."""
+        indices = self._controller.target_face_indices
+        if indices is not None:
+            self._line_region.setText(f"{len(indices)} faces")
+        else:
+            self._line_region.clear()
 
     def _on_error(self, msg: str) -> None:
         logger.error(msg, exc_info=True)
@@ -564,6 +595,7 @@ class MainWindow(BaseMainWindow):
                 landmarks=request.landmarks,
                 duplicate_source=request.duplicate_source,
                 output_space=request.output_space,
+                target_face_indices=request.target_face_indices,
                 on_progress=self._on_fitting_progress,
             )
             self._controller.on_fitting_finished(result)
@@ -590,6 +622,7 @@ class MainWindow(BaseMainWindow):
         self._btn_run.setEnabled(enabled)
         self._btn_set_source.setEnabled(enabled)
         self._btn_set_target.setEnabled(enabled)
+        self._btn_set_region.setEnabled(enabled)
         self._btn_set_landmarks.setEnabled(enabled)
         self._tree_landmarks.setEnabled(enabled)
 
