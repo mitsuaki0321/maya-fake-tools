@@ -117,6 +117,19 @@ def get_blendshape_weights(mesh_name: str) -> list[str]:
     return [aliases[i] for i in range(0, len(aliases), 2)]
 
 
+def match_transform(node: str, target: str) -> None:
+    """Copy the world-space transform matrix from *target* to *node*.
+
+    Args:
+        node: Transform node to modify.
+        target: Transform node whose world matrix is copied.
+    """
+    import maya.cmds as cmds
+
+    mat = cmds.xform(target, query=True, worldSpace=True, matrix=True)
+    cmds.xform(node, worldSpace=True, matrix=mat)
+
+
 def duplicate_mesh(mesh_name: str, new_name: str) -> str:
     """Duplicate a mesh in the Maya scene.
 

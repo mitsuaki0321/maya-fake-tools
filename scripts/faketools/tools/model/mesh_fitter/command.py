@@ -25,6 +25,7 @@ def run_fitting(
     schedule: str | None = None,
     api: MayaMeshAPI | None = None,
     duplicate_source: bool = True,
+    output_space: str = "source",
     result_name: str | None = None,
     on_progress: Callable[[str], None] | None = None,
 ) -> PipelineResult:
@@ -38,6 +39,7 @@ def run_fitting(
         schedule: Shorthand to set config.schedule (overrides config.schedule).
         api: MayaMeshAPI implementation. Defaults to OpenMayaMeshAPI().
         duplicate_source: If True, duplicate source before fitting to preserve original.
+        output_space: "source" to keep result at source transform, "target" to match target transform.
         result_name: Name for the result mesh. Defaults to "{source_name}_fitted".
         on_progress: Optional progress callback.
 
@@ -91,5 +93,10 @@ def run_fitting(
         # Overwrite source in-place
         trimesh_to_maya_mesh(result.fitted_mesh, source_name, api=api)
         result.result_mesh_name = source_name
+
+    if output_space == "target":
+        from .scene_ops import match_transform
+
+        match_transform(result.result_mesh_name, target_name)
 
     return result

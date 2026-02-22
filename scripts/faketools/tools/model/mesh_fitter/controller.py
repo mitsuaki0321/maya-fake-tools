@@ -95,6 +95,7 @@ class FittingRequest:
     config: PipelineConfig
     landmarks: LandmarkData | None
     duplicate_source: bool
+    output_space: str
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +140,7 @@ class MeshFitController:
         self._symmetrize: bool = False
         self._symmetry_method: str = "position"
         self._duplicate_source: bool = True
+        self._output_space: str = "source"
 
         # Advanced fitting settings
         self._stiffness: float = 0.10
@@ -211,6 +213,10 @@ class MeshFitController:
     @property
     def duplicate_source(self) -> bool:
         return self._duplicate_source
+
+    @property
+    def output_space(self) -> str:
+        return self._output_space
 
     @property
     def is_fitting(self) -> bool:
@@ -311,6 +317,9 @@ class MeshFitController:
 
     def set_duplicate_source(self, enabled: bool) -> None:
         self._duplicate_source = enabled
+
+    def set_output_space(self, space: str) -> None:
+        self._output_space = space
 
     def set_stiffness(self, value: float) -> None:
         self._stiffness = max(0.01, min(0.20, value))
@@ -464,6 +473,7 @@ class MeshFitController:
             config=config,
             landmarks=landmarks,
             duplicate_source=self._duplicate_source,
+            output_space=self._output_space,
         )
 
     # ------------------------------------------------------------------

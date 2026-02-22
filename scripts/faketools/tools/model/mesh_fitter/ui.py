@@ -292,6 +292,15 @@ class MainWindow(BaseMainWindow):
         self._chk_duplicate = QCheckBox("Keep Original Mesh")
         self._chk_duplicate.setChecked(True)
         lay_post.addWidget(self._chk_duplicate)
+
+        self._OUTPUT_SPACE_DISPLAY = {"Source": "source", "Target": "target"}
+        row_output_space = QHBoxLayout()
+        row_output_space.addWidget(QLabel("Output Space:"))
+        self._combo_output_space = QComboBox()
+        self._combo_output_space.addItems(list(self._OUTPUT_SPACE_DISPLAY.keys()))
+        row_output_space.addWidget(self._combo_output_space, 1)
+        lay_post.addLayout(row_output_space)
+
         lay_post.addStretch()
         self._tab_settings.addTab(tab_post, "Finish")
 
@@ -312,10 +321,7 @@ class MainWindow(BaseMainWindow):
         header.setSectionsClickable(True)
         header.setHighlightSections(False)
         header.setCursor(Qt.PointingHandCursor)
-        header.setStyleSheet(
-            "QHeaderView::section { background: palette(button); border: none; }"
-            "QHeaderView::section:hover { background: #707070; }"
-        )
+        header.setStyleSheet("QHeaderView::section { background: palette(button); border: none; }QHeaderView::section:hover { background: #707070; }")
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
@@ -356,6 +362,7 @@ class MainWindow(BaseMainWindow):
         self._chk_symmetrize.toggled.connect(self._on_symmetrize_toggled)
         self._combo_sym_method.currentTextChanged.connect(self._on_symmetrize_method_changed)
         self._chk_duplicate.toggled.connect(self._controller.set_duplicate_source)
+        self._combo_output_space.currentTextChanged.connect(self._on_output_space_changed)
 
         self._grp_advanced.toggled.connect(self._on_advanced_toggled)
         self._slider_stiffness.valueChanged.connect(self._on_stiffness_slider)
@@ -420,6 +427,10 @@ class MainWindow(BaseMainWindow):
     def _on_symmetrize_method_changed(self, text: str) -> None:
         internal = self._SYM_DISPLAY.get(text, "position")
         self._controller.set_symmetry_method(internal)
+
+    def _on_output_space_changed(self, text: str) -> None:
+        internal = self._OUTPUT_SPACE_DISPLAY.get(text, "source")
+        self._controller.set_output_space(internal)
 
     def _on_schedule_changed(self, text: str) -> None:
         self._controller.set_schedule(text.lower())
@@ -552,6 +563,7 @@ class MainWindow(BaseMainWindow):
                 config=request.config,
                 landmarks=request.landmarks,
                 duplicate_source=request.duplicate_source,
+                output_space=request.output_space,
                 on_progress=self._on_fitting_progress,
             )
             self._controller.on_fitting_finished(result)
@@ -606,6 +618,7 @@ class MainWindow(BaseMainWindow):
             "symmetrize": self._chk_symmetrize.isChecked(),
             "symmetry_method": self._SYM_DISPLAY.get(self._combo_sym_method.currentText(), "position"),
             "duplicate": self._chk_duplicate.isChecked(),
+            "output_space": self._OUTPUT_SPACE_DISPLAY.get(self._combo_output_space.currentText(), "source"),
             "decimate_target": self._chk_decimate.isChecked(),
             "decimate_ratio": self._spin_decimate.value(),
             "window_geometry": {
@@ -626,6 +639,9 @@ class MainWindow(BaseMainWindow):
         sym_display = next((k for k, v in self._SYM_DISPLAY.items() if v == sym_internal), "By Position")
         self._combo_sym_method.setCurrentText(sym_display)
         self._chk_duplicate.setChecked(settings_data.get("duplicate", True))
+        os_internal = settings_data.get("output_space", "source")
+        os_display = next((k for k, v in self._OUTPUT_SPACE_DISPLAY.items() if v == os_internal), "Source")
+        self._combo_output_space.setCurrentText(os_display)
         self._chk_decimate.setChecked(settings_data.get("decimate_target", False))
         self._spin_decimate.setValue(settings_data.get("decimate_ratio", 0.25))
 
