@@ -350,7 +350,7 @@ These settings are restored on the next launch.
 - Rec mode recording uses screen capture of the viewport, so other windows overlapping the viewport may be included in the capture
 - High resolution and high frame rate recording increases memory usage
 - FFmpeg must be installed on your system to save in MP4 format
-- This tool requires the PIL (Pillow) library (included by default in Maya 2022 and later)
+- This tool requires the PIL (Pillow) library
 
 ## Optional Dependencies
 
