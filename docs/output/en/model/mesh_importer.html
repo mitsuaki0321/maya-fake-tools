@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../css/style.css">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-        <meta name="description" content="Import glTF/GLB and PLY files into Maya">
+        <meta name="description" content="Import glTF/GLB files into Maya via Blender conversion">
     </head>
 <body>
     <header class="site-header">
@@ -40,10 +40,6 @@
                     <li><a href="#requirements"
                     id="toc-requirements">Requirements</a>
                     <ul>
-                    <li><a href="#gltfglb-import"
-                    id="toc-gltfglb-import">glTF/GLB Import</a></li>
-                    <li><a href="#ply-import" id="toc-ply-import">PLY
-                    Import</a></li>
                     <li><a href="#blender-path-detection-order"
                     id="toc-blender-path-detection-order">Blender Path
                     Detection Order</a></li>
@@ -63,12 +59,7 @@
                     id="toc-import-button">Import Button</a></li>
                     </ul></li>
                     <li><a href="#processing-flow"
-                    id="toc-processing-flow">Processing Flow</a>
-                    <ul>
-                    <li><a href="#gltfglb"
-                    id="toc-gltfglb">glTF/GLB</a></li>
-                    <li><a href="#ply" id="toc-ply">PLY</a></li>
-                    </ul></li>
+                    id="toc-processing-flow">Processing Flow</a></li>
                     <li><a href="#command-line-usage"
                     id="toc-command-line-usage">Command Line
                     Usage</a></li>
@@ -81,23 +72,14 @@
                                 <h1 class="page-title">Mesh Importer</h1>
                 
                 <h2 id="overview">Overview</h2>
-                <p>A tool that imports 3D mesh files into Maya. Supports
-                the following formats:</p>
-                <ul>
-                <li><strong>glTF/GLB</strong>: Converted to FBX using
-                Blender and imported with materials and textures</li>
-                <li><strong>PLY</strong>: Imported directly with vertex
-                color support (requires trimesh)</li>
-                </ul>
+                <p>A tool that converts glTF/GLB files to FBX using
+                Blender and imports them into Maya.</p>
+                <p>Maya does not natively support the glTF format, but
+                this tool enables seamless import of glTF/GLB files by
+                leveraging Blender as a conversion backend.</p>
                 <h2 id="requirements">Requirements</h2>
-                <h3 id="gltfglb-import">glTF/GLB Import</h3>
                 <ul>
                 <li><strong>Blender</strong> must be installed</li>
-                </ul>
-                <h3 id="ply-import">PLY Import</h3>
-                <ul>
-                <li><strong>trimesh</strong> must be installed (install
-                via FakeTools &gt; Dependency Installer)</li>
                 </ul>
                 <h3 id="blender-path-detection-order">Blender Path
                 Detection Order</h3>
@@ -139,18 +121,15 @@
 faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 <h2 id="interface">Interface</h2>
                 <h3 id="input-file">Input File</h3>
-                <p>Specify the file to import. Supports glTF (.gltf),
-                GLB (.glb), and PLY (.ply) formats. Click the
+                <p>Specify the glTF/GLB file to import. Click the
                 <code>...</code> button to select from the file
                 browser.</p>
                 <h3 id="output-directory">Output Directory</h3>
                 <p>Specify the output directory for FBX files and
-                textures (glTF/GLB only). If left empty, outputs to the
-                same directory as the input file. This option is
-                disabled for PLY files.</p>
+                textures. If left empty, outputs to the same directory
+                as the input file.</p>
                 <h3 id="shader-type">Shader Type</h3>
-                <p>Select the shader type to use during import (glTF/GLB
-                only). This option is disabled for PLY files.</p>
+                <p>Select the shader type to use during import.</p>
                 <table>
                 <thead>
                 <tr>
@@ -180,7 +159,6 @@ faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 <h3 id="import-button">Import Button</h3>
                 <p>Execute the import based on the current settings.</p>
                 <h2 id="processing-flow">Processing Flow</h2>
-                <h3 id="gltfglb">glTF/GLB</h3>
                 <ol type="1">
                 <li><strong>GLB to FBX Conversion</strong>: Convert
                 glTF/GLB file to FBX using Blender’s headless mode</li>
@@ -192,49 +170,31 @@ faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 materials based on selected shader type (except Auto
                 Detect)</li>
                 </ol>
-                <h3 id="ply">PLY</h3>
-                <ol type="1">
-                <li><strong>File Parsing</strong>: Read PLY file using
-                trimesh</li>
-                <li><strong>Mesh Creation</strong>: Create Maya polygon
-                mesh via API</li>
-                <li><strong>Vertex Colors</strong>: Apply vertex colors
-                if present in the PLY file</li>
-                <li><strong>Material Assignment</strong>: Assign default
-                material (initialShadingGroup)</li>
-                </ol>
                 <h2 id="command-line-usage">Command Line Usage</h2>
                 <p>You can also import directly from scripts without
                 using the UI.</p>
                 <pre class="python"><code>from faketools.tools.model.mesh_importer import command
 
-# Unified import (auto-detects format by extension)
-imported_nodes = command.import_file(
+# Basic usage
+imported_nodes = command.import_gltf_file(
     file_path=&quot;path/to/model.glb&quot;,
     shader_type=&quot;auto&quot;
 )
 
-# glTF/GLB with output directory
+# With output directory
 imported_nodes = command.import_gltf_file(
     file_path=&quot;path/to/model.glb&quot;,
     output_dir=&quot;path/to/output&quot;,
     shader_type=&quot;arnold&quot;
-)
-
-# PLY import
-imported_nodes = command.import_ply_file(
-    file_path=&quot;path/to/scan.ply&quot;
 )</code></pre>
                 <h2 id="notes">Notes</h2>
                 <ul>
-                <li>Blender runs in the background during glTF/GLB
+                <li>Blender runs in the background during
                 conversion</li>
-                <li>Large glTF/GLB files may take longer to convert
-                (timeout: 5 minutes)</li>
+                <li>Large files may take longer to convert (timeout: 5
+                minutes)</li>
                 <li>Textures are extracted to a
                 <code>{filename}.fbm</code> directory</li>
-                <li>PLY vertex colors are applied as a Maya
-                <code>colorSet</code> and displayed in the viewport</li>
                 </ul>
             </main>
         </div>

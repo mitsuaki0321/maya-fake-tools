@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../../css/style.css">
     <!-- highlight.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
-        <meta name="description" content="glTF/GLBおよびPLYファイルをMayaにインポート">
+        <meta name="description" content="Blender経由でglTF/GLBファイルをMayaにインポート">
     </head>
 <body>
     <header class="site-header">
@@ -39,10 +39,6 @@
                     <li><a href="#必要条件"
                     id="toc-必要条件">必要条件</a>
                     <ul>
-                    <li><a href="#gltfglbインポート"
-                    id="toc-gltfglbインポート">glTF/GLBインポート</a></li>
-                    <li><a href="#plyインポート"
-                    id="toc-plyインポート">PLYインポート</a></li>
                     <li><a href="#blenderパスの検知順序"
                     id="toc-blenderパスの検知順序">Blenderパスの検知順序</a></li>
                     </ul></li>
@@ -61,12 +57,7 @@
                     id="toc-import-ボタン">Import ボタン</a></li>
                     </ul></li>
                     <li><a href="#処理フロー"
-                    id="toc-処理フロー">処理フロー</a>
-                    <ul>
-                    <li><a href="#gltfglb"
-                    id="toc-gltfglb">glTF/GLB</a></li>
-                    <li><a href="#ply" id="toc-ply">PLY</a></li>
-                    </ul></li>
+                    id="toc-処理フロー">処理フロー</a></li>
                     <li><a href="#コマンドラインからの使用"
                     id="toc-コマンドラインからの使用">コマンドラインからの使用</a></li>
                     <li><a href="#注意事項"
@@ -79,24 +70,12 @@
                                 <h1 class="page-title">Mesh Importer</h1>
                 
                 <h2 id="概要">概要</h2>
-                <p>3DメッシュファイルをMayaにインポートするツールです。以下のフォーマットに対応しています：</p>
-                <ul>
-                <li><strong>glTF/GLB</strong>:
-                Blenderを使用してFBXに変換し、マテリアルとテクスチャ付きでインポート</li>
-                <li><strong>PLY</strong>:
-                頂点カラー対応で直接インポート（trimeshが必要）</li>
-                </ul>
+                <p>glTF/GLBファイルをBlenderを使用してFBXに変換し、Mayaにインポートするツールです。</p>
+                <p>MayaはglTF形式を直接サポートしていませんが、このツールを使用することで、Blenderをバックエンドとして活用し、glTF/GLBファイルをシームレスにインポートできます。</p>
                 <h2 id="必要条件">必要条件</h2>
-                <h3 id="gltfglbインポート">glTF/GLBインポート</h3>
                 <ul>
                 <li><strong>Blender</strong>
                 がインストールされている必要があります</li>
-                </ul>
-                <h3 id="plyインポート">PLYインポート</h3>
-                <ul>
-                <li><strong>trimesh</strong>
-                がインストールされている必要があります（FakeTools &gt;
-                Dependency Installerからインストール可能）</li>
                 </ul>
                 <h3
                 id="blenderパスの検知順序">Blenderパスの検知順序</h3>
@@ -135,14 +114,12 @@
 faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 <h2 id="インターフェース">インターフェース</h2>
                 <h3 id="input-file">Input File</h3>
-                <p>インポートするファイルを指定します。glTF (.gltf)、GLB
-                (.glb)、PLY (.ply)
-                形式に対応しています。<code>...</code>
+                <p>インポートするglTF/GLBファイルを指定します。<code>...</code>
                 ボタンをクリックしてファイルブラウザから選択できます。</p>
                 <h3 id="output-directory">Output Directory</h3>
-                <p>FBXファイルとテクスチャの出力先ディレクトリを指定します（glTF/GLBのみ）。空のままにすると、入力ファイルと同じディレクトリに出力されます。PLYファイルの場合、このオプションは無効になります。</p>
+                <p>FBXファイルとテクスチャの出力先ディレクトリを指定します。空のままにすると、入力ファイルと同じディレクトリに出力されます。</p>
                 <h3 id="shader-type">Shader Type</h3>
-                <p>インポート時に使用するシェーダータイプを選択します（glTF/GLBのみ）。PLYファイルの場合、このオプションは無効になります。</p>
+                <p>インポート時に使用するシェーダータイプを選択します。</p>
                 <table>
                 <thead>
                 <tr>
@@ -172,7 +149,6 @@ faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 <h3 id="import-ボタン">Import ボタン</h3>
                 <p>設定に基づいてインポートを実行します。</p>
                 <h2 id="処理フロー">処理フロー</h2>
-                <h3 id="gltfglb">glTF/GLB</h3>
                 <ol type="1">
                 <li><strong>GLB→FBX変換</strong>:
                 BlenderのヘッドレスモードでglTF/GLBファイルをFBXに変換</li>
@@ -184,48 +160,30 @@ faketools.tools.model.mesh_importer.ui.show_ui()</code></pre>
                 選択したシェーダータイプに応じてマテリアルを変換（Auto
                 Detect以外の場合）</li>
                 </ol>
-                <h3 id="ply">PLY</h3>
-                <ol type="1">
-                <li><strong>ファイル解析</strong>:
-                trimeshを使用してPLYファイルを読み込み</li>
-                <li><strong>メッシュ作成</strong>: Maya
-                APIを使用してポリゴンメッシュを作成</li>
-                <li><strong>頂点カラー</strong>:
-                PLYファイルに頂点カラーが含まれている場合、適用</li>
-                <li><strong>マテリアル割り当て</strong>:
-                デフォルトマテリアル（initialShadingGroup）を割り当て</li>
-                </ol>
                 <h2
                 id="コマンドラインからの使用">コマンドラインからの使用</h2>
                 <p>UIを使用せずにスクリプトから直接インポートすることも可能です。</p>
                 <pre class="python"><code>from faketools.tools.model.mesh_importer import command
 
-# 統合インポート（拡張子でフォーマットを自動判別）
-imported_nodes = command.import_file(
+# 基本的な使用方法
+imported_nodes = command.import_gltf_file(
     file_path=&quot;path/to/model.glb&quot;,
     shader_type=&quot;auto&quot;
 )
 
-# glTF/GLB（出力ディレクトリを指定）
+# 出力ディレクトリを指定
 imported_nodes = command.import_gltf_file(
     file_path=&quot;path/to/model.glb&quot;,
     output_dir=&quot;path/to/output&quot;,
     shader_type=&quot;arnold&quot;
-)
-
-# PLYインポート
-imported_nodes = command.import_ply_file(
-    file_path=&quot;path/to/scan.ply&quot;
 )</code></pre>
                 <h2 id="注意事項">注意事項</h2>
                 <ul>
-                <li>glTF/GLB変換中にBlenderがバックグラウンドで実行されます</li>
-                <li>大きなglTF/GLBファイルの場合、変換に時間がかかることがあります（タイムアウト:
+                <li>変換中にBlenderがバックグラウンドで実行されます</li>
+                <li>大きなファイルの場合、変換に時間がかかることがあります（タイムアウト:
                 5分）</li>
                 <li>テクスチャは <code>{ファイル名}.fbm</code>
                 ディレクトリに抽出されます</li>
-                <li>PLYの頂点カラーはMayaの <code>colorSet</code>
-                として適用され、ビューポートに表示されます</li>
                 </ul>
             </main>
         </div>

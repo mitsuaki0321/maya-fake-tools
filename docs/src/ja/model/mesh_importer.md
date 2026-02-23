@@ -1,7 +1,7 @@
 ---
 title: Mesh Importer
 category: model
-description: glTF/GLBおよびPLYファイルをMayaにインポート
+description: Blender経由でglTF/GLBファイルをMayaにインポート
 lang: ja
 lang-ref: mesh_importer
 order: 40
@@ -9,20 +9,13 @@ order: 40
 
 ## 概要
 
-3DメッシュファイルをMayaにインポートするツールです。以下のフォーマットに対応しています：
+glTF/GLBファイルをBlenderを使用してFBXに変換し、Mayaにインポートするツールです。
 
-- **glTF/GLB**: Blenderを使用してFBXに変換し、マテリアルとテクスチャ付きでインポート
-- **PLY**: 頂点カラー対応で直接インポート（trimeshが必要）
+MayaはglTF形式を直接サポートしていませんが、このツールを使用することで、Blenderをバックエンドとして活用し、glTF/GLBファイルをシームレスにインポートできます。
 
 ## 必要条件
 
-### glTF/GLBインポート
-
 - **Blender** がインストールされている必要があります
-
-### PLYインポート
-
-- **trimesh** がインストールされている必要があります（FakeTools > Dependency Installerからインストール可能）
 
 ### Blenderパスの検知順序
 
@@ -55,15 +48,15 @@ faketools.tools.model.mesh_importer.ui.show_ui()
 
 ### Input File
 
-インポートするファイルを指定します。glTF (.gltf)、GLB (.glb)、PLY (.ply) 形式に対応しています。`...` ボタンをクリックしてファイルブラウザから選択できます。
+インポートするglTF/GLBファイルを指定します。`...` ボタンをクリックしてファイルブラウザから選択できます。
 
 ### Output Directory
 
-FBXファイルとテクスチャの出力先ディレクトリを指定します（glTF/GLBのみ）。空のままにすると、入力ファイルと同じディレクトリに出力されます。PLYファイルの場合、このオプションは無効になります。
+FBXファイルとテクスチャの出力先ディレクトリを指定します。空のままにすると、入力ファイルと同じディレクトリに出力されます。
 
 ### Shader Type
 
-インポート時に使用するシェーダータイプを選択します（glTF/GLBのみ）。PLYファイルの場合、このオプションは無効になります。
+インポート時に使用するシェーダータイプを選択します。
 
 | オプション | 説明 |
 |-----------|------|
@@ -78,19 +71,10 @@ FBXファイルとテクスチャの出力先ディレクトリを指定しま�
 
 ## 処理フロー
 
-### glTF/GLB
-
 1. **GLB→FBX変換**: BlenderのヘッドレスモードでglTF/GLBファイルをFBXに変換
 2. **FBXインポート**: 変換されたFBXファイルをMayaにインポート
 3. **テクスチャ処理**: 埋め込みテクスチャを抽出し、パスを更新
 4. **マテリアル変換**: 選択したシェーダータイプに応じてマテリアルを変換（Auto Detect以外の場合）
-
-### PLY
-
-1. **ファイル解析**: trimeshを使用してPLYファイルを読み込み
-2. **メッシュ作成**: Maya APIを使用してポリゴンメッシュを作成
-3. **頂点カラー**: PLYファイルに頂点カラーが含まれている場合、適用
-4. **マテリアル割り当て**: デフォルトマテリアル（initialShadingGroup）を割り当て
 
 ## コマンドラインからの使用
 
@@ -99,28 +83,22 @@ UIを使用せずにスクリプトから直接インポートすることも可
 ```python
 from faketools.tools.model.mesh_importer import command
 
-# 統合インポート（拡張子でフォーマットを自動判別）
-imported_nodes = command.import_file(
+# 基本的な使用方法
+imported_nodes = command.import_gltf_file(
     file_path="path/to/model.glb",
     shader_type="auto"
 )
 
-# glTF/GLB（出力ディレクトリを指定）
+# 出力ディレクトリを指定
 imported_nodes = command.import_gltf_file(
     file_path="path/to/model.glb",
     output_dir="path/to/output",
     shader_type="arnold"
 )
-
-# PLYインポート
-imported_nodes = command.import_ply_file(
-    file_path="path/to/scan.ply"
-)
 ```
 
 ## 注意事項
 
-- glTF/GLB変換中にBlenderがバックグラウンドで実行されます
-- 大きなglTF/GLBファイルの場合、変換に時間がかかることがあります（タイムアウト: 5分）
+- 変換中にBlenderがバックグラウンドで実行されます
+- 大きなファイルの場合、変換に時間がかかることがあります（タイムアウト: 5分）
 - テクスチャは `{ファイル名}.fbm` ディレクトリに抽出されます
-- PLYの頂点カラーはMayaの `colorSet` として適用され、ビューポートに表示されます

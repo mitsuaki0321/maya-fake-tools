@@ -2,25 +2,6 @@
 
 import sys
 
-# Supported file format extensions
-GLTF_EXTENSIONS = {".glb", ".gltf"}
-PLY_EXTENSIONS = {".ply"}
-ALL_IMPORT_EXTENSIONS = GLTF_EXTENSIONS | PLY_EXTENSIONS
-
-# Format metadata for UI behavior
-FORMAT_INFO = {
-    "gltf": {
-        "extensions": GLTF_EXTENSIONS,
-        "has_materials": True,
-        "needs_output_dir": True,
-    },
-    "ply": {
-        "extensions": PLY_EXTENSIONS,
-        "has_materials": False,
-        "needs_output_dir": False,
-    },
-}
-
 # Shader type options for material conversion
 SHADER_TYPES = {
     "arnold": "Arnold",

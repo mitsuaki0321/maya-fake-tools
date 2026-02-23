@@ -1,7 +1,7 @@
 """Mesh importer command layer.
 
 Re-exports from submodules for backward compatibility.
-Provides import functions for glTF/GLB and PLY files.
+Provides the main import_gltf_file function.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from pathlib import Path
 import maya.cmds as cmds
 
 from .blender import convert_glb_to_fbx, find_blender_executable
-from .constants import GLTF_EXTENSIONS, PLY_EXTENSIONS, SHADER_TYPES
+from .constants import SHADER_TYPES
 from .fbx_import import import_fbx
 from .material import MaterialConverter
 from .texture import TextureManager
@@ -31,10 +31,8 @@ __all__ = [
     "MaterialConverter",
     # texture
     "TextureManager",
-    # main functions
+    # main function
     "import_gltf_file",
-    "import_ply_file",
-    "import_file",
 ]
 
 
@@ -130,82 +128,4 @@ def import_gltf_file(
     except Exception as e:
         logger.error(f"Unexpected error: {e}")
         cmds.warning(f"Mesh Importer: Unexpected error - {e}")
-        return []
-
-
-def import_ply_file(file_path: str) -> list[str]:
-    """Import PLY file into Maya.
-
-    Creates a Maya mesh from PLY data with optional vertex colors.
-
-    Args:
-        file_path: Path to PLY file.
-
-    Returns:
-        list[str]: List containing the imported transform node name.
-    """
-    from .ply_import import create_mesh_from_ply
-
-    logger.info("=" * 60)
-    logger.info("Mesh Importer - Starting PLY import")
-    logger.info("=" * 60)
-
-    try:
-        file_path = Path(file_path)
-        logger.info(f"Input file: {file_path}")
-
-        if not file_path.exists():
-            logger.error(f"PLY file not found: {file_path}")
-            cmds.warning(f"Mesh Importer: PLY file not found - {file_path}")
-            return []
-
-        transform_name, has_vertex_colors = create_mesh_from_ply(str(file_path))
-
-        # Refresh viewport
-        cmds.refresh()
-
-        # Success message
-        logger.info("=" * 60)
-        logger.info("PLY Import Complete!")
-        logger.info(f"Imported: {transform_name} (vertex colors: {has_vertex_colors})")
-        logger.info("=" * 60)
-
-        return [transform_name]
-
-    except ImportError:
-        logger.error("trimesh is not installed")
-        cmds.warning("Mesh Importer: trimesh is required for PLY import. Install it via FakeTools > Dependency Installer.")
-        return []
-    except Exception as e:
-        logger.error(f"Unexpected error: {e}")
-        cmds.warning(f"Mesh Importer: Unexpected error - {e}")
-        return []
-
-
-def import_file(
-    file_path: str,
-    output_dir: str | None = None,
-    shader_type: str = "auto",
-) -> list[str]:
-    """Import a mesh file into Maya.
-
-    Dispatches to the appropriate importer based on file extension.
-
-    Args:
-        file_path: Path to the mesh file (glTF/GLB/PLY).
-        output_dir: Directory for FBX output (glTF only).
-        shader_type: Material shader type (glTF only).
-
-    Returns:
-        list[str]: List of imported node names.
-    """
-    ext = Path(file_path).suffix.lower()
-
-    if ext in GLTF_EXTENSIONS:
-        return import_gltf_file(file_path=file_path, output_dir=output_dir, shader_type=shader_type)
-    elif ext in PLY_EXTENSIONS:
-        return import_ply_file(file_path=file_path)
-    else:
-        logger.error(f"Unsupported file format: {ext}")
-        cmds.warning(f"Mesh Importer: Unsupported file format - {ext}")
         return []

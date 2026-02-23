@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from logging import getLogger
-from pathlib import Path
 
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
@@ -21,19 +20,19 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from . import command
-from .constants import PLY_EXTENSIONS, SHADER_TYPES
+from .constants import SHADER_TYPES
 
 logger = getLogger(__name__)
 
 _instance = None
 
-_FILE_FILTER = "All Supported (*.glb *.gltf *.ply);;GLB Files (*.glb);;glTF Files (*.gltf);;PLY Files (*.ply);;All Files (*.*)"
+_FILE_FILTER = "GLB Files (*.glb);;glTF Files (*.gltf);;All Files (*.*)"
 
 
 class MainWindow(BaseMainWindow):
     """Mesh Importer Main Window.
 
-    Provides UI for importing glTF/GLB and PLY files into Maya.
+    Provides UI for importing glTF/GLB files into Maya via Blender conversion.
     """
 
     def __init__(self, parent=None):
@@ -64,8 +63,7 @@ class MainWindow(BaseMainWindow):
         input_label = QLabel("Input File:")
         input_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.input_edit = QLineEdit()
-        self.input_edit.setPlaceholderText("Select glTF/GLB/PLY file...")
-        self.input_edit.textChanged.connect(self._update_ui_for_format)
+        self.input_edit.setPlaceholderText("Select glTF/GLB file...")
         input_browse_button = QPushButton("...")
         input_browse_button.setFixedWidth(30)
         input_browse_button.clicked.connect(self._browse_input_file)
@@ -76,23 +74,23 @@ class MainWindow(BaseMainWindow):
         row += 1
 
         # Output Directory
-        self.output_label = QLabel("Output Directory:")
-        self.output_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.output_label.setToolTip("Optional: Leave empty to use same directory as input file")
+        output_label = QLabel("Output Directory:")
+        output_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        output_label.setToolTip("Optional: Leave empty to use same directory as input file")
         self.output_edit = QLineEdit()
         self.output_edit.setPlaceholderText("(Optional) Same as input file...")
-        self.output_browse_button = QPushButton("...")
-        self.output_browse_button.setFixedWidth(30)
-        self.output_browse_button.clicked.connect(self._browse_output_dir)
+        output_browse_button = QPushButton("...")
+        output_browse_button.setFixedWidth(30)
+        output_browse_button.clicked.connect(self._browse_output_dir)
 
-        grid_layout.addWidget(self.output_label, row, 0)
+        grid_layout.addWidget(output_label, row, 0)
         grid_layout.addWidget(self.output_edit, row, 1)
-        grid_layout.addWidget(self.output_browse_button, row, 2)
+        grid_layout.addWidget(output_browse_button, row, 2)
         row += 1
 
         # Shader Type
-        self.shader_label = QLabel("Shader Type:")
-        self.shader_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        shader_label = QLabel("Shader Type:")
+        shader_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.shader_combo = QComboBox()
 
         # Add shader types from constants
@@ -104,7 +102,7 @@ class MainWindow(BaseMainWindow):
         if auto_index >= 0:
             self.shader_combo.setCurrentIndex(auto_index)
 
-        grid_layout.addWidget(self.shader_label, row, 0)
+        grid_layout.addWidget(shader_label, row, 0)
         grid_layout.addWidget(self.shader_combo, row, 1)
 
         # Set column stretch so the middle column expands
@@ -152,32 +150,6 @@ class MainWindow(BaseMainWindow):
         if directory:
             self.output_edit.setText(directory)
 
-    def _is_ply_format(self) -> bool:
-        """Check if the current input file is a PLY file.
-
-        Returns:
-            True if the input file has a PLY extension.
-        """
-        text = self.input_edit.text().strip()
-        if not text:
-            return False
-        return Path(text).suffix.lower() in PLY_EXTENSIONS
-
-    def _update_ui_for_format(self):
-        """Update UI widget states based on the detected file format.
-
-        PLY files do not use Shader Type or Output Directory, so those
-        widgets are disabled when a PLY file is selected.
-        """
-        is_ply = self._is_ply_format()
-        gltf_enabled = not is_ply
-
-        self.output_label.setEnabled(gltf_enabled)
-        self.output_edit.setEnabled(gltf_enabled)
-        self.output_browse_button.setEnabled(gltf_enabled)
-        self.shader_label.setEnabled(gltf_enabled)
-        self.shader_combo.setEnabled(gltf_enabled)
-
     def _get_shader_key(self) -> str:
         """Get the shader type key from the combo box selection.
 
@@ -202,7 +174,7 @@ class MainWindow(BaseMainWindow):
         output_dir = self.output_edit.text().strip() or None
         shader_type = self._get_shader_key()
 
-        result = command.import_file(
+        result = command.import_gltf_file(
             file_path=file_path,
             output_dir=output_dir,
             shader_type=shader_type,
