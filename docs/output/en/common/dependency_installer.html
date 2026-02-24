@@ -77,6 +77,20 @@
                     id="toc-method-2-manual-addition-via-usersetup.py">Method
                     2: Manual Addition via userSetup.py</a></li>
                     </ul></li>
+                    <li><a href="#package-registry-versions"
+                    id="toc-package-registry-versions">Package Registry
+                    (versions)</a>
+                    <ul>
+                    <li><a href="#resolution-order"
+                    id="toc-resolution-order">Resolution Order</a></li>
+                    <li><a href="#json-format" id="toc-json-format">JSON
+                    Format</a></li>
+                    <li><a href="#version-field"
+                    id="toc-version-field">version Field</a></li>
+                    <li><a href="#creating-a-version-specific-file"
+                    id="toc-creating-a-version-specific-file">Creating a
+                    Version-Specific File</a></li>
+                    </ul></li>
                     <li><a href="#notes" id="toc-notes">Notes</a></li>
                     </ul>
                 </div>
@@ -242,7 +256,7 @@ faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
                 are not saved.</li>
                 </ul>
                 <h2 id="package-table">Package Table</h2>
-                <p>Package status is displayed in 4 columns:</p>
+                <p>Package status is displayed in 5 columns:</p>
                 <table>
                 <colgroup>
                 <col style="width: 38%" />
@@ -272,6 +286,11 @@ faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
                 <tr>
                 <td>Required By</td>
                 <td>Tools that depend on this package</td>
+                </tr>
+                <tr>
+                <td>Location</td>
+                <td>Install directory (site-packages path) if
+                installed</td>
                 </tr>
                 </tbody>
                 </table>
@@ -331,6 +350,140 @@ sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
                 are not reflected in standalone mode’s status
                 display.</p>
                 </blockquote>
+                <h2 id="package-registry-versions">Package Registry
+                (versions)</h2>
+                <p>The list of target packages is managed in JSON files
+                under the <code>versions/</code> directory.</p>
+                <pre><code>dependency_installer/versions/
+├── common.json       # Default (shared across all Maya versions)
+└── maya2023.json     # Maya 2023 specific settings</code></pre>
+                <h3 id="resolution-order">Resolution Order</h3>
+                <p>When a Maya version is selected, files are loaded in
+                the following order:</p>
+                <ol type="1">
+                <li><code>versions/maya{version}.json</code> (e.g.,
+                <code>maya2023.json</code>) is used if it exists</li>
+                <li>Falls back to <code>versions/common.json</code> if
+                no version-specific file is found</li>
+                </ol>
+                <p>When a version-specific file is found, it is
+                <strong>not merged</strong> with
+                <code>common.json</code> — its contents are used as the
+                <strong>entire registry</strong>.</p>
+                <h3 id="json-format">JSON Format</h3>
+                <p>Each entry has the following fields:</p>
+                <pre class="json"><code>{
+    &quot;pip_name&quot;: &quot;fast-simplification&quot;,
+    &quot;import_name&quot;: &quot;fast_simplification&quot;,
+    &quot;required_by&quot;: [&quot;Mesh Fitter&quot;, &quot;BlendShape Transfer&quot;],
+    &quot;optional&quot;: false,
+    &quot;version&quot;: &quot;==0.1.12&quot;
+}</code></pre>
+                <table>
+                <colgroup>
+                <col style="width: 19%" />
+                <col style="width: 16%" />
+                <col style="width: 27%" />
+                <col style="width: 36%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Field</th>
+                <th>Type</th>
+                <th>Required</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>pip_name</code></td>
+                <td>string</td>
+                <td>Yes</td>
+                <td>pip package name (the name passed to
+                <code>pip install</code>)</td>
+                </tr>
+                <tr>
+                <td><code>import_name</code></td>
+                <td>string</td>
+                <td>Yes</td>
+                <td>Python import name (the <code>xxx</code> in
+                <code>import xxx</code>)</td>
+                </tr>
+                <tr>
+                <td><code>required_by</code></td>
+                <td>string[]</td>
+                <td>Yes</td>
+                <td>List of tools that use this package</td>
+                </tr>
+                <tr>
+                <td><code>optional</code></td>
+                <td>bool</td>
+                <td>Yes</td>
+                <td><code>false</code>: required (red when Missing),
+                <code>true</code>: optional (orange)</td>
+                </tr>
+                <tr>
+                <td><code>version</code></td>
+                <td>string</td>
+                <td>No</td>
+                <td>PEP 440 version constraint. Omit for no version
+                pinning</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="version-field">version Field</h3>
+                <p>The <code>version</code> field accepts PEP 440
+                version constraints. Values must start with
+                <code>=</code>, <code>&lt;</code>, <code>&gt;</code>,
+                <code>!</code>, or <code>~</code> to be recognized as
+                constraints.</p>
+                <table>
+                <colgroup>
+                <col style="width: 25%" />
+                <col style="width: 37%" />
+                <col style="width: 37%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Example</th>
+                <th>pip command</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>"==0.1.12"</code></td>
+                <td><code>pip install fast-simplification==0.1.12</code></td>
+                <td>Exact match</td>
+                </tr>
+                <tr>
+                <td><code>"&gt;=1.0,&lt;2.0"</code></td>
+                <td><code>pip install package&gt;=1.0,&lt;2.0</code></td>
+                <td>Range constraint</td>
+                </tr>
+                <tr>
+                <td><code>"~=1.4"</code></td>
+                <td><code>pip install package~=1.4</code></td>
+                <td>Compatible release
+                (<code>&gt;=1.4, &lt;2.0</code>)</td>
+                </tr>
+                <tr>
+                <td>(omitted)</td>
+                <td><code>pip install package</code></td>
+                <td>Install latest version</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="creating-a-version-specific-file">Creating a
+                Version-Specific File</h3>
+                <p>When a specific Maya version requires different
+                package versions, copy <code>common.json</code> to
+                <code>maya{version}.json</code> and modify the
+                <code>version</code> field for the relevant
+                packages.</p>
+                <pre class="bash"><code># Example: Create a registry for Maya 2024
+cp versions/common.json versions/maya2024.json
+# Edit maya2024.json to adjust version constraints</code></pre>
                 <h2 id="notes">Notes</h2>
                 <ul>
                 <li>Standard installation may require administrator
@@ -342,7 +495,10 @@ sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
                 specified via <code>FAKETOOLS_SITE_PACKAGES</code> in
                 <code>.env</code> are detected.</li>
                 <li>If installation fails, pip error messages are
-                displayed in the status label and logged.</li>
+                displayed in red on the status label. Details are also
+                written to the log.</li>
+                <li>During installation, an external console window
+                opens so you can monitor pip progress in real time.</li>
                 </ul>
             </main>
         </div>

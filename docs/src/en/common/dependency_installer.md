@@ -96,7 +96,7 @@ Use this section when installing behind a proxy. Enable the checkbox and enter H
 
 ## Package Table
 
-Package status is displayed in 4 columns:
+Package status is displayed in 5 columns:
 
 | Column | Description |
 |--------|-------------|
@@ -104,6 +104,7 @@ Package status is displayed in 4 columns:
 | Status | Installed (green) / Missing (required: red, optional: orange) |
 | Version | Version number if installed |
 | Required By | Tools that depend on this package |
+| Location | Install directory (site-packages path) if installed |
 
 
 ## Buttons
@@ -143,9 +144,73 @@ sys.path.insert(0, "D:/my_packages/2025/site-packages")
 > **Note**: `userSetup.py` is only executed when Maya starts, so paths added this way are not reflected in standalone mode's status display.
 
 
+## Package Registry (versions)
+
+The list of target packages is managed in JSON files under the `versions/` directory.
+
+```
+dependency_installer/versions/
+├── common.json       # Default (shared across all Maya versions)
+└── maya2023.json     # Maya 2023 specific settings
+```
+
+### Resolution Order
+
+When a Maya version is selected, files are loaded in the following order:
+
+1. `versions/maya{version}.json` (e.g., `maya2023.json`) is used if it exists
+2. Falls back to `versions/common.json` if no version-specific file is found
+
+When a version-specific file is found, it is **not merged** with `common.json` — its contents are used as the **entire registry**.
+
+### JSON Format
+
+Each entry has the following fields:
+
+```json
+{
+    "pip_name": "fast-simplification",
+    "import_name": "fast_simplification",
+    "required_by": ["Mesh Fitter", "BlendShape Transfer"],
+    "optional": false,
+    "version": "==0.1.12"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `pip_name` | string | Yes | pip package name (the name passed to `pip install`) |
+| `import_name` | string | Yes | Python import name (the `xxx` in `import xxx`) |
+| `required_by` | string[] | Yes | List of tools that use this package |
+| `optional` | bool | Yes | `false`: required (red when Missing), `true`: optional (orange) |
+| `version` | string | No | PEP 440 version constraint. Omit for no version pinning |
+
+### version Field
+
+The `version` field accepts PEP 440 version constraints. Values must start with `=`, `<`, `>`, `!`, or `~` to be recognized as constraints.
+
+| Example | pip command | Description |
+|---------|-------------|-------------|
+| `"==0.1.12"` | `pip install fast-simplification==0.1.12` | Exact match |
+| `">=1.0,<2.0"` | `pip install package>=1.0,<2.0` | Range constraint |
+| `"~=1.4"` | `pip install package~=1.4` | Compatible release (`>=1.4, <2.0`) |
+| (omitted) | `pip install package` | Install latest version |
+
+### Creating a Version-Specific File
+
+When a specific Maya version requires different package versions, copy `common.json` to `maya{version}.json` and modify the `version` field for the relevant packages.
+
+```bash
+# Example: Create a registry for Maya 2024
+cp versions/common.json versions/maya2024.json
+# Edit maya2024.json to adjust version constraints
+```
+
+
 ## Notes
 
 - Standard installation may require administrator privileges. Run Maya as administrator if needed.
 - If pip is not available, run `mayapy -m ensurepip` first.
 - When launched standalone, paths added by `userSetup.py` are not detected. Paths specified via `FAKETOOLS_SITE_PACKAGES` in `.env` are detected.
-- If installation fails, pip error messages are displayed in the status label and logged.
+- If installation fails, pip error messages are displayed in red on the status label. Details are also written to the log.
+- During installation, an external console window opens so you can monitor pip progress in real time.

@@ -75,6 +75,20 @@
                     id="toc-方法-2-usersetup.py-で手動追加">方法 2:
                     userSetup.py で手動追加</a></li>
                     </ul></li>
+                    <li><a href="#パッケージレジストリversions"
+                    id="toc-パッケージレジストリversions">パッケージレジストリ（versions）</a>
+                    <ul>
+                    <li><a href="#解決順序"
+                    id="toc-解決順序">解決順序</a></li>
+                    <li><a href="#json-フォーマット"
+                    id="toc-json-フォーマット">JSON
+                    フォーマット</a></li>
+                    <li><a href="#version-フィールド"
+                    id="toc-version-フィールド">version
+                    フィールド</a></li>
+                    <li><a href="#バージョン固有ファイルの作成例"
+                    id="toc-バージョン固有ファイルの作成例">バージョン固有ファイルの作成例</a></li>
+                    </ul></li>
                     <li><a href="#注意事項"
                     id="toc-注意事項">注意事項</a></li>
                     </ul>
@@ -237,7 +251,7 @@ faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
                 <li>プロキシ設定は<strong>セッション限り</strong>で保存されません。</li>
                 </ul>
                 <h2 id="パッケージテーブル">パッケージテーブル</h2>
-                <p>各パッケージの状態が 4 列で表示されます。</p>
+                <p>各パッケージの状態が 5 列で表示されます。</p>
                 <table>
                 <colgroup>
                 <col style="width: 40%" />
@@ -266,6 +280,11 @@ faketools.tools.common.dependency_installer.ui.show_ui()</code></pre>
                 <tr>
                 <td>Required By</td>
                 <td>このパッケージを必要とするツール</td>
+                </tr>
+                <tr>
+                <td>Location</td>
+                <td>インストール済みの場合、インストール先ディレクトリ（site-packages
+                パス）</td>
                 </tr>
                 </tbody>
                 </table>
@@ -324,6 +343,137 @@ sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
                 Maya
                 起動時にのみ実行されるため、スタンドアロンモードのステータス表示には反映されません。</p>
                 </blockquote>
+                <h2
+                id="パッケージレジストリversions">パッケージレジストリ（versions）</h2>
+                <p>対象パッケージの一覧は <code>versions/</code>
+                ディレクトリの JSON ファイルで管理されています。</p>
+                <pre><code>dependency_installer/versions/
+├── common.json       # デフォルト（全 Maya バージョン共通）
+└── maya2023.json     # Maya 2023 固有の設定</code></pre>
+                <h3 id="解決順序">解決順序</h3>
+                <p>選択した Maya
+                バージョンに応じて、以下の順序でファイルが読み込まれます。</p>
+                <ol type="1">
+                <li><code>versions/maya{バージョン}.json</code>（例:
+                <code>maya2023.json</code>）が存在すればそれを使用</li>
+                <li>存在しなければ <code>versions/common.json</code>
+                にフォールバック</li>
+                </ol>
+                <p>バージョン固有のファイルが見つかった場合、<code>common.json</code>
+                とのマージは行われず、そのファイルの内容が<strong>そのまま全体のレジストリ</strong>として使用されます。</p>
+                <h3 id="json-フォーマット">JSON フォーマット</h3>
+                <p>各エントリは以下のフィールドを持ちます。</p>
+                <pre class="json"><code>{
+    &quot;pip_name&quot;: &quot;fast-simplification&quot;,
+    &quot;import_name&quot;: &quot;fast_simplification&quot;,
+    &quot;required_by&quot;: [&quot;Mesh Fitter&quot;, &quot;BlendShape Transfer&quot;],
+    &quot;optional&quot;: false,
+    &quot;version&quot;: &quot;==0.1.12&quot;
+}</code></pre>
+                <table>
+                <colgroup>
+                <col style="width: 39%" />
+                <col style="width: 17%" />
+                <col style="width: 21%" />
+                <col style="width: 21%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>フィールド</th>
+                <th>型</th>
+                <th>必須</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>pip_name</code></td>
+                <td>string</td>
+                <td>Yes</td>
+                <td>pip パッケージ名（<code>pip install</code>
+                に渡す名前）</td>
+                </tr>
+                <tr>
+                <td><code>import_name</code></td>
+                <td>string</td>
+                <td>Yes</td>
+                <td>Python import 名（<code>import xxx</code> の
+                <code>xxx</code>）</td>
+                </tr>
+                <tr>
+                <td><code>required_by</code></td>
+                <td>string[]</td>
+                <td>Yes</td>
+                <td>このパッケージを使用するツールの一覧</td>
+                </tr>
+                <tr>
+                <td><code>optional</code></td>
+                <td>bool</td>
+                <td>Yes</td>
+                <td><code>false</code>: 必須（Missing
+                時に赤表示）、<code>true</code>:
+                オプション（オレンジ表示）</td>
+                </tr>
+                <tr>
+                <td><code>version</code></td>
+                <td>string</td>
+                <td>No</td>
+                <td>PEP 440
+                バージョン制約。省略時はバージョン指定なし</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="version-フィールド">version フィールド</h3>
+                <p><code>version</code> フィールドには PEP 440
+                形式のバージョン制約を指定します。先頭が <code>=</code>,
+                <code>&lt;</code>, <code>&gt;</code>, <code>!</code>,
+                <code>~</code> のいずれかで始まる値が有効です。</p>
+                <table style="width:100%;">
+                <colgroup>
+                <col style="width: 29%" />
+                <col style="width: 48%" />
+                <col style="width: 22%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>指定例</th>
+                <th>pip コマンド</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>"==0.1.12"</code></td>
+                <td><code>pip install fast-simplification==0.1.12</code></td>
+                <td>完全一致</td>
+                </tr>
+                <tr>
+                <td><code>"&gt;=1.0,&lt;2.0"</code></td>
+                <td><code>pip install package&gt;=1.0,&lt;2.0</code></td>
+                <td>範囲指定</td>
+                </tr>
+                <tr>
+                <td><code>"~=1.4"</code></td>
+                <td><code>pip install package~=1.4</code></td>
+                <td>互換リリース（<code>&gt;=1.4, &lt;2.0</code>）</td>
+                </tr>
+                <tr>
+                <td>（省略）</td>
+                <td><code>pip install package</code></td>
+                <td>最新版をインストール</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3
+                id="バージョン固有ファイルの作成例">バージョン固有ファイルの作成例</h3>
+                <p>特定の Maya
+                バージョンで異なるパッケージバージョンが必要な場合、<code>common.json</code>
+                をコピーして <code>maya{バージョン}.json</code>
+                を作成し、該当パッケージの <code>version</code>
+                フィールドを変更します。</p>
+                <pre class="bash"><code># 例: Maya 2024 用のレジストリを作成
+cp versions/common.json versions/maya2024.json
+# maya2024.json を編集して version を調整</code></pre>
                 <h2 id="注意事項">注意事項</h2>
                 <ul>
                 <li>Standard
@@ -337,7 +487,9 @@ sys.path.insert(0, &quot;D:/my_packages/2025/site-packages&quot;)</code></pre>
                 <code>FAKETOOLS_SITE_PACKAGES</code>
                 で指定されたパスは検知されます。</li>
                 <li>インストールに失敗した場合、pip
-                のエラーメッセージがステータスラベルとログに表示されます。</li>
+                のエラーメッセージがステータスラベルに赤文字で表示されます。詳細はログにも出力されます。</li>
+                <li>インストール実行時は外部コンソールウィンドウが開き、pip
+                の進捗をリアルタイムで確認できます。</li>
                 </ul>
             </main>
         </div>
