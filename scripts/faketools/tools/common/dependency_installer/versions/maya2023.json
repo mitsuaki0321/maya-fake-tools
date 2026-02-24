@@ -1,0 +1,51 @@
+[
+    {
+        "pip_name": "numpy",
+        "import_name": "numpy",
+        "required_by": ["Bounding Box Creator", "Mesh Retargeter"],
+        "optional": false
+    },
+    {
+        "pip_name": "scipy",
+        "import_name": "scipy",
+        "required_by": ["Bounding Box Creator", "Mesh Retargeter"],
+        "optional": false
+    },
+    {
+        "pip_name": "trimesh",
+        "import_name": "trimesh",
+        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
+        "optional": false
+    },
+    {
+        "pip_name": "rtree",
+        "import_name": "rtree",
+        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
+        "optional": false
+    },
+    {
+        "pip_name": "fast-simplification",
+        "import_name": "fast_simplification",
+        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
+        "optional": false,
+        "version": "==0.1.12"
+    },
+    {
+        "pip_name": "Pillow",
+        "import_name": "PIL",
+        "required_by": ["Snapshot Capture"],
+        "optional": false
+    },
+    {
+        "pip_name": "aggdraw",
+        "import_name": "aggdraw",
+        "required_by": ["Snapshot Capture"],
+        "optional": true
+    },
+    {
+        "pip_name": "mss",
+        "import_name": "mss",
+        "required_by": ["Snapshot Capture"],
+        "optional": true
+    }
+]

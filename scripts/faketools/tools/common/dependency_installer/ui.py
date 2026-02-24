@@ -3,6 +3,8 @@
 Supports both Maya-embedded and standalone (mayapy) launch modes.
 """
 
+from __future__ import annotations
+
 from logging import getLogger
 import sys
 
@@ -205,15 +207,17 @@ def _create_maya_window():
             Otherwise, checks via subprocess with the target mayapy.
             """
             self._tree.clear()
+            maya_version = self._version_combo.currentText() or None
             if self._is_current_maya_selected():
                 mayapy_path = None
             else:
                 mayapy_path = self._get_mayapy_path()
-            statuses = command.get_all_package_statuses(mayapy_path=mayapy_path)
+            statuses = command.get_all_package_statuses(mayapy_path=mayapy_path, maya_version=maya_version)
             for pkg in statuses:
                 item = QTreeWidgetItem()
+                pip_spec = command.get_pip_spec(pkg)
                 item.setText(0, pkg["pip_name"])
-                item.setData(0, Qt.UserRole, pkg["pip_name"])
+                item.setData(0, Qt.UserRole, pip_spec)
 
                 if pkg["installed"]:
                     item.setText(1, "Installed")
@@ -243,7 +247,7 @@ def _create_maya_window():
                     item.setCheckState(0, Qt.Checked)
 
         def _get_selected_packages(self) -> list[str]:
-            """Get list of checked package names."""
+            """Get list of checked pip install specifiers."""
             selected = []
             for i in range(self._tree.topLevelItemCount()):
                 item = self._tree.topLevelItem(i)
@@ -505,12 +509,14 @@ def _create_standalone_window():
         def _refresh_packages(self):
             """Refresh the package status table via the selected Maya's mayapy."""
             self._tree.clear()
+            maya_version = self._version_combo.currentText() or None
             mayapy_path = self._get_mayapy_path()
-            statuses = command.get_all_package_statuses(mayapy_path=mayapy_path)
+            statuses = command.get_all_package_statuses(mayapy_path=mayapy_path, maya_version=maya_version)
             for pkg in statuses:
                 item = QTreeWidgetItem()
+                pip_spec = command.get_pip_spec(pkg)
                 item.setText(0, pkg["pip_name"])
-                item.setData(0, Qt.UserRole, pkg["pip_name"])
+                item.setData(0, Qt.UserRole, pip_spec)
 
                 if pkg["installed"]:
                     item.setText(1, "Installed")
@@ -540,7 +546,7 @@ def _create_standalone_window():
                     item.setCheckState(0, Qt.Checked)
 
         def _get_selected_packages(self) -> list[str]:
-            """Get list of checked package names."""
+            """Get list of checked pip install specifiers."""
             selected = []
             for i in range(self._tree.topLevelItemCount()):
                 item = self._tree.topLevelItem(i)

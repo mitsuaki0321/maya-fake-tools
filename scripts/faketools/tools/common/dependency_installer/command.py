@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import json
 from logging import getLogger
 import os
 from pathlib import Path
@@ -16,56 +17,48 @@ import sys
 
 logger = getLogger(__name__)
 
-PACKAGE_REGISTRY = [
-    {
-        "pip_name": "numpy",
-        "import_name": "numpy",
-        "required_by": ["Bounding Box Creator", "Mesh Retargeter"],
-        "optional": False,
-    },
-    {
-        "pip_name": "scipy",
-        "import_name": "scipy",
-        "required_by": ["Bounding Box Creator", "Mesh Retargeter"],
-        "optional": False,
-    },
-    {
-        "pip_name": "trimesh",
-        "import_name": "trimesh",
-        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
-        "optional": False,
-    },
-    {
-        "pip_name": "rtree",
-        "import_name": "rtree",
-        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
-        "optional": False,
-    },
-    {
-        "pip_name": "fast-simplification",
-        "import_name": "fast_simplification",
-        "required_by": ["Mesh Fitter", "BlendShape Transfer"],
-        "optional": False,
-    },
-    {
-        "pip_name": "Pillow",
-        "import_name": "PIL",
-        "required_by": ["Snapshot Capture"],
-        "optional": False,
-    },
-    {
-        "pip_name": "aggdraw",
-        "import_name": "aggdraw",
-        "required_by": ["Snapshot Capture"],
-        "optional": True,
-    },
-    {
-        "pip_name": "mss",
-        "import_name": "mss",
-        "required_by": ["Snapshot Capture"],
-        "optional": True,
-    },
-]
+_VERSIONS_DIR = Path(__file__).resolve().parent / "versions"
+
+
+def get_package_registry(maya_version: str | None = None) -> list[dict]:
+    """Load the package registry from a version-specific or common JSON file.
+
+    Looks for ``versions/maya{maya_version}.json`` first; falls back to
+    ``versions/common.json``.
+
+    Args:
+        maya_version: Maya version string (e.g., "2023"). If None, loads common.json.
+
+    Returns:
+        list[dict]: Package registry entries.
+    """
+    if maya_version:
+        version_file = _VERSIONS_DIR / f"maya{maya_version}.json"
+        if version_file.exists():
+            return json.loads(version_file.read_text(encoding="utf-8"))
+
+    common_file = _VERSIONS_DIR / "common.json"
+    return json.loads(common_file.read_text(encoding="utf-8"))
+
+
+def get_pip_spec(pkg: dict) -> str:
+    """Build a pip install specifier from a registry or status dict.
+
+    Checks ``pip_version`` first (used in status dicts from
+    :func:`get_all_package_statuses`), then ``version`` (used in raw
+    registry entries).  Only values that look like PEP 440 constraints
+    (starting with ``=``, ``<``, ``>``, ``!``, or ``~``) are appended.
+
+    Args:
+        pkg: A package dict (registry entry or status dict).
+
+    Returns:
+        str: e.g. ``"fast-simplification==0.1.12"`` or ``"numpy"``.
+    """
+    constraint = pkg.get("pip_version") or pkg.get("version") or ""
+    if constraint and constraint[0] in ("=", "<", ">", "!", "~"):
+        return f"{pkg['pip_name']}{constraint}"
+    return pkg["pip_name"]
 
 
 def discover_maya_versions() -> list[str]:
@@ -153,7 +146,7 @@ def get_package_version(pip_name: str) -> str | None:
         return None
 
 
-def get_all_package_statuses(mayapy_path: str | None = None) -> list[dict]:
+def get_all_package_statuses(mayapy_path: str | None = None, maya_version: str | None = None) -> list[dict]:
     """Get installation status for all packages in the registry.
 
     When ``mayapy_path`` is provided, checks are performed via subprocess
@@ -163,18 +156,22 @@ def get_all_package_statuses(mayapy_path: str | None = None) -> list[dict]:
     Args:
         mayapy_path: Path to mayapy executable. If None, checks in the
             current process (legacy behaviour).
+        maya_version: Maya version string used to select the correct
+            package registry JSON (e.g., "2023").
 
     Returns:
         list[dict]: List of dicts with keys: pip_name, import_name, required_by,
-            optional, installed, version.
+            optional, installed, version, and optionally pip_version (version constraint).
     """
+    registry = get_package_registry(maya_version)
+
     if mayapy_path:
-        remote_results = _check_packages_via_subprocess(mayapy_path)
+        remote_results = _check_packages_via_subprocess(mayapy_path, registry)
     else:
         remote_results = None
 
     statuses = []
-    for pkg in PACKAGE_REGISTRY:
+    for pkg in registry:
         if remote_results is not None:
             info = remote_results.get(pkg["pip_name"], {})
             installed = info.get("installed", False)
@@ -183,16 +180,17 @@ def get_all_package_statuses(mayapy_path: str | None = None) -> list[dict]:
             installed = check_package_installed(pkg["import_name"])
             version = get_package_version(pkg["pip_name"]) if installed else None
 
-        statuses.append(
-            {
-                "pip_name": pkg["pip_name"],
-                "import_name": pkg["import_name"],
-                "required_by": pkg["required_by"],
-                "optional": pkg["optional"],
-                "installed": installed,
-                "version": version,
-            }
-        )
+        status = {
+            "pip_name": pkg["pip_name"],
+            "import_name": pkg["import_name"],
+            "required_by": pkg["required_by"],
+            "optional": pkg["optional"],
+            "installed": installed,
+            "version": version,
+        }
+        if pkg.get("version"):
+            status["pip_version"] = pkg["version"]
+        statuses.append(status)
     return statuses
 
 
@@ -215,7 +213,7 @@ def _get_env_site_packages() -> str | None:
     return None
 
 
-def _check_packages_via_subprocess(mayapy_path: str) -> dict:
+def _check_packages_via_subprocess(mayapy_path: str, registry: list[dict]) -> dict:
     """Check all registry packages by running a probe script in mayapy.
 
     Executes a single subprocess that attempts to import each package and
@@ -225,12 +223,11 @@ def _check_packages_via_subprocess(mayapy_path: str) -> dict:
 
     Args:
         mayapy_path: Path to mayapy executable.
+        registry: Package registry entries to check.
 
     Returns:
         dict: Mapping of pip_name to {"installed": bool, "version": str | None}.
     """
-    import json
-
     # Derive Maya version from the mayapy path (e.g. ".../Maya2025/bin/mayapy.exe")
     maya_version = None
     try:
@@ -249,7 +246,7 @@ def _check_packages_via_subprocess(mayapy_path: str) -> dict:
         extra_paths.append(str(Path(env_site) / maya_version / "site-packages"))
 
     # Build a small self-contained script to probe packages
-    packages_json = json.dumps([(p["pip_name"], p["import_name"]) for p in PACKAGE_REGISTRY])
+    packages_json = json.dumps([(p["pip_name"], p["import_name"]) for p in registry])
     extra_paths_json = json.dumps(extra_paths)
     script = (
         "import importlib, importlib.metadata, json, sys\n"
