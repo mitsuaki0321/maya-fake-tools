@@ -146,6 +146,34 @@ def get_package_version(pip_name: str) -> str | None:
         return None
 
 
+def get_package_location(import_name: str) -> str | None:
+    """Get the site-packages directory where a package is installed.
+
+    Args:
+        import_name: The Python import name of the package.
+
+    Returns:
+        str | None: Path to the parent directory (typically site-packages), or None.
+    """
+    try:
+        mod = importlib.import_module(import_name)
+        mod_file = getattr(mod, "__file__", None)
+        if mod_file:
+            p = Path(mod_file).resolve()
+            # Package (__init__.py) -> go up 2 levels to site-packages
+            if p.name == "__init__.py":
+                return str(p.parent.parent)
+            # Single-file module -> parent is site-packages
+            return str(p.parent)
+        # Namespace package or extension without __file__
+        mod_path = getattr(mod, "__path__", None)
+        if mod_path:
+            return str(Path(list(mod_path)[0]).resolve().parent)
+    except ImportError:
+        pass
+    return None
+
+
 def get_all_package_statuses(mayapy_path: str | None = None, maya_version: str | None = None) -> list[dict]:
     """Get installation status for all packages in the registry.
 
@@ -176,9 +204,11 @@ def get_all_package_statuses(mayapy_path: str | None = None, maya_version: str |
             info = remote_results.get(pkg["pip_name"], {})
             installed = info.get("installed", False)
             version = info.get("version")
+            location = info.get("location")
         else:
             installed = check_package_installed(pkg["import_name"])
             version = get_package_version(pkg["pip_name"]) if installed else None
+            location = get_package_location(pkg["import_name"]) if installed else None
 
         status = {
             "pip_name": pkg["pip_name"],
@@ -187,6 +217,7 @@ def get_all_package_statuses(mayapy_path: str | None = None, maya_version: str |
             "optional": pkg["optional"],
             "installed": installed,
             "version": version,
+            "location": location,
         }
         if pkg.get("version"):
             status["pip_version"] = pkg["version"]
@@ -250,6 +281,7 @@ def _check_packages_via_subprocess(mayapy_path: str, registry: list[dict]) -> di
     extra_paths_json = json.dumps(extra_paths)
     script = (
         "import importlib, importlib.metadata, json, sys\n"
+        "from pathlib import Path\n"
         f"for p in {extra_paths_json}:\n"
         "    if p not in sys.path:\n"
         "        sys.path.insert(0, p)\n"
@@ -258,16 +290,29 @@ def _check_packages_via_subprocess(mayapy_path: str, registry: list[dict]) -> di
         "for pip_name, import_name in packages:\n"
         "    installed = True\n"
         "    try:\n"
-        "        importlib.import_module(import_name)\n"
+        "        mod = importlib.import_module(import_name)\n"
         "    except ImportError:\n"
         "        installed = False\n"
+        "        mod = None\n"
         "    version = None\n"
+        "    location = None\n"
         "    if installed:\n"
         "        try:\n"
         "            version = importlib.metadata.version(pip_name)\n"
         "        except Exception:\n"
         "            pass\n"
-        "    results[pip_name] = {'installed': installed, 'version': version}\n"
+        "        try:\n"
+        "            f = getattr(mod, '__file__', None)\n"
+        "            if f:\n"
+        "                p = Path(f).resolve()\n"
+        "                location = str(p.parent.parent) if p.name == '__init__.py' else str(p.parent)\n"
+        "            else:\n"
+        "                mp = getattr(mod, '__path__', None)\n"
+        "                if mp:\n"
+        "                    location = str(Path(list(mp)[0]).resolve().parent)\n"
+        "        except Exception:\n"
+        "            pass\n"
+        "    results[pip_name] = {'installed': installed, 'version': version, 'location': location}\n"
         "print(json.dumps(results))\n"
     )
 
@@ -314,6 +359,7 @@ def install_packages(
     mayapy_path: str,
     target_path: str | None = None,
     proxy: dict | None = None,
+    show_terminal: bool = False,
 ) -> dict:
     """Install packages using pip via mayapy.
 
@@ -322,6 +368,8 @@ def install_packages(
         mayapy_path: Path to mayapy executable.
         target_path: Custom install target directory. If None, uses default.
         proxy: Dict with optional "http" and "https" proxy URLs.
+        show_terminal: If True, opens a new console window so the user can
+            see pip output in real time. stdout/stderr are not captured.
 
     Returns:
         dict: Result with keys "success" (bool), "installed" (list[str]),
@@ -347,6 +395,46 @@ def install_packages(
             env["HTTPS_PROXY"] = proxy["https"]
 
     logger.info("Running: %s", " ".join(cmd))
+
+    if show_terminal:
+        timeout = 600
+        try:
+            result = subprocess.run(
+                cmd,
+                timeout=timeout,
+                env=env,
+                creationflags=subprocess.CREATE_NEW_CONSOLE,
+            )
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "installed": [],
+                "failed": [{"name": pkg, "error": "Timed out"} for pkg in package_names],
+                "stdout": "",
+                "stderr": f"Installation timed out after {timeout} seconds.",
+            }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "installed": [],
+                "failed": [{"name": pkg, "error": "mayapy not found"} for pkg in package_names],
+                "stdout": "",
+                "stderr": f"mayapy not found: {mayapy_path}",
+            }
+
+        if result.returncode == 0:
+            importlib.invalidate_caches()
+            if target_path and target_path not in sys.path:
+                sys.path.insert(0, target_path)
+            return {"success": True, "installed": package_names, "failed": [], "stdout": "", "stderr": ""}
+        else:
+            return {
+                "success": False,
+                "installed": [],
+                "failed": [{"name": pkg, "error": f"pip exited with code {result.returncode}"} for pkg in package_names],
+                "stdout": "",
+                "stderr": f"pip exited with code {result.returncode}",
+            }
 
     try:
         result = subprocess.run(

@@ -134,13 +134,14 @@ def _create_maya_window():
 
             # --- Package Table ---
             self._tree = QTreeWidget()
-            self._tree.setHeaderLabels(["Package", "Status", "Version", "Required By"])
+            self._tree.setHeaderLabels(["Package", "Status", "Version", "Required By", "Location"])
             self._tree.setRootIsDecorated(False)
             header = self._tree.header()
             header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
             header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(3, QHeaderView.Stretch)
+            header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.Stretch)
             self.central_layout.addWidget(self._tree, stretch=1)
 
             # --- Buttons ---
@@ -163,7 +164,7 @@ def _create_maya_window():
             self.central_layout.addWidget(self._status_label)
 
             # --- Window size ---
-            width, height = get_relative_size(self, width_ratio=2.0, height_ratio=2.0)
+            width, height = get_relative_size(self, width_ratio=3.0, height_ratio=2.0)
             self.resize(width, height)
 
         def _on_location_toggled(self, checked):
@@ -224,6 +225,7 @@ def _create_maya_window():
                     item.setText(2, pkg["version"] or "")
                     item.setForeground(1, Qt.green)
                     item.setFlags(item.flags() & ~Qt.ItemIsUserCheckable)
+                    item.setText(4, pkg.get("location") or "")
                 else:
                     item.setText(1, "Missing")
                     item.setText(2, "")
@@ -298,17 +300,20 @@ def _create_maya_window():
             target_path = self._get_target_path()
             proxy = self._get_proxy()
 
+            self._status_label.setStyleSheet("")
             self._status_label.setText(f"Installing {len(packages)} package(s)...")
             self._install_button.setEnabled(False)
             QApplication.processEvents()
 
-            result = command.install_packages(packages, mayapy_path, target_path=target_path, proxy=proxy)
+            result = command.install_packages(packages, mayapy_path, target_path=target_path, proxy=proxy, show_terminal=True)
 
             self._install_button.setEnabled(True)
             if result["success"]:
+                self._status_label.setStyleSheet("")
                 self._status_label.setText(f"Successfully installed: {', '.join(result['installed'])}")
             else:
                 failed_names = [f["name"] for f in result["failed"]]
+                self._status_label.setStyleSheet("color: red;")
                 self._status_label.setText(f"Install failed for: {', '.join(failed_names)}")
                 if result["stderr"]:
                     logger.error("pip stderr:\n%s", result["stderr"])
@@ -448,13 +453,14 @@ def _create_standalone_window():
 
             # --- Package Table ---
             self._tree = QTreeWidget()
-            self._tree.setHeaderLabels(["Package", "Status", "Version", "Required By"])
+            self._tree.setHeaderLabels(["Package", "Status", "Version", "Required By", "Location"])
             self._tree.setRootIsDecorated(False)
             header = self._tree.header()
             header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
             header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-            header.setSectionResizeMode(3, QHeaderView.Stretch)
+            header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+            header.setSectionResizeMode(4, QHeaderView.Stretch)
             self.central_layout.addWidget(self._tree, stretch=1)
 
             # --- Buttons ---
@@ -476,7 +482,7 @@ def _create_standalone_window():
             self._status_label = QLabel("Ready.")
             self.central_layout.addWidget(self._status_label)
 
-            self.resize(600, 500)
+            self.resize(900, 500)
 
         def _on_location_toggled(self, checked):
             """Enable/disable custom path widgets."""
@@ -523,6 +529,7 @@ def _create_standalone_window():
                     item.setText(2, pkg["version"] or "")
                     item.setForeground(1, Qt.green)
                     item.setFlags(item.flags() & ~Qt.ItemIsUserCheckable)
+                    item.setText(4, pkg.get("location") or "")
                 else:
                     item.setText(1, "Missing")
                     item.setText(2, "")
@@ -596,17 +603,20 @@ def _create_standalone_window():
             target_path = self._get_target_path()
             proxy = self._get_proxy()
 
+            self._status_label.setStyleSheet("")
             self._status_label.setText(f"Installing {len(packages)} package(s)...")
             self._install_button.setEnabled(False)
             QApplication.processEvents()
 
-            result = command.install_packages(packages, mayapy_path, target_path=target_path, proxy=proxy)
+            result = command.install_packages(packages, mayapy_path, target_path=target_path, proxy=proxy, show_terminal=True)
 
             self._install_button.setEnabled(True)
             if result["success"]:
+                self._status_label.setStyleSheet("")
                 self._status_label.setText(f"Successfully installed: {', '.join(result['installed'])}")
             else:
                 failed_names = [f["name"] for f in result["failed"]]
+                self._status_label.setStyleSheet("color: red;")
                 self._status_label.setText(f"Install failed for: {', '.join(failed_names)}")
                 if result["stderr"]:
                     logger.error("pip stderr:\n%s", result["stderr"])
