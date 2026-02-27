@@ -730,22 +730,28 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             parent_widget = parent_widget.parent()
 
         if exec_manager:
-            # Create reload code without using logger (which doesn't exist in the execution context)
             reload_code = f"""
 import importlib
 import sys
+import types
 
 try:
     if '{module_name}' in sys.modules:
+        # Direct match in sys.modules (full module path)
         importlib.reload(sys.modules['{module_name}'])
         print("Code Editor: Module '{module_name}' reloaded successfully.")
     else:
-        # Try to import first
-        module = __import__('{module_name}')
-        importlib.reload(module)
-        print("Code Editor: Module '{module_name}' imported and reloaded successfully.")
-except ModuleNotFoundError:
-    print("Code Editor: Module '{module_name}' not found.")
+        # Try to resolve as a variable name (e.g. import alias)
+        _reload_obj = eval('{module_name}')
+        if not isinstance(_reload_obj, types.ModuleType):
+            print("Code Editor: Error: '{module_name}' is not a module.")
+        elif _reload_obj.__name__ not in sys.modules:
+            print(f"Code Editor: Error: Module '{{_reload_obj.__name__}}' is not in sys.modules.")
+        else:
+            importlib.reload(sys.modules[_reload_obj.__name__])
+            print(f"Code Editor: Module '{{_reload_obj.__name__}}' reloaded successfully.")
+except NameError:
+    print("Code Editor: Error: '{module_name}' is not defined.")
 except Exception as e:
     print(f"Code Editor: Error reloading module '{module_name}': {{e}}")
 """
