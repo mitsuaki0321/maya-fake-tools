@@ -157,8 +157,8 @@ class RunButton(VSCodeButton):
 class ToggleButton(VSCodeButton):
     """VSCode-style toggle button with active/inactive visual states."""
 
-    _ACTIVE_BG = "#5A504A"
-    _ACTIVE_HOVER_BG = "#6a6058"
+    _ACTIVE_BG = "#4D3030"
+    _ACTIVE_HOVER_BG = "#5C3A3A"
 
     def __init__(self, icon_name, tooltip, parent=None):
         self._active = False
