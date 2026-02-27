@@ -18,6 +18,66 @@ logger = getLogger(__name__)
 MAX_CUTTER_MESH_FACES = 5
 
 
+# ---------------------------------------------------------------------------
+# Naming helpers
+# ---------------------------------------------------------------------------
+
+
+def _proxy_group_name(mesh: str) -> str:
+    """プロキシグループの名前を生成。"""
+    return f"{mesh}_proxy_grp"
+
+
+def _joint_short_name(joint_name: str) -> str:
+    """ジョイント名からパスとネームスペースを除去。"""
+    return joint_name.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+
+
+def _weight_proxy_name(mesh: str, joint_name: str) -> str:
+    """ウェイト方式のプロキシメッシュ名を生成。"""
+    return f"{mesh}_{_joint_short_name(joint_name)}_proxy"
+
+
+def _plane_proxy_name(mesh: str, index: int) -> str:
+    """プレーン方式のプロキシメッシュ名を生成。"""
+    return f"{mesh}_piece_{index:03d}_proxy"
+
+
+# ---------------------------------------------------------------------------
+# Group organisation helper
+# ---------------------------------------------------------------------------
+
+
+def _collect_into_group(grp: str, nodes: list[str]) -> None:
+    """ノードリストをグループ配下にペアレントする。既にグループ下にあるものはスキップ。"""
+    for node in nodes:
+        current_parent = cmds.listRelatives(node, parent=True)
+        if not current_parent or current_parent[0] != grp:
+            cmds.parent(node, grp)
+
+
+def _cleanup_empty_transforms(transforms: list[str]) -> None:
+    """不要になったトランスフォームを削除する。
+
+    polySeparate 後にピースを別グループへ移動すると、分離元のトランスフォームが
+    シェイプも子も持たない状態で残る。この関数でそれらを掃除する。
+
+    同名ノードとの競合を避けるため、フルパスで渡すこと。
+
+    Args:
+        transforms (list[str]): 削除対象のトランスフォーム名リスト（フルパス推奨）。
+    """
+    for t in transforms:
+        if cmds.objExists(t):
+            logger.debug("Deleting empty transform: %s", t)
+            cmds.delete(t)
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+
 def separate_by_weights(
     mesh: str,
     joints: Optional[list[str]] = None,
@@ -72,17 +132,17 @@ def separate_by_weights(
     logger.info("Face assignment: %s", {j: len(faces) for j, faces in face_map.items()})
 
     # Create proxy group
-    grp = _get_or_create_group(f"{mesh}_proxy_grp")
+    grp = _get_or_create_group(_proxy_group_name(mesh))
 
     # Extract per-joint meshes
     results: list[str] = []
     for joint_name, face_indices in face_map.items():
-        short_name = joint_name.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
-        proxy_name = f"{mesh}_{short_name}_proxy"
+        proxy_name = _weight_proxy_name(mesh, joint_name)
         proxy_mesh = _weights.extract_faces_as_mesh(mesh, face_indices, proxy_name)
-        cmds.parent(proxy_mesh, grp)
         results.append(proxy_mesh)
         logger.debug("Created proxy: %s (%d faces)", proxy_mesh, len(face_indices))
+
+    _collect_into_group(grp, results)
 
     # Delete original if not duplicating
     if not duplicate:
@@ -126,19 +186,28 @@ def separate_by_planes(
 
     pieces = _plane.cut_and_separate(mesh, cutters, duplicate=duplicate)
 
+    # Record parent transforms before re-parenting (polySeparate leaves
+    # an empty parent transform once all children are moved out).
+    parent_candidates: set[str] = set()
+    for piece in pieces:
+        if cmds.objExists(piece):
+            parent = cmds.listRelatives(piece, parent=True, fullPath=True)
+            if parent:
+                parent_candidates.add(parent[0])
+
     # Organize results into a group
-    grp = _get_or_create_group(f"{mesh}_proxy_grp")
+    grp = _get_or_create_group(_proxy_group_name(mesh))
     start_index = _next_piece_index(grp, f"{mesh}_piece_")
     results: list[str] = []
     for i, piece in enumerate(pieces):
         if cmds.objExists(piece):
-            new_name = f"{mesh}_piece_{start_index + i:03d}_proxy"
-            piece = cmds.rename(piece, new_name)
-            # Only re-parent if not already under the group
-            current_parent = cmds.listRelatives(piece, parent=True)
-            if not current_parent or current_parent[0] != grp:
-                cmds.parent(piece, grp)
+            piece = cmds.rename(piece, _plane_proxy_name(mesh, start_index + i))
             results.append(piece)
+
+    _collect_into_group(grp, results)
+
+    # Clean up empty transforms left behind by polySeparate
+    _cleanup_empty_transforms(list(parent_candidates - {grp}))
 
     logger.info("Created %d pieces in '%s'", len(results), grp)
     return results
