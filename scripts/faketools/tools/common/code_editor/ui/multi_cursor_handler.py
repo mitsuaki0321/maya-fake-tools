@@ -608,6 +608,9 @@ class MultiCursorMixin:
 
             self.all_cursors = updated_cursors
 
+            # Merge cursors that ended up at the same position (e.g. after Home/End)
+            self._merge_overlapping_cursors()
+
             # Set the main text cursor to the first multi-cursor position
             if self.all_cursors:
                 main_cursor = QTextCursor(self.document())
@@ -617,6 +620,35 @@ class MultiCursorMixin:
             self.viewport().update()
 
         return handled
+
+    def _merge_overlapping_cursors(self):
+        """Merge cursors that overlap or occupy the same position.
+
+        After movement operations like Home/End, multiple cursors on the same
+        line can converge to the same position. This method deduplicates them
+        so that only one cursor remains per unique range.
+        """
+        if len(self.all_cursors) <= 1:
+            return
+
+        # Build (start, end) range for each cursor and keep unique ranges
+        seen = set()
+        merged = []
+        for cursor in self.all_cursors:
+            if cursor.hasSelection():
+                key = (min(cursor.anchor(), cursor.position()), max(cursor.anchor(), cursor.position()))
+            else:
+                key = (cursor.position(), cursor.position())
+
+            if key not in seen:
+                seen.add(key)
+                merged.append(cursor)
+
+        if len(merged) < len(self.all_cursors):
+            self.all_cursors = merged
+            # If only one cursor remains, exit multi-cursor mode
+            if len(self.all_cursors) <= 1:
+                self.clear_multi_cursors()
 
     def paint_multi_cursors(self, painter):
         """Paint multi-cursor indicators. Call from paintEvent."""
