@@ -14,10 +14,10 @@ from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
+    QAbstractItemView,
     QCheckBox,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QPushButton,
     QTabWidget,
@@ -57,25 +57,27 @@ class MainWindow(BaseMainWindow):
     def _build_ui(self) -> None:
         spacing = get_spacing(self.central_widget, direction="vertical")
 
-        # --- Source Mesh row ---
+        # --- Source Meshes ---
+        self.central_layout.addWidget(QLabel("Source Meshes:"))
+
         row_source = QHBoxLayout()
-        lbl_source = QLabel("Source Mesh:")
-        row_source.addWidget(lbl_source)
+        self._list_source = QListWidget()
+        self._list_source.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        row_source.addWidget(self._list_source, 1)
 
-        self._line_source = QLineEdit()
-        self._line_source.setReadOnly(True)
-        self._line_source.setPlaceholderText("Select a mesh and click SET")
-        row_source.addWidget(self._line_source, 1)
+        col_source_btns = QVBoxLayout()
+        self._btn_add_source = QPushButton("Add")
+        self._btn_remove_source = QPushButton("Remove")
+        self._btn_clear_source = QPushButton("Clear")
+        self._btn_sel_source = QPushButton("Select")
+        col_source_btns.addWidget(self._btn_add_source)
+        col_source_btns.addWidget(self._btn_remove_source)
+        col_source_btns.addWidget(self._btn_clear_source)
+        col_source_btns.addWidget(self._btn_sel_source)
+        col_source_btns.addStretch()
+        row_source.addLayout(col_source_btns)
 
-        btn_h = self._line_source.sizeHint().height()
-        self._btn_set_source = QPushButton("SET")
-        self._btn_set_source.setFixedHeight(btn_h)
-        row_source.addWidget(self._btn_set_source)
-        self._btn_sel_source = QPushButton("SEL")
-        self._btn_sel_source.setFixedHeight(btn_h)
-        row_source.addWidget(self._btn_sel_source)
-
-        self.central_layout.addLayout(row_source)
+        self.central_layout.addLayout(row_source, 1)
 
         # --- Tab Widget ---
         self._tab_widget = QTabWidget()
@@ -149,7 +151,9 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
-        self._btn_set_source.clicked.connect(self._on_set_source)
+        self._btn_add_source.clicked.connect(self._on_add_source)
+        self._btn_remove_source.clicked.connect(self._on_remove_source)
+        self._btn_clear_source.clicked.connect(self._on_clear_source)
         self._btn_sel_source.clicked.connect(self._on_sel_source)
 
         self._btn_add_joints.clicked.connect(self._on_add_joints)
@@ -164,25 +168,33 @@ class MainWindow(BaseMainWindow):
     # Slots — Source Mesh
     # ------------------------------------------------------------------
 
-    def _on_set_source(self) -> None:
-        """Set source mesh from Maya selection."""
+    def _on_add_source(self) -> None:
+        """Add selected mesh transforms to the source list (skip duplicates)."""
         sel = cmds.ls(selection=True, type="transform")
         if not sel:
-            cmds.warning("Proxy Builder: Select a mesh transform")
+            cmds.warning("Proxy Builder: Select one or more mesh transforms")
             return
-        node = sel[0]
-        shapes = cmds.listRelatives(node, shapes=True, type="mesh")
-        if not shapes:
-            cmds.warning("Proxy Builder: Selected node has no mesh shape")
-            return
-        self._line_source.setText(node.rsplit("|", 1)[-1])
-        self._line_source.setToolTip(node)
+        existing = {self._list_source.item(i).text() for i in range(self._list_source.count())}
+        for node in sel:
+            shapes = cmds.listRelatives(node, shapes=True, type="mesh")
+            if shapes and node not in existing:
+                self._list_source.addItem(node)
+
+    def _on_remove_source(self) -> None:
+        """Remove selected items from the source list."""
+        for item in reversed(self._list_source.selectedItems()):
+            self._list_source.takeItem(self._list_source.row(item))
+
+    def _on_clear_source(self) -> None:
+        """Clear all items from the source list."""
+        self._list_source.clear()
 
     def _on_sel_source(self) -> None:
-        """Select the stored source mesh in Maya."""
-        name = self._line_source.toolTip()
-        if name and cmds.objExists(name):
-            cmds.select(name, replace=True)
+        """Select all source meshes in Maya."""
+        meshes = [self._list_source.item(i).text() for i in range(self._list_source.count())]
+        valid = [m for m in meshes if cmds.objExists(m)]
+        if valid:
+            cmds.select(valid, replace=True)
 
     # ------------------------------------------------------------------
     # Slots — Joints list
@@ -234,9 +246,9 @@ class MainWindow(BaseMainWindow):
     @undo_chunk("Proxy Builder: Separate")
     def _on_separate(self) -> None:
         """Run separation based on the active tab."""
-        source = self._line_source.toolTip()
-        if not source or not cmds.objExists(source):
-            cmds.warning("Proxy Builder: Set a valid source mesh first")
+        meshes = [self._list_source.item(i).text() for i in range(self._list_source.count())]
+        if not meshes:
+            cmds.warning("Proxy Builder: Add at least one source mesh")
             return
 
         duplicate = self._chk_keep_original.isChecked()
@@ -245,8 +257,8 @@ class MainWindow(BaseMainWindow):
         if tab_index == 0:
             # By Weights
             joints = [self._list_joints.item(i).text() for i in range(self._list_joints.count())]
-            results = command.separate_by_weights(
-                mesh=source,
+            results = command.separate_meshes_by_weights(
+                meshes=meshes,
                 joints=joints if joints else None,
                 duplicate=duplicate,
             )
@@ -256,8 +268,8 @@ class MainWindow(BaseMainWindow):
             if not cutters:
                 cmds.warning("Proxy Builder: Add at least one cutter surface")
                 return
-            results = command.separate_by_planes(
-                mesh=source,
+            results = command.separate_meshes_by_planes(
+                meshes=meshes,
                 cutters=cutters,
                 duplicate=duplicate,
             )

@@ -213,6 +213,87 @@ def separate_by_planes(
     return results
 
 
+def separate_meshes_by_weights(
+    meshes: list[str],
+    joints: Optional[list[str]] = None,
+    duplicate: bool = True,
+    group: str = "proxy_grp",
+) -> list[str]:
+    """Separate multiple skinned meshes by dominant joint weights.
+
+    Loops over each mesh and calls ``separate_by_weights``.
+    All per-mesh proxy groups are collected under a single parent group.
+
+    Args:
+        meshes (list[str]): Source mesh transform names.
+        joints (Optional[list[str]]): Joints to separate by. None uses all influences.
+        duplicate (bool): If True, keep the original meshes intact.
+        group (str): Parent group name for all per-mesh proxy groups.
+
+    Returns:
+        list[str]: All proxy mesh transform names (flat list).
+
+    Raises:
+        ValueError: If *meshes* is empty, or any individual mesh fails validation.
+    """
+    if not meshes:
+        raise ValueError("No meshes provided")
+    results: list[str] = []
+    mesh_groups: list[str] = []
+    for mesh in meshes:
+        results.extend(separate_by_weights(mesh=mesh, joints=joints, duplicate=duplicate))
+        grp_name = _proxy_group_name(mesh)
+        if cmds.objExists(grp_name):
+            mesh_groups.append(grp_name)
+    parent_grp = _get_or_create_group(group)
+    _collect_into_group(parent_grp, mesh_groups)
+    logger.info("Separated %d meshes into %d total proxies (by weights) in '%s'", len(meshes), len(results), parent_grp)
+    return results
+
+
+def separate_meshes_by_planes(
+    meshes: list[str],
+    cutters: list[str],
+    duplicate: bool = True,
+    group: str = "proxy_grp",
+) -> list[str]:
+    """Separate multiple meshes by cutting planes.
+
+    Loops over each mesh and calls ``separate_by_planes``.
+    All per-mesh proxy groups are collected under a single parent group.
+
+    Args:
+        meshes (list[str]): Source mesh transform names.
+        cutters (list[str]): Cutter surface node names.
+        duplicate (bool): If True, keep the original meshes intact.
+        group (str): Parent group name for all per-mesh proxy groups.
+
+    Returns:
+        list[str]: All separated mesh transform names (flat list).
+
+    Raises:
+        ValueError: If *meshes* is empty, or any individual mesh fails validation.
+    """
+    if not meshes:
+        raise ValueError("No meshes provided")
+    results: list[str] = []
+    mesh_groups: list[str] = []
+    for mesh in meshes:
+        results.extend(separate_by_planes(mesh=mesh, cutters=cutters, duplicate=duplicate))
+        grp_name = _proxy_group_name(mesh)
+        if cmds.objExists(grp_name):
+            mesh_groups.append(grp_name)
+    parent_grp = _get_or_create_group(group)
+    _collect_into_group(parent_grp, mesh_groups)
+    logger.info("Separated %d meshes into %d total pieces (by planes) in '%s'", len(meshes), len(results), parent_grp)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Validation helpers
+# ---------------------------------------------------------------------------
+
+
 def _validate_mesh(mesh: str) -> None:
     """Validate that a mesh transform exists and has a mesh shape.
 
