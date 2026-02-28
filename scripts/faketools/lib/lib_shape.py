@@ -346,7 +346,7 @@ def _get_shading_engines(transform: str) -> list[str]:
     Returns:
         list[str]: Shading engine names. Empty list if no shape or no assignment.
     """
-    shapes = cmds.listRelatives(transform, shapes=True, type="mesh") or []
+    shapes = cmds.listRelatives(transform, shapes=True, type="surfaceShape") or []
     if not shapes:
         return []
     return cmds.listSets(object=shapes[0], type=1) or []
