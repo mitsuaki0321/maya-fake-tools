@@ -74,6 +74,66 @@ def _cleanup_empty_transforms(transforms: list[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Weight merging
+# ---------------------------------------------------------------------------
+
+
+def _merge_end_joint_weights(
+    influences: list[str],
+    weights: list[list[float]],
+) -> tuple[list[str], list[list[float]]]:
+    """Merge end joint weights into their parent joints.
+
+    End joints (joints with no joint children) have their per-vertex weights
+    added to their parent joint.  The end joints are then removed from the
+    influence / weight arrays.
+
+    Args:
+        influences (list[str]): Influence joint names.
+        weights (list[list[float]]): Per-vertex weight data ``[vtx][inf]``.
+
+    Returns:
+        tuple[list[str], list[list[float]]]: Merged (influences, weights).
+    """
+    influence_idx: dict[str, int] = {name: idx for idx, name in enumerate(influences)}
+    end_to_parent: dict[int, int] = {}
+
+    for i, joint in enumerate(influences):
+        if not cmds.objExists(joint):
+            continue
+        children = cmds.listRelatives(joint, children=True, type="joint") or []
+        if children:
+            continue
+        parent = cmds.listRelatives(joint, parent=True, type="joint")
+        if not parent:
+            continue
+        parent_idx = influence_idx.get(parent[0])
+        if parent_idx is not None:
+            end_to_parent[i] = parent_idx
+            logger.debug("Merging end joint '%s' into parent '%s'", joint, parent[0])
+
+    if not end_to_parent:
+        return influences, weights
+
+    # Add end joint weights to their parents, then zero out the end joints
+    merged_weights: list[list[float]] = []
+    for vtx_weights in weights:
+        row = vtx_weights[:]
+        for end_idx, parent_idx in end_to_parent.items():
+            row[parent_idx] += row[end_idx]
+            row[end_idx] = 0.0
+        merged_weights.append(row)
+
+    # Strip end joints from the arrays
+    keep_indices = [i for i in range(len(influences)) if i not in end_to_parent]
+    new_influences = [influences[i] for i in keep_indices]
+    new_weights = [[row[i] for i in keep_indices] for row in merged_weights]
+
+    logger.info("Merged %d end joints into parents", len(end_to_parent))
+    return new_influences, new_weights
+
+
+# ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
@@ -82,6 +142,7 @@ def separate_by_weights(
     mesh: str,
     joints: Optional[list[str]] = None,
     duplicate: bool = True,
+    merge_end_joints: bool = False,
 ) -> list[str]:
     """Separate a skinned mesh by dominant joint weights.
 
@@ -92,6 +153,8 @@ def separate_by_weights(
         mesh (str): Source mesh transform name.
         joints (Optional[list[str]]): Joints to separate by. None uses all influences.
         duplicate (bool): If True, keep the original mesh intact.
+        merge_end_joints (bool): If True, end joints (no joint children) have
+            their weights merged into their parent joint before separation.
 
     Returns:
         list[str]: Proxy mesh transform names.
@@ -113,6 +176,10 @@ def separate_by_weights(
 
     # Get weight data
     influences, weights = _weights.get_weights_per_vertex(skin_cluster)
+
+    # Merge end joint weights into parents
+    if merge_end_joints:
+        influences, weights = _merge_end_joint_weights(influences, weights)
 
     # Validate target joints
     if joints is not None:
@@ -217,6 +284,7 @@ def separate_meshes_by_weights(
     meshes: list[str],
     joints: Optional[list[str]] = None,
     duplicate: bool = True,
+    merge_end_joints: bool = False,
     group: str = "proxy_grp",
 ) -> list[str]:
     """Separate multiple skinned meshes by dominant joint weights.
@@ -228,6 +296,8 @@ def separate_meshes_by_weights(
         meshes (list[str]): Source mesh transform names.
         joints (Optional[list[str]]): Joints to separate by. None uses all influences.
         duplicate (bool): If True, keep the original meshes intact.
+        merge_end_joints (bool): If True, end joints have their weights merged
+            into their parent joint before separation.
         group (str): Parent group name for all per-mesh proxy groups.
 
     Returns:
@@ -241,7 +311,7 @@ def separate_meshes_by_weights(
     results: list[str] = []
     mesh_groups: list[str] = []
     for mesh in meshes:
-        results.extend(separate_by_weights(mesh=mesh, joints=joints, duplicate=duplicate))
+        results.extend(separate_by_weights(mesh=mesh, joints=joints, duplicate=duplicate, merge_end_joints=merge_end_joints))
         grp_name = _proxy_group_name(mesh)
         if cmds.objExists(grp_name):
             mesh_groups.append(grp_name)

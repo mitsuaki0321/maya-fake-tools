@@ -109,6 +109,10 @@ class MainWindow(BaseMainWindow):
         lbl_hint.setEnabled(False)
         lay_weights.addWidget(lbl_hint)
 
+        self._chk_merge_end_joints = QCheckBox("Merge End Joints into Parent")
+        self._chk_merge_end_joints.setToolTip("End joints (no children) will be merged into their parent joint for separation")
+        lay_weights.addWidget(self._chk_merge_end_joints)
+
         self._tab_widget.addTab(tab_weights, "By Weights")
 
         # -- By Planes tab --
@@ -261,6 +265,7 @@ class MainWindow(BaseMainWindow):
                 meshes=meshes,
                 joints=joints if joints else None,
                 duplicate=duplicate,
+                merge_end_joints=self._chk_merge_end_joints.isChecked(),
             )
         else:
             # By Planes
@@ -295,6 +300,7 @@ class MainWindow(BaseMainWindow):
         return {
             "active_tab": self._tab_widget.currentIndex(),
             "keep_original": self._chk_keep_original.isChecked(),
+            "merge_end_joints": self._chk_merge_end_joints.isChecked(),
             "window_geometry": {
                 "size": [self.width(), self.height()],
                 "position": [self.x(), self.y()],
@@ -304,6 +310,7 @@ class MainWindow(BaseMainWindow):
     def _apply_settings(self, settings_data: dict) -> None:
         self._tab_widget.setCurrentIndex(settings_data.get("active_tab", 0))
         self._chk_keep_original.setChecked(settings_data.get("keep_original", True))
+        self._chk_merge_end_joints.setChecked(settings_data.get("merge_end_joints", False))
 
         if "window_geometry" in settings_data:
             geo = settings_data["window_geometry"]
