@@ -28,19 +28,9 @@ def _proxy_group_name(mesh: str) -> str:
     return f"{mesh}_proxy_grp"
 
 
-def _joint_short_name(joint_name: str) -> str:
-    """ジョイント名からパスとネームスペースを除去。"""
-    return joint_name.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
-
-
-def _weight_proxy_name(mesh: str, joint_name: str) -> str:
-    """ウェイト方式のプロキシメッシュ名を生成。"""
-    return f"{mesh}_{_joint_short_name(joint_name)}_proxy"
-
-
-def _plane_proxy_name(mesh: str, index: int) -> str:
-    """プレーン方式のプロキシメッシュ名を生成。"""
-    return f"{mesh}_piece_{index:03d}_proxy"
+def _piece_name(mesh: str, index: int) -> str:
+    """ピースメッシュの名前を生成。"""
+    return f"{mesh}_piece_{index:03d}"
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +147,7 @@ def separate_by_weights(
             their weights merged into their parent joint before separation.
 
     Returns:
-        list[str]: Proxy mesh transform names.
+        list[str]: Piece mesh transform names.
 
     Raises:
         ValueError: If the mesh does not exist, has no mesh shape, or has no skinCluster.
@@ -202,12 +192,13 @@ def separate_by_weights(
     grp = _get_or_create_group(_proxy_group_name(mesh))
 
     # Extract per-joint meshes
+    start_index = _next_piece_index(grp, f"{mesh}_piece_")
     results: list[str] = []
-    for joint_name, face_indices in face_map.items():
-        proxy_name = _weight_proxy_name(mesh, joint_name)
-        proxy_mesh = _weights.extract_faces_as_mesh(mesh, face_indices, proxy_name)
-        results.append(proxy_mesh)
-        logger.debug("Created proxy: %s (%d faces)", proxy_mesh, len(face_indices))
+    for i, (_joint_name, face_indices) in enumerate(face_map.items()):
+        piece_name = _piece_name(mesh, start_index + i)
+        piece_mesh = _weights.extract_faces_as_mesh(mesh, face_indices, piece_name)
+        results.append(piece_mesh)
+        logger.debug("Created piece: %s (%d faces)", piece_mesh, len(face_indices))
 
     _collect_into_group(grp, results)
 
@@ -215,7 +206,7 @@ def separate_by_weights(
     if not duplicate:
         cmds.delete(mesh)
 
-    logger.info("Created %d proxy meshes in '%s'", len(results), grp)
+    logger.info("Created %d pieces in '%s'", len(results), grp)
     return results
 
 
@@ -268,7 +259,7 @@ def separate_by_planes(
     results: list[str] = []
     for i, piece in enumerate(pieces):
         if cmds.objExists(piece):
-            piece = cmds.rename(piece, _plane_proxy_name(mesh, start_index + i))
+            piece = cmds.rename(piece, _piece_name(mesh, start_index + i))
             results.append(piece)
 
     _collect_into_group(grp, results)
@@ -301,7 +292,7 @@ def separate_meshes_by_weights(
         group (str): Parent group name for all per-mesh proxy groups.
 
     Returns:
-        list[str]: All proxy mesh transform names (flat list).
+        list[str]: All piece mesh transform names (flat list).
 
     Raises:
         ValueError: If *meshes* is empty, or any individual mesh fails validation.
@@ -317,7 +308,7 @@ def separate_meshes_by_weights(
             mesh_groups.append(grp_name)
     parent_grp = _get_or_create_group(group)
     _collect_into_group(parent_grp, mesh_groups)
-    logger.info("Separated %d meshes into %d total proxies (by weights) in '%s'", len(meshes), len(results), parent_grp)
+    logger.info("Separated %d meshes into %d total pieces (by weights) in '%s'", len(meshes), len(results), parent_grp)
     return results
 
 
