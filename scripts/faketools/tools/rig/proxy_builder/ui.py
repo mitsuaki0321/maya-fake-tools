@@ -304,6 +304,13 @@ class MainWindow(BaseMainWindow):
         self._list_finalize_groups.setSelectionMode(QAbstractItemView.NoSelection)
         layout.addWidget(self._list_finalize_groups, 1)
 
+        # --- Output Group ---
+        row_final_output = QHBoxLayout()
+        row_final_output.addWidget(QLabel("Output Group:"))
+        self._line_finalize_output = QLineEdit("proxy_final_grp")
+        row_final_output.addWidget(self._line_finalize_output, 1)
+        layout.addLayout(row_final_output)
+
         # --- Finalize button ---
         self._btn_finalize = QPushButton("Finalize")
         _, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
@@ -609,9 +616,11 @@ class MainWindow(BaseMainWindow):
             return
 
         combine_mode = "per_shader" if self._btn_group_combine.checkedId() == 1 else "single"
+        output_group = self._line_finalize_output.text().strip() or "proxy_final_grp"
         results = finalize_command.finalize_proxy_groups(
             parent_group=parent_group,
             combine_mode=combine_mode,
+            output_group=output_group,
         )
         logger.info("Finalized %d proxy meshes", len(results))
 
@@ -637,6 +646,7 @@ class MainWindow(BaseMainWindow):
             "piece_group": self._line_piece_group.text(),
             "output_group": self._line_output_group.text(),
             "finalize_group": self._line_finalize_group.text(),
+            "finalize_output": self._line_finalize_output.text(),
             "combine_mode": "per_shader" if self._btn_group_combine.checkedId() == 1 else "single",
             "window_geometry": {
                 "size": [self.width(), self.height()],
@@ -660,6 +670,7 @@ class MainWindow(BaseMainWindow):
         self._line_piece_group.setText(settings_data.get("piece_group", "piece_grp"))
         self._line_output_group.setText(settings_data.get("output_group", "proxy_grp"))
         self._line_finalize_group.setText(settings_data.get("finalize_group", "proxy_grp"))
+        self._line_finalize_output.setText(settings_data.get("finalize_output", "proxy_final_grp"))
 
         combine_mode = settings_data.get("combine_mode", "single")
         if combine_mode == "per_shader":
