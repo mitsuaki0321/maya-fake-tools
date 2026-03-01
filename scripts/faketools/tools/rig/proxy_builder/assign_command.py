@@ -1,5 +1,6 @@
 """Proxy Builder assign command - Step 2 (Assign) API."""
 
+import colorsys
 from logging import getLogger
 from time import perf_counter
 from typing import Optional
@@ -34,6 +35,27 @@ def _proxy_grp_name_for_joint(joint_name: str) -> str:
 # ---------------------------------------------------------------------------
 # Group helpers
 # ---------------------------------------------------------------------------
+
+
+def _generate_distinct_colors(count: int) -> list[tuple[float, float, float]]:
+    """均等に分散した HSV 色相から RGB カラーリストを生成。
+
+    Args:
+        count (int): 必要な色数。
+
+    Returns:
+        list[tuple[float, float, float]]: (r, g, b) 各値 0.0〜1.0。
+    """
+    if count <= 0:
+        return []
+    return [colorsys.hsv_to_rgb(i / count, 0.8, 0.9) for i in range(count)]
+
+
+def _set_override_color(group: str, r: float, g: float, b: float) -> None:
+    """グループのトランスフォームに RGB オーバーライドカラーを設定。"""
+    cmds.setAttr(f"{group}.overrideEnabled", True)
+    cmds.setAttr(f"{group}.overrideRGBColors", True)
+    cmds.setAttr(f"{group}.overrideColorRGB", r, g, b)
 
 
 def _get_or_create_group(name: str) -> str:
@@ -436,6 +458,12 @@ def create_proxy_groups(
         logger.debug("Group '%s' -> joint '%s' (%d pieces)", grp, joint_name, len(pieces))
 
     _collect_into_group(parent_grp, created_groups)
+
+    # Assign distinct override colors
+    colors = _generate_distinct_colors(len(created_groups))
+    for grp, (r, g, b) in zip(created_groups, colors):
+        _set_override_color(grp, r, g, b)
+
     logger.info("Created %d proxy groups in '%s'", len(created_groups), parent_grp)
     return created_groups
 

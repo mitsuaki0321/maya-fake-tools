@@ -25,8 +25,6 @@ from ....lib_ui.qt_compat import (
     QRadioButton,
     QStackedWidget,
     QTabWidget,
-    QTreeWidget,
-    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -51,8 +49,6 @@ class MainWindow(BaseMainWindow):
         )
 
         self.settings = ToolSettingsManager(tool_name="proxy_builder", category="rig")
-        self._assignment: dict[str, list[str]] = {}
-
         self._build_ui()
         self._connect_signals()
         self._restore_settings()
@@ -254,12 +250,6 @@ class MainWindow(BaseMainWindow):
         lbl_joints_hint.setEnabled(False)
         layout.addWidget(lbl_joints_hint)
 
-        # --- Auto Assign button ---
-        self._btn_auto_assign = QPushButton("Auto Assign")
-        _, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
-        self._btn_auto_assign.setMinimumHeight(int(height * 0.08))
-        layout.addWidget(self._btn_auto_assign)
-
         # --- Output Group ---
         row_output = QHBoxLayout()
         row_output.addWidget(QLabel("Output Group:"))
@@ -267,25 +257,11 @@ class MainWindow(BaseMainWindow):
         row_output.addWidget(self._line_output_group, 1)
         layout.addLayout(row_output)
 
-        # --- Assignment tree ---
-        layout.addWidget(QLabel("Assignment:"))
-        self._tree_assignment = QTreeWidget()
-        self._tree_assignment.setHeaderHidden(True)
-        self._tree_assignment.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        layout.addWidget(self._tree_assignment, 1)
-
-        # --- Reassign / Remove buttons ---
-        row_tree_btns = QHBoxLayout()
-        self._btn_reassign = QPushButton("Reassign to Selected Joint")
-        self._btn_remove_assignment = QPushButton("Remove")
-        row_tree_btns.addWidget(self._btn_reassign)
-        row_tree_btns.addWidget(self._btn_remove_assignment)
-        layout.addLayout(row_tree_btns)
-
-        # --- Create Proxy Groups button ---
-        self._btn_create_groups = QPushButton("Create Proxy Groups")
-        self._btn_create_groups.setMinimumHeight(int(height * 0.08))
-        layout.addWidget(self._btn_create_groups)
+        # --- Assign & Create Groups button ---
+        self._btn_assign = QPushButton("Assign && Create Groups")
+        _, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
+        self._btn_assign.setMinimumHeight(int(height * 0.08))
+        layout.addWidget(self._btn_assign)
 
         return tab
 
@@ -361,10 +337,7 @@ class MainWindow(BaseMainWindow):
         self._btn_sel_ref_mesh.clicked.connect(self._on_sel_ref_mesh)
         self._btn_add_assign_joints.clicked.connect(self._on_add_assign_joints)
         self._btn_remove_assign_joints.clicked.connect(self._on_remove_assign_joints)
-        self._btn_auto_assign.clicked.connect(self._on_auto_assign)
-        self._btn_reassign.clicked.connect(self._on_reassign)
-        self._btn_remove_assignment.clicked.connect(self._on_remove_assignment)
-        self._btn_create_groups.clicked.connect(self._on_create_groups)
+        self._btn_assign.clicked.connect(self._on_assign)
 
         # Finalize tab
         self._btn_pick_finalize_group.clicked.connect(self._on_pick_finalize_group)
@@ -497,8 +470,8 @@ class MainWindow(BaseMainWindow):
             cmds.warning(f"Proxy Builder: Piece group '{group_name}' not found")
             return
 
-        children = cmds.listRelatives(group_name, children=True, type="transform") or []
-        meshes = [c for c in children if cmds.listRelatives(c, shapes=True, type="mesh")]
+        descendants = cmds.listRelatives(group_name, allDescendents=True, type="transform") or []
+        meshes = [d for d in descendants if cmds.listRelatives(d, shapes=True, type="mesh")]
 
         self._list_pieces.clear()
         for m in meshes:
@@ -565,12 +538,13 @@ class MainWindow(BaseMainWindow):
             self._list_assign_joints.takeItem(self._list_assign_joints.row(item))
 
     # ------------------------------------------------------------------
-    # Slots — Auto Assign / Assignment tree (Assign tab)
+    # Slots — Assign (Step 2)
     # ------------------------------------------------------------------
 
     @error_handler
-    def _on_auto_assign(self) -> None:
-        """Run auto assignment and populate the tree."""
+    @undo_chunk("Proxy Builder: Assign")
+    def _on_assign(self) -> None:
+        """Auto-assign pieces to joints and create proxy groups."""
         pieces = [self._list_pieces.item(i).text() for i in range(self._list_pieces.count())]
         if not pieces:
             cmds.warning("Proxy Builder: Add at least one piece")
@@ -583,85 +557,18 @@ class MainWindow(BaseMainWindow):
             cmds.warning("Proxy Builder: Bone mode requires at least one joint")
             return
 
-        self._assignment = assign_command.auto_assign_pieces(
+        assignment = assign_command.auto_assign_pieces(
             pieces=pieces,
             reference_mesh=ref_mesh,
             joints=joints if joints else None,
         )
-        self._refresh_assignment_tree()
 
-        total = sum(len(v) for v in self._assignment.values())
-        logger.info("Assigned %d pieces to %d joints", total, len(self._assignment))
-
-    def _on_reassign(self) -> None:
-        """Reassign selected tree pieces to the currently selected joint in Maya."""
-        sel_joints = cmds.ls(selection=True, type="joint")
-        if not sel_joints:
-            cmds.warning("Proxy Builder: Select a target joint in the viewport")
-            return
-        target_joint = sel_joints[0]
-
-        selected_items = self._tree_assignment.selectedItems()
-        pieces_to_move = []
-        for item in selected_items:
-            if item.parent() is not None:
-                pieces_to_move.append(item.text(0))
-
-        if not pieces_to_move:
-            cmds.warning("Proxy Builder: Select one or more pieces in the assignment tree")
-            return
-
-        for piece in pieces_to_move:
-            for _joint, plist in self._assignment.items():
-                if piece in plist:
-                    plist.remove(piece)
-                    break
-            self._assignment.setdefault(target_joint, []).append(piece)
-
-        self._assignment = {k: v for k, v in self._assignment.items() if v}
-        self._refresh_assignment_tree()
-
-    def _on_remove_assignment(self) -> None:
-        """Remove selected pieces from the assignment."""
-        selected_items = self._tree_assignment.selectedItems()
-        pieces_to_remove = []
-        for item in selected_items:
-            if item.parent() is not None:
-                pieces_to_remove.append(item.text(0))
-
-        if not pieces_to_remove:
-            return
-
-        for piece in pieces_to_remove:
-            for _joint, plist in self._assignment.items():
-                if piece in plist:
-                    plist.remove(piece)
-                    break
-
-        self._assignment = {k: v for k, v in self._assignment.items() if v}
-        self._refresh_assignment_tree()
-
-    def _refresh_assignment_tree(self) -> None:
-        """Rebuild the assignment tree from ``self._assignment``."""
-        self._tree_assignment.clear()
-        for joint, pieces in sorted(self._assignment.items()):
-            joint_item = QTreeWidgetItem([joint])
-            for piece in sorted(pieces):
-                QTreeWidgetItem(joint_item, [piece])
-            self._tree_assignment.addTopLevelItem(joint_item)
-            joint_item.setExpanded(True)
-
-    @error_handler
-    @undo_chunk("Proxy Builder: Create Proxy Groups")
-    def _on_create_groups(self) -> None:
-        """Create proxy groups from the current assignment."""
-        if not self._assignment:
-            cmds.warning("Proxy Builder: Run Auto Assign first")
-            return
+        total = sum(len(v) for v in assignment.values())
+        logger.info("Assigned %d pieces to %d joints", total, len(assignment))
 
         parent_group = self._line_output_group.text().strip() or "proxy_grp"
         groups = assign_command.create_proxy_groups(
-            assignment=self._assignment,
+            assignment=assignment,
             parent_group=parent_group,
         )
         logger.info("Created %d proxy groups under '%s'", len(groups), parent_group)
