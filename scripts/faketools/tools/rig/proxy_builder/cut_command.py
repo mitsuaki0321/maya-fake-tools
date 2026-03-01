@@ -23,9 +23,9 @@ MAX_CUTTER_MESH_FACES = 5
 # ---------------------------------------------------------------------------
 
 
-def _proxy_group_name(mesh: str) -> str:
-    """プロキシグループの名前を生成。"""
-    return f"{mesh}_proxy_grp"
+def _piece_group_name(mesh: str) -> str:
+    """ピースグループの名前を生成。"""
+    return f"{mesh}_piece_grp"
 
 
 def _piece_name(mesh: str, index: int) -> str:
@@ -189,7 +189,7 @@ def separate_by_weights(
     logger.info("Face assignment: %s", {j: len(faces) for j, faces in face_map.items()})
 
     # Create proxy group
-    grp = _get_or_create_group(_proxy_group_name(mesh))
+    grp = _get_or_create_group(_piece_group_name(mesh))
 
     # Extract per-joint meshes
     start_index = _next_piece_index(grp, f"{mesh}_piece_")
@@ -254,7 +254,7 @@ def separate_by_planes(
                 parent_candidates.add(parent[0])
 
     # Organize results into a group
-    grp = _get_or_create_group(_proxy_group_name(mesh))
+    grp = _get_or_create_group(_piece_group_name(mesh))
     start_index = _next_piece_index(grp, f"{mesh}_piece_")
     results: list[str] = []
     for i, piece in enumerate(pieces):
@@ -276,7 +276,7 @@ def separate_meshes_by_weights(
     joints: Optional[list[str]] = None,
     duplicate: bool = True,
     merge_end_joints: bool = False,
-    group: str = "proxy_grp",
+    group: str = "piece_grp",
 ) -> list[str]:
     """Separate multiple skinned meshes by dominant joint weights.
 
@@ -303,7 +303,7 @@ def separate_meshes_by_weights(
     mesh_groups: list[str] = []
     for mesh in meshes:
         results.extend(separate_by_weights(mesh=mesh, joints=joints, duplicate=duplicate, merge_end_joints=merge_end_joints))
-        grp_name = _proxy_group_name(mesh)
+        grp_name = _piece_group_name(mesh)
         if cmds.objExists(grp_name):
             mesh_groups.append(grp_name)
     parent_grp = _get_or_create_group(group)
@@ -316,7 +316,7 @@ def separate_meshes_by_planes(
     meshes: list[str],
     cutters: list[str],
     duplicate: bool = True,
-    group: str = "proxy_grp",
+    group: str = "piece_grp",
 ) -> list[str]:
     """Separate multiple meshes by cutting planes.
 
@@ -341,7 +341,7 @@ def separate_meshes_by_planes(
     mesh_groups: list[str] = []
     for mesh in meshes:
         results.extend(separate_by_planes(mesh=mesh, cutters=cutters, duplicate=duplicate))
-        grp_name = _proxy_group_name(mesh)
+        grp_name = _piece_group_name(mesh)
         if cmds.objExists(grp_name):
             mesh_groups.append(grp_name)
     parent_grp = _get_or_create_group(group)
