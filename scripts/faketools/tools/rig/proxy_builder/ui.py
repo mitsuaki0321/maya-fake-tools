@@ -26,7 +26,7 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.ui_utils import get_relative_size
-from . import command
+from . import cut_command
 
 logger = getLogger(__name__)
 
@@ -261,7 +261,7 @@ class MainWindow(BaseMainWindow):
         if tab_index == 0:
             # By Weights
             joints = [self._list_joints.item(i).text() for i in range(self._list_joints.count())]
-            results = command.separate_meshes_by_weights(
+            results = cut_command.separate_meshes_by_weights(
                 meshes=meshes,
                 joints=joints if joints else None,
                 duplicate=duplicate,
@@ -273,7 +273,7 @@ class MainWindow(BaseMainWindow):
             if not cutters:
                 cmds.warning("Proxy Builder: Add at least one cutter surface")
                 return
-            results = command.separate_meshes_by_planes(
+            results = cut_command.separate_meshes_by_planes(
                 meshes=meshes,
                 cutters=cutters,
                 duplicate=duplicate,
