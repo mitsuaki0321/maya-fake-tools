@@ -21,9 +21,11 @@ from ....lib_ui.qt_compat import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QRadioButton,
     QStackedWidget,
+    Qt,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -35,6 +37,44 @@ from . import assign_command, cut_command, finalize_command
 logger = getLogger(__name__)
 
 _instance = None
+
+
+class SceneNodeListWidget(QListWidget):
+    """QListWidget that selects corresponding Maya scene nodes on item selection.
+
+    Node names are resolved from ``Qt.UserRole`` data first, falling back to
+    ``item.text()``.  A ``_sync_enabled`` flag prevents ``cmds.select`` from
+    firing during programmatic list modifications (clear / addItem / takeItem).
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._sync_enabled = True
+        self.itemSelectionChanged.connect(self._on_selection_changed)
+
+    # -- public helpers --------------------------------------------------
+
+    def set_sync_enabled(self, enabled: bool) -> None:
+        """Enable / disable scene-selection syncing."""
+        self._sync_enabled = enabled
+
+    # -- internal --------------------------------------------------------
+
+    def _node_name(self, item: QListWidgetItem) -> str:
+        """Return the Maya node name stored on *item*."""
+        data = item.data(Qt.UserRole)
+        return data if data else item.text()
+
+    def _on_selection_changed(self) -> None:
+        if not self._sync_enabled:
+            return
+        items = self.selectedItems()
+        if not items:
+            return
+        nodes = [self._node_name(it) for it in items]
+        valid = [n for n in nodes if cmds.objExists(n)]
+        if valid:
+            cmds.select(valid, replace=True)
 
 
 class MainWindow(BaseMainWindow):
@@ -75,7 +115,7 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(QLabel("Source Meshes:"))
 
         row_source = QHBoxLayout()
-        self._list_source = QListWidget()
+        self._list_source = SceneNodeListWidget()
         self._list_source.setSelectionMode(QAbstractItemView.ExtendedSelection)
         row_source.addWidget(self._list_source, 1)
 
@@ -83,11 +123,9 @@ class MainWindow(BaseMainWindow):
         self._btn_add_source = QPushButton("Add")
         self._btn_remove_source = QPushButton("Remove")
         self._btn_clear_source = QPushButton("Clear")
-        self._btn_sel_source = QPushButton("Select")
         col_source_btns.addWidget(self._btn_add_source)
         col_source_btns.addWidget(self._btn_remove_source)
         col_source_btns.addWidget(self._btn_clear_source)
-        col_source_btns.addWidget(self._btn_sel_source)
         col_source_btns.addStretch()
         row_source.addLayout(col_source_btns)
 
@@ -119,7 +157,7 @@ class MainWindow(BaseMainWindow):
         lay_weights.addWidget(QLabel("Joints:"))
 
         row_joints = QHBoxLayout()
-        self._list_joints = QListWidget()
+        self._list_joints = SceneNodeListWidget()
         self._list_joints.setSelectionMode(QListWidget.ExtendedSelection)
         row_joints.addWidget(self._list_joints, 1)
 
@@ -152,7 +190,7 @@ class MainWindow(BaseMainWindow):
         lay_planes.addWidget(QLabel("Cutters:"))
 
         row_cutters = QHBoxLayout()
-        self._list_cutters = QListWidget()
+        self._list_cutters = SceneNodeListWidget()
         self._list_cutters.setSelectionMode(QListWidget.ExtendedSelection)
         row_cutters.addWidget(self._list_cutters, 1)
 
@@ -201,13 +239,19 @@ class MainWindow(BaseMainWindow):
 
         # --- Pieces list ---
         row_pieces = QHBoxLayout()
-        self._list_pieces = QListWidget()
+        self._list_pieces = SceneNodeListWidget()
         self._list_pieces.setSelectionMode(QAbstractItemView.ExtendedSelection)
         row_pieces.addWidget(self._list_pieces, 1)
 
         col_pieces_btns = QVBoxLayout()
         self._btn_add_pieces = QPushButton("Add")
         self._btn_remove_pieces = QPushButton("Remove")
+
+        # Match Load button width with Add/Remove column
+        btn_width = self._btn_remove_pieces.sizeHint().width()
+        self._btn_load_pieces.setFixedWidth(btn_width)
+        self._btn_add_pieces.setFixedWidth(btn_width)
+        self._btn_remove_pieces.setFixedWidth(btn_width)
         col_pieces_btns.addWidget(self._btn_add_pieces)
         col_pieces_btns.addWidget(self._btn_remove_pieces)
         col_pieces_btns.addStretch()
@@ -223,16 +267,15 @@ class MainWindow(BaseMainWindow):
         self._line_ref_mesh.setPlaceholderText("(optional — enables weight mode)")
         row_ref.addWidget(self._line_ref_mesh, 1)
         self._btn_set_ref_mesh = QPushButton("Set")
-        self._btn_sel_ref_mesh = QPushButton("Sel")
+        self._btn_set_ref_mesh.setFixedWidth(btn_width)
         row_ref.addWidget(self._btn_set_ref_mesh)
-        row_ref.addWidget(self._btn_sel_ref_mesh)
         layout.addLayout(row_ref)
 
         # --- Joints ---
         layout.addWidget(QLabel("Joints:"))
 
         row_assign_joints = QHBoxLayout()
-        self._list_assign_joints = QListWidget()
+        self._list_assign_joints = SceneNodeListWidget()
         self._list_assign_joints.setSelectionMode(QAbstractItemView.ExtendedSelection)
         row_assign_joints.addWidget(self._list_assign_joints, 1)
 
@@ -277,8 +320,8 @@ class MainWindow(BaseMainWindow):
         row_src.addWidget(QLabel("Source Group:"))
         self._line_finalize_group = QLineEdit("proxy_grp")
         row_src.addWidget(self._line_finalize_group, 1)
-        self._btn_pick_finalize_group = QPushButton("Pick")
-        row_src.addWidget(self._btn_pick_finalize_group)
+        self._btn_load_finalize_groups = QPushButton("Load")
+        row_src.addWidget(self._btn_load_finalize_groups)
         layout.addLayout(row_src)
 
         # --- Combine Mode ---
@@ -293,15 +336,10 @@ class MainWindow(BaseMainWindow):
         layout.addWidget(self._radio_per_shader)
 
         # --- Groups list ---
-        row_groups_header = QHBoxLayout()
-        row_groups_header.addWidget(QLabel("Groups:"))
-        row_groups_header.addStretch()
-        self._btn_refresh_groups = QPushButton("Refresh")
-        row_groups_header.addWidget(self._btn_refresh_groups)
-        layout.addLayout(row_groups_header)
+        layout.addWidget(QLabel("Groups:"))
 
-        self._list_finalize_groups = QListWidget()
-        self._list_finalize_groups.setSelectionMode(QAbstractItemView.NoSelection)
+        self._list_finalize_groups = SceneNodeListWidget()
+        self._list_finalize_groups.setSelectionMode(QAbstractItemView.ExtendedSelection)
         layout.addWidget(self._list_finalize_groups, 1)
 
         # --- Output Group ---
@@ -328,7 +366,6 @@ class MainWindow(BaseMainWindow):
         self._btn_add_source.clicked.connect(self._on_add_source)
         self._btn_remove_source.clicked.connect(self._on_remove_source)
         self._btn_clear_source.clicked.connect(self._on_clear_source)
-        self._btn_sel_source.clicked.connect(self._on_sel_source)
         self._radio_by_weights.toggled.connect(lambda checked: self._stack_cut_method.setCurrentIndex(0 if checked else 1))
         self._btn_add_joints.clicked.connect(self._on_add_joints)
         self._btn_remove_joints.clicked.connect(self._on_remove_joints)
@@ -341,14 +378,12 @@ class MainWindow(BaseMainWindow):
         self._btn_add_pieces.clicked.connect(self._on_add_pieces)
         self._btn_remove_pieces.clicked.connect(self._on_remove_pieces)
         self._btn_set_ref_mesh.clicked.connect(self._on_set_ref_mesh)
-        self._btn_sel_ref_mesh.clicked.connect(self._on_sel_ref_mesh)
         self._btn_add_assign_joints.clicked.connect(self._on_add_assign_joints)
         self._btn_remove_assign_joints.clicked.connect(self._on_remove_assign_joints)
         self._btn_assign.clicked.connect(self._on_assign)
 
         # Finalize tab
-        self._btn_pick_finalize_group.clicked.connect(self._on_pick_finalize_group)
-        self._btn_refresh_groups.clicked.connect(self._on_refresh_groups)
+        self._btn_load_finalize_groups.clicked.connect(self._on_load_finalize_groups)
         self._btn_finalize.clicked.connect(self._on_finalize)
 
     # ------------------------------------------------------------------
@@ -369,19 +404,16 @@ class MainWindow(BaseMainWindow):
 
     def _on_remove_source(self) -> None:
         """Remove selected items from the source list."""
+        self._list_source.set_sync_enabled(False)
         for item in reversed(self._list_source.selectedItems()):
             self._list_source.takeItem(self._list_source.row(item))
+        self._list_source.set_sync_enabled(True)
 
     def _on_clear_source(self) -> None:
         """Clear all items from the source list."""
+        self._list_source.set_sync_enabled(False)
         self._list_source.clear()
-
-    def _on_sel_source(self) -> None:
-        """Select all source meshes in Maya."""
-        meshes = [self._list_source.item(i).text() for i in range(self._list_source.count())]
-        valid = [m for m in meshes if cmds.objExists(m)]
-        if valid:
-            cmds.select(valid, replace=True)
+        self._list_source.set_sync_enabled(True)
 
     # ------------------------------------------------------------------
     # Slots — Joints list (Cut tab)
@@ -400,8 +432,10 @@ class MainWindow(BaseMainWindow):
 
     def _on_remove_joints(self) -> None:
         """Remove selected items from the joints list."""
+        self._list_joints.set_sync_enabled(False)
         for item in reversed(self._list_joints.selectedItems()):
             self._list_joints.takeItem(self._list_joints.row(item))
+        self._list_joints.set_sync_enabled(True)
 
     # ------------------------------------------------------------------
     # Slots — Cutters list (Cut tab)
@@ -422,8 +456,10 @@ class MainWindow(BaseMainWindow):
 
     def _on_remove_cutters(self) -> None:
         """Remove selected items from the cutters list."""
+        self._list_cutters.set_sync_enabled(False)
         for item in reversed(self._list_cutters.selectedItems()):
             self._list_cutters.takeItem(self._list_cutters.row(item))
+        self._list_cutters.set_sync_enabled(True)
 
     # ------------------------------------------------------------------
     # Slots — Cut (Step 1)
@@ -480,9 +516,11 @@ class MainWindow(BaseMainWindow):
         descendants = cmds.listRelatives(group_name, allDescendents=True, type="transform") or []
         meshes = [d for d in descendants if cmds.listRelatives(d, shapes=True, type="mesh")]
 
+        self._list_pieces.set_sync_enabled(False)
         self._list_pieces.clear()
         for m in meshes:
             self._list_pieces.addItem(m)
+        self._list_pieces.set_sync_enabled(True)
         logger.info("Loaded %d pieces from '%s'", len(meshes), group_name)
 
     def _on_add_pieces(self) -> None:
@@ -499,8 +537,10 @@ class MainWindow(BaseMainWindow):
 
     def _on_remove_pieces(self) -> None:
         """Remove selected items from the pieces list."""
+        self._list_pieces.set_sync_enabled(False)
         for item in reversed(self._list_pieces.selectedItems()):
             self._list_pieces.takeItem(self._list_pieces.row(item))
+        self._list_pieces.set_sync_enabled(True)
 
     # ------------------------------------------------------------------
     # Slots — Reference Mesh (Assign tab)
@@ -517,12 +557,6 @@ class MainWindow(BaseMainWindow):
             cmds.warning(f"Proxy Builder: '{mesh}' is not a mesh transform")
             return
         self._line_ref_mesh.setText(mesh)
-
-    def _on_sel_ref_mesh(self) -> None:
-        """Select the reference mesh in Maya."""
-        mesh = self._line_ref_mesh.text().strip()
-        if mesh and cmds.objExists(mesh):
-            cmds.select(mesh, replace=True)
 
     # ------------------------------------------------------------------
     # Slots — Assign Joints (Assign tab)
@@ -541,8 +575,10 @@ class MainWindow(BaseMainWindow):
 
     def _on_remove_assign_joints(self) -> None:
         """Remove selected items from the assign joints list."""
+        self._list_assign_joints.set_sync_enabled(False)
         for item in reversed(self._list_assign_joints.selectedItems()):
             self._list_assign_joints.takeItem(self._list_assign_joints.row(item))
+        self._list_assign_joints.set_sync_enabled(True)
 
     # ------------------------------------------------------------------
     # Slots — Assign (Step 2)
@@ -584,27 +620,23 @@ class MainWindow(BaseMainWindow):
     # Slots — Finalize (Step 3)
     # ------------------------------------------------------------------
 
-    def _on_pick_finalize_group(self) -> None:
-        """Set the finalize source group from Maya selection."""
-        sel = cmds.ls(selection=True, type="transform")
-        if not sel:
-            cmds.warning("Proxy Builder: Select a group transform")
-            return
-        self._line_finalize_group.setText(sel[0])
-
-    def _on_refresh_groups(self) -> None:
-        """Refresh the list of proxy groups under the source group."""
+    def _on_load_finalize_groups(self) -> None:
+        """Load proxy groups from the source group into the groups list."""
         group_name = self._line_finalize_group.text().strip()
         if not group_name or not cmds.objExists(group_name):
             cmds.warning(f"Proxy Builder: Source group '{group_name}' not found")
             return
 
+        self._list_finalize_groups.set_sync_enabled(False)
         self._list_finalize_groups.clear()
         children = cmds.listRelatives(group_name, children=True, type="transform") or []
         for child in children:
             meshes = cmds.listRelatives(child, children=True, type="transform") or []
             mesh_count = sum(1 for m in meshes if cmds.listRelatives(m, shapes=True, type="mesh"))
-            self._list_finalize_groups.addItem(f"{child}  ({mesh_count} pieces)")
+            item = QListWidgetItem(f"{child}  ({mesh_count} pieces)")
+            item.setData(Qt.UserRole, child)
+            self._list_finalize_groups.addItem(item)
+        self._list_finalize_groups.set_sync_enabled(True)
 
     @error_handler
     @undo_chunk("Proxy Builder: Finalize")
