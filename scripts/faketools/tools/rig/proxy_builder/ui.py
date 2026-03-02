@@ -259,39 +259,89 @@ class MainWindow(BaseMainWindow):
 
         layout.addLayout(row_pieces, 1)
 
-        # --- Reference Mesh ---
+        # --- Assign Method radio buttons ---
+        row_assign_method = QHBoxLayout()
+        row_assign_method.addWidget(QLabel("Assign Method:"))
+        self._radio_assign_by_weights = QRadioButton("By Weights")
+        self._radio_assign_by_bones = QRadioButton("By Bones")
+        self._radio_assign_by_weights.setChecked(True)
+        self._btn_group_assign_method = QButtonGroup(self)
+        self._btn_group_assign_method.addButton(self._radio_assign_by_weights, 0)
+        self._btn_group_assign_method.addButton(self._radio_assign_by_bones, 1)
+        row_assign_method.addWidget(self._radio_assign_by_weights)
+        row_assign_method.addWidget(self._radio_assign_by_bones)
+        row_assign_method.addStretch()
+        layout.addLayout(row_assign_method)
+
+        # --- QStackedWidget for assign method pages ---
+        self._stack_assign_method = QStackedWidget()
+
+        # -- By Weights page --
+        page_weights = QWidget()
+        lay_weights = QVBoxLayout(page_weights)
+        lay_weights.setSpacing(int(spacing * 0.5))
+        lay_weights.setContentsMargins(0, 0, 0, 0)
+
         row_ref = QHBoxLayout()
         row_ref.addWidget(QLabel("Reference Mesh:"))
         self._line_ref_mesh = QLineEdit()
         self._line_ref_mesh.setReadOnly(True)
-        self._line_ref_mesh.setPlaceholderText("(optional — enables weight mode)")
+        self._line_ref_mesh.setPlaceholderText("(skinned mesh)")
         row_ref.addWidget(self._line_ref_mesh, 1)
         self._btn_set_ref_mesh = QPushButton("Set")
         self._btn_set_ref_mesh.setFixedWidth(btn_width)
         row_ref.addWidget(self._btn_set_ref_mesh)
-        layout.addLayout(row_ref)
+        lay_weights.addLayout(row_ref)
 
-        # --- Joints ---
-        layout.addWidget(QLabel("Joints:"))
+        lay_weights.addWidget(QLabel("Joints:"))
 
-        row_assign_joints = QHBoxLayout()
-        self._list_assign_joints = SceneNodeListWidget()
-        self._list_assign_joints.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        row_assign_joints.addWidget(self._list_assign_joints, 1)
+        row_joints_w = QHBoxLayout()
+        self._list_assign_joints_w = SceneNodeListWidget()
+        self._list_assign_joints_w.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        row_joints_w.addWidget(self._list_assign_joints_w, 1)
 
-        col_assign_joints_btns = QVBoxLayout()
-        self._btn_add_assign_joints = QPushButton("Add")
-        self._btn_remove_assign_joints = QPushButton("Remove")
-        col_assign_joints_btns.addWidget(self._btn_add_assign_joints)
-        col_assign_joints_btns.addWidget(self._btn_remove_assign_joints)
-        col_assign_joints_btns.addStretch()
-        row_assign_joints.addLayout(col_assign_joints_btns)
+        col_joints_w_btns = QVBoxLayout()
+        self._btn_add_assign_joints_w = QPushButton("Add")
+        self._btn_remove_assign_joints_w = QPushButton("Remove")
+        col_joints_w_btns.addWidget(self._btn_add_assign_joints_w)
+        col_joints_w_btns.addWidget(self._btn_remove_assign_joints_w)
+        col_joints_w_btns.addStretch()
+        row_joints_w.addLayout(col_joints_w_btns)
 
-        layout.addLayout(row_assign_joints, 1)
+        lay_weights.addLayout(row_joints_w, 1)
 
-        lbl_joints_hint = QLabel("* Required for bone mode; optional filter for weight mode")
-        lbl_joints_hint.setEnabled(False)
-        layout.addWidget(lbl_joints_hint)
+        lbl_hint_w = QLabel("* Leave empty to use all influences")
+        lbl_hint_w.setEnabled(False)
+        lay_weights.addWidget(lbl_hint_w)
+
+        self._stack_assign_method.addWidget(page_weights)
+
+        # -- By Bones page --
+        page_bones = QWidget()
+        lay_bones = QVBoxLayout(page_bones)
+        lay_bones.setSpacing(int(spacing * 0.5))
+        lay_bones.setContentsMargins(0, 0, 0, 0)
+
+        lay_bones.addWidget(QLabel("Joints:"))
+
+        row_joints_b = QHBoxLayout()
+        self._list_assign_joints_b = SceneNodeListWidget()
+        self._list_assign_joints_b.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        row_joints_b.addWidget(self._list_assign_joints_b, 1)
+
+        col_joints_b_btns = QVBoxLayout()
+        self._btn_add_assign_joints_b = QPushButton("Add")
+        self._btn_remove_assign_joints_b = QPushButton("Remove")
+        col_joints_b_btns.addWidget(self._btn_add_assign_joints_b)
+        col_joints_b_btns.addWidget(self._btn_remove_assign_joints_b)
+        col_joints_b_btns.addStretch()
+        row_joints_b.addLayout(col_joints_b_btns)
+
+        lay_bones.addLayout(row_joints_b, 1)
+
+        self._stack_assign_method.addWidget(page_bones)
+
+        layout.addWidget(self._stack_assign_method, 1)
 
         # --- Output Group ---
         row_output = QHBoxLayout()
@@ -377,9 +427,12 @@ class MainWindow(BaseMainWindow):
         self._btn_load_pieces.clicked.connect(self._on_load_pieces)
         self._btn_add_pieces.clicked.connect(self._on_add_pieces)
         self._btn_remove_pieces.clicked.connect(self._on_remove_pieces)
+        self._radio_assign_by_weights.toggled.connect(lambda checked: self._stack_assign_method.setCurrentIndex(0 if checked else 1))
         self._btn_set_ref_mesh.clicked.connect(self._on_set_ref_mesh)
-        self._btn_add_assign_joints.clicked.connect(self._on_add_assign_joints)
-        self._btn_remove_assign_joints.clicked.connect(self._on_remove_assign_joints)
+        self._btn_add_assign_joints_w.clicked.connect(self._on_add_assign_joints_w)
+        self._btn_remove_assign_joints_w.clicked.connect(self._on_remove_assign_joints_w)
+        self._btn_add_assign_joints_b.clicked.connect(self._on_add_assign_joints_b)
+        self._btn_remove_assign_joints_b.clicked.connect(self._on_remove_assign_joints_b)
         self._btn_assign.clicked.connect(self._on_assign)
 
         # Finalize tab
@@ -562,23 +615,39 @@ class MainWindow(BaseMainWindow):
     # Slots — Assign Joints (Assign tab)
     # ------------------------------------------------------------------
 
-    def _on_add_assign_joints(self) -> None:
-        """Add selected joints to the assign joints list."""
+    def _add_joints_to_list(self, list_widget: SceneNodeListWidget) -> None:
+        """Add selected joints to the given list widget (skip duplicates)."""
         sel = cmds.ls(selection=True, type="joint")
         if not sel:
             cmds.warning("Proxy Builder: Select one or more joints")
             return
-        existing = {self._list_assign_joints.item(i).text() for i in range(self._list_assign_joints.count())}
+        existing = {list_widget.item(i).text() for i in range(list_widget.count())}
         for joint in sel:
             if joint not in existing:
-                self._list_assign_joints.addItem(joint)
+                list_widget.addItem(joint)
 
-    def _on_remove_assign_joints(self) -> None:
-        """Remove selected items from the assign joints list."""
-        self._list_assign_joints.set_sync_enabled(False)
-        for item in reversed(self._list_assign_joints.selectedItems()):
-            self._list_assign_joints.takeItem(self._list_assign_joints.row(item))
-        self._list_assign_joints.set_sync_enabled(True)
+    def _remove_from_list(self, list_widget: SceneNodeListWidget) -> None:
+        """Remove selected items from the given list widget."""
+        list_widget.set_sync_enabled(False)
+        for item in reversed(list_widget.selectedItems()):
+            list_widget.takeItem(list_widget.row(item))
+        list_widget.set_sync_enabled(True)
+
+    def _on_add_assign_joints_w(self) -> None:
+        """Add selected joints to the weights joints list."""
+        self._add_joints_to_list(self._list_assign_joints_w)
+
+    def _on_remove_assign_joints_w(self) -> None:
+        """Remove selected items from the weights joints list."""
+        self._remove_from_list(self._list_assign_joints_w)
+
+    def _on_add_assign_joints_b(self) -> None:
+        """Add selected joints to the bones joints list."""
+        self._add_joints_to_list(self._list_assign_joints_b)
+
+    def _on_remove_assign_joints_b(self) -> None:
+        """Remove selected items from the bones joints list."""
+        self._remove_from_list(self._list_assign_joints_b)
 
     # ------------------------------------------------------------------
     # Slots — Assign (Step 2)
@@ -593,12 +662,22 @@ class MainWindow(BaseMainWindow):
             cmds.warning("Proxy Builder: Add at least one piece")
             return
 
-        ref_mesh = self._line_ref_mesh.text().strip() or None
-        joints = [self._list_assign_joints.item(i).text() for i in range(self._list_assign_joints.count())]
+        method_id = self._btn_group_assign_method.checkedId()
 
-        if not ref_mesh and not joints:
-            cmds.warning("Proxy Builder: Bone mode requires at least one joint")
-            return
+        if method_id == 0:
+            # By Weights
+            ref_mesh = self._line_ref_mesh.text().strip() or None
+            if not ref_mesh:
+                cmds.warning("Proxy Builder: Set a reference mesh for weight mode")
+                return
+            joints = [self._list_assign_joints_w.item(i).text() for i in range(self._list_assign_joints_w.count())]
+        else:
+            # By Bones
+            ref_mesh = None
+            joints = [self._list_assign_joints_b.item(i).text() for i in range(self._list_assign_joints_b.count())]
+            if not joints:
+                cmds.warning("Proxy Builder: Add at least one joint for bone mode")
+                return
 
         assignment = assign_command.auto_assign_pieces(
             pieces=pieces,
@@ -676,6 +755,7 @@ class MainWindow(BaseMainWindow):
             "keep_original": self._chk_keep_original.isChecked(),
             "merge_end_joints": self._chk_merge_end_joints.isChecked(),
             "piece_group": self._line_piece_group.text(),
+            "assign_method": self._btn_group_assign_method.checkedId(),
             "output_group": self._line_output_group.text(),
             "finalize_group": self._line_finalize_group.text(),
             "finalize_output": self._line_finalize_output.text(),
@@ -700,6 +780,15 @@ class MainWindow(BaseMainWindow):
         self._chk_keep_original.setChecked(settings_data.get("keep_original", True))
         self._chk_merge_end_joints.setChecked(settings_data.get("merge_end_joints", False))
         self._line_piece_group.setText(settings_data.get("piece_group", "piece_grp"))
+
+        assign_method = settings_data.get("assign_method", 0)
+        if assign_method == 1:
+            self._radio_assign_by_bones.setChecked(True)
+            self._stack_assign_method.setCurrentIndex(1)
+        else:
+            self._radio_assign_by_weights.setChecked(True)
+            self._stack_assign_method.setCurrentIndex(0)
+
         self._line_output_group.setText(settings_data.get("output_group", "proxy_grp"))
         self._line_finalize_group.setText(settings_data.get("finalize_group", "proxy_grp"))
         self._line_finalize_output.setText(settings_data.get("finalize_output", "proxy_final_grp"))
