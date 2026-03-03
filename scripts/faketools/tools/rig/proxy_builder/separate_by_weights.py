@@ -55,6 +55,18 @@ def get_weights_per_vertex(skin_cluster: str) -> tuple[list[str], list[list[floa
     return influences, weights
 
 
+def _get_hierarchy_depth(joint: str) -> int:
+    """Return the DAG hierarchy depth of a joint (0 = root)."""
+    full_path = cmds.ls(joint, long=True)[0]
+    return full_path.count("|") - 1
+
+
+def _get_joint_position(joint: str) -> om.MPoint:
+    """Return the world-space position of a joint as an MPoint."""
+    pos = cmds.xform(joint, query=True, worldSpace=True, translation=True)
+    return om.MPoint(pos[0], pos[1], pos[2])
+
+
 def assign_faces_to_joints(
     mesh: str,
     influences: list[str],
@@ -65,6 +77,10 @@ def assign_faces_to_joints(
 
     For each face, sums the weights of its vertices per influence and
     assigns the face to the influence with the highest total weight.
+
+    When multiple joints share the exact same weight for a face, ties are
+    broken by: (1) shallower hierarchy depth wins, (2) closer distance
+    from the face centroid to the joint position wins.
 
     Args:
         mesh (str): Mesh transform or shape name.
@@ -98,7 +114,22 @@ def assign_faces_to_joints(
     else:
         target_indices = list(range(num_influences))
 
+    # Pre-compute hierarchy depths and positions for tiebreaking (lazy)
+    depth_cache: dict[int, int] = {}
+    pos_cache: dict[int, om.MPoint] = {}
+
+    def _get_depth(inf_idx: int) -> int:
+        if inf_idx not in depth_cache:
+            depth_cache[inf_idx] = _get_hierarchy_depth(influences[inf_idx])
+        return depth_cache[inf_idx]
+
+    def _get_pos(inf_idx: int) -> om.MPoint:
+        if inf_idx not in pos_cache:
+            pos_cache[inf_idx] = _get_joint_position(influences[inf_idx])
+        return pos_cache[inf_idx]
+
     result: dict[str, list[int]] = {}
+    tie_count = 0
 
     face_it = om.MItMeshPolygon(mesh_dag)
     while not face_it.isDone():
@@ -115,9 +146,24 @@ def assign_faces_to_joints(
         best_inf_idx = target_indices[0]
         best_weight = face_weights[target_indices[0]]
         for inf_idx in target_indices[1:]:
-            if face_weights[inf_idx] > best_weight:
-                best_weight = face_weights[inf_idx]
+            w = face_weights[inf_idx]
+            if w > best_weight:
+                best_weight = w
                 best_inf_idx = inf_idx
+            elif w == best_weight:
+                # Tiebreak 1: shallower hierarchy wins
+                depth_new = _get_depth(inf_idx)
+                depth_cur = _get_depth(best_inf_idx)
+                if depth_new < depth_cur:
+                    best_inf_idx = inf_idx
+                elif depth_new == depth_cur:
+                    # Tiebreak 2: closer distance to face centroid wins
+                    centroid = face_it.center(om.MSpace.kWorld)
+                    dist_new = centroid.distanceTo(_get_pos(inf_idx))
+                    dist_cur = centroid.distanceTo(_get_pos(best_inf_idx))
+                    if dist_new < dist_cur:
+                        best_inf_idx = inf_idx
+                tie_count += 1
 
         joint_name = influences[best_inf_idx]
         if joint_name not in result:
@@ -125,6 +171,9 @@ def assign_faces_to_joints(
         result[joint_name].append(face_idx)
 
         face_it.next()
+
+    if tie_count:
+        logger.debug("Resolved %d weight ties by hierarchy depth / distance", tie_count)
 
     return result
 
