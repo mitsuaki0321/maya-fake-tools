@@ -9,14 +9,12 @@ import maya.cmds as cmds
 
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QCheckBox, QGridLayout, QLabel, QLineEdit, QPushButton, Qt, QVBoxLayout, QWidget
+from .....lib_ui.shared_config import get_shared_config
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import extra_widgets
 from ..command import combine_pair_skin_weights
 
 logger = getLogger(__name__)
-
-
-ADJUST_CENTER_WEIGHT = ["(.*)(L$)", r"\g<1>R"]
 
 
 class AdjustCenterSkinWeightsWidgets(QWidget):
@@ -94,6 +92,9 @@ class AdjustCenterSkinWeightsWidgets(QWidget):
         self.auto_search_checkbox.setCheckState(Qt.Checked)
         self._toggle_auto_search(None)
 
+        # Ensure shared config file exists
+        get_shared_config()
+
     def _toggle_auto_search(self, state):
         """Toggle the auto search."""
         enabled = not self.auto_search_checkbox.isChecked()
@@ -141,8 +142,13 @@ class AdjustCenterSkinWeightsWidgets(QWidget):
             static_inf = None
 
         if self.auto_search_checkbox.isChecked():
+            mirror = get_shared_config()["mirror_patterns"]
             combine_pair_skin_weights(
-                components, method="auto", static_inf=static_inf, regex_name=ADJUST_CENTER_WEIGHT[0], replace_name=ADJUST_CENTER_WEIGHT[1]
+                components,
+                method="auto",
+                static_inf=static_inf,
+                regex_name=mirror["adjust_center_weight"][0],
+                replace_name=mirror["adjust_center_weight"][1],
             )
         else:
             src_infs = self.src_infs_field.text().split()

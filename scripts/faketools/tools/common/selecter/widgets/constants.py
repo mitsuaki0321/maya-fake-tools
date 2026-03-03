@@ -12,10 +12,6 @@ RENAME_COLOR = "#536878"
 REORDER_COLOR = "#627282"  # Reorder normal sort color (brighter)
 REORDER_REVERSED_COLOR = "#426272"  # Reorder reversed name sort color (darker)
 
-# Substitution patterns for left/right mirror
-LEFT_TO_RIGHT = ["(.*)(L)", r"\g<1>R"]
-RIGHT_TO_LEFT = ["(.*)(R)", r"\g<1>L"]
-
 
 def selecter_handler(func):
     """Selection handler for selecter tools.
@@ -61,7 +57,5 @@ __all__ = [
     "RENAME_COLOR",
     "REORDER_COLOR",
     "REORDER_REVERSED_COLOR",
-    "LEFT_TO_RIGHT",
-    "RIGHT_TO_LEFT",
     "selecter_handler",
 ]

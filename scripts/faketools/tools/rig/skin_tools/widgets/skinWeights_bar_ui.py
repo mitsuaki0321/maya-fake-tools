@@ -9,14 +9,12 @@ import maya.cmds as cmds
 
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QPushButton, QSizePolicy, QWidget
+from .....lib_ui.shared_config import get_shared_config
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import IconToggleButton, extra_widgets
 from .....operations.copy_weights import copy_skin_weights_with_bind, mirror_skin_weights, mirror_skin_weights_with_objects
 
 _IMAGES_DIR = Path(__file__).parent.parent / "images"
-
-LEFT_TO_RIGHT = ["(.*)(L)", r"\g<1>R"]
-RIGHT_TO_LEFT = ["(.*)(R)", r"\g<1>L"]
 
 logger = getLogger(__name__)
 
@@ -75,6 +73,9 @@ class SkinWeightsBar(QWidget):
         mir_self_button.clicked.connect(self.mirror_skin_weights)
         mir_sub_button.clicked.connect(self.mirror_skin_weights_sub)
 
+        # Ensure shared config file exists
+        get_shared_config()
+
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Copy Skin Weights")
     def copy_skin_weights(self):
@@ -96,9 +97,13 @@ class SkinWeightsBar(QWidget):
         if not sel_nodes:
             cmds.error("No objects selected")
 
+        mirror = get_shared_config()["mirror_patterns"]
         for node in sel_nodes:
             mirror_skin_weights(
-                node, left_right_names=LEFT_TO_RIGHT, right_left_names=RIGHT_TO_LEFT, mirror_inverse=self.mir_dir_checkBox.isChecked()
+                node,
+                left_right_names=mirror["left_to_right"],
+                right_left_names=mirror["right_to_left"],
+                mirror_inverse=self.mir_dir_checkBox.isChecked(),
             )
 
     @maya_decorator.error_handler
@@ -109,10 +114,14 @@ class SkinWeightsBar(QWidget):
         if not sel_nodes:
             cmds.error("No objects selected")
 
+        mirror = get_shared_config()["mirror_patterns"]
         dst_nodes = []
         for node in sel_nodes:
             dst = mirror_skin_weights_with_objects(
-                node, left_right_names=LEFT_TO_RIGHT, right_left_names=RIGHT_TO_LEFT, mirror_inverse=self.mir_dir_checkBox.isChecked()
+                node,
+                left_right_names=mirror["left_to_right"],
+                right_left_names=mirror["right_to_left"],
+                mirror_inverse=self.mir_dir_checkBox.isChecked(),
             )
             dst_nodes.append(dst)
 

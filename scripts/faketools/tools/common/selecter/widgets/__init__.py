@@ -3,9 +3,7 @@
 from .constants import (
     FILTER_COLOR,
     HIERARCHY_COLOR,
-    LEFT_TO_RIGHT,
     RENAME_COLOR,
-    RIGHT_TO_LEFT,
     SUBSTITUTION_COLOR,
     selecter_handler,
 )
@@ -30,6 +28,4 @@ __all__ = [
     "HIERARCHY_COLOR",
     "SUBSTITUTION_COLOR",
     "RENAME_COLOR",
-    "LEFT_TO_RIGHT",
-    "RIGHT_TO_LEFT",
 ]

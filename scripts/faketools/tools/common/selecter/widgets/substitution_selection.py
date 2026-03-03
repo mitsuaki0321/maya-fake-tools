@@ -8,11 +8,12 @@ from .....lib import lib_name, lib_transform
 from .....lib.lib_selection import get_top_nodes
 from .....lib_ui import base_window, maya_decorator
 from .....lib_ui.qt_compat import QHBoxLayout, QLineEdit, QSizePolicy, QWidget, Signal
+from .....lib_ui.shared_config import get_shared_config
 from .....lib_ui.tool_settings import ToolSettingsManager
 from .....lib_ui.widgets import IconToggleButton, TextToggleButton, extra_widgets
 from .....operations import mirror_transforms
 from .. import command
-from .constants import LEFT_TO_RIGHT, RIGHT_TO_LEFT, SUBSTITUTION_COLOR, selecter_handler
+from .constants import SUBSTITUTION_COLOR, selecter_handler
 from .selecter_button import SelecterButton
 
 _IMAGES_DIR = Path(__file__).resolve().parent.parent / "images"
@@ -127,6 +128,9 @@ class SubstitutionSelectionWidget(QWidget):
         duplicate_button.clicked.connect(self.duplicate_substitution)
         duplicate_orig_button.clicked.connect(self.duplicate_original_substitution)
 
+        # Ensure shared config file exists
+        get_shared_config()
+
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Selecter: Select Left to Right")
     @selecter_handler
@@ -139,8 +143,9 @@ class SubstitutionSelectionWidget(QWidget):
         Returns:
             list[str]: Converted node list.
         """
+        mirror = get_shared_config()["mirror_patterns"]
         nodes = [node.split("|")[-1] for node in nodes]
-        convert_names = lib_name.substitute_names(nodes, LEFT_TO_RIGHT[0], LEFT_TO_RIGHT[1])
+        convert_names = lib_name.substitute_names(nodes, mirror["left_to_right"][0], mirror["left_to_right"][1])
 
         result_nodes = []
         for name, node in zip(convert_names, nodes):
@@ -175,8 +180,9 @@ class SubstitutionSelectionWidget(QWidget):
         Returns:
             list[str]: Converted node list.
         """
+        mirror = get_shared_config()["mirror_patterns"]
         nodes = [node.split("|")[-1] for node in nodes]
-        convert_names = lib_name.substitute_names(nodes, RIGHT_TO_LEFT[0], RIGHT_TO_LEFT[1])
+        convert_names = lib_name.substitute_names(nodes, mirror["right_to_left"][0], mirror["right_to_left"][1])
 
         result_nodes = []
         for name, node in zip(convert_names, nodes):
