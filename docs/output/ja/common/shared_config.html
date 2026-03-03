@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共有設定 - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li class="active">共有設定</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#設定ファイルの場所"
+                    id="toc-設定ファイルの場所">設定ファイルの場所</a></li>
+                    <li><a href="#設定項目"
+                    id="toc-設定項目">設定項目</a>
+                    <ul>
+                    <li><a href="#ミラーパターン-mirror_patterns"
+                    id="toc-ミラーパターン-mirror_patterns">ミラーパターン
+                    (mirror_patterns)</a></li>
+                    </ul></li>
+                    <li><a href="#設定ファイルの例"
+                    id="toc-設定ファイルの例">設定ファイルの例</a>
+                    <ul>
+                    <li><a href="#デフォルト設定"
+                    id="toc-デフォルト設定">デフォルト設定</a></li>
+                    <li><a href="#カスタム例-_left-_right-の命名規則"
+                    id="toc-カスタム例-_left-_right-の命名規則">カスタム例:
+                    <code>_Left</code> / <code>_Right</code>
+                    の命名規則</a></li>
+                    <li><a href="#カスタム例-_l_-_r_-の命名規則中間一致"
+                    id="toc-カスタム例-_l_-_r_-の命名規則中間一致">カスタム例:
+                    <code>_L_</code> / <code>_R_</code>
+                    の命名規則（中間一致）</a></li>
+                    </ul></li>
+                    <li><a href="#設定の変更方法"
+                    id="toc-設定の変更方法">設定の変更方法</a></li>
+                    <li><a href="#設定のリセット"
+                    id="toc-設定のリセット">設定のリセット</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">共有設定</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>FakeTools
+                の一部の機能は、ツール間で共通の設定ファイルを参照します。<br />
+                設定ファイルを編集することで、プロジェクトの命名規則に合わせた動作のカスタマイズが可能です。</p>
+                <h2 id="設定ファイルの場所">設定ファイルの場所</h2>
+                <p>設定ファイルは、対象ツールを初めて起動した際に自動的に作成されます。</p>
+                <ul>
+                <li>Windows:
+                <code>%MAYA_APP_DIR%/faketools_workspace/shared/config/settings/default.json</code></li>
+                <li>Mac:
+                <code>~/Library/Preferences/Autodesk/maya/faketools_workspace/shared/config/settings/default.json</code></li>
+                <li>Linux:
+                <code>~/maya/faketools_workspace/shared/config/settings/default.json</code></li>
+                </ul>
+                <h2 id="設定項目">設定項目</h2>
+                <h3 id="ミラーパターン-mirror_patterns">ミラーパターン
+                (mirror_patterns)</h3>
+                <p>左右の名前置換に使用する正規表現パターンです。<br />
+                以下のツールがこの設定を参照します。</p>
+                <ul>
+                <li><a href="selecter.html">Selecter</a> -
+                名前を置換して選択（左右）</li>
+                <li><a href="../rig/skin_tools.html">Skin Tools</a> -
+                Mirror Self / Mirror Sub / Adjust Center Weights</li>
+                </ul>
+                <table>
+                <colgroup>
+                <col style="width: 30%" />
+                <col style="width: 46%" />
+                <col style="width: 23%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>設定名</th>
+                <th>デフォルト値</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><code>left_to_right</code></td>
+                <td><code>["(.*)(L)", "\\g&lt;1&gt;R"]</code></td>
+                <td>左から右への名前変換パターン
+                <code>[検索, 置換]</code></td>
+                </tr>
+                <tr>
+                <td><code>right_to_left</code></td>
+                <td><code>["(.*)(R)", "\\g&lt;1&gt;L"]</code></td>
+                <td>右から左への名前変換パターン
+                <code>[検索, 置換]</code></td>
+                </tr>
+                <tr>
+                <td><code>adjust_center_weight</code></td>
+                <td><code>["(.*)(L$)", "\\g&lt;1&gt;R"]</code></td>
+                <td>センターウエイト調整時のペア検索パターン
+                <code>[検索, 置換]</code></td>
+                </tr>
+                </tbody>
+                </table>
+                <p>各値は <code>[検索パターン, 置換文字列]</code>
+                の2要素のリストで、Python の <code>re.sub()</code>
+                に渡される正規表現です。</p>
+                <h2 id="設定ファイルの例">設定ファイルの例</h2>
+                <h3 id="デフォルト設定">デフォルト設定</h3>
+                <pre class="json"><code>{
+  &quot;mirror_patterns&quot;: {
+    &quot;left_to_right&quot;: [&quot;(.*)(L)&quot;, &quot;\\g&lt;1&gt;R&quot;],
+    &quot;right_to_left&quot;: [&quot;(.*)(R)&quot;, &quot;\\g&lt;1&gt;L&quot;],
+    &quot;adjust_center_weight&quot;: [&quot;(.*)(L$)&quot;, &quot;\\g&lt;1&gt;R&quot;]
+  }
+}</code></pre>
+                <h3 id="カスタム例-_left-_right-の命名規則">カスタム例:
+                <code>_Left</code> / <code>_Right</code> の命名規則</h3>
+                <pre class="json"><code>{
+  &quot;mirror_patterns&quot;: {
+    &quot;left_to_right&quot;: [&quot;(.*)(_Left)&quot;, &quot;\\g&lt;1&gt;_Right&quot;],
+    &quot;right_to_left&quot;: [&quot;(.*)(_Right)&quot;, &quot;\\g&lt;1&gt;_Left&quot;],
+    &quot;adjust_center_weight&quot;: [&quot;(.*)(_Left$)&quot;, &quot;\\g&lt;1&gt;_Right&quot;]
+  }
+}</code></pre>
+                <h3
+                id="カスタム例-_l_-_r_-の命名規則中間一致">カスタム例:
+                <code>_L_</code> / <code>_R_</code>
+                の命名規則（中間一致）</h3>
+                <pre class="json"><code>{
+  &quot;mirror_patterns&quot;: {
+    &quot;left_to_right&quot;: [&quot;(.*)_L_(.*)&quot;, &quot;\\g&lt;1&gt;_R_\\g&lt;2&gt;&quot;],
+    &quot;right_to_left&quot;: [&quot;(.*)_R_(.*)&quot;, &quot;\\g&lt;1&gt;_L_\\g&lt;2&gt;&quot;],
+    &quot;adjust_center_weight&quot;: [&quot;(.*)_L_(.*)&quot;, &quot;\\g&lt;1&gt;_R_\\g&lt;2&gt;&quot;]
+  }
+}</code></pre>
+                <h2 id="設定の変更方法">設定の変更方法</h2>
+                <ol type="1">
+                <li>対象ツールを一度起動して設定ファイルを自動生成する</li>
+                <li>上記パスの <code>default.json</code>
+                をテキストエディタで開く</li>
+                <li>値を変更して保存する</li>
+                <li>ツールを再起動する（次回のコマンド実行時から反映されます）</li>
+                </ol>
+                <p>※
+                一部の設定のみを変更した場合、記載のないキーにはデフォルト値が使用されます。</p>
+                <h2 id="設定のリセット">設定のリセット</h2>
+                <p>すべての設定をデフォルトに戻したい場合は、<code>default.json</code>
+                ファイルを削除してツールを再起動してください。<br />
+                自動的にデフォルト設定のファイルが再作成されます。</p>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

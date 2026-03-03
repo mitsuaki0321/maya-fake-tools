@@ -87,6 +87,8 @@ faketools.tools.rig.skin_tools.ui.show_ui()
 
 ※ 反対側のジオメトリやインフルエンスを検索する方法は、Mirror Self と同様です。
 
+※ 左右の名前検索パターンは [共有設定](../common/shared_config.html) で変更できます。
+
 
 ## Copy Skin Weights Custom
 
@@ -149,7 +151,7 @@ skinCluster が適用されたジオメトリを、ウエイト情報を保持�
 #### Auto Search が有効な場合
 
 `Auto Search` が有効な場合、選択されている頂点のスキンクラスターから、ペアとなるインフルエンスを自動的に検索します。  
-自動的な検索は、`settings.json` に記述された `ADJUST_CENTER_WEIGHT` より正規表現にて検索されます。
+自動的な検索は、[共有設定](../common/shared_config.html) の `adjust_center_weight` に記述された正規表現にて検索されます。
 
 #### Auto Search が無効な場合
 

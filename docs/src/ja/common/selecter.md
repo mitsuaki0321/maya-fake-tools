@@ -107,7 +107,7 @@ faketools.tools.common.selecter.ui.show_ui()
 
 すべて Maya のビュー上での選択と同じようにモディファイヤキーを使用することができます。
 
-※ この機能は、settings.json の `LEFT_TO_RIGHT` 及び `RIGHT_TO_LEFT` の設定によって置換方法を変更することができます。
+※ この機能は、[共有設定](shared_config.html) の `left_to_right` 及び `right_to_left` の設定によって置換方法を変更することができます。
 
 
 ### 名前を置換しての選択、リネーム、複製、オリジナルシェイプを複製
