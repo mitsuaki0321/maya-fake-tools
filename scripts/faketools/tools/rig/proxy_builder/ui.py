@@ -37,7 +37,7 @@ from ....lib_ui.qt_compat import (
 from ....lib_ui.tool_settings import ToolSettingsManager
 from ....lib_ui.ui_utils import get_relative_size
 from ....lib_ui.widgets.extra_widgets import HorizontalSeparator
-from . import assign_command, cut_command, finalize_command, plane
+from . import assign_command, cut_command, finalize_command, plane_command
 
 logger = getLogger(__name__)
 
@@ -1078,7 +1078,7 @@ class MainWindow(BaseMainWindow):
 
         results = []
         for joint in joints:
-            result = plane.create_plane_at_joint(
+            result = plane_command.create_plane_at_joint(
                 joint=joint,
                 target_mesh=target_mesh,
                 plane_type=plane_type,
@@ -1108,7 +1108,7 @@ class MainWindow(BaseMainWindow):
 
         results = []
         for source in sel:
-            mirrored = plane.mirror_plane(source=source, axis=axis)
+            mirrored = plane_command.mirror_plane(source=source, axis=axis)
             results.append(mirrored)
 
         if results:
