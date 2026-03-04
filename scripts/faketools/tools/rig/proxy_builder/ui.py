@@ -436,28 +436,29 @@ class MainWindow(BaseMainWindow):
         lay_create.setSpacing(int(spacing * 0.5))
 
         # Compute uniform label widths
-        lbl_joint = QLabel("Joint:")
+        lbl_joints = QLabel("Joints:")
         lbl_target_mesh = QLabel("Target Mesh:")
-        field_label_width = max(lbl_joint.sizeHint().width(), lbl_target_mesh.sizeHint().width())
-        for lbl in (lbl_joint, lbl_target_mesh):
+        field_label_width = max(lbl_joints.sizeHint().width(), lbl_target_mesh.sizeHint().width())
+        for lbl in (lbl_joints, lbl_target_mesh):
             lbl.setFixedWidth(field_label_width)
             lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         lbl_plane_type = QLabel("Plane Type:")
         lbl_rotation_mode = QLabel("Rotation Mode:")
-        for lbl in (lbl_plane_type, lbl_rotation_mode):
+        lbl_axis = QLabel("Axis:")
+        for lbl in (lbl_plane_type, lbl_rotation_mode, lbl_axis):
             lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        # Joint
-        row_joint = QHBoxLayout()
-        row_joint.addWidget(lbl_joint)
-        self._line_plane_joint = QLineEdit()
-        self._line_plane_joint.setReadOnly(True)
-        self._line_plane_joint.setPlaceholderText("(select a joint)")
-        row_joint.addWidget(self._line_plane_joint, 1)
-        self._btn_set_plane_joint = QPushButton("Set")
-        row_joint.addWidget(self._btn_set_plane_joint)
-        lay_create.addLayout(row_joint)
+        # Joints
+        row_joints = QHBoxLayout()
+        row_joints.addWidget(lbl_joints)
+        self._line_plane_joints = QLineEdit()
+        self._line_plane_joints.setReadOnly(True)
+        self._line_plane_joints.setPlaceholderText("(select one or more joints)")
+        row_joints.addWidget(self._line_plane_joints, 1)
+        self._btn_set_plane_joints = QPushButton("Set")
+        row_joints.addWidget(self._btn_set_plane_joints)
+        lay_create.addLayout(row_joints)
 
         # Target Mesh
         row_target = QHBoxLayout()
@@ -501,6 +502,20 @@ class MainWindow(BaseMainWindow):
         grid_radios.addWidget(self._radio_rot_aim, 1, 2)
         grid_radios.addWidget(self._radio_rot_manual, 1, 3)
 
+        self._radio_axis_x = QRadioButton("X")
+        self._radio_axis_y = QRadioButton("Y")
+        self._radio_axis_z = QRadioButton("Z")
+        self._radio_axis_y.setChecked(True)
+        self._btn_group_axis = QButtonGroup(self)
+        self._btn_group_axis.addButton(self._radio_axis_x, 0)
+        self._btn_group_axis.addButton(self._radio_axis_y, 1)
+        self._btn_group_axis.addButton(self._radio_axis_z, 2)
+
+        grid_radios.addWidget(lbl_axis, 2, 0)
+        grid_radios.addWidget(self._radio_axis_x, 2, 1)
+        grid_radios.addWidget(self._radio_axis_y, 2, 2)
+        grid_radios.addWidget(self._radio_axis_z, 2, 3)
+
         grid_radios.setColumnStretch(4, 1)
         lay_create.addLayout(grid_radios)
 
@@ -520,22 +535,13 @@ class MainWindow(BaseMainWindow):
         lay_page_joint.addStretch()
         self._stack_rotation_mode.addWidget(page_joint)
 
-        # Page 1: Aim
+        # Page 1: Aim (auto-resolve)
         page_aim = QWidget()
         lay_page_aim = QVBoxLayout(page_aim)
         lay_page_aim.setContentsMargins(0, 0, 0, 0)
-        row_aim = QHBoxLayout()
-        lbl_aim_joint = QLabel("Aim Joint:")
-        lbl_aim_joint.setFixedWidth(stacked_label_width)
-        lbl_aim_joint.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        row_aim.addWidget(lbl_aim_joint)
-        self._line_plane_aim_joint = QLineEdit()
-        self._line_plane_aim_joint.setReadOnly(True)
-        self._line_plane_aim_joint.setPlaceholderText("(select aim joint)")
-        row_aim.addWidget(self._line_plane_aim_joint, 1)
-        self._btn_set_plane_aim_joint = QPushButton("Set")
-        row_aim.addWidget(self._btn_set_plane_aim_joint)
-        lay_page_aim.addLayout(row_aim)
+        lbl_aim_hint = QLabel("Auto-resolved from joint hierarchy (child or parent).")
+        lbl_aim_hint.setEnabled(False)
+        lay_page_aim.addWidget(lbl_aim_hint)
         lay_page_aim.addStretch()
         self._stack_rotation_mode.addWidget(page_aim)
 
@@ -650,9 +656,8 @@ class MainWindow(BaseMainWindow):
         self._btn_finalize.clicked.connect(self._on_finalize)
 
         # Plane tab
-        self._btn_set_plane_joint.clicked.connect(self._on_set_plane_joint)
+        self._btn_set_plane_joints.clicked.connect(self._on_set_plane_joints)
         self._btn_set_plane_target_mesh.clicked.connect(self._on_set_plane_target_mesh)
-        self._btn_set_plane_aim_joint.clicked.connect(self._on_set_plane_aim_joint)
         self._btn_group_rotation_mode.buttonClicked.connect(
             lambda btn: self._stack_rotation_mode.setCurrentIndex(self._btn_group_rotation_mode.id(btn))
         )
@@ -963,19 +968,19 @@ class MainWindow(BaseMainWindow):
     # Slots — Plane tab
     # ------------------------------------------------------------------
 
-    def _on_set_plane_joint(self) -> None:
-        """Set the joint from Maya selection."""
+    def _on_set_plane_joints(self) -> None:
+        """Set joints from Maya selection."""
         sel = cmds.ls(selection=True, type="joint")
         if not sel:
-            cmds.warning("Proxy Builder: Select a joint")
+            cmds.warning("Proxy Builder: Select one or more joints")
             return
-        self._line_plane_joint.setText(sel[0])
+        self._line_plane_joints.setText(", ".join(sel))
 
     def _on_set_plane_target_mesh(self) -> None:
-        """Set the target mesh from Maya selection."""
+        """Set the target mesh from Maya selection, or clear if nothing is selected."""
         sel = cmds.ls(selection=True, type="transform")
         if not sel:
-            cmds.warning("Proxy Builder: Select a mesh transform")
+            self._line_plane_target_mesh.clear()
             return
         mesh = sel[0]
         if not cmds.listRelatives(mesh, shapes=True, type="mesh"):
@@ -983,21 +988,18 @@ class MainWindow(BaseMainWindow):
             return
         self._line_plane_target_mesh.setText(mesh)
 
-    def _on_set_plane_aim_joint(self) -> None:
-        """Set the aim joint from Maya selection."""
-        sel = cmds.ls(selection=True, type="joint")
-        if not sel:
-            cmds.warning("Proxy Builder: Select a joint")
-            return
-        self._line_plane_aim_joint.setText(sel[0])
-
     @error_handler
     @undo_chunk("Proxy Builder: Create Plane")
     def _on_create_plane(self) -> None:
-        """Create a cutting plane at the specified joint."""
-        joint = self._line_plane_joint.text().strip()
-        if not joint:
-            cmds.warning("Proxy Builder: Set a joint first")
+        """Create cutting planes at the specified joints."""
+        joints_text = self._line_plane_joints.text().strip()
+        if not joints_text:
+            cmds.warning("Proxy Builder: Set joints first")
+            return
+
+        joints = [j.strip() for j in joints_text.split(",") if j.strip()]
+        if not joints:
+            cmds.warning("Proxy Builder: Set joints first")
             return
 
         target_mesh = self._line_plane_target_mesh.text().strip() or None
@@ -1007,7 +1009,6 @@ class MainWindow(BaseMainWindow):
         rotation_mode_map = {0: "joint", 1: "aim", 2: "manual"}
         rotation_mode = rotation_mode_map[rotation_mode_id]
 
-        aim_joint = self._line_plane_aim_joint.text().strip() or None
         rotation = None
         if rotation_mode == "manual":
             rotation = (
@@ -1018,17 +1019,25 @@ class MainWindow(BaseMainWindow):
 
         size_scale = float(self._line_size_scale.text() or 1.0)
 
-        result = plane.create_plane_at_joint(
-            joint=joint,
-            target_mesh=target_mesh,
-            plane_type=plane_type,
-            rotation_mode=rotation_mode,
-            aim_joint=aim_joint,
-            rotation=rotation,
-            size_scale=size_scale,
-        )
-        cmds.select(result, replace=True)
-        logger.info("Created plane: %s", result)
+        axis_map = {0: (1, 0, 0), 1: (0, 1, 0), 2: (0, 0, 1)}
+        axis = axis_map[self._btn_group_axis.checkedId()]
+
+        results = []
+        for joint in joints:
+            result = plane.create_plane_at_joint(
+                joint=joint,
+                target_mesh=target_mesh,
+                plane_type=plane_type,
+                rotation_mode=rotation_mode,
+                aim_joint=None,
+                rotation=rotation,
+                size_scale=size_scale,
+                axis=axis,
+            )
+            results.append(result)
+
+        cmds.select(results, replace=True)
+        logger.info("Created %d plane(s): %s", len(results), results)
 
     @error_handler
     @undo_chunk("Proxy Builder: Mirror Plane")
@@ -1082,6 +1091,7 @@ class MainWindow(BaseMainWindow):
             "manual_rotation_y": self._line_rot_y.text(),
             "manual_rotation_z": self._line_rot_z.text(),
             "size_scale": self._line_size_scale.text(),
+            "plane_axis": self._btn_group_axis.checkedId(),
             "mirror_axis": self._btn_group_mirror_axis.checkedId(),
             "window_geometry": {
                 "size": [self.width(), self.height()],
@@ -1138,6 +1148,10 @@ class MainWindow(BaseMainWindow):
         self._line_rot_y.setText(str(settings_data.get("manual_rotation_y", "0.0")))
         self._line_rot_z.setText(str(settings_data.get("manual_rotation_z", "0.0")))
         self._line_size_scale.setText(str(settings_data.get("size_scale", "1.0")))
+
+        plane_axis = settings_data.get("plane_axis", 1)
+        axis_radios = {0: self._radio_axis_x, 1: self._radio_axis_y, 2: self._radio_axis_z}
+        axis_radios.get(plane_axis, self._radio_axis_y).setChecked(True)
 
         mirror_axis = settings_data.get("mirror_axis", 0)
         mirror_radios = {0: self._radio_mirror_x, 1: self._radio_mirror_y, 2: self._radio_mirror_z}
