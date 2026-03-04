@@ -493,15 +493,6 @@ class MainWindow(BaseMainWindow):
         self._btn_group_rotation_mode.addButton(self._radio_rot_aim, 1)
         self._btn_group_rotation_mode.addButton(self._radio_rot_manual, 2)
 
-        grid_radios.addWidget(lbl_plane_type, 0, 0)
-        grid_radios.addWidget(self._radio_plane_nurbs, 0, 1)
-        grid_radios.addWidget(self._radio_plane_poly, 0, 2)
-
-        grid_radios.addWidget(lbl_rotation_mode, 1, 0)
-        grid_radios.addWidget(self._radio_rot_joint, 1, 1)
-        grid_radios.addWidget(self._radio_rot_aim, 1, 2)
-        grid_radios.addWidget(self._radio_rot_manual, 1, 3)
-
         self._radio_axis_x = QRadioButton("X")
         self._radio_axis_y = QRadioButton("Y")
         self._radio_axis_z = QRadioButton("Z")
@@ -511,10 +502,19 @@ class MainWindow(BaseMainWindow):
         self._btn_group_axis.addButton(self._radio_axis_y, 1)
         self._btn_group_axis.addButton(self._radio_axis_z, 2)
 
-        grid_radios.addWidget(lbl_axis, 2, 0)
-        grid_radios.addWidget(self._radio_axis_x, 2, 1)
-        grid_radios.addWidget(self._radio_axis_y, 2, 2)
-        grid_radios.addWidget(self._radio_axis_z, 2, 3)
+        grid_radios.addWidget(lbl_plane_type, 0, 0)
+        grid_radios.addWidget(self._radio_plane_nurbs, 0, 1)
+        grid_radios.addWidget(self._radio_plane_poly, 0, 2)
+
+        grid_radios.addWidget(lbl_axis, 1, 0)
+        grid_radios.addWidget(self._radio_axis_x, 1, 1)
+        grid_radios.addWidget(self._radio_axis_y, 1, 2)
+        grid_radios.addWidget(self._radio_axis_z, 1, 3)
+
+        grid_radios.addWidget(lbl_rotation_mode, 2, 0)
+        grid_radios.addWidget(self._radio_rot_joint, 2, 1)
+        grid_radios.addWidget(self._radio_rot_aim, 2, 2)
+        grid_radios.addWidget(self._radio_rot_manual, 2, 3)
 
         grid_radios.setColumnStretch(4, 1)
         lay_create.addLayout(grid_radios)
@@ -535,13 +535,22 @@ class MainWindow(BaseMainWindow):
         lay_page_joint.addStretch()
         self._stack_rotation_mode.addWidget(page_joint)
 
-        # Page 1: Aim (auto-resolve)
+        # Page 1: Aim
         page_aim = QWidget()
         lay_page_aim = QVBoxLayout(page_aim)
         lay_page_aim.setContentsMargins(0, 0, 0, 0)
-        lbl_aim_hint = QLabel("Auto-resolved from joint hierarchy (child or parent).")
-        lbl_aim_hint.setEnabled(False)
-        lay_page_aim.addWidget(lbl_aim_hint)
+        row_aim = QHBoxLayout()
+        lbl_aim_joint = QLabel("Aim Joint:")
+        lbl_aim_joint.setFixedWidth(stacked_label_width)
+        lbl_aim_joint.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_aim.addWidget(lbl_aim_joint)
+        self._line_plane_aim_joint = QLineEdit()
+        self._line_plane_aim_joint.setReadOnly(True)
+        self._line_plane_aim_joint.setPlaceholderText("(optional: auto-resolved if empty / ignored for multiple joints)")
+        row_aim.addWidget(self._line_plane_aim_joint, 1)
+        self._btn_set_plane_aim_joint = QPushButton("Set")
+        row_aim.addWidget(self._btn_set_plane_aim_joint)
+        lay_page_aim.addLayout(row_aim)
         lay_page_aim.addStretch()
         self._stack_rotation_mode.addWidget(page_aim)
 
@@ -658,6 +667,7 @@ class MainWindow(BaseMainWindow):
         # Plane tab
         self._btn_set_plane_joints.clicked.connect(self._on_set_plane_joints)
         self._btn_set_plane_target_mesh.clicked.connect(self._on_set_plane_target_mesh)
+        self._btn_set_plane_aim_joint.clicked.connect(self._on_set_plane_aim_joint)
         self._btn_group_rotation_mode.buttonClicked.connect(
             lambda btn: self._stack_rotation_mode.setCurrentIndex(self._btn_group_rotation_mode.id(btn))
         )
@@ -988,6 +998,14 @@ class MainWindow(BaseMainWindow):
             return
         self._line_plane_target_mesh.setText(mesh)
 
+    def _on_set_plane_aim_joint(self) -> None:
+        """Set the aim joint from Maya selection, or clear if nothing is selected."""
+        sel = cmds.ls(selection=True, type="joint")
+        if not sel:
+            self._line_plane_aim_joint.clear()
+            return
+        self._line_plane_aim_joint.setText(sel[0])
+
     @error_handler
     @undo_chunk("Proxy Builder: Create Plane")
     def _on_create_plane(self) -> None:
@@ -1009,6 +1027,11 @@ class MainWindow(BaseMainWindow):
         rotation_mode_map = {0: "joint", 1: "aim", 2: "manual"}
         rotation_mode = rotation_mode_map[rotation_mode_id]
 
+        # Aim joint: only used when aim mode + single joint + field is set
+        aim_joint = None
+        if rotation_mode == "aim" and len(joints) == 1:
+            aim_joint = self._line_plane_aim_joint.text().strip() or None
+
         rotation = None
         if rotation_mode == "manual":
             rotation = (
@@ -1029,7 +1052,7 @@ class MainWindow(BaseMainWindow):
                 target_mesh=target_mesh,
                 plane_type=plane_type,
                 rotation_mode=rotation_mode,
-                aim_joint=None,
+                aim_joint=aim_joint,
                 rotation=rotation,
                 size_scale=size_scale,
                 axis=axis,
