@@ -81,6 +81,62 @@ def _resolve_aim_joint(joint: str) -> str:
     raise ValueError(f"Cannot auto-resolve aim joint for '{joint}': no child joints and no parent joint.")
 
 
+def _resolve_aim_direction(
+    joint: str,
+    aim_target: str,
+    aim_joint: str | None,
+) -> om.MVector:
+    """Resolve the aim direction vector for aim-based rotation.
+
+    When *aim_joint* is explicitly provided, it always takes precedence
+    and *aim_target* is ignored.
+
+    Args:
+        joint (str): Source joint (must already be validated).
+        aim_target (str): ``"auto"``, ``"parent"``, or ``"chain"``.
+        aim_joint (str | None): Explicit aim joint, or ``None`` to use *aim_target* logic.
+
+    Returns:
+        om.MVector: Normalised direction vector from *joint* toward the target.
+
+    Raises:
+        ValueError: If the required joints for the chosen mode do not exist.
+    """
+    joint_pos = om.MVector(cmds.xform(joint, query=True, translation=True, worldSpace=True))
+
+    # Explicit aim_joint overrides aim_target
+    if aim_joint is not None:
+        aim_joint = _validate_joint(aim_joint)
+        aim_pos = om.MVector(cmds.xform(aim_joint, query=True, translation=True, worldSpace=True))
+        return (aim_pos - joint_pos).normal()
+
+    if aim_target == "auto":
+        resolved = _resolve_aim_joint(joint)
+        logger.debug("Auto-resolved aim joint: %s -> %s", joint, resolved)
+        aim_pos = om.MVector(cmds.xform(resolved, query=True, translation=True, worldSpace=True))
+        return (aim_pos - joint_pos).normal()
+
+    if aim_target == "parent":
+        parent = cmds.listRelatives(joint, parent=True, type="joint") or []
+        if not parent:
+            raise ValueError(f"Cannot use aim_target='parent' for '{joint}': no parent joint.")
+        parent_pos = om.MVector(cmds.xform(parent[0], query=True, translation=True, worldSpace=True))
+        return (parent_pos - joint_pos).normal()
+
+    if aim_target == "chain":
+        parent = cmds.listRelatives(joint, parent=True, type="joint") or []
+        children = cmds.listRelatives(joint, children=True, type="joint") or []
+        if not parent:
+            raise ValueError(f"Cannot use aim_target='chain' for '{joint}': no parent joint.")
+        if len(children) != 1:
+            raise ValueError(f"Cannot use aim_target='chain' for '{joint}': expected exactly 1 child joint, found {len(children)}.")
+        parent_pos = om.MVector(cmds.xform(parent[0], query=True, translation=True, worldSpace=True))
+        child_pos = om.MVector(cmds.xform(children[0], query=True, translation=True, worldSpace=True))
+        return (child_pos - parent_pos).normal()
+
+    raise ValueError(f"Invalid aim_target: '{aim_target}'. Must be 'auto', 'parent', or 'chain'.")
+
+
 def _validate_plane_type(plane_type: str) -> None:
     """Validate plane_type parameter.
 
@@ -272,32 +328,26 @@ def _axis_to_primary(axis: tuple[float, float, float]) -> str:
 
 def _find_aim_axis_and_up(
     joint: str,
-    aim_joint: str,
+    aim_dir: om.MVector,
     axis: tuple[float, float, float],
 ) -> tuple[float, float, float]:
-    """Compute the rotation to orient a plane's normal along the joint→aim_joint direction.
+    """Compute the rotation to orient a plane's normal along *aim_dir*.
 
     Algorithm:
         1. Get joint's local X, Y, Z from worldMatrix.
-        2. Compute aim_dir = normalize(aim_joint_pos - joint_pos).
-        3. Find which local axis has the largest |dot product| with aim_dir.
-        4. That axis becomes the normal direction (sign-matched to aim_dir).
-        5. Pick an up vector from the remaining axes.
-        6. Use ``vector_to_rotation`` to convert to Euler angles.
+        2. Find which local axis has the largest |dot product| with *aim_dir*.
+        3. That axis becomes the normal direction (sign-matched to *aim_dir*).
+        4. Pick an up vector from the remaining axes.
+        5. Use ``vector_to_rotation`` to convert to Euler angles.
 
     Args:
         joint (str): Source joint.
-        aim_joint (str): Target joint (defines the normal direction).
+        aim_dir (om.MVector): Normalised direction vector for the plane normal.
         axis (tuple[float, float, float]): Primitive normal axis for primary_axis mapping.
 
     Returns:
         tuple[float, float, float]: Euler rotation in degrees.
     """
-    # Joint positions
-    joint_pos = om.MVector(cmds.xform(joint, query=True, translation=True, worldSpace=True))
-    aim_pos = om.MVector(cmds.xform(aim_joint, query=True, translation=True, worldSpace=True))
-    aim_dir = (aim_pos - joint_pos).normal()
-
     # Local axes
     local_x, local_y, local_z = _get_joint_local_axes(joint)
     local_axes = [local_x, local_y, local_z]
@@ -536,6 +586,7 @@ def create_plane_at_joint(
     axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
     rotation_mode: str = "joint",
     aim_joint: str | None = None,
+    aim_target: str = "auto",
     rotation: tuple[float, float, float] | None = None,
     size: tuple[float, float] | None = None,
     spans: tuple[int, int] = (1, 1),
@@ -550,12 +601,16 @@ def create_plane_at_joint(
         plane_type (str): ``"nurbs"`` or ``"poly"``.
         axis (tuple[float, float, float]): Primitive normal axis.
         rotation_mode (str): How to determine the plane rotation:
-            - ``"aim"``: Auto-compute from joint→aim_joint direction. Requires *aim_joint*.
+            - ``"aim"``: Auto-compute from joint→aim direction. See *aim_target*.
             - ``"manual"``: Use the explicit *rotation* value. Requires *rotation*.
             - ``"joint"``: Use the joint's world rotation (default). No extra args needed.
         aim_joint (str | None): Target joint for ``rotation_mode="aim"``.
-            If ``None``, automatically resolved: single child joint → child,
-            otherwise parent joint. Raises if neither exists.
+            If provided, *aim_target* is ignored and the direction is computed
+            from joint → aim_joint.  If ``None``, resolution depends on *aim_target*.
+        aim_target (str): How to resolve the aim direction when *aim_joint* is ``None``:
+            - ``"auto"``: Child joint preferred, parent fallback (default).
+            - ``"parent"``: Always aim toward the parent joint.
+            - ``"chain"``: Use the parent→child vector (requires exactly 1 child).
         rotation (tuple[float, float, float] | None): Euler rotation (degrees) for ``rotation_mode="manual"``.
         size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
         spans (tuple[int, int]): Patch/subdivision counts.
@@ -567,7 +622,7 @@ def create_plane_at_joint(
 
     Raises:
         ValueError: If *joint* is invalid, *plane_type* is unsupported,
-            or *rotation_mode* is invalid.
+            *rotation_mode* is invalid, or *aim_target* is invalid.
     """
     joint = _validate_joint(joint)
     _validate_plane_type(plane_type)
@@ -580,14 +635,12 @@ def create_plane_at_joint(
 
     # Rotation
     if rotation_mode == "aim":
-        if aim_joint is None:
-            aim_joint = _resolve_aim_joint(joint)
-            logger.debug("Auto-resolved aim joint: %s -> %s", joint, aim_joint)
-        else:
-            aim_joint = _validate_joint(aim_joint)
+        if aim_target not in ("auto", "parent", "chain"):
+            raise ValueError(f"Invalid aim_target: '{aim_target}'. Must be 'auto', 'parent', or 'chain'.")
         if rotation is not None:
-            logger.warning("rotation_mode='aim': rotation parameter is ignored (aim_joint takes precedence).")
-        resolved_rotation = _find_aim_axis_and_up(joint, aim_joint, axis)
+            logger.warning("rotation_mode='aim': rotation parameter is ignored.")
+        aim_dir = _resolve_aim_direction(joint, aim_target, aim_joint)
+        resolved_rotation = _find_aim_axis_and_up(joint, aim_dir, axis)
     elif rotation_mode == "manual":
         if rotation is None:
             logger.warning("rotation_mode='manual' but rotation is not specified. Falling back to joint rotation.")

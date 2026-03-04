@@ -17,6 +17,7 @@ from ....lib_ui.qt_compat import (
     QAbstractItemView,
     QButtonGroup,
     QCheckBox,
+    QComboBox,
     QDoubleValidator,
     QGridLayout,
     QGroupBox,
@@ -539,6 +540,20 @@ class MainWindow(BaseMainWindow):
         page_aim = QWidget()
         lay_page_aim = QVBoxLayout(page_aim)
         lay_page_aim.setContentsMargins(0, 0, 0, 0)
+
+        # Aim Target row
+        row_aim_target = QHBoxLayout()
+        lbl_aim_target = QLabel("Aim Target:")
+        lbl_aim_target.setFixedWidth(stacked_label_width)
+        lbl_aim_target.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_aim_target.addWidget(lbl_aim_target)
+        self._combo_aim_target = QComboBox()
+        self._combo_aim_target.addItems(["Auto", "Parent", "Chain"])
+        row_aim_target.addWidget(self._combo_aim_target)
+        row_aim_target.addStretch()
+        lay_page_aim.addLayout(row_aim_target)
+
+        # Aim Joint row
         row_aim = QHBoxLayout()
         lbl_aim_joint = QLabel("Aim Joint:")
         lbl_aim_joint.setFixedWidth(stacked_label_width)
@@ -668,6 +683,7 @@ class MainWindow(BaseMainWindow):
         self._btn_set_plane_joints.clicked.connect(self._on_set_plane_joints)
         self._btn_set_plane_target_mesh.clicked.connect(self._on_set_plane_target_mesh)
         self._btn_set_plane_aim_joint.clicked.connect(self._on_set_plane_aim_joint)
+        self._combo_aim_target.currentIndexChanged.connect(self._on_aim_target_changed)
         self._btn_group_rotation_mode.buttonClicked.connect(
             lambda btn: self._stack_rotation_mode.setCurrentIndex(self._btn_group_rotation_mode.id(btn))
         )
@@ -1006,6 +1022,18 @@ class MainWindow(BaseMainWindow):
             return
         self._line_plane_aim_joint.setText(sel[0])
 
+    def _on_aim_target_changed(self, index: int) -> None:
+        """Enable/disable aim joint field based on aim target mode.
+
+        Chain mode (index 2) does not use an explicit aim joint,
+        so the field and Set button are disabled and cleared.
+        """
+        is_chain = index == 2
+        self._line_plane_aim_joint.setEnabled(not is_chain)
+        self._btn_set_plane_aim_joint.setEnabled(not is_chain)
+        if is_chain:
+            self._line_plane_aim_joint.clear()
+
     @error_handler
     @undo_chunk("Proxy Builder: Create Plane")
     def _on_create_plane(self) -> None:
@@ -1027,7 +1055,10 @@ class MainWindow(BaseMainWindow):
         rotation_mode_map = {0: "joint", 1: "aim", 2: "manual"}
         rotation_mode = rotation_mode_map[rotation_mode_id]
 
-        # Aim joint: only used when aim mode + single joint + field is set
+        # Aim target / aim joint: only used when aim mode
+        aim_target_map = {0: "auto", 1: "parent", 2: "chain"}
+        aim_target = aim_target_map[self._combo_aim_target.currentIndex()]
+
         aim_joint = None
         if rotation_mode == "aim" and len(joints) == 1:
             aim_joint = self._line_plane_aim_joint.text().strip() or None
@@ -1053,6 +1084,7 @@ class MainWindow(BaseMainWindow):
                 plane_type=plane_type,
                 rotation_mode=rotation_mode,
                 aim_joint=aim_joint,
+                aim_target=aim_target,
                 rotation=rotation,
                 size_scale=size_scale,
                 axis=axis,
@@ -1110,6 +1142,7 @@ class MainWindow(BaseMainWindow):
             "combine_mode": "per_shader" if self._btn_group_combine.checkedId() == 1 else "single",
             "plane_type": self._btn_group_plane_type.checkedId(),
             "rotation_mode": self._btn_group_rotation_mode.checkedId(),
+            "aim_target": self._combo_aim_target.currentIndex(),
             "manual_rotation_x": self._line_rot_x.text(),
             "manual_rotation_y": self._line_rot_y.text(),
             "manual_rotation_z": self._line_rot_z.text(),
@@ -1166,6 +1199,8 @@ class MainWindow(BaseMainWindow):
         rot_radios = {0: self._radio_rot_joint, 1: self._radio_rot_aim, 2: self._radio_rot_manual}
         rot_radios.get(rotation_mode, self._radio_rot_joint).setChecked(True)
         self._stack_rotation_mode.setCurrentIndex(rotation_mode)
+
+        self._combo_aim_target.setCurrentIndex(settings_data.get("aim_target", 0))
 
         self._line_rot_x.setText(str(settings_data.get("manual_rotation_x", "0.0")))
         self._line_rot_y.setText(str(settings_data.get("manual_rotation_y", "0.0")))
