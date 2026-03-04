@@ -164,8 +164,10 @@ class MainWindow(BaseMainWindow):
         col_joints_btns = QVBoxLayout()
         self._btn_add_joints = QPushButton("Add")
         self._btn_remove_joints = QPushButton("Remove")
+        self._btn_select_all_joints = QPushButton("Select All")
         col_joints_btns.addWidget(self._btn_add_joints)
         col_joints_btns.addWidget(self._btn_remove_joints)
+        col_joints_btns.addWidget(self._btn_select_all_joints)
         col_joints_btns.addStretch()
         row_joints.addLayout(col_joints_btns)
 
@@ -197,8 +199,10 @@ class MainWindow(BaseMainWindow):
         col_cutters_btns = QVBoxLayout()
         self._btn_add_cutters = QPushButton("Add")
         self._btn_remove_cutters = QPushButton("Remove")
+        self._btn_select_all_cutters = QPushButton("Select All")
         col_cutters_btns.addWidget(self._btn_add_cutters)
         col_cutters_btns.addWidget(self._btn_remove_cutters)
+        col_cutters_btns.addWidget(self._btn_select_all_cutters)
         col_cutters_btns.addStretch()
         row_cutters.addLayout(col_cutters_btns)
 
@@ -246,14 +250,17 @@ class MainWindow(BaseMainWindow):
         col_pieces_btns = QVBoxLayout()
         self._btn_add_pieces = QPushButton("Add")
         self._btn_remove_pieces = QPushButton("Remove")
+        self._btn_select_all_pieces = QPushButton("Select All")
 
         # Match Load button width with Add/Remove column
-        btn_width = self._btn_remove_pieces.sizeHint().width()
+        btn_width = self._btn_select_all_pieces.sizeHint().width()
         self._btn_load_pieces.setFixedWidth(btn_width)
         self._btn_add_pieces.setFixedWidth(btn_width)
         self._btn_remove_pieces.setFixedWidth(btn_width)
+        self._btn_select_all_pieces.setFixedWidth(btn_width)
         col_pieces_btns.addWidget(self._btn_add_pieces)
         col_pieces_btns.addWidget(self._btn_remove_pieces)
+        col_pieces_btns.addWidget(self._btn_select_all_pieces)
         col_pieces_btns.addStretch()
         row_pieces.addLayout(col_pieces_btns)
 
@@ -303,8 +310,10 @@ class MainWindow(BaseMainWindow):
         col_joints_w_btns = QVBoxLayout()
         self._btn_add_assign_joints_w = QPushButton("Add")
         self._btn_remove_assign_joints_w = QPushButton("Remove")
+        self._btn_select_all_assign_joints_w = QPushButton("Select All")
         col_joints_w_btns.addWidget(self._btn_add_assign_joints_w)
         col_joints_w_btns.addWidget(self._btn_remove_assign_joints_w)
+        col_joints_w_btns.addWidget(self._btn_select_all_assign_joints_w)
         col_joints_w_btns.addStretch()
         row_joints_w.addLayout(col_joints_w_btns)
 
@@ -332,8 +341,10 @@ class MainWindow(BaseMainWindow):
         col_joints_b_btns = QVBoxLayout()
         self._btn_add_assign_joints_b = QPushButton("Add")
         self._btn_remove_assign_joints_b = QPushButton("Remove")
+        self._btn_select_all_assign_joints_b = QPushButton("Select All")
         col_joints_b_btns.addWidget(self._btn_add_assign_joints_b)
         col_joints_b_btns.addWidget(self._btn_remove_assign_joints_b)
+        col_joints_b_btns.addWidget(self._btn_select_all_assign_joints_b)
         col_joints_b_btns.addStretch()
         row_joints_b.addLayout(col_joints_b_btns)
 
@@ -419,20 +430,25 @@ class MainWindow(BaseMainWindow):
         self._radio_by_weights.toggled.connect(lambda checked: self._stack_cut_method.setCurrentIndex(0 if checked else 1))
         self._btn_add_joints.clicked.connect(self._on_add_joints)
         self._btn_remove_joints.clicked.connect(self._on_remove_joints)
+        self._btn_select_all_joints.clicked.connect(lambda: self._select_all_items(self._list_joints))
         self._btn_add_cutters.clicked.connect(self._on_add_cutters)
         self._btn_remove_cutters.clicked.connect(self._on_remove_cutters)
+        self._btn_select_all_cutters.clicked.connect(lambda: self._select_all_items(self._list_cutters))
         self._btn_cut.clicked.connect(self._on_cut)
 
         # Assign tab
         self._btn_load_pieces.clicked.connect(self._on_load_pieces)
         self._btn_add_pieces.clicked.connect(self._on_add_pieces)
         self._btn_remove_pieces.clicked.connect(self._on_remove_pieces)
+        self._btn_select_all_pieces.clicked.connect(lambda: self._select_all_items(self._list_pieces))
         self._radio_assign_by_weights.toggled.connect(lambda checked: self._stack_assign_method.setCurrentIndex(0 if checked else 1))
         self._btn_set_ref_mesh.clicked.connect(self._on_set_ref_mesh)
         self._btn_add_assign_joints_w.clicked.connect(self._on_add_assign_joints_w)
         self._btn_remove_assign_joints_w.clicked.connect(self._on_remove_assign_joints_w)
+        self._btn_select_all_assign_joints_w.clicked.connect(lambda: self._select_all_items(self._list_assign_joints_w))
         self._btn_add_assign_joints_b.clicked.connect(self._on_add_assign_joints_b)
         self._btn_remove_assign_joints_b.clicked.connect(self._on_remove_assign_joints_b)
+        self._btn_select_all_assign_joints_b.clicked.connect(lambda: self._select_all_items(self._list_assign_joints_b))
         self._btn_assign.clicked.connect(self._on_assign)
 
         # Finalize tab
@@ -632,6 +648,10 @@ class MainWindow(BaseMainWindow):
         for item in reversed(list_widget.selectedItems()):
             list_widget.takeItem(list_widget.row(item))
         list_widget.set_sync_enabled(True)
+
+    def _select_all_items(self, list_widget: SceneNodeListWidget) -> None:
+        """Select all items in the given list widget."""
+        list_widget.selectAll()
 
     def _on_add_assign_joints_w(self) -> None:
         """Add selected joints to the weights joints list."""
