@@ -5,6 +5,7 @@ from __future__ import annotations
 from logging import getLogger
 import math
 import re
+from typing import Literal
 
 import maya.api.OpenMaya as om
 import maya.cmds as cmds
@@ -18,6 +19,11 @@ from ....operations.mirror import mirror_transforms
 logger = getLogger(__name__)
 
 _DEFAULT_PLANE_PREFIX = "cut_plane"
+
+PlaneType = Literal["nurbs", "poly"]
+RotationMode = Literal["joint", "aim", "manual"]
+AimTarget = Literal["auto", "parent", "chain"]
+MirrorAxis = Literal["x", "y", "z"]
 
 
 # ---------------------------------------------------------------------------
@@ -53,7 +59,20 @@ def _validate_joint(joint: str) -> str:
     return found[0]
 
 
-def _resolve_aim_joint(joint: str) -> str:
+def _get_child_joints(joint: str) -> list[str]:
+    """Return non-intermediate child joints.
+
+    Args:
+        joint (str): Parent joint node name.
+
+    Returns:
+        list[str]: Child joint names excluding intermediate objects.
+    """
+    children = cmds.listRelatives(joint, children=True, type="joint") or []
+    return [c for c in children if not cmds.getAttr(f"{c}.io")]
+
+
+def _resolve_aim_joint(joint: str) -> tuple[str, bool]:
     """Auto-resolve the aim joint for aim-based rotation.
 
     Resolution rules:
@@ -61,29 +80,32 @@ def _resolve_aim_joint(joint: str) -> str:
         2. Zero or multiple child joints → use parent joint.
         3. No parent and no children → raise ValueError.
 
+    Intermediate objects (``.io == True``) are excluded from child detection.
+
     Args:
         joint (str): Source joint (must already be validated).
 
     Returns:
-        str: Resolved aim joint name.
+        tuple[str, bool]: ``(resolved_joint, is_parent)`` — the second element
+        is ``True`` when the parent was used as fallback.
 
     Raises:
         ValueError: If neither parent nor child joints exist.
     """
-    children = cmds.listRelatives(joint, children=True, type="joint") or []
+    children = _get_child_joints(joint)
     if len(children) == 1:
-        return children[0]
+        return children[0], False
 
     parent = cmds.listRelatives(joint, parent=True, type="joint") or []
     if parent:
-        return parent[0]
+        return parent[0], True
 
     raise ValueError(f"Cannot auto-resolve aim joint for '{joint}': no child joints and no parent joint.")
 
 
 def _resolve_aim_direction(
     joint: str,
-    aim_target: str,
+    aim_target: AimTarget,
     aim_joint: str | None,
 ) -> om.MVector:
     """Resolve the aim direction vector for aim-based rotation.
@@ -93,7 +115,7 @@ def _resolve_aim_direction(
 
     Args:
         joint (str): Source joint (must already be validated).
-        aim_target (str): ``"auto"``, ``"parent"``, or ``"chain"``.
+        aim_target (AimTarget): ``"auto"``, ``"parent"``, or ``"chain"``.
         aim_joint (str | None): Explicit aim joint, or ``None`` to use *aim_target* logic.
 
     Returns:
@@ -111,21 +133,22 @@ def _resolve_aim_direction(
         return (aim_pos - joint_pos).normal()
 
     if aim_target == "auto":
-        resolved = _resolve_aim_joint(joint)
-        logger.debug("Auto-resolved aim joint: %s -> %s", joint, resolved)
+        resolved, is_parent = _resolve_aim_joint(joint)
+        logger.debug("Auto-resolved aim joint: %s -> %s (parent=%s)", joint, resolved, is_parent)
         aim_pos = om.MVector(cmds.xform(resolved, query=True, translation=True, worldSpace=True))
-        return (aim_pos - joint_pos).normal()
+        direction = (aim_pos - joint_pos).normal()
+        return -direction if is_parent else direction
 
     if aim_target == "parent":
         parent = cmds.listRelatives(joint, parent=True, type="joint") or []
         if not parent:
             raise ValueError(f"Cannot use aim_target='parent' for '{joint}': no parent joint.")
         parent_pos = om.MVector(cmds.xform(parent[0], query=True, translation=True, worldSpace=True))
-        return (parent_pos - joint_pos).normal()
+        return (joint_pos - parent_pos).normal()
 
     if aim_target == "chain":
         parent = cmds.listRelatives(joint, parent=True, type="joint") or []
-        children = cmds.listRelatives(joint, children=True, type="joint") or []
+        children = _get_child_joints(joint)
         if not parent:
             raise ValueError(f"Cannot use aim_target='chain' for '{joint}': no parent joint.")
         if len(children) != 1:
@@ -137,11 +160,11 @@ def _resolve_aim_direction(
     raise ValueError(f"Invalid aim_target: '{aim_target}'. Must be 'auto', 'parent', or 'chain'.")
 
 
-def _validate_plane_type(plane_type: str) -> None:
+def _validate_plane_type(plane_type: PlaneType) -> None:
     """Validate plane_type parameter.
 
     Args:
-        plane_type (str): ``"nurbs"`` or ``"poly"``.
+        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
 
     Raises:
         ValueError: If *plane_type* is unsupported.
@@ -334,11 +357,10 @@ def _find_aim_axis_and_up(
     """Compute the rotation to orient a plane's normal along *aim_dir*.
 
     Algorithm:
-        1. Get joint's local X, Y, Z from worldMatrix.
-        2. Find which local axis has the largest |dot product| with *aim_dir*.
-        3. That axis becomes the normal direction (sign-matched to *aim_dir*).
-        4. Pick an up vector from the remaining axes.
-        5. Use ``vector_to_rotation`` to convert to Euler angles.
+        1. Use *aim_dir* directly as the plane normal.
+        2. Get joint's local X, Y, Z from worldMatrix.
+        3. Pick the local axis most perpendicular to *aim_dir* as the up vector.
+        4. Use ``vector_to_rotation`` to convert to Euler angles.
 
     Args:
         joint (str): Source joint.
@@ -348,22 +370,13 @@ def _find_aim_axis_and_up(
     Returns:
         tuple[float, float, float]: Euler rotation in degrees.
     """
-    # Local axes
+    normal = aim_dir
+
+    # Pick the joint local axis most perpendicular to aim_dir as up vector
     local_x, local_y, local_z = _get_joint_local_axes(joint)
     local_axes = [local_x, local_y, local_z]
-
-    # Find best matching axis
     dots = [abs(aim_dir * ax) for ax in local_axes]
-    best_idx = dots.index(max(dots))
-
-    # Normal = best axis, sign-matched to aim_dir
-    normal = local_axes[best_idx]
-    if normal * aim_dir < 0:
-        normal = -normal
-
-    # Up = first remaining axis
-    remaining = [i for i in range(3) if i != best_idx]
-    up = local_axes[remaining[0]]
+    up = local_axes[dots.index(min(dots))]
 
     # Determine primary/secondary axis from the axis parameter
     primary_axis = _axis_to_primary(axis)
@@ -542,7 +555,7 @@ def create_plane(
     position: tuple[float, float, float] = (0.0, 0.0, 0.0),
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
     size: tuple[float, float] = (1.0, 1.0),
-    plane_type: str = "nurbs",
+    plane_type: PlaneType = "nurbs",
     axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
     spans: tuple[int, int] = (1, 1),
     name: str | None = None,
@@ -553,7 +566,7 @@ def create_plane(
         position (tuple[float, float, float]): World-space position.
         rotation (tuple[float, float, float]): World-space Euler rotation (degrees).
         size (tuple[float, float]): (width, height) of the plane.
-        plane_type (str): ``"nurbs"`` or ``"poly"``.
+        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
         axis (tuple[float, float, float]): Primitive normal axis (passed to cmds ``ax`` flag).
         spans (tuple[int, int]): Patch/subdivision counts (U, V).
         name (str | None): Explicit name, or ``None`` for auto-generated.
@@ -582,32 +595,31 @@ def create_plane(
 def create_plane_at_joint(
     joint: str,
     target_mesh: str | None = None,
-    plane_type: str = "nurbs",
+    plane_type: PlaneType = "nurbs",
     axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
-    rotation_mode: str = "joint",
+    rotation_mode: RotationMode = "joint",
     aim_joint: str | None = None,
-    aim_target: str = "auto",
+    aim_target: AimTarget = "auto",
     rotation: tuple[float, float, float] | None = None,
     size: tuple[float, float] | None = None,
     spans: tuple[int, int] = (1, 1),
     size_scale: float = 1.0,
-    name: str | None = None,
 ) -> str:
     """Create a cutting plane at a joint's position.
 
     Args:
         joint (str): Joint to place the plane at.
         target_mesh (str | None): Mesh for auto-size raycasting.
-        plane_type (str): ``"nurbs"`` or ``"poly"``.
+        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
         axis (tuple[float, float, float]): Primitive normal axis.
-        rotation_mode (str): How to determine the plane rotation:
+        rotation_mode (RotationMode): How to determine the plane rotation:
             - ``"aim"``: Auto-compute from joint→aim direction. See *aim_target*.
             - ``"manual"``: Use the explicit *rotation* value. Requires *rotation*.
             - ``"joint"``: Use the joint's world rotation (default). No extra args needed.
         aim_joint (str | None): Target joint for ``rotation_mode="aim"``.
             If provided, *aim_target* is ignored and the direction is computed
             from joint → aim_joint.  If ``None``, resolution depends on *aim_target*.
-        aim_target (str): How to resolve the aim direction when *aim_joint* is ``None``:
+        aim_target (AimTarget): How to resolve the aim direction when *aim_joint* is ``None``:
             - ``"auto"``: Child joint preferred, parent fallback (default).
             - ``"parent"``: Always aim toward the parent joint.
             - ``"chain"``: Use the parent→child vector (requires exactly 1 child).
@@ -615,7 +627,6 @@ def create_plane_at_joint(
         size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
         spans (tuple[int, int]): Patch/subdivision counts.
         size_scale (float): Multiplier applied to auto-sized dimensions (>= 1.0).
-        name (str | None): Explicit name, or ``None`` for auto-generated.
 
     Returns:
         str: Transform name of the created plane.
@@ -672,6 +683,9 @@ def create_plane_at_joint(
     else:
         resolved_size = (1.0, 1.0)
 
+    short_name = joint.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+    name = f"{short_name}_{_DEFAULT_PLANE_PREFIX}"
+
     return create_plane(
         position=position,
         rotation=resolved_rotation,
@@ -683,12 +697,12 @@ def create_plane_at_joint(
     )
 
 
-def mirror_plane(source: str, axis: str = "x") -> str:
+def mirror_plane(source: str, axis: MirrorAxis = "x") -> str:
     """Duplicate and mirror a cutting plane across the specified world axis.
 
     Args:
         source (str): Source plane transform name.
-        axis (str): Mirror axis (``"x"``, ``"y"``, or ``"z"``). Defaults to ``"x"``.
+        axis (MirrorAxis): Mirror axis (``"x"``, ``"y"``, or ``"z"``). Defaults to ``"x"``.
 
     Returns:
         str: Mirrored plane transform name.
@@ -709,4 +723,4 @@ def mirror_plane(source: str, axis: str = "x") -> str:
     return duplicated
 
 
-__all__ = ["create_plane", "create_plane_at_joint", "mirror_plane"]
+__all__ = ["AimTarget", "MirrorAxis", "PlaneType", "RotationMode", "create_plane", "create_plane_at_joint", "mirror_plane"]

@@ -165,7 +165,7 @@ class PlaneTab(QWidget):
         lbl_aim_target.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         row_aim_target.addWidget(lbl_aim_target)
         self._combo_aim_target = QComboBox()
-        self._combo_aim_target.addItems(["Auto", "Parent", "Chain"])
+        self._combo_aim_target.addItems(["Auto", "Parent", "Parent > Child"])
         row_aim_target.addWidget(self._combo_aim_target)
         row_aim_target.addStretch()
         lay_page_aim.addLayout(row_aim_target)
