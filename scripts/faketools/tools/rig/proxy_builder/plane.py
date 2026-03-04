@@ -53,6 +53,34 @@ def _validate_joint(joint: str) -> str:
     return found[0]
 
 
+def _resolve_aim_joint(joint: str) -> str:
+    """Auto-resolve the aim joint for aim-based rotation.
+
+    Resolution rules:
+        1. Exactly one child joint → use child.
+        2. Zero or multiple child joints → use parent joint.
+        3. No parent and no children → raise ValueError.
+
+    Args:
+        joint (str): Source joint (must already be validated).
+
+    Returns:
+        str: Resolved aim joint name.
+
+    Raises:
+        ValueError: If neither parent nor child joints exist.
+    """
+    children = cmds.listRelatives(joint, children=True, type="joint") or []
+    if len(children) == 1:
+        return children[0]
+
+    parent = cmds.listRelatives(joint, parent=True, type="joint") or []
+    if parent:
+        return parent[0]
+
+    raise ValueError(f"Cannot auto-resolve aim joint for '{joint}': no child joints and no parent joint.")
+
+
 def _validate_plane_type(plane_type: str) -> None:
     """Validate plane_type parameter.
 
@@ -526,6 +554,8 @@ def create_plane_at_joint(
             - ``"manual"``: Use the explicit *rotation* value. Requires *rotation*.
             - ``"joint"``: Use the joint's world rotation (default). No extra args needed.
         aim_joint (str | None): Target joint for ``rotation_mode="aim"``.
+            If ``None``, automatically resolved: single child joint → child,
+            otherwise parent joint. Raises if neither exists.
         rotation (tuple[float, float, float] | None): Euler rotation (degrees) for ``rotation_mode="manual"``.
         size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
         spans (tuple[int, int]): Patch/subdivision counts.
@@ -551,13 +581,13 @@ def create_plane_at_joint(
     # Rotation
     if rotation_mode == "aim":
         if aim_joint is None:
-            logger.warning("rotation_mode='aim' but aim_joint is not specified. Falling back to joint rotation.")
-            resolved_rotation = _get_joint_world_rotation(joint)
+            aim_joint = _resolve_aim_joint(joint)
+            logger.debug("Auto-resolved aim joint: %s -> %s", joint, aim_joint)
         else:
             aim_joint = _validate_joint(aim_joint)
-            if rotation is not None:
-                logger.warning("rotation_mode='aim': rotation parameter is ignored (aim_joint takes precedence).")
-            resolved_rotation = _find_aim_axis_and_up(joint, aim_joint, axis)
+        if rotation is not None:
+            logger.warning("rotation_mode='aim': rotation parameter is ignored (aim_joint takes precedence).")
+        resolved_rotation = _find_aim_axis_and_up(joint, aim_joint, axis)
     elif rotation_mode == "manual":
         if rotation is None:
             logger.warning("rotation_mode='manual' but rotation is not specified. Falling back to joint rotation.")
