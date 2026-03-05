@@ -54,29 +54,14 @@ class PlaneTab(QWidget):
         lay_create.setSpacing(int(spacing * 0.5))
 
         # Compute uniform label widths
-        lbl_joints = QLabel("Joints:")
         lbl_target_mesh = QLabel("Target Mesh:")
-        field_label_width = max(lbl_joints.sizeHint().width(), lbl_target_mesh.sizeHint().width())
-        for lbl in (lbl_joints, lbl_target_mesh):
-            lbl.setFixedWidth(field_label_width)
-            lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        lbl_target_mesh.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         lbl_plane_type = QLabel("Plane Type:")
         lbl_rotation_mode = QLabel("Rotation Mode:")
         lbl_axis = QLabel("Axis:")
         for lbl in (lbl_plane_type, lbl_rotation_mode, lbl_axis):
             lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        # Joints
-        row_joints = QHBoxLayout()
-        row_joints.addWidget(lbl_joints)
-        self._line_plane_joints = QLineEdit()
-        self._line_plane_joints.setReadOnly(True)
-        self._line_plane_joints.setPlaceholderText("(select one or more joints)")
-        row_joints.addWidget(self._line_plane_joints, 1)
-        self._btn_set_plane_joints = QPushButton("Set")
-        row_joints.addWidget(self._btn_set_plane_joints)
-        lay_create.addLayout(row_joints)
 
         # Target Mesh
         row_target = QHBoxLayout()
@@ -262,7 +247,6 @@ class PlaneTab(QWidget):
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
-        self._btn_set_plane_joints.clicked.connect(self._on_set_plane_joints)
         self._btn_set_plane_target_mesh.clicked.connect(self._on_set_plane_target_mesh)
         self._btn_set_plane_aim_joint.clicked.connect(self._on_set_plane_aim_joint)
         self._combo_aim_target.currentIndexChanged.connect(self._on_aim_target_changed)
@@ -275,14 +259,6 @@ class PlaneTab(QWidget):
     # ------------------------------------------------------------------
     # Slots
     # ------------------------------------------------------------------
-
-    def _on_set_plane_joints(self) -> None:
-        """Set joints from Maya selection."""
-        sel = cmds.ls(selection=True, type="joint")
-        if not sel:
-            cmds.warning("Proxy Builder: Select one or more joints")
-            return
-        self._line_plane_joints.setText(", ".join(sel))
 
     def _on_set_plane_target_mesh(self) -> None:
         """Set the target mesh from Maya selection, or clear if nothing is selected."""
@@ -319,15 +295,10 @@ class PlaneTab(QWidget):
     @error_handler
     @undo_chunk("Proxy Builder: Create Plane")
     def _on_create_plane(self) -> None:
-        """Create cutting planes at the specified joints."""
-        joints_text = self._line_plane_joints.text().strip()
-        if not joints_text:
-            cmds.warning("Proxy Builder: Set joints first")
-            return
-
-        joints = [j.strip() for j in joints_text.split(",") if j.strip()]
+        """Create cutting planes at the selected joints."""
+        joints = cmds.ls(selection=True, type="joint")
         if not joints:
-            cmds.warning("Proxy Builder: Set joints first")
+            cmds.warning("Proxy Builder: Select one or more joints")
             return
 
         target_mesh = self._line_plane_target_mesh.text().strip() or None
