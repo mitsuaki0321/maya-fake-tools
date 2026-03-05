@@ -61,6 +61,11 @@ def _find_cut_edges(mesh_name: str, nurbs_name: str) -> list[tuple[int, float]]:
     mesh_fn = om.MFnMesh(mesh_dag)
     points = mesh_fn.getPoints(om.MSpace.kWorld)
 
+    # Pre-compute the NURBS world-inverse matrix so that world-space rays
+    # can be transformed into the surface's object space for intersection.
+    nurbs_world_inv = nurbs_dag.inclusiveMatrixInverse()
+    nurbs_world_matrix = nurbs_dag.inclusiveMatrix()
+
     cut_edges: list[tuple[int, float]] = []
 
     edge_it = om.MItMeshEdge(mesh_dag)
@@ -74,7 +79,7 @@ def _find_cut_edges(mesh_name: str, nurbs_name: str) -> list[tuple[int, float]]:
         edge_length = direction.length()
 
         if edge_length > 1e-10:
-            t = _ray_intersect(nurbs_fn, om.MPoint(pt_a), direction, edge_length)
+            t = _ray_intersect(nurbs_fn, om.MPoint(pt_a), direction, edge_length, nurbs_world_inv, nurbs_world_matrix)
             if t is not None:
                 t = max(T_CLAMP, min(1.0 - T_CLAMP, t))
                 cut_edges.append((edge_it.index(), t))
@@ -198,25 +203,45 @@ def _ray_intersect(
     ray_origin: om.MPoint,
     ray_direction: om.MVector,
     edge_length: float,
+    nurbs_world_inv: om.MMatrix,
+    nurbs_world_matrix: om.MMatrix,
 ) -> Optional[float]:
     """Cast a ray along an edge direction and return the intersection t value.
+
+    The ray (world-space) is transformed into the NURBS surface's object space
+    for intersection, then the hit point is transformed back to world space to
+    compute the parametric *t* value along the original edge.
+
+    Args:
+        nurbs_fn (om.MFnNurbsSurface): NURBS surface function set.
+        ray_origin (om.MPoint): Ray origin in world space.
+        ray_direction (om.MVector): Ray direction in world space.
+        edge_length (float): Length of the mesh edge in world space.
+        nurbs_world_inv (om.MMatrix): Inverse inclusive matrix of the NURBS dag path.
+        nurbs_world_matrix (om.MMatrix): Inclusive matrix of the NURBS dag path.
 
     Returns:
         Optional[float]: Intersection position (0-1), or None if no intersection.
     """
+    # Transform the world-space ray into the NURBS surface's object space.
+    local_origin = ray_origin * nurbs_world_inv
+    local_direction = ray_direction * nurbs_world_inv
+
     try:
-        result = nurbs_fn.intersect(ray_origin, ray_direction, om.MSpace.kWorld)
+        result = nurbs_fn.intersect(local_origin, local_direction, om.MSpace.kObject)
     except RuntimeError:
         return None
 
     if result is None:
         return None
 
-    hit_point = result[0]
-    if hit_point is None:
+    hit_point_local = result[0]
+    if hit_point_local is None:
         return None
 
-    hit_dist = om.MVector(hit_point - ray_origin).length()
+    # Transform the hit point back to world space to measure distance.
+    hit_point_world = hit_point_local * nurbs_world_matrix
+    hit_dist = om.MVector(hit_point_world - ray_origin).length()
     t = hit_dist / edge_length
 
     if 0.0 <= t <= 1.0:
