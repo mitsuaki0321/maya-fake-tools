@@ -275,12 +275,48 @@ class MainWindow(BaseMainWindow):
         left_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         self._speed_combo = QComboBox()
+        self._speed_combo.setFixedHeight(int(scale_by_dpi(24, self)))
         self._speed_combo.addItems(_SPEED_OPTIONS)
         self._speed_combo.setCurrentIndex(_DEFAULT_SPEED_INDEX)
         self._speed_combo.currentIndexChanged.connect(self._on_speed_changed)
+        arrow_size = int(scale_by_dpi(8, self))
+        combo_pad_h = int(scale_by_dpi(6, self))
+        combo_pad_v = int(scale_by_dpi(4, self))
+        self._speed_combo.setStyleSheet(f"""
+            QComboBox {{
+                background-color: transparent;
+                border: {border_w}px solid #444444;
+                border-radius: {int(scale_by_dpi(2, self))}px;
+                color: #CCCCCC;
+                padding: {combo_pad_v}px {combo_pad_h}px;
+            }}
+            QComboBox:hover {{
+                background-color: rgba(255, 255, 255, 0.1);
+                border-color: #555555;
+            }}
+            QComboBox::drop-down {{
+                border-left: {border_w}px solid #444444;
+                width: {arrow_size + combo_pad_h}px;
+            }}
+            QComboBox::down-arrow {{
+                image: url({Path(_ICONS_DIR, "dropdown_arrow.svg").as_posix()});
+                width: {arrow_size}px;
+                height: {arrow_size}px;
+            }}
+            QComboBox QAbstractItemView {{
+                background-color: #2D2D2D;
+                color: #CCCCCC;
+                selection-background-color: rgba(255, 255, 255, 0.15);
+                border: {border_w}px solid #444444;
+                outline: none;
+            }}
+        """)
         left_layout.addWidget(self._speed_combo)
 
+        sep_margin = int(scale_by_dpi(12, self))
+        left_layout.addSpacing(sep_margin)
         left_layout.addWidget(_make_vline())
+        left_layout.addSpacing(sep_margin)
 
         self._btn_loop = IconToggleButton(icon_on="loop_on", icon_off="loop_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
         self._btn_loop.setToolTip("Loop")
@@ -349,11 +385,9 @@ class MainWindow(BaseMainWindow):
         self._volume_slider = QSlider(Qt.Orientation.Horizontal)
         self._volume_slider.setRange(0, 100)
         self._volume_slider.setValue(100)
-        self._volume_slider.setFixedWidth(int(get_relative_size(self, width_ratio=0.15)[0]))
+        self._volume_slider.setFixedWidth(int(get_relative_size(self, width_ratio=0.3)[0]))
         self._volume_slider.valueChanged.connect(self._on_volume_changed)
         right_layout.addWidget(self._volume_slider)
-
-        right_layout.addWidget(_make_vline())
 
         ctrl_layout.addWidget(right_widget, stretch=1)
 
