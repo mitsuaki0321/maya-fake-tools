@@ -10,6 +10,8 @@ from logging import getLogger
 import os
 from pathlib import Path
 
+import maya.cmds as cmds
+
 from ....lib_ui import (
     BaseMainWindow,
     ToolSettingsManager,
@@ -107,6 +109,7 @@ class MainWindow(BaseMainWindow):
         self._player_core.position_changed.connect(self._on_position_changed)
         self._player_core.duration_changed.connect(self._on_duration_changed)
         self._player_core.state_changed.connect(self._on_state_changed)
+        self._player_core.video_fps_detected.connect(self._on_video_fps_detected)
         self._sync_controller = command.MayaSyncController(self._player_core)
 
         # Seek slider
@@ -121,7 +124,7 @@ class MainWindow(BaseMainWindow):
         time_row = QWidget()
         time_layout = QHBoxLayout(time_row)
         time_layout.setContentsMargins(0, 0, 0, 0)
-        self._time_label = QLabel("00:00 / 00:00")
+        self._time_label = QLabel("00:00 / 00:00    [ 0 / 0 ]")
         time_layout.addWidget(self._time_label)
         time_layout.addStretch()
         self._fps_label = QLabel(f"{command.DEFAULT_FPS:.0f}fps")
@@ -214,6 +217,19 @@ class MainWindow(BaseMainWindow):
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
 
     # ------------------------------------------------------------------
+    # Time display helper
+    # ------------------------------------------------------------------
+
+    def _update_time_display(self, position_ms: int, duration_ms: int) -> None:
+        """Update the time label with time and frame numbers."""
+        fps = self._player_core.fps if self._player_core else command.DEFAULT_FPS
+        current_frame = command.ms_to_frame(position_ms, fps)
+        total_frames = command.ms_to_frame(duration_ms, fps)
+        time_text = f"{command.format_time(position_ms)} / {command.format_time(duration_ms)}"
+        frame_text = f"[ {current_frame} / {total_frames} ]"
+        self._time_label.setText(f"{time_text}    {frame_text}")
+
+    # ------------------------------------------------------------------
     # Signal handlers — transport
     # ------------------------------------------------------------------
 
@@ -271,7 +287,7 @@ class MainWindow(BaseMainWindow):
     def _on_seek_moved(self, position: int):
         if self._player_core:
             self._player_core.seek(position)
-        self._time_label.setText(f"{command.format_time(position)} / {command.format_time(self._seek_slider.maximum())}")
+        self._update_time_display(position, self._seek_slider.maximum())
 
     # ------------------------------------------------------------------
     # Signal handlers — player feedback
@@ -280,17 +296,20 @@ class MainWindow(BaseMainWindow):
     def _on_position_changed(self, position: int):
         if not self._seeking:
             self._seek_slider.setValue(position)
-            self._time_label.setText(f"{command.format_time(position)} / {command.format_time(self._seek_slider.maximum())}")
+            self._update_time_display(position, self._seek_slider.maximum())
 
     def _on_duration_changed(self, duration: int):
         self._seek_slider.setRange(0, duration)
-        self._time_label.setText(f"{command.format_time(0)} / {command.format_time(duration)}")
+        self._update_time_display(0, duration)
 
     def _on_state_changed(self, state: str):
         is_playing = state == "playing"
         self._btn_play_pause.blockSignals(True)
         self._btn_play_pause.setChecked(is_playing)
         self._btn_play_pause.blockSignals(False)
+
+    def _on_video_fps_detected(self, fps: float):
+        self._fps_label.setText(f"{fps:.4g}fps")
 
     # ------------------------------------------------------------------
     # Signal handlers — loop / speed / volume / mute
@@ -325,12 +344,17 @@ class MainWindow(BaseMainWindow):
         if not self._sync_controller:
             return
         if checked:
-            fps = command.get_maya_fps()
-            self._sync_controller.set_fps(fps)
+            maya_fps = command.get_maya_fps()
+            self._sync_controller.set_fps(maya_fps)
             self._sync_controller.enable()
             if self._player_core:
-                self._player_core.set_fps(fps)
-            self._fps_label.setText(f"{fps:.4g}fps")
+                self._player_core.set_fps(maya_fps)
+                video_fps = self._player_core.get_video_fps()
+                if video_fps is not None and abs(video_fps - maya_fps) > 0.1:
+                    cmds.warning(
+                        f"Sync Player: Video FPS ({video_fps:.4g}) differs from Maya FPS ({maya_fps:.4g}). "
+                        "Frame stepping and frame display may not match the video."
+                    )
             self._seek_slider.setEnabled(False)
         else:
             self._sync_controller.disable()

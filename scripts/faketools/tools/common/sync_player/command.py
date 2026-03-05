@@ -21,6 +21,7 @@ from ....lib_ui.qt_compat import (
     connect_state_changed,
     create_media_player,
     get_playback_state,
+    get_video_fps,
     is_pyside2,
     set_media_source,
     set_player_volume,
@@ -52,6 +53,21 @@ def format_time(ms: int) -> str:
     return f"{minutes:02d}:{seconds:02d}"
 
 
+def ms_to_frame(ms: int, fps: float) -> int:
+    """Convert milliseconds to a frame number.
+
+    Args:
+        ms: Time in milliseconds.
+        fps: Frames per second.
+
+    Returns:
+        int: Frame number (0-based).
+    """
+    if ms <= 0 or fps <= 0:
+        return 0
+    return int(ms * fps / 1000.0)
+
+
 class VideoPlayerCore(QObject):
     """Core video playback controller.
 
@@ -62,6 +78,7 @@ class VideoPlayerCore(QObject):
     position_changed = Signal(int)
     duration_changed = Signal(int)
     state_changed = Signal(str)
+    video_fps_detected = Signal(float)
 
     def __init__(self, video_widget: QVideoWidget, parent: QObject | None = None):
         super().__init__(parent)
@@ -106,6 +123,14 @@ class VideoPlayerCore(QObject):
             return self._player.media().canonicalUrl() != QUrl()
         else:
             return self._player.source() != QUrl()
+
+    def get_video_fps(self) -> float | None:
+        """Get the loaded video's native frame rate.
+
+        Returns:
+            float | None: Video FPS if available, None otherwise.
+        """
+        return get_video_fps(self._player)
 
     # ------------------------------------------------------------------
     # Playback control
@@ -256,6 +281,9 @@ class VideoPlayerCore(QObject):
             self._pending_pause = False
             self._player.pause()
             self._player.setPosition(0)
+            video_fps = self.get_video_fps()
+            if video_fps is not None:
+                self.video_fps_detected.emit(video_fps)
             return
 
         if self._loop and end_of_media:
@@ -337,12 +365,29 @@ class MayaSyncController:
 
     Uses MDGMessage.addTimeChangeCallback as the primary sync mechanism
     and MConditionMessage("playingBack") for play state detection.
+
+    During Maya playback: video plays alongside and corrects drift when needed.
+    During scrubbing/clicking: video is paused and seeks to exact frame position.
     """
 
     def __init__(self, player_core: VideoPlayerCore):
         self._player_core = player_core
         self._fps = DEFAULT_FPS
         self._callbacks: list[int] = []
+        self._is_playing_back = False
+
+    def _frame_to_ms(self, frame: float) -> int:
+        """Convert a frame number to milliseconds.
+
+        Uses round() to avoid truncation-based off-by-one errors.
+
+        Args:
+            frame: Frame number.
+
+        Returns:
+            int: Position in milliseconds.
+        """
+        return max(0, int(round(frame / self._fps * 1000.0)))
 
     def set_fps(self, fps: float) -> None:
         """Set FPS for frame-to-millisecond conversion.
@@ -354,14 +399,23 @@ class MayaSyncController:
             self._fps = fps
 
     def enable(self) -> None:
-        """Start syncing video to Maya timeline."""
+        """Start syncing video to Maya timeline.
+
+        Pauses the video and seeks to the current Maya time.
+        """
         self.disable()
+        self._is_playing_back = False
+
+        self._player_core.pause()
 
         cb_time = om2.MDGMessage.addTimeChangeCallback(self._on_time_changed)
         self._callbacks.append(cb_time)
 
         cb_cond = om2.MConditionMessage.addConditionCallback("playingBack", self._on_playback_changed)
         self._callbacks.append(cb_cond)
+
+        current_frame = cmds.currentTime(query=True)
+        self._player_core.seek(self._frame_to_ms(current_frame))
 
         logger.info("Maya sync enabled (%.2f fps)", self._fps)
 
@@ -371,6 +425,7 @@ class MayaSyncController:
             with contextlib.suppress(RuntimeError):
                 om2.MMessage.removeCallback(cb)
         self._callbacks.clear()
+        self._is_playing_back = False
         logger.info("Maya sync disabled")
 
     def cleanup(self) -> None:
@@ -383,14 +438,36 @@ class MayaSyncController:
         return len(self._callbacks) > 0
 
     def _on_time_changed(self, mtime, _client_data) -> None:
-        """Called every time Maya's current time changes."""
+        """Called every time Maya's current time changes.
+
+        During playback: only corrects when drift exceeds 1.5 frames.
+        During scrub/click: always seeks to the exact frame position.
+        """
         frame = mtime.value
-        position_ms = int(frame / self._fps * 1000)
-        self._player_core.seek(position_ms)
+        position_ms = self._frame_to_ms(frame)
+
+        if self._is_playing_back:
+            current_pos = self._player_core.position
+            drift_threshold = int(1500.0 / self._fps)
+            if abs(current_pos - position_ms) > drift_threshold:
+                self._player_core.seek(position_ms)
+        else:
+            self._player_core.seek(position_ms)
 
     def _on_playback_changed(self, state, _client_data) -> None:
-        """Called when Maya playback starts or stops."""
+        """Called when Maya playback starts or stops.
+
+        Starts/stops video playback to match Maya's play state.
+        """
         if state:
-            logger.debug("Maya playback started")
+            self._is_playing_back = True
+            current_frame = cmds.currentTime(query=True)
+            self._player_core.seek(self._frame_to_ms(current_frame))
+            self._player_core.play()
+            logger.debug("Maya playback started - video playing")
         else:
-            logger.debug("Maya playback stopped")
+            self._is_playing_back = False
+            self._player_core.pause()
+            current_frame = cmds.currentTime(query=True)
+            self._player_core.seek(self._frame_to_ms(current_frame))
+            logger.debug("Maya playback stopped - video paused")

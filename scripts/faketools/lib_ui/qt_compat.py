@@ -453,6 +453,29 @@ def connect_state_changed(player: QMediaPlayer, callback) -> None:
         player.playbackStateChanged.connect(lambda _state: callback(player))
 
 
+def get_video_fps(player: "QMediaPlayer") -> "float | None":
+    """Get the video's native frame rate from media metadata.
+
+    Args:
+        player: QMediaPlayer instance with loaded media.
+
+    Returns:
+        float | None: Video FPS if available, None otherwise.
+    """
+    try:
+        if is_pyside2():
+            value = player.metaData("VideoFrameRate")
+        else:
+            from PySide6.QtMultimedia import QMediaMetaData
+
+            value = player.metaData().value(QMediaMetaData.VideoFrameRate)
+        if isinstance(value, (int, float)) and value > 0:
+            return float(value)
+    except Exception:
+        pass
+    return None
+
+
 # Export all for easy star import if needed
 __all__ = [
     # Core modules
