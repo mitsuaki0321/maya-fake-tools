@@ -22,6 +22,7 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.ui_utils import get_relative_size
+from ....lib_ui.widgets.extra_widgets import HorizontalSeparator
 from . import cut_command
 from .ui_common import SceneNodeListWidget, select_all_items
 
@@ -150,6 +151,8 @@ class CutTab(QWidget):
         self._chk_keep_original = QCheckBox("Keep Original Mesh")
         self._chk_keep_original.setChecked(True)
         layout.addWidget(self._chk_keep_original)
+
+        layout.addWidget(HorizontalSeparator())
 
         # --- Cut button ---
         self._btn_cut = QPushButton("Cut")

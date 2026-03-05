@@ -22,6 +22,7 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.ui_utils import get_relative_size
+from ....lib_ui.widgets.extra_widgets import HorizontalSeparator
 from . import finalize_command
 from .ui_common import SceneNodeListWidget
 
@@ -78,6 +79,8 @@ class FinalizeTab(QWidget):
         self._line_finalize_output = QLineEdit("proxy_final_grp")
         row_final_output.addWidget(self._line_finalize_output, 1)
         layout.addLayout(row_final_output)
+
+        layout.addWidget(HorizontalSeparator())
 
         # --- Finalize button ---
         self._btn_finalize = QPushButton("Finalize")

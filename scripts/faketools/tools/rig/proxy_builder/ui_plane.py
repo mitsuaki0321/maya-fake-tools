@@ -65,13 +65,19 @@ class PlaneTab(QWidget):
 
         # Target Mesh
         row_target = QHBoxLayout()
-        row_target.addWidget(lbl_target_mesh)
+        self._lbl_target_mesh = lbl_target_mesh
+        row_target.addWidget(self._lbl_target_mesh)
         self._line_plane_target_mesh = QLineEdit()
         self._line_plane_target_mesh.setReadOnly(True)
         self._line_plane_target_mesh.setPlaceholderText("(optional, for auto-size)")
         row_target.addWidget(self._line_plane_target_mesh, 1)
         self._btn_set_plane_target_mesh = QPushButton("Set")
         row_target.addWidget(self._btn_set_plane_target_mesh)
+        self._btn_toggle_target_mesh = QPushButton("ON")
+        self._btn_toggle_target_mesh.setCheckable(True)
+        self._btn_toggle_target_mesh.setChecked(True)
+        self._btn_toggle_target_mesh.setFixedWidth(self._btn_set_plane_target_mesh.sizeHint().width())
+        row_target.addWidget(self._btn_toggle_target_mesh)
         lay_create.addLayout(row_target)
 
         lay_create.addWidget(HorizontalSeparator())
@@ -124,6 +130,7 @@ class PlaneTab(QWidget):
 
         # Label width for stacked pages (match grid col0 = Rotation Mode label)
         stacked_label_width = lbl_rotation_mode.sizeHint().width()
+        self._lbl_target_mesh.setFixedWidth(stacked_label_width)
 
         # QStackedWidget for rotation mode pages
         self._stack_rotation_mode = QStackedWidget()
@@ -206,6 +213,8 @@ class PlaneTab(QWidget):
         row_scale.addStretch()
         lay_create.addLayout(row_scale)
 
+        lay_create.addWidget(HorizontalSeparator())
+
         # Create Plane button
         self._btn_create_plane = QPushButton("Create Plane")
         _, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
@@ -235,6 +244,8 @@ class PlaneTab(QWidget):
         row_mirror_axis.addStretch()
         lay_mirror.addLayout(row_mirror_axis)
 
+        lay_mirror.addWidget(HorizontalSeparator())
+
         self._btn_mirror_plane = QPushButton("Mirror")
         self._btn_mirror_plane.setMinimumHeight(int(height * 0.08))
         lay_mirror.addWidget(self._btn_mirror_plane)
@@ -248,6 +259,7 @@ class PlaneTab(QWidget):
 
     def _connect_signals(self) -> None:
         self._btn_set_plane_target_mesh.clicked.connect(self._on_set_plane_target_mesh)
+        self._btn_toggle_target_mesh.toggled.connect(self._on_toggle_target_mesh)
         self._btn_set_plane_aim_joint.clicked.connect(self._on_set_plane_aim_joint)
         self._combo_aim_target.currentIndexChanged.connect(self._on_aim_target_changed)
         self._btn_group_rotation_mode.buttonClicked.connect(
@@ -259,6 +271,13 @@ class PlaneTab(QWidget):
     # ------------------------------------------------------------------
     # Slots
     # ------------------------------------------------------------------
+
+    def _on_toggle_target_mesh(self, checked: bool) -> None:
+        """Enable or disable the target mesh field based on the toggle state."""
+        self._lbl_target_mesh.setEnabled(checked)
+        self._line_plane_target_mesh.setEnabled(checked)
+        self._btn_set_plane_target_mesh.setEnabled(checked)
+        self._btn_toggle_target_mesh.setText("ON" if checked else "OFF")
 
     def _on_set_plane_target_mesh(self) -> None:
         """Set the target mesh from Maya selection, or clear if nothing is selected."""
@@ -302,6 +321,8 @@ class PlaneTab(QWidget):
             return
 
         target_mesh = self._line_plane_target_mesh.text().strip() or None
+        if not self._btn_toggle_target_mesh.isChecked():
+            target_mesh = None
         plane_type = "nurbs" if self._btn_group_plane_type.checkedId() == 0 else "poly"
 
         rotation_mode_id = self._btn_group_rotation_mode.checkedId()
@@ -374,6 +395,7 @@ class PlaneTab(QWidget):
 
     def _collect_settings(self) -> dict:
         return {
+            "use_target_mesh": self._btn_toggle_target_mesh.isChecked(),
             "plane_type": self._btn_group_plane_type.checkedId(),
             "rotation_mode": self._btn_group_rotation_mode.checkedId(),
             "aim_target": self._combo_aim_target.currentIndex(),
@@ -386,6 +408,9 @@ class PlaneTab(QWidget):
         }
 
     def _apply_settings(self, data: dict) -> None:
+        use_target_mesh = data.get("use_target_mesh", True)
+        self._btn_toggle_target_mesh.setChecked(use_target_mesh)
+
         plane_type = data.get("plane_type", 0)
         if plane_type == 1:
             self._radio_plane_poly.setChecked(True)

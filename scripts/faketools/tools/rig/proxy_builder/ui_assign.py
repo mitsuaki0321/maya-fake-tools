@@ -21,6 +21,7 @@ from ....lib_ui.qt_compat import (
     QWidget,
 )
 from ....lib_ui.ui_utils import get_relative_size
+from ....lib_ui.widgets.extra_widgets import HorizontalSeparator
 from . import assign_command
 from .ui_common import SceneNodeListWidget, add_joints_to_list, remove_from_list, select_all_items
 
@@ -172,6 +173,8 @@ class AssignTab(QWidget):
         self._line_output_group = QLineEdit("proxy_grp")
         row_output.addWidget(self._line_output_group, 1)
         layout.addLayout(row_output)
+
+        layout.addWidget(HorizontalSeparator())
 
         # --- Assign & Create Groups button ---
         self._btn_assign = QPushButton("Assign && Create Groups")
