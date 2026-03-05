@@ -72,6 +72,8 @@ try:
         QTransform,
         QValidator,
     )
+    from PySide2.QtMultimedia import QMediaContent, QMediaPlayer
+    from PySide2.QtMultimediaWidgets import QVideoWidget
     from PySide2.QtWidgets import (
         QAbstractItemView,
         QAction,
@@ -236,6 +238,8 @@ except ImportError:
         QTransform,
         QValidator,
     )
+    from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
+    from PySide6.QtMultimediaWidgets import QVideoWidget
     from PySide6.QtWidgets import (
         QAbstractItemView,
         QApplication,
@@ -348,6 +352,105 @@ def is_pyside2() -> bool:
 def is_pyside6() -> bool:
     """Check if using PySide6."""
     return QT_VERSION == "PySide6"
+
+
+# ---------------------------------------------------------------------------
+# QtMultimedia compatibility helpers
+# ---------------------------------------------------------------------------
+
+
+def create_media_player(parent: QObject) -> tuple:
+    """Create a QMediaPlayer with audio support.
+
+    Returns:
+        tuple: (player, audio_output) where audio_output is None for PySide2
+            and QAudioOutput for PySide6.
+    """
+    if is_pyside2():
+        player = QMediaPlayer(parent)
+        return player, None
+    else:
+        audio_output = QAudioOutput(parent)
+        player = QMediaPlayer(parent)
+        player.setAudioOutput(audio_output)
+        return player, audio_output
+
+
+def set_media_source(player: QMediaPlayer, path: str) -> None:
+    """Load a media file into the player.
+
+    Args:
+        player: QMediaPlayer instance.
+        path: Absolute file path to the media file.
+    """
+    url = QUrl.fromLocalFile(path)
+    if is_pyside2():
+        player.setMedia(QMediaContent(url))
+    else:
+        player.setSource(url)
+
+
+def set_player_volume(target, volume: int) -> None:
+    """Set playback volume.
+
+    Args:
+        target: QMediaPlayer (PySide2) or QAudioOutput (PySide6).
+        volume: Volume level 0-100.
+    """
+    if is_pyside2():
+        target.setVolume(int(volume))
+    else:
+        target.setVolume(max(0.0, min(1.0, volume / 100.0)))
+
+
+def get_player_volume(target) -> int:
+    """Get playback volume as 0-100.
+
+    Args:
+        target: QMediaPlayer (PySide2) or QAudioOutput (PySide6).
+
+    Returns:
+        int: Volume level 0-100.
+    """
+    if is_pyside2():
+        return int(target.volume())
+    else:
+        return int(round(target.volume() * 100))
+
+
+def get_playback_state(player: QMediaPlayer) -> str:
+    """Get the current playback state as a string.
+
+    Returns:
+        str: One of "playing", "paused", or "stopped".
+    """
+    if is_pyside2():
+        state = player.state()
+        if state == QMediaPlayer.PlayingState:
+            return "playing"
+        elif state == QMediaPlayer.PausedState:
+            return "paused"
+        return "stopped"
+    else:
+        state = player.playbackState()
+        if state == QMediaPlayer.PlaybackState.PlayingState:
+            return "playing"
+        elif state == QMediaPlayer.PlaybackState.PausedState:
+            return "paused"
+        return "stopped"
+
+
+def connect_state_changed(player: QMediaPlayer, callback) -> None:
+    """Connect the playback state changed signal.
+
+    Args:
+        player: QMediaPlayer instance.
+        callback: Callable that receives a single argument (the player).
+    """
+    if is_pyside2():
+        player.stateChanged.connect(lambda _state: callback(player))
+    else:
+        player.playbackStateChanged.connect(lambda _state: callback(player))
 
 
 # Export all for easy star import if needed
@@ -507,4 +610,13 @@ __all__ = [
     "get_save_file_name",
     # "shiboken"
     "shiboken",
+    # QtMultimedia
+    "QMediaPlayer",
+    "QVideoWidget",
+    "create_media_player",
+    "set_media_source",
+    "set_player_volume",
+    "get_player_volume",
+    "get_playback_state",
+    "connect_state_changed",
 ]
