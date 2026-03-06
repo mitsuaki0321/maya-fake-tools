@@ -53,6 +53,9 @@ class IconButtonMixin:
         {widget_type}:pressed {{
             background-color: rgba(255, 255, 255, 0.2);
         }}
+        {widget_type}:disabled {{
+            background-color: transparent;
+        }}
     """
 
     _PALETTE_STYLESHEET_TEMPLATE = """

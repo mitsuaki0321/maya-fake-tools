@@ -83,10 +83,19 @@ class _PlaceholderWidget(QWidget):
         text_label.setStyleSheet("color: rgba(255, 255, 255, 0.4);")
         layout.addWidget(text_label)
 
+    def _is_sync_locked(self) -> bool:
+        ctrl = self._main_window._sync_controller
+        return ctrl is not None and ctrl.is_enabled
+
     def mouseDoubleClickEvent(self, event):
+        if self._is_sync_locked():
+            return
         self._main_window._on_open()
 
     def dragEnterEvent(self, event):
+        if self._is_sync_locked():
+            event.ignore()
+            return
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
                 path = url.toLocalFile()
@@ -96,6 +105,8 @@ class _PlaceholderWidget(QWidget):
         event.ignore()
 
     def dropEvent(self, event):
+        if self._is_sync_locked():
+            return
         for url in event.mimeData().urls():
             path = url.toLocalFile()
             if path.lower().endswith(command.SUPPORTED_FORMATS):
@@ -111,7 +122,14 @@ class _VideoDropWidget(QVideoWidget):
         self.setAcceptDrops(True)
         self._main_window = parent
 
+    def _is_sync_locked(self) -> bool:
+        ctrl = self._main_window._sync_controller
+        return ctrl is not None and ctrl.is_enabled
+
     def dragEnterEvent(self, event):
+        if self._is_sync_locked():
+            event.ignore()
+            return
         if event.mimeData().hasUrls():
             for url in event.mimeData().urls():
                 path = url.toLocalFile()
@@ -121,6 +139,8 @@ class _VideoDropWidget(QVideoWidget):
         event.ignore()
 
     def dropEvent(self, event):
+        if self._is_sync_locked():
+            return
         for url in event.mimeData().urls():
             path = url.toLocalFile()
             if path.lower().endswith(command.SUPPORTED_FORMATS):
@@ -128,6 +148,8 @@ class _VideoDropWidget(QVideoWidget):
                 return
 
     def mouseDoubleClickEvent(self, event):
+        if self._is_sync_locked():
+            return
         self._main_window._on_open()
 
 
@@ -243,6 +265,15 @@ class MainWindow(BaseMainWindow):
                 margin: -{handle_m}px 0;
                 border-radius: {handle_r}px;
             }}
+            QSlider::groove:horizontal:disabled {{
+                background: #1A1A1A;
+            }}
+            QSlider::sub-page:horizontal:disabled {{
+                background: #1A1A1A;
+            }}
+            QSlider::handle:horizontal:disabled {{
+                background: transparent;
+            }}
         """)
 
         slider_wrap = QWidget()
@@ -322,6 +353,10 @@ class MainWindow(BaseMainWindow):
                 selection-background-color: rgba(255, 255, 255, 0.15);
                 border: {border_w}px solid #444444;
                 outline: none;
+            }}
+            QComboBox:disabled {{
+                color: rgba(204, 204, 204, 0.3);
+                border-color: rgba(68, 68, 68, 0.5);
             }}
         """)
         left_layout.addWidget(self._speed_combo)
@@ -576,10 +611,19 @@ class MainWindow(BaseMainWindow):
                         f"Sync Player: Video FPS ({video_fps:.4g}) differs from Maya FPS ({maya_fps:.4g}). "
                         "Frame stepping and frame display may not match the video."
                     )
-            self._seek_slider.setEnabled(False)
         else:
             self._sync_controller.disable()
-            self._seek_slider.setEnabled(True)
+        self._set_sync_locked(checked)
+
+    def _set_sync_locked(self, locked: bool):
+        """Enable or disable player controls based on Maya sync state."""
+        enabled = not locked
+        self._btn_play_pause.setEnabled(enabled)
+        self._btn_prev.setEnabled(enabled)
+        self._btn_next.setEnabled(enabled)
+        self._speed_combo.setEnabled(enabled)
+        self._btn_loop.setEnabled(enabled)
+        self._seek_slider.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Settings persistence
@@ -628,6 +672,9 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def keyPressEvent(self, event):
+        if self._sync_controller and self._sync_controller.is_enabled:
+            super().keyPressEvent(event)
+            return
         key = event.key()
         if key == Qt.Key.Key_Space:
             if self._player_core:
