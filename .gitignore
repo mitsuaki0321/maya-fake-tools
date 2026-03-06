@@ -213,6 +213,7 @@ main.py
 tests/*
 
 # Project-internal documentation (not for public)
+docs/dev/
 CLAUDE.md
 DEVELOP.md
 LOGGING_USAGE.md
