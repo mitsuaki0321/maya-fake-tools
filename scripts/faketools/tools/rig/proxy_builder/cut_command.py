@@ -58,9 +58,14 @@ def _cleanup_empty_transforms(transforms: list[str]) -> None:
         transforms (list[str]): 削除対象のトランスフォーム名リスト（フルパス推奨）。
     """
     for t in transforms:
-        if cmds.objExists(t):
-            logger.debug("Deleting empty transform: %s", t)
-            cmds.delete(t)
+        if not cmds.objExists(t):
+            continue
+        children = cmds.listRelatives(t, children=True, type="transform")
+        if children:
+            logger.debug("Skipping non-empty transform: %s", t)
+            continue
+        logger.debug("Deleting empty transform: %s", t)
+        cmds.delete(t)
 
 
 # ---------------------------------------------------------------------------

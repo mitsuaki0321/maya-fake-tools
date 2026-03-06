@@ -34,7 +34,8 @@ def _get_joint_from_group(group: str) -> Optional[str]:
     Returns:
         Optional[str]: ジョイント名。parentConstraint がない場合は None。
     """
-    constraints = cmds.listRelatives(group, children=True, type="parentConstraint") or []
+    children = cmds.listRelatives(group, children=True) or []
+    constraints = cmds.ls(children, type="parentConstraint")
     if not constraints:
         return None
     targets = cmds.parentConstraint(constraints[0], query=True, targetList=True) or []
@@ -177,18 +178,23 @@ def finalize_proxy_groups(
     if not cmds.objExists(parent_group):
         raise ValueError(f"Parent group '{parent_group}' does not exist")
 
-    children = cmds.listRelatives(parent_group, children=True) or []
+    all_children = cmds.listRelatives(parent_group, children=True, type="transform") or []
+    children = [c for c in all_children if cmds.listRelatives(c, allDescendents=True, type="mesh")]
     results: list[str] = []
 
     for child in children:
         joint_name = _get_joint_from_group(child)
         if not joint_name:
-            logger.warning("Group '%s' has no parentConstraint, skipping", child)
+            msg = f"Group '{child}' has no parentConstraint, skipping"
+            logger.warning(msg)
+            cmds.warning(msg)
             continue
 
         meshes = _get_meshes_in_group(child)
         if not meshes:
-            logger.warning("Group '%s' has no meshes, skipping", child)
+            msg = f"Group '{child}' has no meshes, skipping"
+            logger.warning(msg)
+            cmds.warning(msg)
             continue
 
         joint_short = _joint_short_name(joint_name)

@@ -257,6 +257,11 @@ def combine_meshes(meshes: list[str], name: Optional[str] = None) -> str:
         if not cmds.objExists(mesh):
             raise ValueError(f"Mesh does not exist: {mesh}")
 
+    # Delete construction history on source meshes before combining.
+    # polyUnite(ch=False) can cascade-delete unrelated DG nodes
+    # (e.g. parentConstraints) through shared connections like skinCluster -> joint.
+    cmds.delete(meshes, constructionHistory=True)
+
     result = cmds.polyUnite(meshes, constructionHistory=False, mergeUVSets=True)
     combined = result[0]
     cmds.delete(combined, constructionHistory=True)
