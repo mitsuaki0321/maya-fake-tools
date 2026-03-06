@@ -436,11 +436,15 @@ class VideoPlayerCore(QObject):
 
     def _on_player_error(self, error) -> None:
         """Handle QMediaPlayer error (PySide2)."""
+        msg = f"Sync Player: {self._player.errorString()}"
         logger.error("Player error: %s - %s", error, self._player.errorString())
+        om2.MGlobal.displayError(msg)
 
     def _on_player_error_occurred(self, error, message: str) -> None:
         """Handle QMediaPlayer errorOccurred (PySide6)."""
+        msg = f"Sync Player: {message}"
         logger.error("Player error: %s - %s", error, message)
+        om2.MGlobal.displayError(msg)
 
 
 # ----------------------------------------------------------------------
