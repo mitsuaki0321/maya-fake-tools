@@ -155,69 +155,67 @@ class RunButton(VSCodeButton):
 
 
 class ToggleButton(VSCodeButton):
-    """VSCode-style toggle button with active/inactive visual states."""
+    """VSCode-style toggle button that switches icons between active/inactive states."""
 
-    _ACTIVE_BG = "#4D3030"
-    _ACTIVE_HOVER_BG = "#5C3A3A"
-
-    def __init__(self, icon_name, tooltip, parent=None):
+    def __init__(self, icon_name, tooltip, active_icon_name=None, parent=None):
         self._active = False
+        self._active_icon_name = active_icon_name
+        self._active_icons = {}
         super().__init__(icon_name, tooltip, parent)
+
+    def _load_icons(self):
+        """Load icon states for both inactive and active modes."""
+        super()._load_icons()
+        if self._active_icon_name:
+            active_path = os.path.join(self.icon_base_path, f"{self._active_icon_name}_normal.svg")
+            if os.path.exists(active_path):
+                with open(active_path, encoding="utf-8") as f:
+                    svg_template = f.read()
+                for state, color in _ICON_STATE_COLORS.items():
+                    self._active_icons[state] = _create_icon_from_svg(svg_template, _ICON_SOURCE_COLOR, color)
 
     def is_active(self):
         """Return current toggle state."""
         return self._active
 
     def set_active(self, active):
-        """Set active state and update styling."""
+        """Set active state and update icon."""
         self._active = active
-        self._apply_style()
+        self._update_icon("normal")
 
-    def _set_normal_state(self):
-        """Set initial style based on active state."""
-        if "normal" in self.icons:
-            self.setIcon(self.icons["normal"])
-        self._apply_style()
+    def _current_icons(self):
+        """Return the icon set for the current state."""
+        if self._active and self._active_icons:
+            return self._active_icons
+        return self.icons
 
-    def _apply_style(self):
-        """Apply stylesheet based on active state."""
-        if self._active:
-            self.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {self._ACTIVE_BG};
-                    border: none;
-                    border-radius: 3px;
-                    padding: 3px;
-                }}
-                QPushButton:hover {{
-                    background-color: {self._ACTIVE_HOVER_BG};
-                }}
-                QPushButton:pressed {{
-                    background-color: {self._ACTIVE_BG};
-                }}
-            """)
-        else:
-            self.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    border: none;
-                    border-radius: 3px;
-                    padding: 3px;
-                }
-                QPushButton:hover {
-                    background-color: #484848;
-                }
-                QPushButton:pressed {
-                    background-color: #484848;
-                }
-            """)
+    def _update_icon(self, state):
+        """Update icon to the given state using the current icon set."""
+        icons = self._current_icons()
+        if state in icons:
+            self.setIcon(icons[state])
+
+    def enterEvent(self, event):
+        """Handle mouse enter - switch to hover icon."""
+        self._update_icon("hover")
+        QPushButton.enterEvent(self, event)
+
+    def leaveEvent(self, event):
+        """Handle mouse leave - switch to normal icon."""
+        self._update_icon("normal")
+        QPushButton.leaveEvent(self, event)
+
+    def mousePressEvent(self, event):
+        """Handle mouse press - switch to pressed icon."""
+        self._update_icon("pressed")
+        QPushButton.mousePressEvent(self, event)
 
     def mouseReleaseEvent(self, event):
         """Toggle active state on click."""
         if self.rect().contains(event.pos()):
             self._active = not self._active
-            self._apply_style()
-        super().mouseReleaseEvent(event)
+        self._update_icon("hover")
+        QPushButton.mouseReleaseEvent(self, event)
 
 
 class ToolBarSeparator(QFrame):
@@ -298,7 +296,7 @@ class ToolBar(QWidget):
         self.clear_button = VSCodeButton("clear", "Clear Terminal")
 
         # Echo All toggle button
-        self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands")
+        self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands", active_icon_name="echo_active")
 
         # Fourth separator
         sep4 = ToolBarSeparator()
