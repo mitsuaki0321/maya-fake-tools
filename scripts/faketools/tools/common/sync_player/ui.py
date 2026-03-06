@@ -58,7 +58,6 @@ class _PlaceholderWidget(QWidget):
 
     def __init__(self, main_window: MainWindow, parent=None):
         super().__init__(parent)
-        self.setAcceptDrops(True)
         self._main_window = main_window
         self.setAutoFillBackground(True)
         palette = self.palette()
@@ -78,77 +77,25 @@ class _PlaceholderWidget(QWidget):
         layout.addWidget(icon_label)
 
         # Instruction text
-        text_label = QLabel("Drag && drop video here\nDouble-click to open")
+        text_label = QLabel("Double-click to open")
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         text_label.setStyleSheet("color: rgba(255, 255, 255, 0.4);")
         layout.addWidget(text_label)
 
-    def _is_sync_locked(self) -> bool:
-        ctrl = self._main_window._sync_controller
-        return ctrl is not None and ctrl.is_enabled
-
     def mouseDoubleClickEvent(self, event):
-        if self._is_sync_locked():
-            return
         self._main_window._on_open()
 
-    def dragEnterEvent(self, event):
-        if self._is_sync_locked():
-            event.ignore()
-            return
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                path = url.toLocalFile()
-                if path.lower().endswith(command.SUPPORTED_FORMATS):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
 
-    def dropEvent(self, event):
-        if self._is_sync_locked():
-            return
-        for url in event.mimeData().urls():
-            path = url.toLocalFile()
-            if path.lower().endswith(command.SUPPORTED_FORMATS):
-                self._main_window.load_video(path)
-                return
-
-
-class _VideoDropWidget(QVideoWidget):
-    """QVideoWidget with drag-and-drop and double-click support."""
+class _VideoWidget(QVideoWidget):
+    """QVideoWidget with double-click support for opening files."""
 
     def __init__(self, parent: MainWindow):
         super().__init__(parent)
-        self.setAcceptDrops(True)
         self._main_window = parent
 
-    def _is_sync_locked(self) -> bool:
-        ctrl = self._main_window._sync_controller
-        return ctrl is not None and ctrl.is_enabled
-
-    def dragEnterEvent(self, event):
-        if self._is_sync_locked():
-            event.ignore()
-            return
-        if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                path = url.toLocalFile()
-                if path.lower().endswith(command.SUPPORTED_FORMATS):
-                    event.acceptProposedAction()
-                    return
-        event.ignore()
-
-    def dropEvent(self, event):
-        if self._is_sync_locked():
-            return
-        for url in event.mimeData().urls():
-            path = url.toLocalFile()
-            if path.lower().endswith(command.SUPPORTED_FORMATS):
-                self._main_window.load_video(path)
-                return
-
     def mouseDoubleClickEvent(self, event):
-        if self._is_sync_locked():
+        if self._main_window._is_playing():
+            cmds.warning("Sync Player: Cannot open a new video while playing")
             return
         self._main_window._on_open()
 
@@ -198,7 +145,7 @@ class MainWindow(BaseMainWindow):
         self._placeholder = _PlaceholderWidget(self)
         container_layout.addWidget(self._placeholder)
 
-        self._video_widget = _VideoDropWidget(self)
+        self._video_widget = _VideoWidget(self)
         self._video_widget.hide()
         container_layout.addWidget(self._video_widget)
 
@@ -445,6 +392,10 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def _is_playing(self) -> bool:
+        """Return True if a video is currently playing."""
+        return self._btn_play_pause.isChecked()
 
     def load_video(self, path: str) -> None:
         """Load a video file.
