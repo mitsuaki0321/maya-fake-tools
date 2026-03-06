@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Builder - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="レイアウトリグ用プロキシジオメトリの構築ツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/rig/proxy_builder.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>リグ</li>
+                        <li class="active">Proxy Builder</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#ワークフロー"
+                    id="toc-ワークフロー">ワークフロー</a>
+                    <ul>
+                    <li><a href="#モデルのカッティング"
+                    id="toc-モデルのカッティング">1.
+                    モデルのカッティング</a></li>
+                    <li><a href="#モデルの各骨への割り当て"
+                    id="toc-モデルの各骨への割り当て">2.
+                    モデルの各骨への割り当て</a></li>
+                    <li><a href="#モデルのファイナライズ"
+                    id="toc-モデルのファイナライズ">3.
+                    モデルのファイナライズ</a></li>
+                    </ul></li>
+                    <li><a href="#plane-タブについて"
+                    id="toc-plane-タブについて">Plane タブについて</a>
+                    <ul>
+                    <li><a href="#create-plane-at-joint"
+                    id="toc-create-plane-at-joint">Create Plane at
+                    Joint</a></li>
+                    <li><a href="#mirror-plane"
+                    id="toc-mirror-plane">Mirror Plane</a></li>
+                    </ul></li>
+                    <li><a href="#設計原則"
+                    id="toc-設計原則">設計原則</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Proxy Builder</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Proxy Builder
+                は、キャラクターモデルを骨単位のピースに分割し、各骨に追従するプロキシジオメトリを組み立てるツールです。　　
+                レイアウトリグやゲームエンジン向けの簡易ジオメトリ作成に使用します。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image000.png"
+                alt="image" /></p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.rig.proxy_builder.ui
+faketools.tools.rig.proxy_builder.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/proxy_builder/image001.png"
+                alt="image" /></p>
+                <h2 id="ワークフロー">ワークフロー</h2>
+                <p>想定の基本的ワークフローです。</p>
+                <ol type="1">
+                <li><strong>モデルのカッティング</strong> —
+                メッシュをウェイト境界またはカッタープレーンで骨単位に切断</li>
+                <li><strong>モデルの各骨への割り当て</strong> —
+                各ピースを骨に割り当て、parentConstraint
+                付きグループを生成</li>
+                <li><strong>モデルのファイナライズ</strong> —
+                骨別グループ内のジオメトリをコンバインして最終形にする</li>
+                </ol>
+                <h3 id="モデルのカッティング">1.
+                モデルのカッティング</h3>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-1.png"
+                alt="image" /></p>
+                <p>メッシュをウェイト境界またはカッタープレーンで骨単位に切断します。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>ツールの <code>Cut</code>
+                タブをアクティブにします。</p></li>
+                <li><p><code>Source Meshes</code>
+                にカットしたいモデルを登録します。</p></li>
+                <li><p><code>Cut Method</code> で
+                ウエイト境界でカットするか ( <code>By Weights</code>
+                )、カットプレーンでカットするか ( <code>By Planes</code>
+                ) を選択します。</p>
+                <ul>
+                <li><code>By Weights</code>: <code>Source Meshes</code>
+                に登録しているメッシュに
+                スキンウエイトが設定されている場合のみそのウエイトの境界でメッシュをカットします。</li>
+                <li><code>By Planes</code>: モデルをカットプレーン (
+                メッシュか NURBSサーフェース )
+                で切断します。カットプレーンは <code>Plane</code>
+                タブからも生成できます。</li>
+                </ul></li>
+                <li><p><code>Cut</code>
+                ボタンをクリックしてモデルをカットします。
+                <strong>piece_grp</strong>
+                の下にカットされたモデルが生成されます。<br />
+                ※
+                複製したモデルで処理を行いたい場合は、<code>Keep Original Mesh</code>
+                のチェックボックスをオンにして <code>Cut</code>
+                を実行してください。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h3 id="モデルの各骨への割り当て">2.
+                モデルの各骨への割り当て</h3>
+                <p><img
+                src="../../images/rig/proxy_builder/image003-1.png"
+                alt="image" /></p>
+                <p>各ピースを骨に割り当て、parentConstraint
+                付きグループを生成します。<br />
+                目的は、問題なく各モデルがそのスケルトンに対応するようにカットされているかの確認です。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>ツールの <code>Assign</code>
+                タブをアクティブにします。</p></li>
+                <li><p>上部のリストにカットしたモデルをリストします。
+                モデルは <code>Piece Group</code>
+                にセットされたグループから一括で <code>Load</code>
+                することも可能です。</p></li>
+                <li><p>次に、各スケルトンに対してカットしたモデルを振り分ける設定を行います。
+                <code>Assign Method</code> から方法を選択します。</p>
+                <ul>
+                <li><code>By Weights</code>: <code>Reference Mesh</code>
+                に設定したジオメトリのスキンウエイトの範囲からモデルを振り分けます。</li>
+                <li><code>By Bones</code>: 各ジオメトリと
+                骨（ボーンセグメント）との距離からモデルを振り分けます。</li>
+                </ul></li>
+                <li><p>振り分ける骨を <code>Joints</code>
+                リストに登録します。<code>By Bones</code>
+                の場合は必須です。<code>By Weights</code>
+                の場合、リストが設定されていないと skinCluster
+                ノードから自動的に骨を決定します。</p></li>
+                <li><p><code>Assign &amp; Create Groups</code>
+                ボタンをクリックします。それぞれのモデルが各骨ごとにグループ化されます。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image003-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h3 id="モデルのファイナライズ">3.
+                モデルのファイナライズ</h3>
+                <p>骨別グループ内のジオメトリをコンバインして最終形にします。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image004-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>ツールの <code>Finalize</code>
+                タブをアクティブにします。</p></li>
+                <li><p><code>Assign</code> タブで生成されたグループ (
+                proxy_grp ) を <code>Source Group</code>
+                に設定して、<code>Load</code> します。</p></li>
+                <li><p><code>Combine Mode</code>
+                からその骨に該当するモデルのコンバイン方法を選択します。</p>
+                <ul>
+                <li><code>Single Mesh per Joint</code>:
+                モデルをそのままコンバインして一つのメッシュにします。</li>
+                <li><code>Per Shader (shape parent)</code>:
+                同じシェーダーがアサインされているモデルのみをコンバインし、ひとつのトランスフォームの下にそれぞれ別のシェーダーのシェイプをペアレントします。</li>
+                <li>※ <code>Per Shader (shape parent)</code>
+                では、同一シェル内で複数のシェーダーがアサインされている場合はエラーとなります。</li>
+                </ul></li>
+                <li><p><code>Finalize</code>
+                ボタンをクリックするとそれぞれコンバインされたモデルが生成されます。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image004-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h2 id="plane-タブについて">Plane タブについて</h2>
+                <p><code>Cut</code> タブの <code>By Planes</code>
+                で使用するカッタープレーンを作成・ミラーするための補助ツールです。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image005.png"
+                alt="image" /></p>
+                <h3 id="create-plane-at-joint">Create Plane at
+                Joint</h3>
+                <p>ジョイントの位置にカッタープレーンを作成します。<br />
+                プレーン名はジョイント名から自動生成されます（例:
+                <code>LeftArm_cut_plane</code>）。</p>
+                <p>各オプションを設定し、カットプレーンを作成したいジョイントを選択
+                ( 複数可 ) して、<code>Create Plane</code>
+                を実行します。</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image006.png"
+                alt="image" /></p>
+                <h4 id="基本設定">基本設定</h4>
+                <ul>
+                <li><strong>Target Mesh</strong>:
+                サイズ自動計算の参照メッシュを選択して
+                <code>Set</code>（任意）します。 設定した後は、
+                <code>ON/OFF</code>
+                で参照するかどうかを決定します。</li>
+                </ul>
+                <h4 id="plane-type">Plane Type</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>タイプ</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>NURBS</strong></td>
+                <td>NURBS プレーンを作成</td>
+                </tr>
+                <tr>
+                <td><strong>Poly</strong></td>
+                <td>ポリゴンプレーンを作成</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>※
+                ポリゴンの場合、一つのフェース単位で切断が発生するためできるだけ低解像度のポリゴンを採用してください。フェースが
+                5 より多いポリゴンはエラーとしています。</p>
+                <h4 id="axis">Axis</h4>
+                <p>プレーンの法線方向の基準軸を選択します（X / Y /
+                Z）。</p>
+                <h4 id="rotation-mode">Rotation Mode</h4>
+                <p>プレーンの回転（法線方向）をどのように決定するかを選択します。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>動作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>Joint</strong></td>
+                <td>ジョイントのワールド回転をそのまま使用</td>
+                </tr>
+                <tr>
+                <td><strong>Aim</strong></td>
+                <td>Aim Target の設定に基づいて法線方向を自動計算</td>
+                </tr>
+                <tr>
+                <td><strong>Manual</strong></td>
+                <td>手動で回転値を入力</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="aim-targetrotation-mode-が-aim-の場合">Aim
+                Target（Rotation Mode が Aim の場合）</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>オプション</th>
+                <th>動作</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>Auto</strong></td>
+                <td>子ジョイントが 1
+                つなら子方向、なければ親から離れる方向</td>
+                </tr>
+                <tr>
+                <td><strong>Parent</strong></td>
+                <td>親ジョイントから離れる方向（ボーン進行方向）</td>
+                </tr>
+                <tr>
+                <td><strong>Parent &gt; Child</strong></td>
+                <td>親ジョイントから子ジョイントへの方向</td>
+                </tr>
+                </tbody>
+                </table>
+                <ul>
+                <li><strong>Aim Joint</strong>: 明示的に aim
+                先のジョイントを指定（任意）。設定すると Aim Target
+                の選択は無視されます。</li>
+                </ul>
+                <p>※ 子ジョイントを検索する際に <code>io</code> 属性が
+                <code>True</code> のものは除外されます。</p>
+                <h4 id="size-scale">Size Scale</h4>
+                <p>Target Mesh
+                を設定した場合、レイキャストによるサイズ自動計算が行われます。Size
+                Scale はその結果に対する倍率です。</p>
+                <h3 id="mirror-plane">Mirror Plane</h3>
+                <p>選択中のプレーンを指定軸でミラーコピーします。ミラー後の名前は左右パターン（共有設定の
+                <code>mirror_patterns</code>）に基づいて自動生成されます。</p>
+                <ul>
+                <li><strong>Mirror Axis</strong>: ミラーする軸（X / Y /
+                Z）</li>
+                <li>対象のプレーンを選択して <code>Mirror</code>
+                をクリック</li>
+                </ul>
+                <h2 id="設計原則">設計原則</h2>
+                <ul>
+                <li><strong>フレームワーク非依存</strong>: Maya
+                標準操作のみ使用。特定のリグフレームワークの API
+                や命名規則に依存しません</li>
+                <li><strong>各ステップ間で確認可能</strong>:
+                各ステップの結果を確認・調整してから次のステップに進めます</li>
+                <li><strong>各ステップ間は疎結合</strong>:
+                ステップ間の依存関係を最小限にし、任意のステップから開始できます</li>
+                <li><strong>ツール API に依存しない紐付け</strong>:
+                骨とジオメトリの関係はシーン構造（命名 +
+                parentConstraint）から読み取れます</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

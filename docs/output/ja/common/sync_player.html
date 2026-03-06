@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Player - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Mayaタイムラインと同期可能なビデオプレイヤー">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/common/sync_player.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>共通</li>
+                        <li class="active">Sync Player</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a>
+                    <ul>
+                    <li><a href="#対応フォーマット"
+                    id="toc-対応フォーマット">対応フォーマット</a></li>
+                    </ul></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#ui-構成" id="toc-ui-構成">UI
+                    構成</a></li>
+                    <li><a href="#基本的な使い方"
+                    id="toc-基本的な使い方">基本的な使い方</a>
+                    <ul>
+                    <li><a href="#ビデオファイルの読み込み"
+                    id="toc-ビデオファイルの読み込み">ビデオファイルの読み込み</a></li>
+                    <li><a href="#再生コントロール"
+                    id="toc-再生コントロール">再生コントロール</a></li>
+                    <li><a href="#シークバー"
+                    id="toc-シークバー">シークバー</a></li>
+                    <li><a href="#時間フレーム表示"
+                    id="toc-時間フレーム表示">時間/フレーム表示</a></li>
+                    </ul></li>
+                    <li><a href="#コントロールバー"
+                    id="toc-コントロールバー">コントロールバー</a>
+                    <ul>
+                    <li><a href="#再生速度"
+                    id="toc-再生速度">再生速度</a></li>
+                    <li><a href="#ループ再生"
+                    id="toc-ループ再生">ループ再生</a></li>
+                    <li><a href="#maya-syncタイムライン同期"
+                    id="toc-maya-syncタイムライン同期">Maya
+                    Sync（タイムライン同期）</a></li>
+                    <li><a href="#音量コントロール"
+                    id="toc-音量コントロール">音量コントロール</a></li>
+                    </ul></li>
+                    <li><a href="#キーボードショートカット"
+                    id="toc-キーボードショートカット">キーボードショートカット</a></li>
+                    <li><a href="#設定の保存"
+                    id="toc-設定の保存">設定の保存</a></li>
+                    <li><a href="#対応フォーマットの拡張"
+                    id="toc-対応フォーマットの拡張">対応フォーマットの拡張</a>
+                    <ul>
+                    <li><a href="#windows"
+                    id="toc-windows">Windows</a></li>
+                    </ul></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Sync Player</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>Sync Player は、Maya
+                内でビデオファイルを再生するためのツールです。通常のビデオプレイヤーとして使用できるほか、<strong>Maya
+                タイムラインとの同期機能</strong>を搭載しており、リファレンス映像を確認しながらアニメーション作業を行うことができます。</p>
+                <h3 id="対応フォーマット">対応フォーマット</h3>
+                <p>mov, avi, mp4, wmv</p>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.common.sync_player.ui
+faketools.tools.common.sync_player.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/sync_player/iamge001.png"
+                alt="image" /></p>
+                <h2 id="ui-構成">UI 構成</h2>
+                <p>ウィンドウは以下の要素で構成されています。</p>
+                <table>
+                <colgroup>
+                <col style="width: 50%" />
+                <col style="width: 50%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>領域</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>ビデオ表示エリア</td>
+                <td>ビデオの映像が表示される領域。未読み込み時はプレースホルダーが表示される</td>
+                </tr>
+                <tr>
+                <td>時間/フレーム表示</td>
+                <td>現在の再生位置と総時間、フレーム番号を表示</td>
+                </tr>
+                <tr>
+                <td>FPS 表示</td>
+                <td>読み込んだビデオのフレームレートを表示</td>
+                </tr>
+                <tr>
+                <td>シークバー</td>
+                <td>再生位置を操作するスライダー</td>
+                </tr>
+                <tr>
+                <td>コントロールバー</td>
+                <td>再生操作、各種設定のボタン群</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="基本的な使い方">基本的な使い方</h2>
+                <h3
+                id="ビデオファイルの読み込み">ビデオファイルの読み込み</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge005.png"
+                alt="image" /></p>
+                <p>以下のいずれかの方法でビデオファイルを開きます。</p>
+                <ul>
+                <li>ビデオ表示エリアを<strong>ダブルクリック</strong>するとファイルダイアログが開きます</li>
+                <li>ビデオ再生中はダブルクリックによるファイル読み込みはブロックされます</li>
+                </ul>
+                <blockquote>
+                <p><strong>Note</strong>: Maya Sync
+                が有効な場合、ダブルクリックによるファイル読み込みは無効になります。</p>
+                </blockquote>
+                <h3 id="再生コントロール">再生コントロール</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge004.png"
+                alt="image" /></p>
+                <p>コントロールバー中央のボタンで再生操作を行います。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>ボタン</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>前のフレーム</td>
+                <td>1フレーム戻る</td>
+                </tr>
+                <tr>
+                <td>再生 / 一時停止</td>
+                <td>再生と一時停止を切り替え</td>
+                </tr>
+                <tr>
+                <td>次のフレーム</td>
+                <td>1フレーム進む</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="シークバー">シークバー</h3>
+                <p>シークバーをドラッグして、任意の再生位置にジャンプできます。</p>
+                <ul>
+                <li>一時停止中にシークバーをドラッグすると、ドラッグ中は内部的に再生状態になり映像が更新されます。ドラッグを離すと一時停止状態に戻ります。</li>
+                </ul>
+                <h3 id="時間フレーム表示">時間/フレーム表示</h3>
+                <p>シークバーの上に現在の再生情報が表示されます。</p>
+                <pre><code>MM:SS / MM:SS    [ 現在フレーム / 総フレーム数 ]</code></pre>
+                <h2 id="コントロールバー">コントロールバー</h2>
+                <p><img
+                src="../../images/common/sync_player/iamge003.png"
+                alt="image" /></p>
+                <h3 id="再生速度">再生速度</h3>
+                <p>左側のドロップダウンから再生速度を選択できます。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>速度</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>0.25x</td>
+                <td>4分の1速度</td>
+                </tr>
+                <tr>
+                <td>0.5x</td>
+                <td>半分の速度</td>
+                </tr>
+                <tr>
+                <td>0.75x</td>
+                <td>4分の3速度</td>
+                </tr>
+                <tr>
+                <td>1.0x</td>
+                <td>通常速度（デフォルト）</td>
+                </tr>
+                <tr>
+                <td>1.25x</td>
+                <td>1.25倍速</td>
+                </tr>
+                <tr>
+                <td>1.5x</td>
+                <td>1.5倍速</td>
+                </tr>
+                <tr>
+                <td>2.0x</td>
+                <td>2倍速</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="ループ再生">ループ再生</h3>
+                <p><img
+                src="../../images/common/sync_player/loop_off.svg"
+                alt="image" />
+                ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。</p>
+                <p>ループがオンの場合は、ボタンアイコンが、<img
+                src="../../images/common/sync_player/loop_on.svg"
+                alt="image" /> に変更されます。</p>
+                <h3 id="maya-syncタイムライン同期">Maya
+                Sync（タイムライン同期）</h3>
+                <p><img
+                src="../../images/common/sync_player/sync_off.svg"
+                alt="image" /> ボタンをクリックすると、Maya
+                タイムラインとの同期モードが有効になります。</p>
+                <p>Sync がオンの場合は、ボタンアイコンが、<img
+                src="../../images/common/sync_player/sync_on.svg"
+                alt="image" /> に変更されます。</p>
+                <h4 id="同期モードの動作">同期モードの動作</h4>
+                <ul>
+                <li><strong>同期有効時</strong>: ビデオの再生位置が Maya
+                のタイムラインに連動します
+                <ul>
+                <li>Maya
+                でタイムラインを再生すると、ビデオも同時に再生されます</li>
+                <li>Maya の再生を停止すると、ビデオも一時停止します</li>
+                <li>タイムラインをスクラブ（ドラッグ）すると、ビデオが対応するフレームにシークします</li>
+                </ul></li>
+                <li><strong>同期無効時</strong>:
+                通常のビデオプレイヤーとして独立して動作します</li>
+                </ul>
+                <h4
+                id="同期中のコントロール制限">同期中のコントロール制限</h4>
+                <p>同期モードが有効な間は、以下のコントロールが無効になります。</p>
+                <ul>
+                <li>再生 / 一時停止ボタン</li>
+                <li>フレーム送り / 戻しボタン</li>
+                <li>再生速度の変更</li>
+                <li>ループ再生の切り替え</li>
+                <li>シークバーの操作</li>
+                </ul>
+                <p>これは、ビデオの再生が Maya
+                のタイムラインに完全に制御されるためです。</p>
+                <h4 id="fps-の不一致に関する警告">FPS
+                の不一致に関する警告</h4>
+                <p>同期を有効にした際、ビデオの FPS と Maya シーンの FPS
+                が異なる場合、警告メッセージが表示されます。FPS
+                が異なると、フレーム送りやフレーム番号の表示がビデオの実際のフレームと一致しない場合があります。</p>
+                <h3 id="音量コントロール">音量コントロール</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge002.png"
+                alt="image" /></p>
+                <p>右側にミュートボタンと音量スライダーがあります。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>コントロール</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>ミュートボタン</td>
+                <td>音声のオン/オフを切り替え</td>
+                </tr>
+                <tr>
+                <td>音量スライダー</td>
+                <td>音量を 0〜100 の範囲で調整</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2
+                id="キーボードショートカット">キーボードショートカット</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>キー</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Space</td>
+                <td>再生 / 一時停止の切り替え</td>
+                </tr>
+                <tr>
+                <td>Right / Up</td>
+                <td>次のフレームに進む</td>
+                </tr>
+                <tr>
+                <td>Left / Down</td>
+                <td>前のフレームに戻る</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: Maya Sync
+                が有効な場合、キーボードショートカットは無効になります。</p>
+                </blockquote>
+                <h2 id="設定の保存">設定の保存</h2>
+                <p>ウィンドウを閉じる際、以下の設定が自動的に保存され、次回起動時に復元されます。</p>
+                <ul>
+                <li>音量</li>
+                <li>ミュート状態</li>
+                <li>ループ再生の有効/無効</li>
+                <li>再生速度</li>
+                </ul>
+                <h2
+                id="対応フォーマットの拡張">対応フォーマットの拡張</h2>
+                <p>Sync Player は Qt の QMediaPlayer
+                を使用しており、再生可能なフォーマットは OS
+                のメディアバックエンドに依存します。</p>
+                <h3 id="windows">Windows</h3>
+                <p>Windows では <strong>Windows Media Foundation
+                (WMF)</strong> がバックエンドとして使用されます。標準で
+                mp4 (H.264)、wmv、avi
+                などに対応していますが、追加のコーデックをインストールすることで対応フォーマットを増やすことができます。</p>
+                <table>
+                <colgroup>
+                <col style="width: 73%" />
+                <col style="width: 26%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>コーデックパック</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><a href="https://codecguide.com/">K-Lite Codec
+                Pack</a></td>
+                <td>幅広いフォーマットに対応する定番コーデックパック。Basic
+                版で十分です</td>
+                </tr>
+                <tr>
+                <td><a
+                href="https://github.com/Nevcairiel/LAVFilters">LAV
+                Filters</a></td>
+                <td>FFmpeg ベースの DirectShow フィルター。K-Lite
+                にも同梱されています</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>コーデックパックをインストールすると、WebM
+                (VP9)、MKV、HEVC (H.265)
+                など、標準では再生できないフォーマットも WMF
+                経由で再生可能になります。</p>
+                <blockquote>
+                <p><strong>Note</strong>:
+                コーデックパックのインストール後、Maya
+                の再起動が必要です。</p>
+                </blockquote>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>ビデオの読み込みには Windows Media Foundation (WMF)
+                バックエンドが使用されます。まれにバックエンドが応答しなくなる場合がありますが、ツールが自動的にプレイヤーを再作成してリトライします</li>
+                <li>ビデオの読み込みが 10
+                秒以内に完了しない場合、タイムアウトとなりプレースホルダー画面に戻ります</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

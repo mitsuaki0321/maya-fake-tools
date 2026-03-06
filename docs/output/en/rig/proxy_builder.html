@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy Builder - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Build proxy geometry for layout rigs">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/rig/proxy_builder.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Rig</li>
+                        <li class="active">Proxy Builder</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#workflow"
+                    id="toc-workflow">Workflow</a>
+                    <ul>
+                    <li><a href="#cutting-the-model"
+                    id="toc-cutting-the-model">1. Cutting the
+                    Model</a></li>
+                    <li><a href="#assigning-pieces-to-bones"
+                    id="toc-assigning-pieces-to-bones">2. Assigning
+                    Pieces to Bones</a></li>
+                    <li><a href="#finalizing-the-model"
+                    id="toc-finalizing-the-model">3. Finalizing the
+                    Model</a></li>
+                    </ul></li>
+                    <li><a href="#plane-tab" id="toc-plane-tab">Plane
+                    Tab</a>
+                    <ul>
+                    <li><a href="#create-plane-at-joint"
+                    id="toc-create-plane-at-joint">Create Plane at
+                    Joint</a></li>
+                    <li><a href="#mirror-plane"
+                    id="toc-mirror-plane">Mirror Plane</a></li>
+                    </ul></li>
+                    <li><a href="#design-principles"
+                    id="toc-design-principles">Design
+                    Principles</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Proxy Builder</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Proxy Builder is a tool for splitting a character
+                model into per-bone pieces and assembling proxy geometry
+                that follows each bone. It is used for creating
+                simplified geometry for layout rigs and game
+                engines.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image000.png"
+                alt="image" /></p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or using the
+                following command:</p>
+                <pre class="python"><code>import faketools.tools.rig.proxy_builder.ui
+faketools.tools.rig.proxy_builder.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/rig/proxy_builder/image001.png"
+                alt="image" /></p>
+                <h2 id="workflow">Workflow</h2>
+                <p>The expected basic workflow is as follows:</p>
+                <ol type="1">
+                <li><strong>Cutting the model</strong> — Split the mesh
+                into per-bone pieces using weight boundaries or cutter
+                planes</li>
+                <li><strong>Assigning pieces to bones</strong> — Assign
+                each piece to a bone, generating groups with
+                parentConstraints</li>
+                <li><strong>Finalizing the model</strong> — Combine
+                geometry within per-bone groups into the final form</li>
+                </ol>
+                <h3 id="cutting-the-model">1. Cutting the Model</h3>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-1.png"
+                alt="image" /></p>
+                <p>Split the mesh into per-bone pieces using weight
+                boundaries or cutter planes.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>Activate the <code>Cut</code> tab in the
+                tool.</p></li>
+                <li><p>Register the model(s) to cut in
+                <code>Source Meshes</code>.</p></li>
+                <li><p>In <code>Cut Method</code>, choose whether to cut
+                by weight boundaries (<code>By Weights</code>) or by
+                cutter planes (<code>By Planes</code>).</p>
+                <ul>
+                <li><code>By Weights</code>: Cuts the mesh at skin
+                weight boundaries. Only works when the meshes registered
+                in <code>Source Meshes</code> have skin weights
+                assigned.</li>
+                <li><code>By Planes</code>: Cuts the model using cutter
+                planes (mesh or NURBS surface). Cutter planes can also
+                be created from the <code>Plane</code> tab.</li>
+                </ul></li>
+                <li><p>Click the <code>Cut</code> button to cut the
+                model. The cut pieces are generated under
+                <strong>piece_grp</strong>.<br />
+                <em>To work on a duplicate of the model, enable the
+                <code>Keep Original Mesh</code> checkbox before clicking
+                <code>Cut</code>.</em></p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h3 id="assigning-pieces-to-bones">2. Assigning Pieces
+                to Bones</h3>
+                <p><img
+                src="../../images/rig/proxy_builder/image003-1.png"
+                alt="image" /></p>
+                <p>Assign each piece to a bone, generating groups with
+                parentConstraints.<br />
+                The purpose is to verify that each piece has been
+                correctly cut to correspond to its skeleton.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image002-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>Activate the <code>Assign</code> tab in the
+                tool.</p></li>
+                <li><p>List the cut pieces in the upper list. You can
+                bulk-load pieces from the group set in
+                <code>Piece Group</code> using
+                <code>Load</code>.</p></li>
+                <li><p>Next, configure how to distribute the cut pieces
+                to each skeleton. Select the method from
+                <code>Assign Method</code>.</p>
+                <ul>
+                <li><code>By Weights</code>: Distributes pieces based on
+                the skin weight coverage of the geometry set in
+                <code>Reference Mesh</code>.</li>
+                <li><code>By Bones</code>: Distributes pieces based on
+                the distance between each geometry and the bone
+                segments.</li>
+                </ul></li>
+                <li><p>Register the target bones in the
+                <code>Joints</code> list. Required for
+                <code>By Bones</code>. For <code>By Weights</code>, if
+                the list is empty, bones are automatically determined
+                from the skinCluster node.</p></li>
+                <li><p>Click the <code>Assign &amp; Create Groups</code>
+                button. Each piece is grouped per bone.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image003-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h3 id="finalizing-the-model">3. Finalizing the
+                Model</h3>
+                <p>Combine geometry within per-bone groups into the
+                final form.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image004-0.png"
+                alt="image" /></p>
+                <ol type="1">
+                <li><p>Activate the <code>Finalize</code> tab in the
+                tool.</p></li>
+                <li><p>Set the groups generated by the
+                <code>Assign</code> tab (proxy_grp) in
+                <code>Source Group</code> and click
+                <code>Load</code>.</p></li>
+                <li><p>Select the combine method for each bone’s
+                geometry from <code>Combine Mode</code>.</p>
+                <ul>
+                <li><code>Single Mesh per Joint</code>: Combines pieces
+                into a single mesh as-is.</li>
+                <li><code>Per Shader (shape parent)</code>: Combines
+                only pieces with the same shader, then parents the
+                separate shader shapes under a single transform.</li>
+                <li><em><code>Per Shader (shape parent)</code> will
+                produce an error if multiple shaders are assigned within
+                the same shell.</em></li>
+                </ul></li>
+                <li><p>Click the <code>Finalize</code> button to
+                generate the combined models.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image004-2.png"
+                alt="image" /></p></li>
+                </ol>
+                <h2 id="plane-tab">Plane Tab</h2>
+                <p>A helper tool for creating and mirroring cutter
+                planes used with the <code>By Planes</code> option in
+                the <code>Cut</code> tab.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image005.png"
+                alt="image" /></p>
+                <h3 id="create-plane-at-joint">Create Plane at
+                Joint</h3>
+                <p>Creates a cutter plane at a joint’s position.<br />
+                The plane name is automatically generated from the joint
+                name (e.g., <code>LeftArm_cut_plane</code>).</p>
+                <p>Configure the options, select the joint(s) where you
+                want to create cut planes (multiple selection
+                supported), and execute <code>Create Plane</code>.</p>
+                <p><img
+                src="../../images/rig/proxy_builder/image006.png"
+                alt="image" /></p>
+                <h4 id="basic-settings">Basic Settings</h4>
+                <ul>
+                <li><strong>Target Mesh</strong>: Select a reference
+                mesh for automatic size calculation and click
+                <code>Set</code> (optional). After setting, use
+                <code>ON/OFF</code> to toggle whether to reference
+                it.</li>
+                </ul>
+                <h4 id="plane-type">Plane Type</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>Type</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>NURBS</strong></td>
+                <td>Creates a NURBS plane</td>
+                </tr>
+                <tr>
+                <td><strong>Poly</strong></td>
+                <td>Creates a polygon plane</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><em>For polygons, cutting occurs per face, so use the
+                lowest resolution polygon possible. Polygons with more
+                than 5 faces will produce an error.</em></p>
+                <h4 id="axis">Axis</h4>
+                <p>Select the reference axis for the plane’s normal
+                direction (X / Y / Z).</p>
+                <h4 id="rotation-mode">Rotation Mode</h4>
+                <p>Select how the plane’s rotation (normal direction) is
+                determined.</p>
+                <table>
+                <colgroup>
+                <col style="width: 37%" />
+                <col style="width: 62%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Mode</th>
+                <th>Behavior</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>Joint</strong></td>
+                <td>Uses the joint’s world rotation directly</td>
+                </tr>
+                <tr>
+                <td><strong>Aim</strong></td>
+                <td>Automatically calculates the normal direction based
+                on Aim Target settings</td>
+                </tr>
+                <tr>
+                <td><strong>Manual</strong></td>
+                <td>Manually enter rotation values</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="aim-target-when-rotation-mode-is-aim">Aim Target
+                (when Rotation Mode is Aim)</h4>
+                <table>
+                <colgroup>
+                <col style="width: 44%" />
+                <col style="width: 55%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Option</th>
+                <th>Behavior</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><strong>Auto</strong></td>
+                <td>Aims toward the child joint if there is exactly one;
+                otherwise aims away from the parent</td>
+                </tr>
+                <tr>
+                <td><strong>Parent</strong></td>
+                <td>Aims away from the parent joint (bone progression
+                direction)</td>
+                </tr>
+                <tr>
+                <td><strong>Parent &gt; Child</strong></td>
+                <td>Aims from the parent joint toward the child
+                joint</td>
+                </tr>
+                </tbody>
+                </table>
+                <ul>
+                <li><strong>Aim Joint</strong>: Explicitly specify a
+                target joint for aiming (optional). When set, the Aim
+                Target selection is ignored.</li>
+                </ul>
+                <p><em>When searching for child joints, those with the
+                <code>io</code> (intermediateObject) attribute set to
+                <code>True</code> are excluded.</em></p>
+                <h4 id="size-scale">Size Scale</h4>
+                <p>When Target Mesh is set, automatic size calculation
+                via raycasting is performed. Size Scale is a multiplier
+                applied to the result.</p>
+                <h3 id="mirror-plane">Mirror Plane</h3>
+                <p>Mirrors the selected plane(s) along the specified
+                axis. The mirrored name is automatically generated based
+                on left/right patterns (from shared config
+                <code>mirror_patterns</code>).</p>
+                <ul>
+                <li><strong>Mirror Axis</strong>: Axis to mirror along
+                (X / Y / Z)</li>
+                <li>Select the plane(s) and click
+                <code>Mirror</code></li>
+                </ul>
+                <h2 id="design-principles">Design Principles</h2>
+                <ul>
+                <li><strong>Framework-independent</strong>: Uses only
+                standard Maya operations. Does not depend on any
+                specific rig framework’s API or naming conventions</li>
+                <li><strong>Verifiable between steps</strong>: Results
+                of each step can be reviewed and adjusted before
+                proceeding to the next</li>
+                <li><strong>Loosely coupled steps</strong>: Minimizes
+                dependencies between steps, allowing you to start from
+                any step</li>
+                <li><strong>Binding without tool API
+                dependency</strong>: The relationship between bones and
+                geometry is readable from the scene structure (naming +
+                parentConstraint)</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

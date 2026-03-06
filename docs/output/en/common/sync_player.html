@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Player - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Video player with Maya timeline sync support">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index_en.html">FakeTools Help</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../ja/common/sync_player.html" class="lang-switch-btn">日本語</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index_en.html">Home</a></li>
+                        <li>Common</li>
+                        <li class="active">Sync Player</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>Table of Contents</h2>
+                    <ul>
+                    <li><a href="#overview"
+                    id="toc-overview">Overview</a>
+                    <ul>
+                    <li><a href="#supported-formats"
+                    id="toc-supported-formats">Supported
+                    Formats</a></li>
+                    </ul></li>
+                    <li><a href="#how-to-launch"
+                    id="toc-how-to-launch">How to Launch</a></li>
+                    <li><a href="#ui-layout" id="toc-ui-layout">UI
+                    Layout</a></li>
+                    <li><a href="#basic-usage"
+                    id="toc-basic-usage">Basic Usage</a>
+                    <ul>
+                    <li><a href="#loading-a-video-file"
+                    id="toc-loading-a-video-file">Loading a Video
+                    File</a></li>
+                    <li><a href="#playback-controls"
+                    id="toc-playback-controls">Playback
+                    Controls</a></li>
+                    <li><a href="#seek-bar" id="toc-seek-bar">Seek
+                    Bar</a></li>
+                    <li><a href="#timeframe-display"
+                    id="toc-timeframe-display">Time/Frame
+                    Display</a></li>
+                    </ul></li>
+                    <li><a href="#control-bar"
+                    id="toc-control-bar">Control Bar</a>
+                    <ul>
+                    <li><a href="#playback-speed"
+                    id="toc-playback-speed">Playback Speed</a></li>
+                    <li><a href="#loop-playback"
+                    id="toc-loop-playback">Loop Playback</a></li>
+                    <li><a href="#maya-sync-timeline-synchronization"
+                    id="toc-maya-sync-timeline-synchronization">Maya
+                    Sync (Timeline Synchronization)</a></li>
+                    <li><a href="#volume-controls"
+                    id="toc-volume-controls">Volume Controls</a></li>
+                    </ul></li>
+                    <li><a href="#keyboard-shortcuts"
+                    id="toc-keyboard-shortcuts">Keyboard
+                    Shortcuts</a></li>
+                    <li><a href="#settings-persistence"
+                    id="toc-settings-persistence">Settings
+                    Persistence</a></li>
+                    <li><a href="#extending-supported-formats"
+                    id="toc-extending-supported-formats">Extending
+                    Supported Formats</a>
+                    <ul>
+                    <li><a href="#windows"
+                    id="toc-windows">Windows</a></li>
+                    </ul></li>
+                    <li><a href="#notes" id="toc-notes">Notes</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">Sync Player</h1>
+                
+                <h2 id="overview">Overview</h2>
+                <p>Sync Player is a tool for playing video files within
+                Maya. In addition to functioning as a standard video
+                player, it features <strong>Maya timeline
+                synchronization</strong>, allowing you to review
+                reference footage while working on animations.</p>
+                <h3 id="supported-formats">Supported Formats</h3>
+                <p>mov, avi, mp4, wmv</p>
+                <h2 id="how-to-launch">How to Launch</h2>
+                <p>Launch the tool from the dedicated menu or using the
+                following command:</p>
+                <pre class="python"><code>import faketools.tools.common.sync_player.ui
+faketools.tools.common.sync_player.ui.show_ui()</code></pre>
+                <p><img
+                src="../../images/common/sync_player/iamge001.png"
+                alt="image" /></p>
+                <h2 id="ui-layout">UI Layout</h2>
+                <p>The window consists of the following elements:</p>
+                <table>
+                <colgroup>
+                <col style="width: 31%" />
+                <col style="width: 68%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Area</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Video display area</td>
+                <td>Displays the video. A placeholder is shown when no
+                video is loaded</td>
+                </tr>
+                <tr>
+                <td>Time/frame display</td>
+                <td>Shows the current playback position, total duration,
+                and frame numbers</td>
+                </tr>
+                <tr>
+                <td>FPS display</td>
+                <td>Shows the frame rate of the loaded video</td>
+                </tr>
+                <tr>
+                <td>Seek bar</td>
+                <td>Slider for controlling the playback position</td>
+                </tr>
+                <tr>
+                <td>Control bar</td>
+                <td>Buttons for playback controls and various
+                settings</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="basic-usage">Basic Usage</h2>
+                <h3 id="loading-a-video-file">Loading a Video File</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge005.png"
+                alt="image" /></p>
+                <p>Open a video file using the following method:</p>
+                <ul>
+                <li><strong>Double-click</strong> the video display area
+                to open a file dialog</li>
+                <li>Double-click is blocked while a video is
+                playing</li>
+                </ul>
+                <blockquote>
+                <p><strong>Note</strong>: Double-click file loading is
+                disabled when Maya Sync is active.</p>
+                </blockquote>
+                <h3 id="playback-controls">Playback Controls</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge004.png"
+                alt="image" /></p>
+                <p>Use the center buttons on the control bar for
+                playback operations.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Button</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Previous frame</td>
+                <td>Step back one frame</td>
+                </tr>
+                <tr>
+                <td>Play / Pause</td>
+                <td>Toggle between play and pause</td>
+                </tr>
+                <tr>
+                <td>Next frame</td>
+                <td>Step forward one frame</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="seek-bar">Seek Bar</h3>
+                <p>Drag the seek bar to jump to any playback
+                position.</p>
+                <ul>
+                <li>When paused, dragging the seek bar temporarily
+                enters a playback state to update the video frames.
+                Releasing the slider returns to the paused state.</li>
+                </ul>
+                <h3 id="timeframe-display">Time/Frame Display</h3>
+                <p>Playback information is shown above the seek bar.</p>
+                <pre><code>MM:SS / MM:SS    [ current frame / total frames ]</code></pre>
+                <h2 id="control-bar">Control Bar</h2>
+                <p><img
+                src="../../images/common/sync_player/iamge003.png"
+                alt="image" /></p>
+                <h3 id="playback-speed">Playback Speed</h3>
+                <p>Select the playback speed from the dropdown on the
+                left.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Speed</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>0.25x</td>
+                <td>Quarter speed</td>
+                </tr>
+                <tr>
+                <td>0.5x</td>
+                <td>Half speed</td>
+                </tr>
+                <tr>
+                <td>0.75x</td>
+                <td>Three-quarter speed</td>
+                </tr>
+                <tr>
+                <td>1.0x</td>
+                <td>Normal speed (default)</td>
+                </tr>
+                <tr>
+                <td>1.25x</td>
+                <td>1.25x speed</td>
+                </tr>
+                <tr>
+                <td>1.5x</td>
+                <td>1.5x speed</td>
+                </tr>
+                <tr>
+                <td>2.0x</td>
+                <td>Double speed</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="loop-playback">Loop Playback</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/loop_off.svg"
+                alt="image" /> button to automatically restart playback
+                from the beginning when the video reaches the end.</p>
+                <p>When loop is enabled, the button icon changes to <img
+                src="../../images/common/sync_player/loop_on.svg"
+                alt="image" />.</p>
+                <h3 id="maya-sync-timeline-synchronization">Maya Sync
+                (Timeline Synchronization)</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/sync_off.svg"
+                alt="image" /> button to enable Maya timeline
+                synchronization mode.</p>
+                <p>When sync is enabled, the button icon changes to <img
+                src="../../images/common/sync_player/sync_on.svg"
+                alt="image" />.</p>
+                <h4 id="sync-mode-behavior">Sync Mode Behavior</h4>
+                <ul>
+                <li><strong>When sync is enabled</strong>: The video
+                playback position follows Maya’s timeline
+                <ul>
+                <li>Playing the Maya timeline also plays the video</li>
+                <li>Stopping Maya playback pauses the video</li>
+                <li>Scrubbing (dragging) the timeline seeks the video to
+                the corresponding frame</li>
+                </ul></li>
+                <li><strong>When sync is disabled</strong>: Operates as
+                a standalone video player</li>
+                </ul>
+                <h4 id="control-restrictions-during-sync">Control
+                Restrictions During Sync</h4>
+                <p>While sync mode is active, the following controls are
+                disabled:</p>
+                <ul>
+                <li>Play / Pause button</li>
+                <li>Frame forward / backward buttons</li>
+                <li>Playback speed changes</li>
+                <li>Loop toggle</li>
+                <li>Seek bar</li>
+                </ul>
+                <p>This is because video playback is fully controlled by
+                Maya’s timeline.</p>
+                <h4 id="fps-mismatch-warning">FPS Mismatch Warning</h4>
+                <p>When enabling sync, a warning message is displayed if
+                the video’s FPS differs from the Maya scene’s FPS. When
+                FPS values differ, frame stepping and frame number
+                display may not match the video’s actual frames.</p>
+                <h3 id="volume-controls">Volume Controls</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge002.png"
+                alt="image" /></p>
+                <p>The mute button and volume slider are on the right
+                side.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Control</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Mute button</td>
+                <td>Toggle audio on/off</td>
+                </tr>
+                <tr>
+                <td>Volume slider</td>
+                <td>Adjust volume from 0 to 100</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>Key</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Space</td>
+                <td>Toggle play / pause</td>
+                </tr>
+                <tr>
+                <td>Right / Up</td>
+                <td>Step to next frame</td>
+                </tr>
+                <tr>
+                <td>Left / Down</td>
+                <td>Step to previous frame</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: Keyboard shortcuts are
+                disabled when Maya Sync is active.</p>
+                </blockquote>
+                <h2 id="settings-persistence">Settings Persistence</h2>
+                <p>The following settings are automatically saved when
+                the window is closed and restored on next launch:</p>
+                <ul>
+                <li>Volume</li>
+                <li>Mute state</li>
+                <li>Loop playback on/off</li>
+                <li>Playback speed</li>
+                </ul>
+                <h2 id="extending-supported-formats">Extending Supported
+                Formats</h2>
+                <p>Sync Player uses Qt’s QMediaPlayer, so the playable
+                formats depend on the OS media backend.</p>
+                <h3 id="windows">Windows</h3>
+                <p>On Windows, <strong>Windows Media Foundation
+                (WMF)</strong> is used as the backend. It supports mp4
+                (H.264), wmv, avi, etc. by default, but you can extend
+                format support by installing additional codecs.</p>
+                <table>
+                <colgroup>
+                <col style="width: 48%" />
+                <col style="width: 52%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>Codec Pack</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td><a href="https://codecguide.com/">K-Lite Codec
+                Pack</a></td>
+                <td>A popular codec pack with broad format support. The
+                Basic edition is sufficient</td>
+                </tr>
+                <tr>
+                <td><a
+                href="https://github.com/Nevcairiel/LAVFilters">LAV
+                Filters</a></td>
+                <td>FFmpeg-based DirectShow filters. Also bundled with
+                K-Lite</td>
+                </tr>
+                </tbody>
+                </table>
+                <p>Installing a codec pack enables playback of formats
+                such as WebM (VP9), MKV, and HEVC (H.265) that are not
+                supported by default, via WMF.</p>
+                <blockquote>
+                <p><strong>Note</strong>: Maya must be restarted after
+                installing a codec pack.</p>
+                </blockquote>
+                <h2 id="notes">Notes</h2>
+                <ul>
+                <li>Video loading uses the Windows Media Foundation
+                (WMF) backend. In rare cases the backend may become
+                unresponsive, but the tool automatically recreates the
+                player and retries</li>
+                <li>If video loading does not complete within 10
+                seconds, it times out and returns to the placeholder
+                screen</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>
