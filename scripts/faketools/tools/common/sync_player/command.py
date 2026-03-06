@@ -15,6 +15,7 @@ import maya.cmds as cmds
 from ....lib_ui.qt_compat import (
     QMediaPlayer,
     QObject,
+    QTimer,
     QUrl,
     QVideoWidget,
     Signal,
@@ -34,6 +35,33 @@ SUPPORTED_FORMATS = (".mov", ".avi", ".mp4", ".wmv")
 VIDEO_FILTER = "Video Files (*.mov *.avi *.mp4 *.wmv);;All Files (*)"
 
 DEFAULT_FPS = 24.0
+
+
+def _media_status_name(status) -> str:
+    """Get human-readable name for a QMediaPlayer.MediaStatus value."""
+    if is_pyside2():
+        return {
+            QMediaPlayer.UnknownMediaStatus: "UnknownMediaStatus",
+            QMediaPlayer.NoMedia: "NoMedia",
+            QMediaPlayer.LoadingMedia: "LoadingMedia",
+            QMediaPlayer.LoadedMedia: "LoadedMedia",
+            QMediaPlayer.StalledMedia: "StalledMedia",
+            QMediaPlayer.BufferingMedia: "BufferingMedia",
+            QMediaPlayer.BufferedMedia: "BufferedMedia",
+            QMediaPlayer.EndOfMedia: "EndOfMedia",
+            QMediaPlayer.InvalidMedia: "InvalidMedia",
+        }.get(status, f"Unknown({status})")
+    ms = QMediaPlayer.MediaStatus
+    return {
+        ms.NoMedia: "NoMedia",
+        ms.LoadingMedia: "LoadingMedia",
+        ms.LoadedMedia: "LoadedMedia",
+        ms.StalledMedia: "StalledMedia",
+        ms.BufferingMedia: "BufferingMedia",
+        ms.BufferedMedia: "BufferedMedia",
+        ms.EndOfMedia: "EndOfMedia",
+        ms.InvalidMedia: "InvalidMedia",
+    }.get(status, f"Unknown({status})")
 
 
 def format_time(ms: int) -> str:
@@ -86,18 +114,49 @@ class VideoPlayerCore(QObject):
         self._loop = False
         self._fps = DEFAULT_FPS
         self._pending_pause = False
+        self._loaded_path: str = ""
+        self._retry_count = 0
+        self._verifying = False
 
+        self._player: QMediaPlayer | None = None
+        self._audio_output = None
+        self._init_player()
+
+    # ------------------------------------------------------------------
+    # Player lifecycle
+    # ------------------------------------------------------------------
+
+    def _init_player(self) -> None:
+        """Create a QMediaPlayer and wire up all signals."""
         player, audio_output = create_media_player(self)
-        self._player: QMediaPlayer = player
+        self._player = player
         self._audio_output = audio_output
 
-        self._player.setVideoOutput(video_widget)
+        self._player.setVideoOutput(self._video_widget)
 
         self._player.positionChanged.connect(self._on_position_changed)
         self._player.durationChanged.connect(self._on_duration_changed)
         connect_state_changed(self._player, self._on_state_changed)
-
         self._player.mediaStatusChanged.connect(self._on_media_status_changed)
+
+        if is_pyside2():
+            self._player.error.connect(self._on_player_error)
+        else:
+            self._player.errorOccurred.connect(self._on_player_error_occurred)
+
+    def _recreate_player(self) -> None:
+        """Destroy the current QMediaPlayer and create a fresh instance.
+
+        Used to recover from WMF backend stalls where the player becomes
+        permanently unresponsive despite correct API-level state transitions.
+        """
+        if self._player is not None:
+            self._player.blockSignals(True)
+            self._player.stop()
+            self._player.deleteLater()
+
+        logger.debug("Recreating QMediaPlayer instance")
+        self._init_player()
 
     # ------------------------------------------------------------------
     # Media loading
@@ -106,15 +165,42 @@ class VideoPlayerCore(QObject):
     def load(self, path: str) -> None:
         """Load a video file.
 
-        Starts playback internally then pauses once buffered, so the player
-        is in a seekable (paused) state with the first frame displayed.
+        Stops any current playback, sets the new source, then plays briefly
+        so the player reaches a seekable (paused) state with the first frame.
 
         Args:
             path: Absolute file path.
         """
-        set_media_source(self._player, path)
+        # Reset retry counter when loading a new file (not an internal retry).
+        if path != self._loaded_path:
+            self._retry_count = 0
+        self._loaded_path = path
+
+        # Stop first to ensure a clean pipeline state.
+        self._player.stop()
+
+        # Reconnect video output to force Qt to refresh the rendering
+        # pipeline.  On Windows the D3D11 video surface can become stale
+        # between loads, resulting in audio/metadata working but no frames
+        # being rendered (black screen).
+        self._player.setVideoOutput(self._video_widget)
+
+        # Set pending_pause BEFORE set_media_source so that synchronous
+        # BufferedMedia callbacks (common for cached local files) can see it.
         self._pending_pause = True
-        self._player.play()
+        self._verifying = False
+
+        logger.debug("load(): setting source (retry=%d): %s", self._retry_count, path)
+        set_media_source(self._player, path)
+
+        # If BufferedMedia already fired synchronously during set_media_source,
+        # _pending_pause is now False and the player is paused at frame 0.
+        if self._pending_pause:
+            self._player.play()
+            logger.debug("load(): play() called (async buffering)")
+        else:
+            logger.debug("load(): pending pause already completed (sync buffering)")
+
         logger.info("Loaded: %s", path)
 
     def has_media(self) -> bool:
@@ -269,6 +355,16 @@ class VideoPlayerCore(QObject):
         - Pending pause: pause as soon as media is buffered after load().
         - Loop: restart from beginning when end of media is reached.
         """
+        status_name = _media_status_name(status)
+        state = get_playback_state(self._player)
+        logger.debug(
+            "MediaStatus: %s | playback: %s | pending_pause: %s | duration: %d",
+            status_name,
+            state,
+            self._pending_pause,
+            self._player.duration(),
+        )
+
         # Detect buffered state to complete pending pause
         if is_pyside2():
             buffered = status == QMediaPlayer.BufferedMedia
@@ -279,16 +375,72 @@ class VideoPlayerCore(QObject):
 
         if self._pending_pause and buffered:
             self._pending_pause = False
-            self._player.pause()
+            state = get_playback_state(self._player)
+            if state == "playing":
+                self._player.pause()
             self._player.setPosition(0)
+            logger.debug("Pending pause completed (was %s): at position 0", state)
             video_fps = self.get_video_fps()
             if video_fps is not None:
                 self.video_fps_detected.emit(video_fps)
+            # Schedule backend health check.
+            QTimer.singleShot(300, self._verify_backend)
             return
 
         if self._loop and end_of_media:
             self._player.setPosition(0)
             self._player.play()
+
+    # ------------------------------------------------------------------
+    # Backend health check — detect WMF silent stall and retry once
+    # ------------------------------------------------------------------
+
+    def _verify_backend(self) -> None:
+        """Play briefly to check whether the backend actually produces frames."""
+        if self._pending_pause or not self.has_media():
+            return  # Another load started; skip stale verification.
+        self._verifying = True
+        self._player.play()
+        QTimer.singleShot(200, self._check_backend)
+
+    def _check_backend(self) -> None:
+        """Evaluate whether position advanced during the verification play."""
+        if not self._verifying:
+            return  # Cancelled by a new load().
+        self._verifying = False
+        pos = self._player.position()
+        self._player.pause()
+
+        if pos > 0:
+            # Backend is alive.  Reset to frame 0.
+            self._player.setPosition(0)
+            logger.debug("Backend verification passed (pos=%d)", pos)
+            return
+
+        # Position stuck at 0 — backend is stalled.
+        if self._retry_count < 1:
+            self._retry_count += 1
+            logger.warning(
+                "Backend stall detected (pos=0), recreating player and "
+                "retrying load (%d): %s",
+                self._retry_count,
+                self._loaded_path,
+            )
+            self._recreate_player()
+            self.load(self._loaded_path)
+        else:
+            logger.error(
+                "Backend stall persists after player recreation: %s",
+                self._loaded_path,
+            )
+
+    def _on_player_error(self, error) -> None:
+        """Handle QMediaPlayer error (PySide2)."""
+        logger.error("Player error: %s - %s", error, self._player.errorString())
+
+    def _on_player_error_occurred(self, error, message: str) -> None:
+        """Handle QMediaPlayer errorOccurred (PySide6)."""
+        logger.error("Player error: %s - %s", error, message)
 
 
 # ----------------------------------------------------------------------

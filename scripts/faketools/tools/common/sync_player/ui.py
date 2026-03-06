@@ -23,6 +23,7 @@ from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
     QColor,
     QComboBox,
+    QEvent,
     QFrame,
     QHBoxLayout,
     QIcon,
@@ -30,7 +31,6 @@ from ....lib_ui.qt_compat import (
     QSize,
     QSizePolicy,
     QSlider,
-    QStackedWidget,
     Qt,
     QVBoxLayout,
     QVideoWidget,
@@ -162,14 +162,23 @@ class MainWindow(BaseMainWindow):
         left, _top, _right, _bottom = self.central_layout.getContentsMargins()
         self.central_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Stacked widget: page 0 = placeholder, page 1 = video
-        self._video_stack = QStackedWidget()
-        self._placeholder = _PlaceholderWidget(self)
+        # Video area — QVideoWidget is always visible so that its rendering
+        # surface (D3D11/RHI) stays initialised.  The placeholder is an
+        # overlay parented to the container and hidden when a video loads.
+        self._video_container = QWidget()
+        container_layout = QVBoxLayout(self._video_container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
         self._video_widget = _VideoDropWidget(self)
-        self._video_stack.addWidget(self._placeholder)  # index 0
-        self._video_stack.addWidget(self._video_widget)  # index 1
-        self._video_stack.setCurrentIndex(0)
-        self.central_layout.addWidget(self._video_stack, stretch=1)
+        container_layout.addWidget(self._video_widget)
+
+        # Placeholder overlay (parented to container, NOT in its layout)
+        self._placeholder = _PlaceholderWidget(self, parent=self._video_container)
+        self._placeholder.raise_()
+        self._video_container.installEventFilter(self)
+
+        self.central_layout.addWidget(self._video_container, stretch=1)
 
         # Player core + sync controller
         self._player_core = command.VideoPlayerCore(self._video_widget, parent=self)
@@ -405,9 +414,9 @@ class MainWindow(BaseMainWindow):
             path: Absolute file path.
         """
         if self._player_core:
+            self._placeholder.hide()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
-            self._video_stack.setCurrentIndex(1)
 
     # ------------------------------------------------------------------
     # Time display helper
@@ -614,6 +623,15 @@ class MainWindow(BaseMainWindow):
                 self._player_core.step_backward()
             return
         super().keyPressEvent(event)
+
+    # ------------------------------------------------------------------
+    # Event filter — keep placeholder overlay sized to video container
+    # ------------------------------------------------------------------
+
+    def eventFilter(self, watched, event):
+        if watched is self._video_container and event.type() == QEvent.Type.Resize:
+            self._placeholder.setGeometry(self._video_container.rect())
+        return super().eventFilter(watched, event)
 
     # ------------------------------------------------------------------
     # Lifecycle
