@@ -413,10 +413,8 @@ def _get_plane_surface_axes(
     is applied in world space. This function returns the two axes that lie on
     the plane surface after that rotation.
 
-    The returned axes match Maya's primitive UV convention:
-        - axis~Y: width=X, height=Z
-        - axis~X: width=Y, height=Z
-        - axis~Z: width=X, height=Y
+    The returned axes are derived via cross-product from the normal and a
+    reference-up vector, matching Maya's polyPlane/nurbsPlane UV convention.
 
     Args:
         rotation (tuple[float, float, float]): Euler rotation in degrees.
@@ -425,17 +423,13 @@ def _get_plane_surface_axes(
     Returns:
         tuple[om.MVector, om.MVector]: (width_axis, height_axis) matching Maya's plane UV layout.
     """
-    # Determine UV directions matching Maya's nurbsPlane / polyPlane convention
-    primary = _axis_to_primary(axis)
-    if primary == "x":
-        width_axis = om.MVector(0, 1, 0)
-        height_axis = om.MVector(0, 0, 1)
-    elif primary == "y":
-        width_axis = om.MVector(1, 0, 0)
-        height_axis = om.MVector(0, 0, 1)
-    else:
-        width_axis = om.MVector(1, 0, 0)
-        height_axis = om.MVector(0, 1, 0)
+    # Derive UV directions via cross-product, matching Maya's nurbsPlane / polyPlane convention
+    normal = om.MVector(*axis).normal()
+    ref_up = om.MVector(0, 1, 0)
+    if abs(normal * ref_up) > 0.9999:
+        ref_up = om.MVector(0, 0, 1)
+    width_axis = (normal ^ ref_up).normal()
+    height_axis = (width_axis ^ normal).normal()
 
     # Apply rotation
     euler = om.MEulerRotation(math.radians(rotation[0]), math.radians(rotation[1]), math.radians(rotation[2]))
