@@ -32,8 +32,6 @@ from ....lib_ui.qt_compat import (
 
 logger = getLogger(__name__)
 
-SUPPORTED_FORMATS = (".mov", ".avi", ".mp4", ".wmv")
-
 VIDEO_FILTER = "Video Files (*.mov *.avi *.mp4 *.wmv);;All Files (*)"
 
 DEFAULT_FPS = 24.0

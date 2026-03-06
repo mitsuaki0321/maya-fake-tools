@@ -37,6 +37,7 @@ from ....lib_ui.qt_compat import (
     QVideoWidget,
     QWidget,
     get_open_file_name,
+    get_playback_state,
 )
 from ....lib_ui.ui_utils import get_relative_size, scale_by_dpi
 from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton
@@ -94,6 +95,9 @@ class _VideoWidget(QVideoWidget):
         self._main_window = parent
 
     def mouseDoubleClickEvent(self, event):
+        sync = self._main_window._sync_controller
+        if sync is not None and sync.is_enabled:
+            return
         if self._main_window._is_playing():
             cmds.warning("Sync Player: Cannot open a new video while playing")
             return
@@ -386,8 +390,9 @@ class MainWindow(BaseMainWindow):
 
         ctrl_layout.addWidget(right_widget, stretch=1)
 
-        # Focus policy: only seek slider accepts keyboard focus
+        # Focus policy: all controls NoFocus so keyPressEvent handles shortcuts
         for widget in (
+            self._seek_slider,
             self._speed_combo,
             self._btn_loop,
             self._btn_sync,
@@ -405,10 +410,6 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-
-    def _is_playing(self) -> bool:
-        """Return True if a video is currently playing."""
-        return self._btn_play_pause.isChecked()
 
     def load_video(self, path: str) -> None:
         """Load a video file.
@@ -440,6 +441,10 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
     # Signal handlers — transport
     # ------------------------------------------------------------------
+
+    def _is_playing(self) -> bool:
+        """Return True if a video is currently playing."""
+        return self._btn_play_pause.isChecked()
 
     @error_handler
     def _on_open(self):
@@ -476,13 +481,10 @@ class MainWindow(BaseMainWindow):
     def _on_seek_pressed(self):
         self._seeking = True
         self._was_paused_before_seek = False
-        if self._player_core:
-            from ....lib_ui.qt_compat import get_playback_state
-
-            if get_playback_state(self._player_core.player) != "playing":
-                self._was_paused_before_seek = True
-                self._player_core.set_muted(True)
-                self._player_core.play()
+        if self._player_core and get_playback_state(self._player_core.player) != "playing":
+            self._was_paused_before_seek = True
+            self._player_core.set_muted(True)
+            self._player_core.play()
 
     def _on_seek_released(self):
         self._seeking = False
@@ -526,9 +528,13 @@ class MainWindow(BaseMainWindow):
     def _on_load_failed(self, message: str):
         self._load_timer.stop()
         self.unsetCursor()
+        self._video_widget.hide()
+        self._placeholder.show()
 
     def _on_load_timeout(self):
         self.unsetCursor()
+        self._video_widget.hide()
+        self._placeholder.show()
         om2.MGlobal.displayError("Sync Player: Video load timed out")
 
     # ------------------------------------------------------------------
