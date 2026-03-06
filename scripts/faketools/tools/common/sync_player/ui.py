@@ -10,6 +10,7 @@ from logging import getLogger
 import os
 from pathlib import Path
 
+import maya.api.OpenMaya as om2
 import maya.cmds as cmds
 
 from ....lib_ui import (
@@ -23,7 +24,6 @@ from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
     QColor,
     QComboBox,
-    QEvent,
     QFrame,
     QHBoxLayout,
     QIcon,
@@ -32,6 +32,7 @@ from ....lib_ui.qt_compat import (
     QSizePolicy,
     QSlider,
     Qt,
+    QTimer,
     QVBoxLayout,
     QVideoWidget,
     QWidget,
@@ -146,6 +147,10 @@ class MainWindow(BaseMainWindow):
         self._was_paused_before_seek = False
         self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
 
+        self._load_timer = QTimer(self)
+        self._load_timer.setSingleShot(True)
+        self._load_timer.timeout.connect(self._on_load_timeout)
+
         self._setup_ui()
 
         width = get_relative_size(self, width_ratio=3.0)[0]
@@ -162,21 +167,18 @@ class MainWindow(BaseMainWindow):
         left, _top, _right, _bottom = self.central_layout.getContentsMargins()
         self.central_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Video area — QVideoWidget is always visible so that its rendering
-        # surface (D3D11/RHI) stays initialised.  The placeholder is an
-        # overlay parented to the container and hidden when a video loads.
+        # Video area — placeholder shown until a video is loaded
         self._video_container = QWidget()
         container_layout = QVBoxLayout(self._video_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        self._video_widget = _VideoDropWidget(self)
-        container_layout.addWidget(self._video_widget)
+        self._placeholder = _PlaceholderWidget(self)
+        container_layout.addWidget(self._placeholder)
 
-        # Placeholder overlay (parented to container, NOT in its layout)
-        self._placeholder = _PlaceholderWidget(self, parent=self._video_container)
-        self._placeholder.raise_()
-        self._video_container.installEventFilter(self)
+        self._video_widget = _VideoDropWidget(self)
+        self._video_widget.hide()
+        container_layout.addWidget(self._video_widget)
 
         self.central_layout.addWidget(self._video_container, stretch=1)
 
@@ -186,6 +188,8 @@ class MainWindow(BaseMainWindow):
         self._player_core.duration_changed.connect(self._on_duration_changed)
         self._player_core.state_changed.connect(self._on_state_changed)
         self._player_core.video_fps_detected.connect(self._on_video_fps_detected)
+        self._player_core.video_ready.connect(self._on_video_ready)
+        self._player_core.load_failed.connect(self._on_load_failed)
         self._sync_controller = command.MayaSyncController(self._player_core)
 
         # -- bottom_widget: scrub + controls container --
@@ -414,7 +418,10 @@ class MainWindow(BaseMainWindow):
             path: Absolute file path.
         """
         if self._player_core:
+            self.setCursor(Qt.CursorShape.WaitCursor)
+            self._load_timer.start(10000)
             self._placeholder.hide()
+            self._video_widget.show()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
 
@@ -512,6 +519,18 @@ class MainWindow(BaseMainWindow):
 
     def _on_video_fps_detected(self, fps: float):
         self._fps_label.setText(f"{fps:.4g}fps")
+
+    def _on_video_ready(self):
+        self._load_timer.stop()
+        self.unsetCursor()
+
+    def _on_load_failed(self, message: str):
+        self._load_timer.stop()
+        self.unsetCursor()
+
+    def _on_load_timeout(self):
+        self.unsetCursor()
+        om2.MGlobal.displayError("Sync Player: Video load timed out")
 
     # ------------------------------------------------------------------
     # Signal handlers — loop / speed / volume / mute
@@ -623,15 +642,6 @@ class MainWindow(BaseMainWindow):
                 self._player_core.step_backward()
             return
         super().keyPressEvent(event)
-
-    # ------------------------------------------------------------------
-    # Event filter — keep placeholder overlay sized to video container
-    # ------------------------------------------------------------------
-
-    def eventFilter(self, watched, event):
-        if watched is self._video_container and event.type() == QEvent.Type.Resize:
-            self._placeholder.setGeometry(self._video_container.rect())
-        return super().eventFilter(watched, event)
 
     # ------------------------------------------------------------------
     # Lifecycle

@@ -453,6 +453,50 @@ def connect_state_changed(player: QMediaPlayer, callback) -> None:
         player.playbackStateChanged.connect(lambda _state: callback(player))
 
 
+def connect_frame_signal(player: "QMediaPlayer", video_widget: "QVideoWidget", callback) -> "QObject | None":
+    """Connect a callback to the video frame output signal.
+
+    Args:
+        player: QMediaPlayer instance.
+        video_widget: QVideoWidget receiving frames.
+        callback: Callable that receives a QVideoFrame.
+
+    Returns:
+        The signal source object (must be kept alive for PySide2 QVideoProbe),
+        or None if the connection failed.
+    """
+    if is_pyside2():
+        from PySide2.QtMultimedia import QVideoProbe
+
+        probe = QVideoProbe()
+        if not probe.setSource(player):
+            return None
+        probe.videoFrameProbed.connect(callback)
+        return probe
+    else:
+        sink = video_widget.videoSink()
+        if sink is None:
+            return None
+        sink.videoFrameChanged.connect(callback)
+        return sink
+
+
+def disconnect_frame_signal(source: "QObject", callback) -> None:
+    """Disconnect a callback from the video frame signal.
+
+    Args:
+        source: Object returned by :func:`connect_frame_signal`.
+        callback: The same callable passed to :func:`connect_frame_signal`.
+    """
+    try:
+        if is_pyside2():
+            source.videoFrameProbed.disconnect(callback)
+        else:
+            source.videoFrameChanged.disconnect(callback)
+    except RuntimeError:
+        pass  # Already disconnected
+
+
 def get_video_fps(player: "QMediaPlayer") -> "float | None":
     """Get the video's native frame rate from media metadata.
 

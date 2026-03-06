@@ -19,8 +19,10 @@ from ....lib_ui.qt_compat import (
     QUrl,
     QVideoWidget,
     Signal,
+    connect_frame_signal,
     connect_state_changed,
     create_media_player,
+    disconnect_frame_signal,
     get_playback_state,
     get_video_fps,
     is_pyside2,
@@ -107,6 +109,8 @@ class VideoPlayerCore(QObject):
     duration_changed = Signal(int)
     state_changed = Signal(str)
     video_fps_detected = Signal(float)
+    video_ready = Signal()
+    load_failed = Signal(str)
 
     def __init__(self, video_widget: QVideoWidget, parent: QObject | None = None):
         super().__init__(parent)
@@ -117,6 +121,10 @@ class VideoPlayerCore(QObject):
         self._loaded_path: str = ""
         self._retry_count = 0
         self._verifying = False
+
+        self._frame_source: QObject | None = None
+        self._stall_timer: QTimer | None = None
+        self._verify_phase = 0  # 0=idle, 1=waiting-for-frame, 2=waiting-for-frame-zero
 
         self._player: QMediaPlayer | None = None
         self._audio_output = None
@@ -131,8 +139,6 @@ class VideoPlayerCore(QObject):
         player, audio_output = create_media_player(self)
         self._player = player
         self._audio_output = audio_output
-
-        self._player.setVideoOutput(self._video_widget)
 
         self._player.positionChanged.connect(self._on_position_changed)
         self._player.durationChanged.connect(self._on_duration_changed)
@@ -150,6 +156,7 @@ class VideoPlayerCore(QObject):
         Used to recover from WMF backend stalls where the player becomes
         permanently unresponsive despite correct API-level state transitions.
         """
+        self._cleanup_verify()
         if self._player is not None:
             self._player.blockSignals(True)
             self._player.stop()
@@ -188,7 +195,7 @@ class VideoPlayerCore(QObject):
         # Set pending_pause BEFORE set_media_source so that synchronous
         # BufferedMedia callbacks (common for cached local files) can see it.
         self._pending_pause = True
-        self._verifying = False
+        self._cleanup_verify()
 
         logger.debug("load(): setting source (retry=%d): %s", self._retry_count, path)
         set_media_source(self._player, path)
@@ -396,55 +403,113 @@ class VideoPlayerCore(QObject):
     # ------------------------------------------------------------------
 
     def _verify_backend(self) -> None:
-        """Play briefly to check whether the backend actually produces frames."""
+        """Play and wait for actual frame output to confirm the backend works.
+
+        Uses QVideoProbe (PySide2) or QVideoSink.videoFrameChanged (PySide6)
+        to detect real frame decoding instead of relying on position changes.
+        Falls back to position-based detection if frame signals are unavailable.
+        """
         if self._pending_pause or not self.has_media():
             return  # Another load started; skip stale verification.
         self._verifying = True
-        self._player.play()
-        QTimer.singleShot(200, self._check_backend)
+        self._verify_phase = 1
 
-    def _check_backend(self) -> None:
-        """Evaluate whether position advanced during the verification play."""
+        self._frame_source = connect_frame_signal(self._player, self._video_widget, self._on_verify_frame)
+
+        self._player.play()
+
+        # Timeout fallback — if no frame signal fires, check position instead.
+        self._stall_timer = QTimer(self)
+        self._stall_timer.setSingleShot(True)
+        self._stall_timer.timeout.connect(self._on_verify_timeout)
+        self._stall_timer.start(500)
+
+    def _on_verify_frame(self, _frame) -> None:
+        """Handle a decoded video frame during backend verification.
+
+        Phase 1: First frame received proves the backend is alive.
+                 Seek to 0 so the renderer decodes frame 0.
+        Phase 2: A frame after the seek-to-0 confirms frame 0 is rendered.
+                 Pause and emit video_ready.
+        """
         if not self._verifying:
-            return  # Cancelled by a new load().
-        self._verifying = False
+            return
+
+        if self._verify_phase == 1:
+            self._verify_phase = 2
+            self._player.setPosition(0)
+            logger.debug("Backend verified: frame decoded, seeking to 0")
+        elif self._verify_phase == 2:
+            self._cleanup_verify()
+            self._player.pause()
+            self._player.setPosition(0)
+            logger.debug("Load complete: frame 0 rendered and paused")
+            self.video_ready.emit()
+
+    def _on_verify_timeout(self) -> None:
+        """Handle verification timeout — frame signal did not fire.
+
+        Falls back to position-based check: if position advanced the backend
+        is likely working (frame signal unsupported); otherwise stall/retry.
+        """
+        if not self._verifying:
+            return
+        self._cleanup_verify()
+
         pos = self._player.position()
         self._player.pause()
 
         if pos > 0:
-            # Backend is alive.  Reset to frame 0.
+            # Position advanced but no frame signal — proceed anyway.
             self._player.setPosition(0)
-            logger.debug("Backend verification passed (pos=%d)", pos)
+            logger.warning("Verify timeout but pos=%d; frame signal may not be supported", pos)
+            self.video_ready.emit()
             return
 
         # Position stuck at 0 — backend is stalled.
         if self._retry_count < 1:
             self._retry_count += 1
             logger.warning(
-                "Backend stall detected (pos=0), recreating player and "
-                "retrying load (%d): %s",
+                "Backend stall detected (pos=0), recreating player and retrying load (%d): %s",
                 self._retry_count,
                 self._loaded_path,
             )
             self._recreate_player()
             self.load(self._loaded_path)
         else:
+            msg = f"Sync Player: Failed to load video after retry: {self._loaded_path}"
             logger.error(
                 "Backend stall persists after player recreation: %s",
                 self._loaded_path,
             )
+            om2.MGlobal.displayError(msg)
+            self.load_failed.emit(msg)
+
+    def _cleanup_verify(self) -> None:
+        """Disconnect frame signal and cancel stall timer."""
+        self._verifying = False
+        self._verify_phase = 0
+        if self._frame_source is not None:
+            disconnect_frame_signal(self._frame_source, self._on_verify_frame)
+            self._frame_source = None
+        if self._stall_timer is not None:
+            self._stall_timer.stop()
+            self._stall_timer.deleteLater()
+            self._stall_timer = None
 
     def _on_player_error(self, error) -> None:
         """Handle QMediaPlayer error (PySide2)."""
         msg = f"Sync Player: {self._player.errorString()}"
         logger.error("Player error: %s - %s", error, self._player.errorString())
         om2.MGlobal.displayError(msg)
+        self.load_failed.emit(msg)
 
     def _on_player_error_occurred(self, error, message: str) -> None:
         """Handle QMediaPlayer errorOccurred (PySide6)."""
         msg = f"Sync Player: {message}"
         logger.error("Player error: %s - %s", error, message)
         om2.MGlobal.displayError(msg)
+        self.load_failed.emit(msg)
 
 
 # ----------------------------------------------------------------------
