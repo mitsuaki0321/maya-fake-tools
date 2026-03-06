@@ -386,6 +386,19 @@ class MainWindow(BaseMainWindow):
 
         ctrl_layout.addWidget(right_widget, stretch=1)
 
+        # Focus policy: only seek slider accepts keyboard focus
+        for widget in (
+            self._speed_combo,
+            self._btn_loop,
+            self._btn_sync,
+            self._btn_prev,
+            self._btn_play_pause,
+            self._btn_next,
+            self._btn_mute,
+            self._volume_slider,
+        ):
+            widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
         bottom_layout.addWidget(controls)
         self.central_layout.addWidget(bottom_widget)
 
@@ -628,16 +641,13 @@ class MainWindow(BaseMainWindow):
             return
         key = event.key()
         if key == Qt.Key.Key_Space:
-            if self._player_core:
-                self._player_core.toggle_play_pause()
+            self._btn_play_pause.toggle()
             return
-        if key == Qt.Key.Key_Right:
-            if self._player_core:
-                self._player_core.step_forward()
+        if key in (Qt.Key.Key_Right, Qt.Key.Key_Up):
+            self._btn_next.click()
             return
-        if key == Qt.Key.Key_Left:
-            if self._player_core:
-                self._player_core.step_backward()
+        if key in (Qt.Key.Key_Left, Qt.Key.Key_Down):
+            self._btn_prev.click()
             return
         super().keyPressEvent(event)
 
