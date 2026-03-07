@@ -171,9 +171,14 @@ class _LoopRangeBar(QWidget):
         h = self.height()
         x_a = self._value_to_pixel(self._loop_in_ms)
         x_b = self._value_to_pixel(self._loop_out_ms)
+        disabled = not self.isEnabled()
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Colors
+        accent = QColor("#555555") if disabled else QColor("#4A9EFF")
+        highlight = QColor(85, 85, 85, 60) if disabled else QColor(74, 158, 255, 90)
 
         # Rail line
         rail_h = max(1, int(scale_by_dpi(3, self)))
@@ -181,19 +186,16 @@ class _LoopRangeBar(QWidget):
         painter.fillRect(QRect(0, rail_y, w, rail_h), QColor("#2A2A2A"))
 
         # A-B highlight
-        painter.fillRect(QRect(x_a, rail_y, x_b - x_a, rail_h), QColor(74, 158, 255, 90))
+        painter.fillRect(QRect(x_a, rail_y, x_b - x_a, rail_h), highlight)
 
         # A line
         line_w = max(1, int(scale_by_dpi(2, self)))
-        pen_a = QPen(QColor("#4A9EFF"))
-        pen_a.setWidth(line_w)
-        painter.setPen(pen_a)
+        pen = QPen(accent)
+        pen.setWidth(line_w)
+        painter.setPen(pen)
         painter.drawLine(x_a, 0, x_a, h)
 
         # B line
-        pen_b = QPen(QColor("#4A9EFF"))
-        pen_b.setWidth(line_w)
-        painter.setPen(pen_b)
         painter.drawLine(x_b, 0, x_b, h)
 
         # A/B labels
@@ -204,9 +206,9 @@ class _LoopRangeBar(QWidget):
         painter.setFont(font)
 
         label_offset = int(scale_by_dpi(2, self))
-        painter.setPen(QPen(QColor("#4A9EFF")))
+        fm = painter.fontMetrics()
         painter.drawText(x_a + label_offset, font_size, "A")
-        painter.drawText(x_b + label_offset, font_size, "B")
+        painter.drawText(x_b - label_offset - fm.horizontalAdvance("B"), font_size, "B")
 
         painter.end()
 
@@ -381,13 +383,13 @@ class MainWindow(BaseMainWindow):
                 border-radius: {handle_r}px;
             }}
             QSlider::groove:horizontal:disabled {{
-                background: #1A1A1A;
+                background: #252525;
             }}
             QSlider::sub-page:horizontal:disabled {{
-                background: #1A1A1A;
+                background: #3A3A3A;
             }}
             QSlider::handle:horizontal:disabled {{
-                background: transparent;
+                background: #666666;
             }}
         """)
 
@@ -491,6 +493,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setToolTip("A-B Loop")
         self._btn_ab.setIconSize(btn_icon_size)
         self._btn_ab.setFixedSize(btn_size, btn_size)
+        self._btn_ab.setEnabled(False)
         self._btn_ab.toggled.connect(self._on_ab_toggled)
         left_layout.addWidget(self._btn_ab)
 
@@ -498,6 +501,7 @@ class MainWindow(BaseMainWindow):
         self._btn_loop.setToolTip("Loop")
         self._btn_loop.setIconSize(btn_icon_size)
         self._btn_loop.setFixedSize(btn_size, btn_size)
+        self._btn_loop.setEnabled(False)
         self._btn_loop.toggled.connect(self._on_loop_toggled)
         left_layout.addWidget(self._btn_loop)
 
@@ -505,6 +509,7 @@ class MainWindow(BaseMainWindow):
         self._btn_sync.setToolTip("Maya Sync")
         self._btn_sync.setIconSize(btn_icon_size)
         self._btn_sync.setFixedSize(btn_size, btn_size)
+        self._btn_sync.setEnabled(False)
         self._btn_sync.toggled.connect(self._on_sync_toggled)
         left_layout.addWidget(self._btn_sync)
 
@@ -746,15 +751,24 @@ class MainWindow(BaseMainWindow):
     def _on_video_ready(self):
         self._load_timer.stop()
         self.unsetCursor()
+        self._btn_ab.setEnabled(True)
+        self._btn_loop.setEnabled(True)
+        self._btn_sync.setEnabled(True)
 
     def _on_load_failed(self, message: str):
         self._load_timer.stop()
         self.unsetCursor()
+        self._btn_ab.setEnabled(False)
+        self._btn_loop.setEnabled(False)
+        self._btn_sync.setEnabled(False)
         self._video_widget.hide()
         self._placeholder.show()
 
     def _on_load_timeout(self):
         self.unsetCursor()
+        self._btn_ab.setEnabled(False)
+        self._btn_loop.setEnabled(False)
+        self._btn_sync.setEnabled(False)
         self._video_widget.hide()
         self._placeholder.show()
         om2.MGlobal.displayError("Sync Player: Video load timed out")
@@ -869,8 +883,6 @@ class MainWindow(BaseMainWindow):
         return {
             "volume": self._volume_slider.value(),
             "muted": self._btn_mute.isChecked(),
-            "loop": self._btn_loop.isChecked(),
-            "speed_index": self._speed_combo.currentIndex(),
             "frame_offset": self._offset_spin.value(),
         }
 
@@ -884,17 +896,6 @@ class MainWindow(BaseMainWindow):
         self._btn_mute.setChecked(muted)
         if self._player_core:
             self._player_core.set_muted(muted)
-
-        loop = data.get("loop", False)
-        self._btn_loop.setChecked(loop)
-        if self._player_core:
-            self._player_core.set_loop(loop)
-
-        speed_index = data.get("speed_index", _DEFAULT_SPEED_INDEX)
-        if 0 <= speed_index < len(_SPEED_VALUES):
-            self._speed_combo.setCurrentIndex(speed_index)
-            if self._player_core:
-                self._player_core.set_playback_rate(_SPEED_VALUES[speed_index])
 
         frame_offset = data.get("frame_offset", 0)
         self._offset_spin.setValue(frame_offset)
