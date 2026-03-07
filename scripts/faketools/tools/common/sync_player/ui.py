@@ -28,14 +28,19 @@ from ....lib_ui.qt_compat import (
     QHBoxLayout,
     QIcon,
     QLabel,
+    QPainter,
+    QPen,
     QSize,
     QSizePolicy,
     QSlider,
+    QSpinBox,
+    QStyle,
     Qt,
     QTimer,
     QVBoxLayout,
     QVideoWidget,
     QWidget,
+    Signal,
     get_open_file_name,
     get_playback_state,
 )
@@ -52,6 +57,125 @@ _ICONS_DIR = str(Path(__file__).parent / "icons")
 _SPEED_OPTIONS = ["0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x"]
 _SPEED_VALUES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 _DEFAULT_SPEED_INDEX = 3  # 1.0x
+
+
+class _ABLoopSlider(QSlider):
+    """QSlider with draggable A-B loop markers."""
+
+    loop_in_changed = Signal(int)
+    loop_out_changed = Signal(int)
+
+    def __init__(self, orientation, parent=None):
+        super().__init__(orientation, parent)
+        self._loop_in_ms: int | None = None
+        self._loop_out_ms: int | None = None
+        self._dragging: str | None = None
+        self.setMouseTracking(True)
+
+    def set_loop_markers(self, loop_in: int | None, loop_out: int | None) -> None:
+        """Update A-B loop marker positions.
+
+        Args:
+            loop_in: A point in milliseconds, or None.
+            loop_out: B point in milliseconds, or None.
+        """
+        self._loop_in_ms = loop_in
+        self._loop_out_ms = loop_out
+        self.update()
+
+    def _value_to_pixel(self, value: int) -> int:
+        slider_min = self.minimum()
+        slider_max = self.maximum()
+        if slider_max <= slider_min:
+            return 0
+        handle_w = self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength, None, self)
+        available = self.width() - handle_w
+        ratio = (value - slider_min) / (slider_max - slider_min)
+        return int(handle_w / 2 + ratio * available)
+
+    def _pixel_to_value(self, px: int) -> int:
+        slider_min = self.minimum()
+        slider_max = self.maximum()
+        if slider_max <= slider_min:
+            return slider_min
+        handle_w = self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength, None, self)
+        available = self.width() - handle_w
+        if available <= 0:
+            return slider_min
+        ratio = max(0.0, min(1.0, (px - handle_w / 2) / available))
+        return int(slider_min + ratio * (slider_max - slider_min))
+
+    def _hit_test(self, x: int) -> str | None:
+        if self._loop_in_ms is None or self._loop_out_ms is None:
+            return None
+        grab_px = int(scale_by_dpi(6, self))
+        x_a = self._value_to_pixel(self._loop_in_ms)
+        x_b = self._value_to_pixel(self._loop_out_ms)
+        dist_a = abs(x - x_a)
+        dist_b = abs(x - x_b)
+        if dist_a <= grab_px and dist_b <= grab_px:
+            return "in" if dist_a <= dist_b else "out"
+        if dist_a <= grab_px:
+            return "in"
+        if dist_b <= grab_px:
+            return "out"
+        return None
+
+    def mousePressEvent(self, event):
+        if self.isEnabled() and event.button() == Qt.MouseButton.LeftButton:
+            hit = self._hit_test(event.pos().x())
+            if hit:
+                self._dragging = hit
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._dragging:
+            value = self._pixel_to_value(event.pos().x())
+            value = max(self.minimum(), min(self.maximum(), value))
+            if self._dragging == "in" and self._loop_out_ms is not None:
+                value = min(value, self._loop_out_ms - 1)
+                self.loop_in_changed.emit(max(self.minimum(), value))
+            elif self._dragging == "out" and self._loop_in_ms is not None:
+                value = max(value, self._loop_in_ms + 1)
+                self.loop_out_changed.emit(min(self.maximum(), value))
+            event.accept()
+            return
+        if self._loop_in_ms is not None and self._loop_out_ms is not None:
+            if self._hit_test(event.pos().x()):
+                self.setCursor(Qt.CursorShape.SizeHorCursor)
+            else:
+                self.unsetCursor()
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._dragging:
+            self._dragging = None
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def leaveEvent(self, event):
+        if not self._dragging:
+            self.unsetCursor()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self._loop_in_ms is None or self._loop_out_ms is None:
+            return
+        x_a = self._value_to_pixel(self._loop_in_ms)
+        x_b = self._value_to_pixel(self._loop_out_ms)
+        painter = QPainter(self)
+        painter.fillRect(x_a, 0, x_b - x_a, self.height(), QColor(70, 130, 200, 60))
+        line_w = max(1, int(scale_by_dpi(1, self)))
+        pen = QPen(QColor(70, 130, 200, 200))
+        pen.setWidth(line_w)
+        painter.setPen(pen)
+        painter.drawLine(x_a, 0, x_a, self.height())
+        painter.drawLine(x_b, 0, x_b, self.height())
+        painter.end()
 
 
 class _PlaceholderWidget(QWidget):
@@ -163,6 +287,7 @@ class MainWindow(BaseMainWindow):
         self._player_core.video_fps_detected.connect(self._on_video_fps_detected)
         self._player_core.video_ready.connect(self._on_video_ready)
         self._player_core.load_failed.connect(self._on_load_failed)
+        self._player_core.ab_loop_changed.connect(self._on_ab_loop_changed)
         self._sync_controller = command.MayaSyncController(self._player_core)
 
         # -- bottom_widget: scrub + controls container --
@@ -189,11 +314,13 @@ class MainWindow(BaseMainWindow):
         bottom_layout.addWidget(scrub_header)
 
         # seek slider
-        self._seek_slider = QSlider(Qt.Orientation.Horizontal)
+        self._seek_slider = _ABLoopSlider(Qt.Orientation.Horizontal)
         self._seek_slider.setRange(0, 0)
         self._seek_slider.sliderPressed.connect(self._on_seek_pressed)
         self._seek_slider.sliderReleased.connect(self._on_seek_released)
         self._seek_slider.sliderMoved.connect(self._on_seek_moved)
+        self._seek_slider.loop_in_changed.connect(self._on_slider_loop_in)
+        self._seek_slider.loop_out_changed.connect(self._on_slider_loop_out)
 
         groove_h = int(scale_by_dpi(4, self))
         handle_w = int(scale_by_dpi(10, self))
@@ -317,6 +444,13 @@ class MainWindow(BaseMainWindow):
         left_layout.addWidget(_make_vline())
         left_layout.addSpacing(sep_margin)
 
+        self._btn_ab = IconToggleButton(icon_on="ab_on", icon_off="ab_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_ab.setToolTip("A-B Loop")
+        self._btn_ab.setIconSize(btn_icon_size)
+        self._btn_ab.setFixedSize(btn_size, btn_size)
+        self._btn_ab.toggled.connect(self._on_ab_toggled)
+        left_layout.addWidget(self._btn_ab)
+
         self._btn_loop = IconToggleButton(icon_on="loop_on", icon_off="loop_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
         self._btn_loop.setToolTip("Loop")
         self._btn_loop.setIconSize(btn_icon_size)
@@ -330,6 +464,42 @@ class MainWindow(BaseMainWindow):
         self._btn_sync.setFixedSize(btn_size, btn_size)
         self._btn_sync.toggled.connect(self._on_sync_toggled)
         left_layout.addWidget(self._btn_sync)
+
+        offset_label = QLabel("Offset")
+        offset_label.setStyleSheet("color: #999999;")
+        left_layout.addWidget(offset_label)
+
+        self._offset_spin = QSpinBox()
+        self._offset_spin.setRange(-999999, 999999)
+        self._offset_spin.setValue(0)
+        self._offset_spin.setFixedHeight(int(scale_by_dpi(24, self)))
+        spin_pad_h = int(scale_by_dpi(4, self))
+        spin_pad_v = int(scale_by_dpi(2, self))
+        self._offset_spin.setStyleSheet(f"""
+            QSpinBox {{
+                background-color: transparent;
+                border: {border_w}px solid #444444;
+                border-radius: {int(scale_by_dpi(2, self))}px;
+                color: #CCCCCC;
+                padding: {spin_pad_v}px {spin_pad_h}px;
+            }}
+            QSpinBox:hover {{
+                background-color: rgba(255, 255, 255, 0.1);
+                border-color: #555555;
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                width: 0px;
+                border: none;
+            }}
+            QSpinBox:disabled {{
+                color: rgba(204, 204, 204, 0.3);
+                border-color: rgba(68, 68, 68, 0.5);
+            }}
+        """)
+        self._offset_spin.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        self._offset_spin.setToolTip("Frame offset for Maya sync")
+        self._offset_spin.valueChanged.connect(self._on_offset_changed)
+        left_layout.addWidget(self._offset_spin)
 
         ctrl_layout.addWidget(left_widget, stretch=1)
 
@@ -394,6 +564,7 @@ class MainWindow(BaseMainWindow):
         for widget in (
             self._seek_slider,
             self._speed_combo,
+            self._btn_ab,
             self._btn_loop,
             self._btn_sync,
             self._btn_prev,
@@ -418,6 +589,7 @@ class MainWindow(BaseMainWindow):
             path: Absolute file path.
         """
         if self._player_core:
+            self._player_core.clear_ab_loop()
             self.setCursor(Qt.CursorShape.WaitCursor)
             self._load_timer.start(10000)
             self._placeholder.hide()
@@ -436,7 +608,12 @@ class MainWindow(BaseMainWindow):
         total_frames = command.ms_to_frame(duration_ms, fps)
         time_text = f"{command.format_time(position_ms)} / {command.format_time(duration_ms)}"
         frame_text = f"[ {current_frame} / {total_frames} ]"
-        self._time_label.setText(f"{time_text}    {frame_text}")
+        display = f"{time_text}    {frame_text}"
+        if self._player_core and self._player_core.has_ab_loop:
+            a_text = command.format_time(self._player_core.loop_in)
+            b_text = command.format_time(self._player_core.loop_out)
+            display += f"  A-B: {a_text} - {b_text}"
+        self._time_label.setText(display)
 
     # ------------------------------------------------------------------
     # Signal handlers — transport
@@ -542,6 +719,21 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     @error_handler
+    def _on_ab_toggled(self, checked: bool):
+        if not self._player_core:
+            return
+        if checked:
+            if not self._player_core.has_media():
+                self._btn_ab.blockSignals(True)
+                self._btn_ab.setChecked(False)
+                self._btn_ab.blockSignals(False)
+                return
+            self._player_core.set_loop_in(0)
+            self._player_core.set_loop_out(self._player_core.duration)
+        else:
+            self._player_core.clear_ab_loop()
+
+    @error_handler
     def _on_loop_toggled(self, checked: bool):
         if self._player_core:
             self._player_core.set_loop(checked)
@@ -560,6 +752,28 @@ class MainWindow(BaseMainWindow):
     def _on_mute_toggled(self, checked: bool):
         if self._player_core:
             self._player_core.set_muted(checked)
+
+    @error_handler
+    def _on_offset_changed(self, value: int):
+        if self._sync_controller:
+            self._sync_controller.set_frame_offset(value)
+
+    def _on_ab_loop_changed(self):
+        if self._player_core:
+            has_loop = self._player_core.has_ab_loop
+            self._btn_ab.blockSignals(True)
+            self._btn_ab.setChecked(has_loop)
+            self._btn_ab.blockSignals(False)
+            self._seek_slider.set_loop_markers(self._player_core.loop_in, self._player_core.loop_out)
+            self._update_time_display(self._player_core.position, self._player_core.duration)
+
+    def _on_slider_loop_in(self, ms: int):
+        if self._player_core:
+            self._player_core.set_loop_in(ms)
+
+    def _on_slider_loop_out(self, ms: int):
+        if self._player_core:
+            self._player_core.set_loop_out(ms)
 
     # ------------------------------------------------------------------
     # Signal handlers — sync
@@ -583,6 +797,8 @@ class MainWindow(BaseMainWindow):
                     )
         else:
             self._sync_controller.disable()
+        if self._player_core:
+            self._player_core.set_ab_enforcement(not checked)
         self._set_sync_locked(checked)
 
     def _set_sync_locked(self, locked: bool):
@@ -592,6 +808,7 @@ class MainWindow(BaseMainWindow):
         self._btn_prev.setEnabled(enabled)
         self._btn_next.setEnabled(enabled)
         self._speed_combo.setEnabled(enabled)
+        self._btn_ab.setEnabled(enabled)
         self._btn_loop.setEnabled(enabled)
         self._seek_slider.setEnabled(enabled)
 
@@ -605,6 +822,7 @@ class MainWindow(BaseMainWindow):
             "muted": self._btn_mute.isChecked(),
             "loop": self._btn_loop.isChecked(),
             "speed_index": self._speed_combo.currentIndex(),
+            "frame_offset": self._offset_spin.value(),
         }
 
     def _apply_settings(self, data: dict) -> None:
@@ -628,6 +846,11 @@ class MainWindow(BaseMainWindow):
             self._speed_combo.setCurrentIndex(speed_index)
             if self._player_core:
                 self._player_core.set_playback_rate(_SPEED_VALUES[speed_index])
+
+        frame_offset = data.get("frame_offset", 0)
+        self._offset_spin.setValue(frame_offset)
+        if self._sync_controller:
+            self._sync_controller.set_frame_offset(frame_offset)
 
     def _restore_settings(self):
         data = self._settings.load_settings("default")

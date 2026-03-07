@@ -109,6 +109,7 @@ class VideoPlayerCore(QObject):
     video_fps_detected = Signal(float)
     video_ready = Signal()
     load_failed = Signal(str)
+    ab_loop_changed = Signal()
 
     def __init__(self, video_widget: QVideoWidget, parent: QObject | None = None):
         super().__init__(parent)
@@ -123,6 +124,10 @@ class VideoPlayerCore(QObject):
         self._frame_source: QObject | None = None
         self._stall_timer: QTimer | None = None
         self._verify_phase = 0  # 0=idle, 1=waiting-for-frame, 2=waiting-for-frame-zero
+
+        self._loop_in: int | None = None
+        self._loop_out: int | None = None
+        self._ab_enforcement = True
 
         self._player: QMediaPlayer | None = None
         self._audio_output = None
@@ -325,6 +330,67 @@ class VideoPlayerCore(QObject):
         """Current FPS setting."""
         return self._fps
 
+    # ------------------------------------------------------------------
+    # A-B Loop
+    # ------------------------------------------------------------------
+
+    def set_loop_in(self, ms: int | None) -> None:
+        """Set the A (in) point for A-B loop.
+
+        Args:
+            ms: Position in milliseconds, or None to clear.
+        """
+        if ms is not None and self._loop_out is not None and ms > self._loop_out:
+            ms, self._loop_out = self._loop_out, ms
+        min_gap = int(1000.0 / self._fps)
+        if ms is not None and self._loop_out is not None and self._loop_out - ms < min_gap:
+            self._loop_out = ms + min_gap
+        self._loop_in = ms
+        self.ab_loop_changed.emit()
+
+    def set_loop_out(self, ms: int | None) -> None:
+        """Set the B (out) point for A-B loop.
+
+        Args:
+            ms: Position in milliseconds, or None to clear.
+        """
+        if ms is not None and self._loop_in is not None and ms < self._loop_in:
+            self._loop_in, ms = ms, self._loop_in
+        min_gap = int(1000.0 / self._fps)
+        if ms is not None and self._loop_in is not None and ms - self._loop_in < min_gap:
+            ms = self._loop_in + min_gap
+        self._loop_out = ms
+        self.ab_loop_changed.emit()
+
+    def clear_ab_loop(self) -> None:
+        """Clear A-B loop points."""
+        self._loop_in = None
+        self._loop_out = None
+        self.ab_loop_changed.emit()
+
+    def set_ab_enforcement(self, enabled: bool) -> None:
+        """Enable or disable A-B loop position enforcement.
+
+        Args:
+            enabled: False to suspend enforcement (e.g. during Maya sync).
+        """
+        self._ab_enforcement = enabled
+
+    @property
+    def loop_in(self) -> int | None:
+        """A (in) point in milliseconds."""
+        return self._loop_in
+
+    @property
+    def loop_out(self) -> int | None:
+        """B (out) point in milliseconds."""
+        return self._loop_out
+
+    @property
+    def has_ab_loop(self) -> bool:
+        """True if both A and B points are set."""
+        return self._loop_in is not None and self._loop_out is not None
+
     @property
     def duration(self) -> int:
         """Current media duration in milliseconds."""
@@ -345,6 +411,12 @@ class VideoPlayerCore(QObject):
     # ------------------------------------------------------------------
 
     def _on_position_changed(self, position: int) -> None:
+        if self.has_ab_loop and self._ab_enforcement and position >= self._loop_out:
+            if self._loop:
+                self._player.setPosition(self._loop_in)
+            else:
+                self._player.setPosition(self._loop_out)
+                self._player.pause()
         self.position_changed.emit(position)
 
     def _on_duration_changed(self, duration: int) -> None:
@@ -393,7 +465,8 @@ class VideoPlayerCore(QObject):
             return
 
         if self._loop and end_of_media:
-            self._player.setPosition(0)
+            start_pos = self._loop_in if self._loop_in is not None else 0
+            self._player.setPosition(start_pos)
             self._player.play()
 
     # ------------------------------------------------------------------
@@ -594,6 +667,7 @@ class MayaSyncController:
         self._fps = DEFAULT_FPS
         self._callbacks: list[int] = []
         self._is_playing_back = False
+        self._frame_offset: int = 0
 
     def _frame_to_ms(self, frame: float) -> int:
         """Convert a frame number to milliseconds.
@@ -606,7 +680,8 @@ class MayaSyncController:
         Returns:
             int: Position in milliseconds.
         """
-        return max(0, int(round(frame / self._fps * 1000.0)))
+        adjusted = frame - self._frame_offset
+        return max(0, int(round(adjusted / self._fps * 1000.0)))
 
     def set_fps(self, fps: float) -> None:
         """Set FPS for frame-to-millisecond conversion.
@@ -616,6 +691,14 @@ class MayaSyncController:
         """
         if fps > 0:
             self._fps = fps
+
+    def set_frame_offset(self, offset: int) -> None:
+        """Set frame offset for sync mapping.
+
+        Args:
+            offset: Frame offset (e.g. 100 maps Maya frame 101 to video frame 1).
+        """
+        self._frame_offset = offset
 
     def enable(self) -> None:
         """Start syncing video to Maya timeline.
