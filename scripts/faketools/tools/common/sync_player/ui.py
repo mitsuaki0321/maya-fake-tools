@@ -23,12 +23,12 @@ from ....lib_ui import (
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
     QColor,
-    QComboBox,
     QFont,
     QFrame,
     QHBoxLayout,
     QIcon,
     QLabel,
+    QMenu,
     QPainter,
     QPen,
     QRect,
@@ -38,6 +38,7 @@ from ....lib_ui.qt_compat import (
     QSpinBox,
     Qt,
     QTimer,
+    QToolButton,
     QVBoxLayout,
     QVideoWidget,
     QWidget,
@@ -46,7 +47,7 @@ from ....lib_ui.qt_compat import (
     get_playback_state,
 )
 from ....lib_ui.ui_utils import get_relative_size, scale_by_dpi
-from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton
+from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton, IconToolButton
 from . import command
 
 logger = getLogger(__name__)
@@ -234,7 +235,7 @@ class _PlaceholderWidget(QWidget):
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Monitor icon
-        icon_size = int(scale_by_dpi(48, self))
+        icon_size = int(scale_by_dpi(64, self))
         icon_path = icons.get_path("monitor", base_dir=_ICONS_DIR)
         pixmap = QIcon(icon_path).pixmap(QSize(icon_size, icon_size))
         icon_label = QLabel()
@@ -243,9 +244,10 @@ class _PlaceholderWidget(QWidget):
         layout.addWidget(icon_label)
 
         # Instruction text
+        font_size = max(11, int(scale_by_dpi(13, self)))
         text_label = QLabel("Double-click to open")
         text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet("color: rgba(255, 255, 255, 0.4);")
+        text_label.setStyleSheet(f"color: rgba(255, 255, 255, 0.4); font-size: {font_size}px;")
         layout.addWidget(text_label)
 
     def mouseDoubleClickEvent(self, event):
@@ -283,6 +285,7 @@ class MainWindow(BaseMainWindow):
         self._sync_controller: command.MayaSyncController | None = None
         self._seeking = False
         self._was_paused_before_seek = False
+        self._current_speed_index = _DEFAULT_SPEED_INDEX
         self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
 
         self._load_timer = QTimer(self)
@@ -441,53 +444,7 @@ class MainWindow(BaseMainWindow):
         left_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         left_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        self._speed_combo = QComboBox()
-        self._speed_combo.setFixedHeight(int(scale_by_dpi(24, self)))
-        self._speed_combo.addItems(_SPEED_OPTIONS)
-        self._speed_combo.setCurrentIndex(_DEFAULT_SPEED_INDEX)
-        self._speed_combo.currentIndexChanged.connect(self._on_speed_changed)
-        arrow_size = int(scale_by_dpi(8, self))
-        combo_pad_h = int(scale_by_dpi(6, self))
-        combo_pad_v = int(scale_by_dpi(4, self))
-        self._speed_combo.setStyleSheet(f"""
-            QComboBox {{
-                background-color: transparent;
-                border: {border_w}px solid #444444;
-                border-radius: {int(scale_by_dpi(2, self))}px;
-                color: #CCCCCC;
-                padding: {combo_pad_v}px {combo_pad_h}px;
-            }}
-            QComboBox:hover {{
-                background-color: rgba(255, 255, 255, 0.1);
-                border-color: #555555;
-            }}
-            QComboBox::drop-down {{
-                border-left: {border_w}px solid #444444;
-                width: {arrow_size + combo_pad_h}px;
-            }}
-            QComboBox::down-arrow {{
-                image: url({Path(_ICONS_DIR, "dropdown_arrow.svg").as_posix()});
-                width: {arrow_size}px;
-                height: {arrow_size}px;
-            }}
-            QComboBox QAbstractItemView {{
-                background-color: #2D2D2D;
-                color: #CCCCCC;
-                selection-background-color: rgba(255, 255, 255, 0.15);
-                border: {border_w}px solid #444444;
-                outline: none;
-            }}
-            QComboBox:disabled {{
-                color: rgba(204, 204, 204, 0.3);
-                border-color: rgba(68, 68, 68, 0.5);
-            }}
-        """)
-        left_layout.addWidget(self._speed_combo)
-
         sep_margin = int(scale_by_dpi(12, self))
-        left_layout.addSpacing(sep_margin)
-        left_layout.addWidget(_make_vline())
-        left_layout.addSpacing(sep_margin)
 
         self._btn_ab = IconToggleButton(icon_on="ab_on", icon_off="ab_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
         self._btn_ab.setToolTip("A-B Loop")
@@ -513,9 +470,15 @@ class MainWindow(BaseMainWindow):
         self._btn_sync.toggled.connect(self._on_sync_toggled)
         left_layout.addWidget(self._btn_sync)
 
+        left_layout.addSpacing(sep_margin)
+        left_layout.addWidget(_make_vline())
+        left_layout.addSpacing(sep_margin)
+
         offset_label = QLabel("Offset")
         offset_label.setStyleSheet("color: #999999;")
         left_layout.addWidget(offset_label)
+
+        left_layout.addSpacing(int(scale_by_dpi(4, self)))
 
         self._offset_spin = QSpinBox()
         self._offset_spin.setRange(-999999, 999999)
@@ -606,13 +569,62 @@ class MainWindow(BaseMainWindow):
         self._volume_slider.valueChanged.connect(self._on_volume_changed)
         right_layout.addWidget(self._volume_slider)
 
+        right_layout.addSpacing(sep_margin)
+        right_layout.addWidget(_make_vline())
+        right_layout.addSpacing(sep_margin)
+
+        self._options_btn = IconToolButton(
+            icon_name="options",
+            style_mode=IconButtonStyle.TRANSPARENT,
+            auto_size=False,
+            icon_dir=_ICONS_DIR,
+        )
+        self._options_btn.setToolTip("Options")
+        self._options_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        self._options_btn.setFixedSize(btn_size, btn_size)
+        self._options_btn.setIconSize(btn_icon_size)
+        self._options_btn.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        menu_pad_v = int(scale_by_dpi(4, self))
+        menu_pad_h = int(scale_by_dpi(12, self))
+        arrow_size = int(scale_by_dpi(8, self))
+        arrow_reserve = arrow_size + menu_pad_h * 2
+        menu_style = f"""
+            QMenu {{
+                background-color: #1A1A1A;
+                border: {border_w}px solid #333333;
+                color: #CCCCCC;
+                padding: {menu_pad_v}px 0px;
+            }}
+            QMenu::item {{
+                padding: {menu_pad_v}px {arrow_reserve}px {menu_pad_v}px {menu_pad_h}px;
+            }}
+            QMenu::item:selected {{
+                background-color: rgba(255, 255, 255, 0.1);
+            }}
+            QMenu::separator {{
+                height: {border_w}px;
+                background: #333333;
+                margin: {menu_pad_v}px 0px;
+            }}
+            QMenu::right-arrow {{
+                width: {arrow_size}px;
+                height: {arrow_size}px;
+                right: {menu_pad_h}px;
+            }}
+        """
+        self._options_menu = QMenu(self)
+        self._options_menu.setWindowFlags(self._options_menu.windowFlags() | Qt.WindowType.NoDropShadowWindowHint)
+        self._options_menu.setStyleSheet(menu_style)
+        self._options_menu.aboutToShow.connect(self._populate_options_menu)
+        self._options_btn.setMenu(self._options_menu)
+        right_layout.addWidget(self._options_btn)
+
         ctrl_layout.addWidget(right_widget, stretch=1)
 
         # Focus policy: all controls NoFocus so keyPressEvent handles shortcuts
         for widget in (
             self._seek_slider,
             self._loop_bar,
-            self._speed_combo,
             self._btn_ab,
             self._btn_loop,
             self._btn_sync,
@@ -621,6 +633,7 @@ class MainWindow(BaseMainWindow):
             self._btn_next,
             self._btn_mute,
             self._volume_slider,
+            self._options_btn,
         ):
             widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
@@ -798,9 +811,11 @@ class MainWindow(BaseMainWindow):
             self._player_core.set_loop(checked)
 
     @error_handler
-    def _on_speed_changed(self, index: int):
-        if self._player_core and 0 <= index < len(_SPEED_VALUES):
-            self._player_core.set_playback_rate(_SPEED_VALUES[index])
+    def _on_speed_selected(self, index: int):
+        if 0 <= index < len(_SPEED_VALUES):
+            self._current_speed_index = index
+            if self._player_core:
+                self._player_core.set_playback_rate(_SPEED_VALUES[index])
 
     @error_handler
     def _on_volume_changed(self, value: int):
@@ -837,6 +852,14 @@ class MainWindow(BaseMainWindow):
         if self._player_core:
             self._player_core.set_loop_out(ms)
 
+    def _populate_options_menu(self):
+        self._options_menu.clear()
+        current_label = _SPEED_OPTIONS[self._current_speed_index]
+        speed_menu = self._options_menu.addMenu(f"Speed: {current_label}")
+        speed_menu.setWindowFlags(speed_menu.windowFlags() | Qt.WindowType.NoDropShadowWindowHint)
+        for i, label in enumerate(_SPEED_OPTIONS):
+            speed_menu.addAction(label, lambda checked=False, idx=i: self._on_speed_selected(idx))
+
     # ------------------------------------------------------------------
     # Signal handlers — sync
     # ------------------------------------------------------------------
@@ -869,7 +892,6 @@ class MainWindow(BaseMainWindow):
         self._btn_play_pause.setEnabled(enabled)
         self._btn_prev.setEnabled(enabled)
         self._btn_next.setEnabled(enabled)
-        self._speed_combo.setEnabled(enabled)
         self._btn_ab.setEnabled(enabled)
         self._btn_loop.setEnabled(enabled)
         self._seek_slider.setEnabled(enabled)
@@ -884,6 +906,7 @@ class MainWindow(BaseMainWindow):
             "volume": self._volume_slider.value(),
             "muted": self._btn_mute.isChecked(),
             "frame_offset": self._offset_spin.value(),
+            "speed_index": self._current_speed_index,
         }
 
     def _apply_settings(self, data: dict) -> None:
@@ -901,6 +924,9 @@ class MainWindow(BaseMainWindow):
         self._offset_spin.setValue(frame_offset)
         if self._sync_controller:
             self._sync_controller.set_frame_offset(frame_offset)
+
+        speed_index = data.get("speed_index", _DEFAULT_SPEED_INDEX)
+        self._on_speed_selected(speed_index)
 
     def _restore_settings(self):
         data = self._settings.load_settings("default")
