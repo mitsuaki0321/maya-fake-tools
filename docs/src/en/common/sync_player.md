@@ -36,6 +36,7 @@ The window consists of the following elements:
 | Time/frame display | Shows the current playback position, total duration, and frame numbers |
 | FPS display | Shows the frame rate of the loaded video |
 | Seek bar | Slider for controlling the playback position |
+| A-B loop bar | Visually displays and adjusts the A-B loop range |
 | Control bar | Buttons for playback controls and various settings |
 
 ## Basic Usage
@@ -65,6 +66,8 @@ Use the center buttons on the control bar for playback operations.
 
 ### Seek Bar
 
+![image](../../images/common/sync_player/iamge006.png)
+
 Drag the seek bar to jump to any playback position.
 
 - When paused, dragging the seek bar temporarily enters a playback state to update the video frames. Releasing the slider returns to the paused state.
@@ -77,23 +80,32 @@ Playback information is shown above the seek bar.
 MM:SS / MM:SS    [ current frame / total frames ]
 ```
 
+When an A-B loop is active, the loop range time and frame numbers are displayed on the right.
+
+```
+MM:SS / MM:SS    [ current frame / total frames ]      A-B: MM:SS - MM:SS [ start frame - end frame ]
+```
+
 ## Control Bar
 
 ![image](../../images/common/sync_player/iamge003.png)
 
-### Playback Speed
+### A-B Loop
 
-Select the playback speed from the dropdown on the left.
+Click the ![image](../../images/common/sync_player/ab_off.svg) button to enable the A-B loop feature.
 
-| Speed | Description |
-|-------|-------------|
-| 0.25x | Quarter speed |
-| 0.5x | Half speed |
-| 0.75x | Three-quarter speed |
-| 1.0x | Normal speed (default) |
-| 1.25x | 1.25x speed |
-| 1.5x | 1.5x speed |
-| 2.0x | Double speed |
+When A-B loop is enabled, the button icon changes to ![image](../../images/common/sync_player/ab_on.svg).
+
+#### A-B Loop Behavior
+
+![image](../../images/common/sync_player/iamge007.png)
+
+- Enabling A-B loop sets the initial range to the entire video (start to end)
+- Use the **A-B loop bar** below the seek bar to drag the A (start) and B (end) markers to adjust the range
+- When combined with loop playback, the video loops within the specified A-B range
+- Disabling A-B loop clears the range settings
+
+> **Note**: A-B loop is disabled when Maya Sync is active.
 
 ### Loop Playback
 
@@ -115,13 +127,21 @@ When sync is enabled, the button icon changes to ![image](../../images/common/sy
   - Scrubbing (dragging) the timeline seeks the video to the corresponding frame
 - **When sync is disabled**: Operates as a standalone video player
 
+#### Frame Offset
+
+![image](../../images/common/sync_player/iamge008.png)
+
+Use the **Offset** field on the left side of the control bar to set a frame-based offset between the Maya timeline and the video sync position.
+
+For example, use this when the video has unwanted frames at the beginning, or when you need to align the Maya timeline start frame with the video start position.
+
 #### Control Restrictions During Sync
 
 While sync mode is active, the following controls are disabled:
 
 - Play / Pause button
 - Frame forward / backward buttons
-- Playback speed changes
+- A-B loop toggle
 - Loop toggle
 - Seek bar
 
@@ -142,6 +162,24 @@ The mute button and volume slider are on the right side.
 | Mute button | Toggle audio on/off |
 | Volume slider | Adjust volume from 0 to 100 |
 
+### Options Menu
+
+Click the ![image](../../images/common/sync_player/options.svg) button to the right of the volume slider to open the menu.
+
+#### Playback Speed
+
+Select the playback speed from the **Speed** submenu.
+
+| Speed | Description |
+|-------|-------------|
+| 0.25x | Quarter speed |
+| 0.5x | Half speed |
+| 0.75x | Three-quarter speed |
+| 1.0x | Normal speed (default) |
+| 1.25x | 1.25x speed |
+| 1.5x | 1.5x speed |
+| 2.0x | Double speed |
+
 ## Keyboard Shortcuts
 
 | Key | Description |
@@ -158,7 +196,7 @@ The following settings are automatically saved when the window is closed and res
 
 - Volume
 - Mute state
-- Loop playback on/off
+- Frame offset
 - Playback speed
 
 ## Extending Supported Formats

@@ -64,8 +64,8 @@
                     <li><a href="#control-bar"
                     id="toc-control-bar">Control Bar</a>
                     <ul>
-                    <li><a href="#playback-speed"
-                    id="toc-playback-speed">Playback Speed</a></li>
+                    <li><a href="#a-b-loop" id="toc-a-b-loop">A-B
+                    Loop</a></li>
                     <li><a href="#loop-playback"
                     id="toc-loop-playback">Loop Playback</a></li>
                     <li><a href="#maya-sync-timeline-synchronization"
@@ -73,6 +73,8 @@
                     Sync (Timeline Synchronization)</a></li>
                     <li><a href="#volume-controls"
                     id="toc-volume-controls">Volume Controls</a></li>
+                    <li><a href="#options-menu"
+                    id="toc-options-menu">Options Menu</a></li>
                     </ul></li>
                     <li><a href="#keyboard-shortcuts"
                     id="toc-keyboard-shortcuts">Keyboard
@@ -144,6 +146,11 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <td>Slider for controlling the playback position</td>
                 </tr>
                 <tr>
+                <td>A-B loop bar</td>
+                <td>Visually displays and adjusts the A-B loop
+                range</td>
+                </tr>
+                <tr>
                 <td>Control bar</td>
                 <td>Buttons for playback controls and various
                 settings</td>
@@ -195,6 +202,9 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <h3 id="seek-bar">Seek Bar</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge006.png"
+                alt="image" /></p>
                 <p>Drag the seek bar to jump to any playback
                 position.</p>
                 <ul>
@@ -205,13 +215,131 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <h3 id="timeframe-display">Time/Frame Display</h3>
                 <p>Playback information is shown above the seek bar.</p>
                 <pre><code>MM:SS / MM:SS    [ current frame / total frames ]</code></pre>
+                <p>When an A-B loop is active, the loop range time and
+                frame numbers are displayed on the right.</p>
+                <pre><code>MM:SS / MM:SS    [ current frame / total frames ]      A-B: MM:SS - MM:SS [ start frame - end frame ]</code></pre>
                 <h2 id="control-bar">Control Bar</h2>
                 <p><img
                 src="../../images/common/sync_player/iamge003.png"
                 alt="image" /></p>
-                <h3 id="playback-speed">Playback Speed</h3>
-                <p>Select the playback speed from the dropdown on the
-                left.</p>
+                <h3 id="a-b-loop">A-B Loop</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/ab_off.svg"
+                alt="image" /> button to enable the A-B loop
+                feature.</p>
+                <p>When A-B loop is enabled, the button icon changes to
+                <img src="../../images/common/sync_player/ab_on.svg"
+                alt="image" />.</p>
+                <h4 id="a-b-loop-behavior">A-B Loop Behavior</h4>
+                <p><img
+                src="../../images/common/sync_player/iamge007.png"
+                alt="image" /></p>
+                <ul>
+                <li>Enabling A-B loop sets the initial range to the
+                entire video (start to end)</li>
+                <li>Use the <strong>A-B loop bar</strong> below the seek
+                bar to drag the A (start) and B (end) markers to adjust
+                the range</li>
+                <li>When combined with loop playback, the video loops
+                within the specified A-B range</li>
+                <li>Disabling A-B loop clears the range settings</li>
+                </ul>
+                <blockquote>
+                <p><strong>Note</strong>: A-B loop is disabled when Maya
+                Sync is active.</p>
+                </blockquote>
+                <h3 id="loop-playback">Loop Playback</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/loop_off.svg"
+                alt="image" /> button to automatically restart playback
+                from the beginning when the video reaches the end.</p>
+                <p>When loop is enabled, the button icon changes to <img
+                src="../../images/common/sync_player/loop_on.svg"
+                alt="image" />.</p>
+                <h3 id="maya-sync-timeline-synchronization">Maya Sync
+                (Timeline Synchronization)</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/sync_off.svg"
+                alt="image" /> button to enable Maya timeline
+                synchronization mode.</p>
+                <p>When sync is enabled, the button icon changes to <img
+                src="../../images/common/sync_player/sync_on.svg"
+                alt="image" />.</p>
+                <h4 id="sync-mode-behavior">Sync Mode Behavior</h4>
+                <ul>
+                <li><strong>When sync is enabled</strong>: The video
+                playback position follows Maya’s timeline
+                <ul>
+                <li>Playing the Maya timeline also plays the video</li>
+                <li>Stopping Maya playback pauses the video</li>
+                <li>Scrubbing (dragging) the timeline seeks the video to
+                the corresponding frame</li>
+                </ul></li>
+                <li><strong>When sync is disabled</strong>: Operates as
+                a standalone video player</li>
+                </ul>
+                <h4 id="frame-offset">Frame Offset</h4>
+                <p><img
+                src="../../images/common/sync_player/iamge008.png"
+                alt="image" /></p>
+                <p>Use the <strong>Offset</strong> field on the left
+                side of the control bar to set a frame-based offset
+                between the Maya timeline and the video sync
+                position.</p>
+                <p>For example, use this when the video has unwanted
+                frames at the beginning, or when you need to align the
+                Maya timeline start frame with the video start
+                position.</p>
+                <h4 id="control-restrictions-during-sync">Control
+                Restrictions During Sync</h4>
+                <p>While sync mode is active, the following controls are
+                disabled:</p>
+                <ul>
+                <li>Play / Pause button</li>
+                <li>Frame forward / backward buttons</li>
+                <li>A-B loop toggle</li>
+                <li>Loop toggle</li>
+                <li>Seek bar</li>
+                </ul>
+                <p>This is because video playback is fully controlled by
+                Maya’s timeline.</p>
+                <h4 id="fps-mismatch-warning">FPS Mismatch Warning</h4>
+                <p>When enabling sync, a warning message is displayed if
+                the video’s FPS differs from the Maya scene’s FPS. When
+                FPS values differ, frame stepping and frame number
+                display may not match the video’s actual frames.</p>
+                <h3 id="volume-controls">Volume Controls</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge002.png"
+                alt="image" /></p>
+                <p>The mute button and volume slider are on the right
+                side.</p>
+                <table>
+                <thead>
+                <tr>
+                <th>Control</th>
+                <th>Description</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Mute button</td>
+                <td>Toggle audio on/off</td>
+                </tr>
+                <tr>
+                <td>Volume slider</td>
+                <td>Adjust volume from 0 to 100</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="options-menu">Options Menu</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/options.svg"
+                alt="image" /> button to the right of the volume slider
+                to open the menu.</p>
+                <h4 id="playback-speed">Playback Speed</h4>
+                <p>Select the playback speed from the
+                <strong>Speed</strong> submenu.</p>
                 <table>
                 <thead>
                 <tr>
@@ -250,78 +378,6 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="loop-playback">Loop Playback</h3>
-                <p>Click the <img
-                src="../../images/common/sync_player/loop_off.svg"
-                alt="image" /> button to automatically restart playback
-                from the beginning when the video reaches the end.</p>
-                <p>When loop is enabled, the button icon changes to <img
-                src="../../images/common/sync_player/loop_on.svg"
-                alt="image" />.</p>
-                <h3 id="maya-sync-timeline-synchronization">Maya Sync
-                (Timeline Synchronization)</h3>
-                <p>Click the <img
-                src="../../images/common/sync_player/sync_off.svg"
-                alt="image" /> button to enable Maya timeline
-                synchronization mode.</p>
-                <p>When sync is enabled, the button icon changes to <img
-                src="../../images/common/sync_player/sync_on.svg"
-                alt="image" />.</p>
-                <h4 id="sync-mode-behavior">Sync Mode Behavior</h4>
-                <ul>
-                <li><strong>When sync is enabled</strong>: The video
-                playback position follows Maya’s timeline
-                <ul>
-                <li>Playing the Maya timeline also plays the video</li>
-                <li>Stopping Maya playback pauses the video</li>
-                <li>Scrubbing (dragging) the timeline seeks the video to
-                the corresponding frame</li>
-                </ul></li>
-                <li><strong>When sync is disabled</strong>: Operates as
-                a standalone video player</li>
-                </ul>
-                <h4 id="control-restrictions-during-sync">Control
-                Restrictions During Sync</h4>
-                <p>While sync mode is active, the following controls are
-                disabled:</p>
-                <ul>
-                <li>Play / Pause button</li>
-                <li>Frame forward / backward buttons</li>
-                <li>Playback speed changes</li>
-                <li>Loop toggle</li>
-                <li>Seek bar</li>
-                </ul>
-                <p>This is because video playback is fully controlled by
-                Maya’s timeline.</p>
-                <h4 id="fps-mismatch-warning">FPS Mismatch Warning</h4>
-                <p>When enabling sync, a warning message is displayed if
-                the video’s FPS differs from the Maya scene’s FPS. When
-                FPS values differ, frame stepping and frame number
-                display may not match the video’s actual frames.</p>
-                <h3 id="volume-controls">Volume Controls</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge002.png"
-                alt="image" /></p>
-                <p>The mute button and volume slider are on the right
-                side.</p>
-                <table>
-                <thead>
-                <tr>
-                <th>Control</th>
-                <th>Description</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td>Mute button</td>
-                <td>Toggle audio on/off</td>
-                </tr>
-                <tr>
-                <td>Volume slider</td>
-                <td>Adjust volume from 0 to 100</td>
-                </tr>
-                </tbody>
-                </table>
                 <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
                 <table>
                 <thead>
@@ -355,7 +411,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <ul>
                 <li>Volume</li>
                 <li>Mute state</li>
-                <li>Loop playback on/off</li>
+                <li>Frame offset</li>
                 <li>Playback speed</li>
                 </ul>
                 <h2 id="extending-supported-formats">Extending Supported

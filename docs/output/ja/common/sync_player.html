@@ -59,8 +59,8 @@
                     <li><a href="#コントロールバー"
                     id="toc-コントロールバー">コントロールバー</a>
                     <ul>
-                    <li><a href="#再生速度"
-                    id="toc-再生速度">再生速度</a></li>
+                    <li><a href="#a-b-ループ" id="toc-a-b-ループ">A-B
+                    ループ</a></li>
                     <li><a href="#ループ再生"
                     id="toc-ループ再生">ループ再生</a></li>
                     <li><a href="#maya-syncタイムライン同期"
@@ -68,6 +68,8 @@
                     Sync（タイムライン同期）</a></li>
                     <li><a href="#音量コントロール"
                     id="toc-音量コントロール">音量コントロール</a></li>
+                    <li><a href="#オプションメニュー"
+                    id="toc-オプションメニュー">オプションメニュー</a></li>
                     </ul></li>
                     <li><a href="#キーボードショートカット"
                     id="toc-キーボードショートカット">キーボードショートカット</a></li>
@@ -132,6 +134,10 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <td>再生位置を操作するスライダー</td>
                 </tr>
                 <tr>
+                <td>A-B ループバー</td>
+                <td>A-B ループの範囲を視覚的に表示・調整するバー</td>
+                </tr>
+                <tr>
                 <td>コントロールバー</td>
                 <td>再生操作、各種設定のボタン群</td>
                 </tr>
@@ -180,6 +186,9 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <h3 id="シークバー">シークバー</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge006.png"
+                alt="image" /></p>
                 <p>シークバーをドラッグして、任意の再生位置にジャンプできます。</p>
                 <ul>
                 <li>一時停止中にシークバーをドラッグすると、ドラッグ中は内部的に再生状態になり映像が更新されます。ドラッグを離すと一時停止状態に戻ります。</li>
@@ -187,12 +196,126 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <h3 id="時間フレーム表示">時間/フレーム表示</h3>
                 <p>シークバーの上に現在の再生情報が表示されます。</p>
                 <pre><code>MM:SS / MM:SS    [ 現在フレーム / 総フレーム数 ]</code></pre>
+                <p>A-B
+                ループが有効な場合は、右側にループ範囲の時間とフレーム番号が追加表示されます。</p>
+                <pre><code>MM:SS / MM:SS    [ 現在フレーム / 総フレーム数 ]      A-B: MM:SS - MM:SS [ 開始フレーム - 終了フレーム ]</code></pre>
                 <h2 id="コントロールバー">コントロールバー</h2>
                 <p><img
                 src="../../images/common/sync_player/iamge003.png"
                 alt="image" /></p>
-                <h3 id="再生速度">再生速度</h3>
-                <p>左側のドロップダウンから再生速度を選択できます。</p>
+                <h3 id="a-b-ループ">A-B ループ</h3>
+                <p><img src="../../images/common/sync_player/ab_off.svg"
+                alt="image" /> ボタンをクリックすると、A-B
+                ループ機能が有効になります。</p>
+                <p>A-B ループがオンの場合は、ボタンアイコンが <img
+                src="../../images/common/sync_player/ab_on.svg"
+                alt="image" /> に変更されます。</p>
+                <h4 id="a-b-ループの動作">A-B ループの動作</h4>
+                <p><img
+                src="../../images/common/sync_player/iamge007.png"
+                alt="image" /></p>
+                <ul>
+                <li>A-B
+                ループを有効にすると、初期値としてビデオ全体の範囲（先頭〜末尾）が設定されます</li>
+                <li>シークバーの下に表示される <strong>A-B
+                ループバー</strong> で、A（開始）マーカーと
+                B（終了）マーカーをドラッグして範囲を調整できます</li>
+                <li>ループ再生と併用すると、指定した A-B
+                範囲内でループ再生されます</li>
+                <li>A-B
+                ループを無効にすると、範囲設定がクリアされます</li>
+                </ul>
+                <blockquote>
+                <p><strong>Note</strong>: Maya Sync が有効な場合、A-B
+                ループは無効になります。</p>
+                </blockquote>
+                <h3 id="ループ再生">ループ再生</h3>
+                <p><img
+                src="../../images/common/sync_player/loop_off.svg"
+                alt="image" />
+                ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。</p>
+                <p>ループがオンの場合は、ボタンアイコンが、<img
+                src="../../images/common/sync_player/loop_on.svg"
+                alt="image" /> に変更されます。</p>
+                <h3 id="maya-syncタイムライン同期">Maya
+                Sync（タイムライン同期）</h3>
+                <p><img
+                src="../../images/common/sync_player/sync_off.svg"
+                alt="image" /> ボタンをクリックすると、Maya
+                タイムラインとの同期モードが有効になります。</p>
+                <p>Sync がオンの場合は、ボタンアイコンが、<img
+                src="../../images/common/sync_player/sync_on.svg"
+                alt="image" /> に変更されます。</p>
+                <h4 id="同期モードの動作">同期モードの動作</h4>
+                <ul>
+                <li><strong>同期有効時</strong>: ビデオの再生位置が Maya
+                のタイムラインに連動します
+                <ul>
+                <li>Maya
+                でタイムラインを再生すると、ビデオも同時に再生されます</li>
+                <li>Maya の再生を停止すると、ビデオも一時停止します</li>
+                <li>タイムラインをスクラブ（ドラッグ）すると、ビデオが対応するフレームにシークします</li>
+                </ul></li>
+                <li><strong>同期無効時</strong>:
+                通常のビデオプレイヤーとして独立して動作します</li>
+                </ul>
+                <h4 id="フレームオフセット">フレームオフセット</h4>
+                <p><img
+                src="../../images/common/sync_player/iamge008.png"
+                alt="image" /></p>
+                <p>コントロールバー左側の <strong>Offset</strong>
+                欄で、Maya
+                タイムラインとビデオの同期位置にフレーム単位のオフセットを設定できます。</p>
+                <p>たとえば、ビデオの冒頭に不要なフレームがある場合や、Maya
+                のタイムラインの開始フレームとビデオの開始位置を調整したい場合に使用します。</p>
+                <h4
+                id="同期中のコントロール制限">同期中のコントロール制限</h4>
+                <p>同期モードが有効な間は、以下のコントロールが無効になります。</p>
+                <ul>
+                <li>再生 / 一時停止ボタン</li>
+                <li>フレーム送り / 戻しボタン</li>
+                <li>A-B ループの切り替え</li>
+                <li>ループ再生の切り替え</li>
+                <li>シークバーの操作</li>
+                </ul>
+                <p>これは、ビデオの再生が Maya
+                のタイムラインに完全に制御されるためです。</p>
+                <h4 id="fps-の不一致に関する警告">FPS
+                の不一致に関する警告</h4>
+                <p>同期を有効にした際、ビデオの FPS と Maya シーンの FPS
+                が異なる場合、警告メッセージが表示されます。FPS
+                が異なると、フレーム送りやフレーム番号の表示がビデオの実際のフレームと一致しない場合があります。</p>
+                <h3 id="音量コントロール">音量コントロール</h3>
+                <p><img
+                src="../../images/common/sync_player/iamge002.png"
+                alt="image" /></p>
+                <p>右側にミュートボタンと音量スライダーがあります。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>コントロール</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>ミュートボタン</td>
+                <td>音声のオン/オフを切り替え</td>
+                </tr>
+                <tr>
+                <td>音量スライダー</td>
+                <td>音量を 0〜100 の範囲で調整</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="オプションメニュー">オプションメニュー</h3>
+                <p>音量スライダーの右にある <img
+                src="../../images/common/sync_player/options.svg"
+                alt="image" />
+                ボタンをクリックすると、メニューが表示されます。</p>
+                <h4 id="再生速度">再生速度</h4>
+                <p><strong>Speed</strong>
+                サブメニューから再生速度を選択できます。</p>
                 <table>
                 <thead>
                 <tr>
@@ -231,76 +354,6 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
-                <h3 id="ループ再生">ループ再生</h3>
-                <p><img
-                src="../../images/common/sync_player/loop_off.svg"
-                alt="image" />
-                ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。</p>
-                <p>ループがオンの場合は、ボタンアイコンが、<img
-                src="../../images/common/sync_player/loop_on.svg"
-                alt="image" /> に変更されます。</p>
-                <h3 id="maya-syncタイムライン同期">Maya
-                Sync（タイムライン同期）</h3>
-                <p><img
-                src="../../images/common/sync_player/sync_off.svg"
-                alt="image" /> ボタンをクリックすると、Maya
-                タイムラインとの同期モードが有効になります。</p>
-                <p>Sync がオンの場合は、ボタンアイコンが、<img
-                src="../../images/common/sync_player/sync_on.svg"
-                alt="image" /> に変更されます。</p>
-                <h4 id="同期モードの動作">同期モードの動作</h4>
-                <ul>
-                <li><strong>同期有効時</strong>: ビデオの再生位置が Maya
-                のタイムラインに連動します
-                <ul>
-                <li>Maya
-                でタイムラインを再生すると、ビデオも同時に再生されます</li>
-                <li>Maya の再生を停止すると、ビデオも一時停止します</li>
-                <li>タイムラインをスクラブ（ドラッグ）すると、ビデオが対応するフレームにシークします</li>
-                </ul></li>
-                <li><strong>同期無効時</strong>:
-                通常のビデオプレイヤーとして独立して動作します</li>
-                </ul>
-                <h4
-                id="同期中のコントロール制限">同期中のコントロール制限</h4>
-                <p>同期モードが有効な間は、以下のコントロールが無効になります。</p>
-                <ul>
-                <li>再生 / 一時停止ボタン</li>
-                <li>フレーム送り / 戻しボタン</li>
-                <li>再生速度の変更</li>
-                <li>ループ再生の切り替え</li>
-                <li>シークバーの操作</li>
-                </ul>
-                <p>これは、ビデオの再生が Maya
-                のタイムラインに完全に制御されるためです。</p>
-                <h4 id="fps-の不一致に関する警告">FPS
-                の不一致に関する警告</h4>
-                <p>同期を有効にした際、ビデオの FPS と Maya シーンの FPS
-                が異なる場合、警告メッセージが表示されます。FPS
-                が異なると、フレーム送りやフレーム番号の表示がビデオの実際のフレームと一致しない場合があります。</p>
-                <h3 id="音量コントロール">音量コントロール</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge002.png"
-                alt="image" /></p>
-                <p>右側にミュートボタンと音量スライダーがあります。</p>
-                <table>
-                <thead>
-                <tr>
-                <th>コントロール</th>
-                <th>説明</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                <td>ミュートボタン</td>
-                <td>音声のオン/オフを切り替え</td>
-                </tr>
-                <tr>
-                <td>音量スライダー</td>
-                <td>音量を 0〜100 の範囲で調整</td>
-                </tr>
-                </tbody>
-                </table>
                 <h2
                 id="キーボードショートカット">キーボードショートカット</h2>
                 <table>
@@ -334,7 +387,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <ul>
                 <li>音量</li>
                 <li>ミュート状態</li>
-                <li>ループ再生の有効/無効</li>
+                <li>フレームオフセット</li>
                 <li>再生速度</li>
                 </ul>
                 <h2
