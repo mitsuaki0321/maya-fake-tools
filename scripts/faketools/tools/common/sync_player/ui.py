@@ -24,17 +24,18 @@ from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
     QColor,
     QComboBox,
+    QFont,
     QFrame,
     QHBoxLayout,
     QIcon,
     QLabel,
     QPainter,
     QPen,
+    QRect,
     QSize,
     QSizePolicy,
     QSlider,
     QSpinBox,
-    QStyle,
     Qt,
     QTimer,
     QVBoxLayout,
@@ -59,51 +60,53 @@ _SPEED_VALUES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 _DEFAULT_SPEED_INDEX = 3  # 1.0x
 
 
-class _ABLoopSlider(QSlider):
-    """QSlider with draggable A-B loop markers."""
+class _LoopRangeBar(QWidget):
+    """Dedicated A-B loop range bar with draggable markers."""
 
     loop_in_changed = Signal(int)
     loop_out_changed = Signal(int)
 
-    def __init__(self, orientation, parent=None):
-        super().__init__(orientation, parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._loop_in_ms: int | None = None
         self._loop_out_ms: int | None = None
+        self._total_ms: int = 0
         self._dragging: str | None = None
         self.setMouseTracking(True)
+        self.setFixedHeight(int(scale_by_dpi(16, self)))
 
-    def set_loop_markers(self, loop_in: int | None, loop_out: int | None) -> None:
+    def set_loop_markers(self, loop_in: int | None, loop_out: int | None, total_ms: int) -> None:
         """Update A-B loop marker positions.
 
         Args:
             loop_in: A point in milliseconds, or None.
             loop_out: B point in milliseconds, or None.
+            total_ms: Total duration in milliseconds.
         """
         self._loop_in_ms = loop_in
         self._loop_out_ms = loop_out
+        self._total_ms = total_ms
         self.update()
 
-    def _value_to_pixel(self, value: int) -> int:
-        slider_min = self.minimum()
-        slider_max = self.maximum()
-        if slider_max <= slider_min:
+    def set_total_ms(self, ms: int) -> None:
+        """Update total duration.
+
+        Args:
+            ms: Total duration in milliseconds.
+        """
+        self._total_ms = ms
+        self.update()
+
+    def _value_to_pixel(self, ms: int) -> int:
+        if self._total_ms <= 0:
             return 0
-        handle_w = self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength, None, self)
-        available = self.width() - handle_w
-        ratio = (value - slider_min) / (slider_max - slider_min)
-        return int(handle_w / 2 + ratio * available)
+        return int(ms / self._total_ms * self.width())
 
     def _pixel_to_value(self, px: int) -> int:
-        slider_min = self.minimum()
-        slider_max = self.maximum()
-        if slider_max <= slider_min:
-            return slider_min
-        handle_w = self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength, None, self)
-        available = self.width() - handle_w
-        if available <= 0:
-            return slider_min
-        ratio = max(0.0, min(1.0, (px - handle_w / 2) / available))
-        return int(slider_min + ratio * (slider_max - slider_min))
+        if self.width() <= 0 or self._total_ms <= 0:
+            return 0
+        ratio = max(0.0, min(1.0, px / self.width()))
+        return int(ratio * self._total_ms)
 
     def _hit_test(self, x: int) -> str | None:
         if self._loop_in_ms is None or self._loop_out_ms is None:
@@ -133,13 +136,13 @@ class _ABLoopSlider(QSlider):
     def mouseMoveEvent(self, event):
         if self._dragging:
             value = self._pixel_to_value(event.pos().x())
-            value = max(self.minimum(), min(self.maximum(), value))
+            value = max(0, min(self._total_ms, value))
             if self._dragging == "in" and self._loop_out_ms is not None:
                 value = min(value, self._loop_out_ms - 1)
-                self.loop_in_changed.emit(max(self.minimum(), value))
+                self.loop_in_changed.emit(max(0, value))
             elif self._dragging == "out" and self._loop_in_ms is not None:
                 value = max(value, self._loop_in_ms + 1)
-                self.loop_out_changed.emit(min(self.maximum(), value))
+                self.loop_out_changed.emit(min(self._total_ms, value))
             event.accept()
             return
         if self._loop_in_ms is not None and self._loop_out_ms is not None:
@@ -162,20 +165,56 @@ class _ABLoopSlider(QSlider):
         super().leaveEvent(event)
 
     def paintEvent(self, event):
-        super().paintEvent(event)
         if self._loop_in_ms is None or self._loop_out_ms is None:
             return
+        w = self.width()
+        h = self.height()
         x_a = self._value_to_pixel(self._loop_in_ms)
         x_b = self._value_to_pixel(self._loop_out_ms)
+
         painter = QPainter(self)
-        painter.fillRect(x_a, 0, x_b - x_a, self.height(), QColor(70, 130, 200, 60))
-        line_w = max(1, int(scale_by_dpi(1, self)))
-        pen = QPen(QColor(70, 130, 200, 200))
-        pen.setWidth(line_w)
-        painter.setPen(pen)
-        painter.drawLine(x_a, 0, x_a, self.height())
-        painter.drawLine(x_b, 0, x_b, self.height())
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Rail line
+        rail_h = max(1, int(scale_by_dpi(3, self)))
+        rail_y = (h - rail_h) // 2
+        painter.fillRect(QRect(0, rail_y, w, rail_h), QColor("#2A2A2A"))
+
+        # A-B highlight
+        painter.fillRect(QRect(x_a, rail_y, x_b - x_a, rail_h), QColor(74, 158, 255, 90))
+
+        # A line
+        line_w = max(1, int(scale_by_dpi(2, self)))
+        pen_a = QPen(QColor("#4A9EFF"))
+        pen_a.setWidth(line_w)
+        painter.setPen(pen_a)
+        painter.drawLine(x_a, 0, x_a, h)
+
+        # B line
+        pen_b = QPen(QColor("#4A9EFF"))
+        pen_b.setWidth(line_w)
+        painter.setPen(pen_b)
+        painter.drawLine(x_b, 0, x_b, h)
+
+        # A/B labels
+        font_size = max(1, int(scale_by_dpi(11, self)))
+        font = QFont()
+        font.setPixelSize(font_size)
+        font.setBold(True)
+        painter.setFont(font)
+
+        label_offset = int(scale_by_dpi(2, self))
+        painter.setPen(QPen(QColor("#4A9EFF")))
+        painter.drawText(x_a + label_offset, font_size, "A")
+        painter.drawText(x_b + label_offset, font_size, "B")
+
         painter.end()
+
+
+class _SeekSlider(QSlider):
+    """Simple seek slider subclass for future extensibility."""
+
+    pass
 
 
 class _PlaceholderWidget(QWidget):
@@ -314,13 +353,11 @@ class MainWindow(BaseMainWindow):
         bottom_layout.addWidget(scrub_header)
 
         # seek slider
-        self._seek_slider = _ABLoopSlider(Qt.Orientation.Horizontal)
+        self._seek_slider = _SeekSlider(Qt.Orientation.Horizontal)
         self._seek_slider.setRange(0, 0)
         self._seek_slider.sliderPressed.connect(self._on_seek_pressed)
         self._seek_slider.sliderReleased.connect(self._on_seek_released)
         self._seek_slider.sliderMoved.connect(self._on_seek_moved)
-        self._seek_slider.loop_in_changed.connect(self._on_slider_loop_in)
-        self._seek_slider.loop_out_changed.connect(self._on_slider_loop_out)
 
         groove_h = int(scale_by_dpi(4, self))
         handle_w = int(scale_by_dpi(10, self))
@@ -354,12 +391,18 @@ class MainWindow(BaseMainWindow):
             }}
         """)
 
+        self._loop_bar = _LoopRangeBar(self)
+        self._loop_bar.loop_in_changed.connect(self._on_slider_loop_in)
+        self._loop_bar.loop_out_changed.connect(self._on_slider_loop_out)
+
         slider_wrap = QWidget()
         slider_wrap_layout = QVBoxLayout(slider_wrap)
         pad_slider_top = int(scale_by_dpi(2, self))
         pad_slider_bottom = int(scale_by_dpi(4, self))
         slider_wrap_layout.setContentsMargins(left, pad_slider_top, left, pad_slider_bottom)
+        slider_wrap_layout.setSpacing(int(scale_by_dpi(4, self)))
         slider_wrap_layout.addWidget(self._seek_slider)
+        slider_wrap_layout.addWidget(self._loop_bar)
         bottom_layout.addWidget(slider_wrap)
 
         # -- controls row --
@@ -563,6 +606,7 @@ class MainWindow(BaseMainWindow):
         # Focus policy: all controls NoFocus so keyPressEvent handles shortcuts
         for widget in (
             self._seek_slider,
+            self._loop_bar,
             self._speed_combo,
             self._btn_ab,
             self._btn_loop,
@@ -687,6 +731,7 @@ class MainWindow(BaseMainWindow):
 
     def _on_duration_changed(self, duration: int):
         self._seek_slider.setRange(0, duration)
+        self._loop_bar.set_total_ms(duration)
         self._update_time_display(0, duration)
 
     def _on_state_changed(self, state: str):
@@ -764,7 +809,10 @@ class MainWindow(BaseMainWindow):
             self._btn_ab.blockSignals(True)
             self._btn_ab.setChecked(has_loop)
             self._btn_ab.blockSignals(False)
-            self._seek_slider.set_loop_markers(self._player_core.loop_in, self._player_core.loop_out)
+            if has_loop:
+                self._loop_bar.set_loop_markers(self._player_core.loop_in, self._player_core.loop_out, self._player_core.duration)
+            else:
+                self._loop_bar.set_loop_markers(None, None, self._player_core.duration)
             self._update_time_display(self._player_core.position, self._player_core.duration)
 
     def _on_slider_loop_in(self, ms: int):
@@ -811,6 +859,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setEnabled(enabled)
         self._btn_loop.setEnabled(enabled)
         self._seek_slider.setEnabled(enabled)
+        self._loop_bar.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Settings persistence
