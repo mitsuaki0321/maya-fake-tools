@@ -658,21 +658,31 @@ class MayaSyncController:
     Uses MDGMessage.addTimeChangeCallback as the primary sync mechanism
     and MConditionMessage("playingBack") for play state detection.
 
-    During Maya playback: video plays alongside and corrects drift when needed.
-    During scrubbing/clicking: video is paused and seeks to exact frame position.
+    On playingBack=True the video is NOT played immediately. Only after
+    consecutive frame advances are detected (confirming real Maya
+    playback rather than a timeline click-hold) does the video start
+    playing with drift correction. A stale timer pauses the video if
+    time changes stop arriving.
     """
+
+    _CONFIRM_THRESHOLD = 2  # consecutive frame advances to confirm playback
 
     def __init__(self, player_core: VideoPlayerCore):
         self._player_core = player_core
         self._fps = DEFAULT_FPS
         self._callbacks: list[int] = []
-        self._is_playing_back = False
         self._frame_offset: int = 0
+        self._is_playing_back = False
+        self._play_confirmed = False
+        self._advance_count = 0
+        self._last_frame: float | None = None
+        self._stale_timer: QTimer | None = None
 
     def _frame_to_ms(self, frame: float) -> int:
         """Convert a frame number to milliseconds.
 
-        Uses round() to avoid truncation-based off-by-one errors.
+        Seeks to the centre of the frame's time window to avoid
+        boundary ambiguity in the media backend.
 
         Args:
             frame: Frame number.
@@ -681,7 +691,7 @@ class MayaSyncController:
             int: Position in milliseconds.
         """
         adjusted = frame - self._frame_offset
-        return max(0, int(round(adjusted / self._fps * 1000.0)))
+        return max(0, int(round((adjusted + 0.5) / self._fps * 1000.0)))
 
     def set_fps(self, fps: float) -> None:
         """Set FPS for frame-to-millisecond conversion.
@@ -706,7 +716,6 @@ class MayaSyncController:
         Pauses the video and seeks to the current Maya time.
         """
         self.disable()
-        self._is_playing_back = False
 
         self._player_core.pause()
 
@@ -723,11 +732,13 @@ class MayaSyncController:
 
     def disable(self) -> None:
         """Stop syncing and remove all callbacks."""
+        self._stop_stale_timer()
         for cb in self._callbacks:
             with contextlib.suppress(RuntimeError):
                 om2.MMessage.removeCallback(cb)
         self._callbacks.clear()
         self._is_playing_back = False
+        self._play_confirmed = False
         logger.info("Maya sync disabled")
 
     def cleanup(self) -> None:
@@ -742,13 +753,31 @@ class MayaSyncController:
     def _on_time_changed(self, mtime, _client_data) -> None:
         """Called every time Maya's current time changes.
 
-        During playback: only corrects when drift exceeds 1.5 frames.
-        During scrub/click: always seeks to the exact frame position.
+        During confirmed playback: drift correction with stale timer.
+        Otherwise: seeks to the exact frame position.
         """
         frame = mtime.value
         position_ms = self._frame_to_ms(frame)
 
         if self._is_playing_back:
+            if not self._play_confirmed:
+                # Detect consecutive frame advances to confirm real playback
+                if self._last_frame is not None and frame != self._last_frame:
+                    self._advance_count += 1
+                self._last_frame = frame
+
+                if self._advance_count >= self._CONFIRM_THRESHOLD:
+                    self._play_confirmed = True
+                    self._player_core.seek(position_ms)
+                    self._player_core.play()
+                    self._restart_stale_timer()
+                    logger.debug("Playback confirmed - video playing")
+                else:
+                    self._player_core.seek(position_ms)
+                return
+
+            # Confirmed playback — drift correction
+            self._restart_stale_timer()
             current_pos = self._player_core.position
             drift_threshold = int(1500.0 / self._fps)
             if abs(current_pos - position_ms) > drift_threshold:
@@ -759,17 +788,47 @@ class MayaSyncController:
     def _on_playback_changed(self, state, _client_data) -> None:
         """Called when Maya playback starts or stops.
 
-        Starts/stops video playback to match Maya's play state.
+        On start: enters pending state without playing the video.
+        On stop: pauses and seeks to the current frame.
         """
         if state:
             self._is_playing_back = True
+            self._play_confirmed = False
+            self._advance_count = 0
             current_frame = cmds.currentTime(query=True)
+            self._last_frame = current_frame
             self._player_core.seek(self._frame_to_ms(current_frame))
-            self._player_core.play()
-            logger.debug("Maya playback started - video playing")
+            logger.debug("Maya playback started - awaiting confirmation")
         else:
             self._is_playing_back = False
+            self._play_confirmed = False
+            self._stop_stale_timer()
             self._player_core.pause()
             current_frame = cmds.currentTime(query=True)
             self._player_core.seek(self._frame_to_ms(current_frame))
-            logger.debug("Maya playback stopped - video paused")
+            logger.debug("Maya playback stopped")
+
+    # ------------------------------------------------------------------
+    # Stale timer — pause video when time changes stop arriving
+    # ------------------------------------------------------------------
+
+    def _restart_stale_timer(self) -> None:
+        if self._stale_timer is None:
+            self._stale_timer = QTimer()
+            self._stale_timer.setSingleShot(True)
+            self._stale_timer.timeout.connect(self._on_stale)
+        self._stale_timer.start(int(3000.0 / self._fps))
+
+    def _stop_stale_timer(self) -> None:
+        if self._stale_timer is not None:
+            self._stale_timer.stop()
+
+    def _on_stale(self) -> None:
+        """No time changes for ~3 frames — pause the video."""
+        if self._play_confirmed:
+            self._play_confirmed = False
+            self._advance_count = 0
+            self._player_core.pause()
+            current_frame = cmds.currentTime(query=True)
+            self._player_core.seek(self._frame_to_ms(current_frame))
+            logger.debug("Playback stale - video paused")
