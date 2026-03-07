@@ -674,7 +674,9 @@ class MainWindow(BaseMainWindow):
         if self._player_core and self._player_core.has_ab_loop:
             a_text = command.format_time(self._player_core.loop_in)
             b_text = command.format_time(self._player_core.loop_out)
-            display += f"  A-B: {a_text} - {b_text}"
+            a_frame = command.ms_to_frame(self._player_core.loop_in, fps)
+            b_frame = command.ms_to_frame(self._player_core.loop_out, fps)
+            display += f"      A-B: {a_text} - {b_text} [ {a_frame} - {b_frame} ]"
         self._time_label.setText(display)
 
     # ------------------------------------------------------------------
