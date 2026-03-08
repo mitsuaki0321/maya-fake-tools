@@ -233,9 +233,14 @@ class _OffsetSpinBox(QSpinBox):
 
 
 class _SeekSlider(QSlider):
-    """Simple seek slider subclass for future extensibility."""
+    """Seek slider with click-to-jump behavior."""
 
-    pass
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self.maximum() > self.minimum() and self.width() > 0:
+            ratio = max(0.0, min(1.0, event.pos().x() / self.width()))
+            value = int(self.minimum() + ratio * (self.maximum() - self.minimum()))
+            self.setValue(value)
+        super().mousePressEvent(event)
 
 
 class _PlaceholderWidget(QWidget):
@@ -310,7 +315,7 @@ class MainWindow(BaseMainWindow):
         self._player_core: command.VideoPlayerCore | None = None
         self._sync_controller: command.MayaSyncController | None = None
         self._seeking = False
-        self._was_paused_before_seek = False
+        self._was_playing_before_seek = False
         self._current_speed_index = _DEFAULT_SPEED_INDEX
         self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
 
@@ -747,19 +752,21 @@ class MainWindow(BaseMainWindow):
 
     def _on_seek_pressed(self):
         self._seeking = True
-        self._was_paused_before_seek = False
-        if self._player_core and get_playback_state(self._player_core.player) != "playing":
-            self._was_paused_before_seek = True
-            self._player_core.set_muted(True)
-            self._player_core.play()
+        self._was_playing_before_seek = False
+        if self._player_core:
+            self._was_playing_before_seek = get_playback_state(self._player_core.player) == "playing"
+            if self._was_playing_before_seek:
+                self._player_core.pause()
+            self._player_core.seek(self._seek_slider.value())
+            self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
 
     def _on_seek_released(self):
         self._seeking = False
         if self._player_core:
             self._player_core.seek(self._seek_slider.value())
-            if self._was_paused_before_seek:
-                self._player_core.pause()
-                self._player_core.set_muted(self._btn_mute.isChecked())
+            if self._was_playing_before_seek:
+                self._player_core.play()
+            self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
 
     def _on_seek_moved(self, position: int):
         if self._player_core:
