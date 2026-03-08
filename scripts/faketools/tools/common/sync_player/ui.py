@@ -214,6 +214,24 @@ class _LoopRangeBar(QWidget):
         painter.end()
 
 
+class _OffsetSpinBox(QSpinBox):
+    """QSpinBox that returns focus to the parent MainWindow on Enter/Escape or focus loss."""
+
+    def __init__(self, main_window: MainWindow, parent=None):
+        super().__init__(parent)
+        self._main_window = main_window
+
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Escape):
+            self._main_window.setFocus()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        if event.reason() != Qt.FocusReason.ActiveWindowFocusReason:
+            self._main_window.setFocus()
+
+
 class _SeekSlider(QSlider):
     """Simple seek slider subclass for future extensibility."""
 
@@ -250,6 +268,10 @@ class _PlaceholderWidget(QWidget):
         text_label.setStyleSheet(f"color: rgba(255, 255, 255, 0.4); font-size: {font_size}px;")
         layout.addWidget(text_label)
 
+    def mousePressEvent(self, event):
+        self._main_window.setFocus()
+        super().mousePressEvent(event)
+
     def mouseDoubleClickEvent(self, event):
         self._main_window._on_open()
 
@@ -260,6 +282,10 @@ class _VideoWidget(QVideoWidget):
     def __init__(self, parent: MainWindow):
         super().__init__(parent)
         self._main_window = parent
+
+    def mousePressEvent(self, event):
+        self._main_window.setFocus()
+        super().mousePressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         sync = self._main_window._sync_controller
@@ -480,7 +506,7 @@ class MainWindow(BaseMainWindow):
 
         left_layout.addSpacing(int(scale_by_dpi(4, self)))
 
-        self._offset_spin = QSpinBox()
+        self._offset_spin = _OffsetSpinBox(self)
         self._offset_spin.setRange(-999999, 999999)
         self._offset_spin.setValue(0)
         self._offset_spin.setFixedHeight(int(scale_by_dpi(24, self)))
@@ -941,6 +967,10 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
     # Keyboard shortcuts
     # ------------------------------------------------------------------
+
+    def mousePressEvent(self, event):
+        self.setFocus()
+        super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
         if self._sync_controller and self._sync_controller.is_enabled:
