@@ -324,12 +324,6 @@ class MainWindow(BaseMainWindow):
         self._load_timer.setSingleShot(True)
         self._load_timer.timeout.connect(self._on_load_timeout)
 
-        # Timer to pause playback when scrub goes idle (mouse stops or click).
-        self._scrub_pause_timer = QTimer(self)
-        self._scrub_pause_timer.setSingleShot(True)
-        self._scrub_pause_timer.setInterval(50)
-        self._scrub_pause_timer.timeout.connect(self._on_scrub_pause)
-
         self._setup_ui()
 
         width = get_relative_size(self, width_ratio=3.0)[0]
@@ -764,48 +758,36 @@ class MainWindow(BaseMainWindow):
         if self._player_core:
             self._was_playing_before_seek = get_playback_state(self._player_core.player) == "playing"
             self._was_muted_before_seek = self._btn_mute.isChecked()
-            # Mute audio during scrub. The player is kept in playing
-            # state so the WMF backend renders frames on setPosition,
-            # but a short idle timer pauses it when the mouse stops
-            # to prevent unwanted playback.
             if not self._was_muted_before_seek:
                 self._player_core.set_muted(True)
             self._player_core.set_ab_enforcement(False)
-            self._player_core.seek(self._seek_slider.value())
+            # Rate-zero scrub: WMF renders exactly one frame per seek
+            # without advancing playback.
+            self._player_core.set_playback_rate(0.0)
             self._player_core.play()
-            self._scrub_pause_timer.start()
+            self._player_core.seek(self._seek_slider.value())
             self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
 
     def _on_seek_released(self):
-        self._scrub_pause_timer.stop()
-        self._seeking = False
         if self._player_core:
             self._player_core.seek(self._seek_slider.value())
+            # Pause first to cleanly exit the rate-zero state, then
+            # restore the playback rate on the paused player.
+            self._player_core.pause()
+            self._player_core.set_playback_rate(_SPEED_VALUES[self._current_speed_index])
             if self._was_playing_before_seek:
                 self._player_core.play()
-            else:
-                # Brief play to force the WMF backend to render the
-                # final frame, then pause via the timer.
-                self._player_core.play()
-                self._scrub_pause_timer.start()
             if not self._was_muted_before_seek:
                 self._player_core.set_muted(False)
             self._player_core.set_ab_enforcement(True)
             self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
+        # Unblock _on_state_changed only after all state is restored.
+        self._seeking = False
 
     def _on_seek_moved(self, position: int):
         if self._player_core:
-            # Resume playing if the idle timer paused us.
-            if get_playback_state(self._player_core.player) != "playing":
-                self._player_core.play()
             self._player_core.seek(position)
-            self._scrub_pause_timer.start()
         self._update_time_display(position, self._seek_slider.maximum())
-
-    def _on_scrub_pause(self):
-        """Pause the player when scrub goes idle (mouse stopped or click)."""
-        if self._player_core and get_playback_state(self._player_core.player) == "playing":
-            self._player_core.pause()
 
     # ------------------------------------------------------------------
     # Signal handlers — player feedback
@@ -822,7 +804,7 @@ class MainWindow(BaseMainWindow):
         self._update_time_display(0, duration)
 
     def _on_state_changed(self, state: str):
-        if self._seeking or self._scrub_pause_timer.isActive():
+        if self._seeking:
             return
         is_playing = state == "playing"
         self._btn_play_pause.blockSignals(True)
