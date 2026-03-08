@@ -113,6 +113,16 @@ Click the ![image](../../images/common/sync_player/loop_off.svg) button to autom
 
 When loop is enabled, the button icon changes to ![image](../../images/common/sync_player/loop_on.svg).
 
+### Window Opacity
+
+Click the ![image](../../images/common/sync_player/opacity_off.svg) button to make the entire window (video and controls) semi-transparent. This is useful for overlaying the window on the Maya viewport to reference footage while working.
+
+When opacity is enabled, the button icon changes to ![image](../../images/common/sync_player/opacity_on.svg).
+
+- The opacity preset value can be adjusted from 10% to 100% using the Opacity slider in the options menu
+- While opacity is enabled, changes to the slider are applied immediately
+- The window always starts fully opaque (opacity off) on launch
+
 ### Maya Sync (Timeline Synchronization)
 
 Click the ![image](../../images/common/sync_player/sync_off.svg) button to enable Maya timeline synchronization mode.
@@ -180,6 +190,10 @@ Select the playback speed from the **Speed** submenu.
 | 1.5x | 1.5x speed |
 | 2.0x | Double speed |
 
+#### Opacity
+
+Use the **Opacity** slider to adjust the window opacity preset value. The range is 10% to 100%. When opacity is enabled, adjusting the slider changes the window opacity in real time.
+
 ## Keyboard Shortcuts
 
 | Key | Description |
@@ -187,8 +201,12 @@ Select the playback speed from the **Speed** submenu.
 | Space | Toggle play / pause |
 | Right / Up | Step to next frame |
 | Left / Down | Step to previous frame |
+| Ctrl+T | Toggle window opacity |
+| Ctrl+Up | Increase opacity preset by +10% |
+| Ctrl+Down | Decrease opacity preset by -10% |
+| Ctrl+0 | Reset opacity to 100% and turn off |
 
-> **Note**: Keyboard shortcuts are disabled when Maya Sync is active.
+> **Note**: Keyboard shortcuts are disabled when Maya Sync is active. However, opacity shortcuts (Ctrl+T / Ctrl+Up / Ctrl+Down / Ctrl+0) remain available during sync.
 
 ## Settings Persistence
 
@@ -198,6 +216,7 @@ The following settings are automatically saved when the window is closed and res
 - Mute state
 - Frame offset
 - Playback speed
+- Opacity preset value
 
 ## Extending Supported Formats
 

@@ -68,6 +68,8 @@
                     Loop</a></li>
                     <li><a href="#loop-playback"
                     id="toc-loop-playback">Loop Playback</a></li>
+                    <li><a href="#window-opacity"
+                    id="toc-window-opacity">Window Opacity</a></li>
                     <li><a href="#maya-sync-timeline-synchronization"
                     id="toc-maya-sync-timeline-synchronization">Maya
                     Sync (Timeline Synchronization)</a></li>
@@ -256,6 +258,25 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <p>When loop is enabled, the button icon changes to <img
                 src="../../images/common/sync_player/loop_on.svg"
                 alt="image" />.</p>
+                <h3 id="window-opacity">Window Opacity</h3>
+                <p>Click the <img
+                src="../../images/common/sync_player/opacity_off.svg"
+                alt="image" /> button to make the entire window (video
+                and controls) semi-transparent. This is useful for
+                overlaying the window on the Maya viewport to reference
+                footage while working.</p>
+                <p>When opacity is enabled, the button icon changes to
+                <img
+                src="../../images/common/sync_player/opacity_on.svg"
+                alt="image" />.</p>
+                <ul>
+                <li>The opacity preset value can be adjusted from 10% to
+                100% using the Opacity slider in the options menu</li>
+                <li>While opacity is enabled, changes to the slider are
+                applied immediately</li>
+                <li>The window always starts fully opaque (opacity off)
+                on launch</li>
+                </ul>
                 <h3 id="maya-sync-timeline-synchronization">Maya Sync
                 (Timeline Synchronization)</h3>
                 <p>Click the <img
@@ -378,6 +399,11 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
+                <h4 id="opacity">Opacity</h4>
+                <p>Use the <strong>Opacity</strong> slider to adjust the
+                window opacity preset value. The range is 10% to 100%.
+                When opacity is enabled, adjusting the slider changes
+                the window opacity in real time.</p>
                 <h2 id="keyboard-shortcuts">Keyboard Shortcuts</h2>
                 <table>
                 <thead>
@@ -399,11 +425,29 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <td>Left / Down</td>
                 <td>Step to previous frame</td>
                 </tr>
+                <tr>
+                <td>Ctrl+T</td>
+                <td>Toggle window opacity</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Up</td>
+                <td>Increase opacity preset by +10%</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Down</td>
+                <td>Decrease opacity preset by -10%</td>
+                </tr>
+                <tr>
+                <td>Ctrl+0</td>
+                <td>Reset opacity to 100% and turn off</td>
+                </tr>
                 </tbody>
                 </table>
                 <blockquote>
                 <p><strong>Note</strong>: Keyboard shortcuts are
-                disabled when Maya Sync is active.</p>
+                disabled when Maya Sync is active. However, opacity
+                shortcuts (Ctrl+T / Ctrl+Up / Ctrl+Down / Ctrl+0) remain
+                available during sync.</p>
                 </blockquote>
                 <h2 id="settings-persistence">Settings Persistence</h2>
                 <p>The following settings are automatically saved when
@@ -413,6 +457,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <li>Mute state</li>
                 <li>Frame offset</li>
                 <li>Playback speed</li>
+                <li>Opacity preset value</li>
                 </ul>
                 <h2 id="extending-supported-formats">Extending Supported
                 Formats</h2>

@@ -63,6 +63,8 @@
                     ループ</a></li>
                     <li><a href="#ループ再生"
                     id="toc-ループ再生">ループ再生</a></li>
+                    <li><a href="#ウィンドウ透過"
+                    id="toc-ウィンドウ透過">ウィンドウ透過</a></li>
                     <li><a href="#maya-syncタイムライン同期"
                     id="toc-maya-syncタイムライン同期">Maya
                     Sync（タイムライン同期）</a></li>
@@ -237,6 +239,21 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <p>ループがオンの場合は、ボタンアイコンが、<img
                 src="../../images/common/sync_player/loop_on.svg"
                 alt="image" /> に変更されます。</p>
+                <h3 id="ウィンドウ透過">ウィンドウ透過</h3>
+                <p><img
+                src="../../images/common/sync_player/opacity_off.svg"
+                alt="image" />
+                ボタンをクリックすると、ウィンドウ全体（ビデオ映像とコントロール）が半透明になります。Maya
+                ビューポートの上にウィンドウを重ねてリファレンス映像を確認しながら作業する際に便利です。</p>
+                <p>透過がオンの場合は、ボタンアイコンが <img
+                src="../../images/common/sync_player/opacity_on.svg"
+                alt="image" /> に変更されます。</p>
+                <ul>
+                <li>不透明度のプリセット値はオプションメニューの Opacity
+                スライダーで 10%〜100% の範囲で調整できます</li>
+                <li>透過がオンの間、スライダーで値を変更すると即座に反映されます</li>
+                <li>起動時は常に不透明（透過オフ）の状態です</li>
+                </ul>
                 <h3 id="maya-syncタイムライン同期">Maya
                 Sync（タイムライン同期）</h3>
                 <p><img
@@ -354,6 +371,11 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tr>
                 </tbody>
                 </table>
+                <h4 id="不透明度">不透明度</h4>
+                <p><strong>Opacity</strong>
+                スライダーでウィンドウ透過のプリセット値を調整できます。範囲は
+                10%〜100%
+                です。透過がオンの状態でスライダーを操作すると、リアルタイムにウィンドウの不透明度が変化します。</p>
                 <h2
                 id="キーボードショートカット">キーボードショートカット</h2>
                 <table>
@@ -376,11 +398,29 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <td>Left / Down</td>
                 <td>前のフレームに戻る</td>
                 </tr>
+                <tr>
+                <td>Ctrl+T</td>
+                <td>ウィンドウ透過の切り替え</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Up</td>
+                <td>不透明度プリセット値を +10%</td>
+                </tr>
+                <tr>
+                <td>Ctrl+Down</td>
+                <td>不透明度プリセット値を -10%</td>
+                </tr>
+                <tr>
+                <td>Ctrl+0</td>
+                <td>不透明度を 100% にリセットし透過をオフ</td>
+                </tr>
                 </tbody>
                 </table>
                 <blockquote>
                 <p><strong>Note</strong>: Maya Sync
-                が有効な場合、キーボードショートカットは無効になります。</p>
+                が有効な場合、キーボードショートカットは無効になります。ただし、透過関連のショートカット（Ctrl+T
+                / Ctrl+Up / Ctrl+Down / Ctrl+0）は Sync
+                中でも使用できます。</p>
                 </blockquote>
                 <h2 id="設定の保存">設定の保存</h2>
                 <p>ウィンドウを閉じる際、以下の設定が自動的に保存され、次回起動時に復元されます。</p>
@@ -389,6 +429,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <li>ミュート状態</li>
                 <li>フレームオフセット</li>
                 <li>再生速度</li>
+                <li>不透明度プリセット値</li>
                 </ul>
                 <h2
                 id="対応フォーマットの拡張">対応フォーマットの拡張</h2>
