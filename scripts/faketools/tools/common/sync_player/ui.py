@@ -42,6 +42,7 @@ from ....lib_ui.qt_compat import (
     QVBoxLayout,
     QVideoWidget,
     QWidget,
+    QWidgetAction,
     Signal,
     get_open_file_name,
     get_playback_state,
@@ -318,6 +319,7 @@ class MainWindow(BaseMainWindow):
         self._was_playing_before_seek = False
         self._was_muted_before_seek = False
         self._current_speed_index = _DEFAULT_SPEED_INDEX
+        self._opacity_value = 50
         self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
 
         self._load_timer = QTimer(self)
@@ -502,6 +504,15 @@ class MainWindow(BaseMainWindow):
         self._btn_sync.toggled.connect(self._on_sync_toggled)
         left_layout.addWidget(self._btn_sync)
 
+        self._btn_opacity = IconToggleButton(
+            icon_on="opacity_on", icon_off="opacity_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR
+        )
+        self._btn_opacity.setToolTip("Opacity (Ctrl+T)")
+        self._btn_opacity.setIconSize(btn_icon_size)
+        self._btn_opacity.setFixedSize(btn_size, btn_size)
+        self._btn_opacity.toggled.connect(self._on_opacity_toggled)
+        left_layout.addWidget(self._btn_opacity)
+
         left_layout.addSpacing(sep_margin)
         left_layout.addWidget(_make_vline())
         left_layout.addSpacing(sep_margin)
@@ -660,6 +671,7 @@ class MainWindow(BaseMainWindow):
             self._btn_ab,
             self._btn_loop,
             self._btn_sync,
+            self._btn_opacity,
             self._btn_prev,
             self._btn_play_pause,
             self._btn_next,
@@ -913,6 +925,43 @@ class MainWindow(BaseMainWindow):
         for i, label in enumerate(_SPEED_OPTIONS):
             speed_menu.addAction(label, lambda checked=False, idx=i: self._on_speed_selected(idx))
 
+        self._options_menu.addSeparator()
+
+        # Opacity slider row
+        opacity_widget = QWidget()
+        opacity_layout = QHBoxLayout(opacity_widget)
+        menu_pad_h = int(scale_by_dpi(12, self))
+        menu_pad_v = int(scale_by_dpi(4, self))
+        opacity_layout.setContentsMargins(menu_pad_h, menu_pad_v, menu_pad_h, menu_pad_v)
+        opacity_layout.setSpacing(int(scale_by_dpi(8, self)))
+
+        opacity_label = QLabel("Opacity")
+        opacity_label.setStyleSheet("color: #CCCCCC;")
+        opacity_layout.addWidget(opacity_label)
+
+        opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        opacity_slider.setRange(10, 100)
+        opacity_slider.setValue(self._opacity_value)
+        opacity_slider.setMinimumWidth(int(scale_by_dpi(80, self)))
+        opacity_layout.addWidget(opacity_slider, stretch=1)
+
+        value_label = QLabel(f"{self._opacity_value}%")
+        value_label.setFixedWidth(int(scale_by_dpi(32, self)))
+        value_label.setStyleSheet("color: #CCCCCC;")
+        opacity_layout.addWidget(value_label)
+
+        def _on_opacity_slider_changed(val: int):
+            self._opacity_value = val
+            value_label.setText(f"{val}%")
+            if self._btn_opacity.isChecked():
+                self.setWindowOpacity(val / 100.0)
+
+        opacity_slider.valueChanged.connect(_on_opacity_slider_changed)
+
+        action = QWidgetAction(self._options_menu)
+        action.setDefaultWidget(opacity_widget)
+        self._options_menu.addAction(action)
+
     # ------------------------------------------------------------------
     # Signal handlers — sync
     # ------------------------------------------------------------------
@@ -939,6 +988,17 @@ class MainWindow(BaseMainWindow):
             self._player_core.set_ab_enforcement(not checked)
         self._set_sync_locked(checked)
 
+    # ------------------------------------------------------------------
+    # Signal handlers — opacity
+    # ------------------------------------------------------------------
+
+    @error_handler
+    def _on_opacity_toggled(self, checked: bool):
+        if checked:
+            self.setWindowOpacity(self._opacity_value / 100.0)
+        else:
+            self.setWindowOpacity(1.0)
+
     def _set_sync_locked(self, locked: bool):
         """Enable or disable player controls based on Maya sync state."""
         enabled = not locked
@@ -960,6 +1020,7 @@ class MainWindow(BaseMainWindow):
             "muted": self._btn_mute.isChecked(),
             "frame_offset": self._offset_spin.value(),
             "speed_index": self._current_speed_index,
+            "opacity_value": self._opacity_value,
         }
 
     def _apply_settings(self, data: dict) -> None:
@@ -981,6 +1042,8 @@ class MainWindow(BaseMainWindow):
         speed_index = data.get("speed_index", _DEFAULT_SPEED_INDEX)
         self._on_speed_selected(speed_index)
 
+        self._opacity_value = data.get("opacity_value", 50)
+
     def _restore_settings(self):
         data = self._settings.load_settings("default")
         if data:
@@ -998,10 +1061,34 @@ class MainWindow(BaseMainWindow):
         super().mousePressEvent(event)
 
     def keyPressEvent(self, event):
+        key = event.key()
+        ctrl = bool(event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+
+        # Opacity shortcuts (available even during sync)
+        if ctrl and key == Qt.Key.Key_T:
+            self._btn_opacity.toggle()
+            return
+        if ctrl and key == Qt.Key.Key_Up:
+            self._opacity_value = min(100, self._opacity_value + 10)
+            if self._btn_opacity.isChecked():
+                self.setWindowOpacity(self._opacity_value / 100.0)
+            return
+        if ctrl and key == Qt.Key.Key_Down:
+            self._opacity_value = max(10, self._opacity_value - 10)
+            if self._btn_opacity.isChecked():
+                self.setWindowOpacity(self._opacity_value / 100.0)
+            return
+        if ctrl and key == Qt.Key.Key_0:
+            self._opacity_value = 100
+            self._btn_opacity.blockSignals(True)
+            self._btn_opacity.setChecked(False)
+            self._btn_opacity.blockSignals(False)
+            self.setWindowOpacity(1.0)
+            return
+
         if self._sync_controller and self._sync_controller.is_enabled:
             super().keyPressEvent(event)
             return
-        key = event.key()
         if key == Qt.Key.Key_Space:
             self._btn_play_pause.toggle()
             return

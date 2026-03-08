@@ -157,6 +157,7 @@ try:
         QTreeWidgetItem,
         QVBoxLayout,
         QWidget,
+        QWidgetAction,
     )
 
     # Version flag
@@ -320,6 +321,7 @@ except ImportError:
         QTreeWidgetItem,
         QVBoxLayout,
         QWidget,
+        QWidgetAction,
     )
 
     # Version flag
@@ -666,6 +668,7 @@ __all__ = [
     "QStyleOptionTab",
     "QStylePainter",
     "QFrame",
+    "QWidgetAction",
     # Version info
     "QT_VERSION",
     "QT_VERSION_MAJOR",
