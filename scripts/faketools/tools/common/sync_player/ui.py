@@ -512,6 +512,7 @@ class MainWindow(BaseMainWindow):
         """
         if self._player_core:
             self._player_core.clear_ab_loop()
+            self._video_graphics_view.reset_view()
             self.setCursor(Qt.CursorShape.WaitCursor)
             self._load_timer.start(10000)
             self._placeholder.hide()
@@ -919,6 +920,11 @@ class MainWindow(BaseMainWindow):
             self._btn_opacity.setChecked(False)
             self._btn_opacity.blockSignals(False)
             self.setWindowOpacity(1.0)
+            return
+
+        # Pan/zoom reset (available even during sync)
+        if key in (Qt.Key.Key_A, Qt.Key.Key_F):
+            self._video_graphics_view.reset_view()
             return
 
         if self._sync_controller and self._sync_controller.is_enabled:

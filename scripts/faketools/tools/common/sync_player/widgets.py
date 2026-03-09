@@ -16,6 +16,7 @@ from ....lib_ui.qt_compat import (
     QLabel,
     QPainter,
     QPen,
+    QPointF,
     QRect,
     QSize,
     QSlider,
@@ -253,8 +254,12 @@ class PlaceholderWidget(QWidget):
         self.open_requested.emit()
 
 
+_ZOOM_FACTOR = 1.15
+_ZOOM_MAX = 20.0
+
+
 class VideoGraphicsView(QGraphicsView):
-    """QGraphicsView hosting a QGraphicsVideoItem with flip support."""
+    """QGraphicsView hosting a QGraphicsVideoItem with flip, pan, and zoom support."""
 
     open_requested = Signal()
 
@@ -263,6 +268,14 @@ class VideoGraphicsView(QGraphicsView):
         self._focus_widget = focus_widget
         self._flip_h = False
         self._flip_v = False
+        self._zoom_level = 1.0
+
+        # Alt+Middle-drag pan state
+        self._pan_last_pos: QPointF | None = None
+        # Alt+Right-drag zoom state
+        self._drag_zoom_start_pos: QPointF | None = None
+        self._drag_zoom_start_level: float = 1.0
+        self._drag_zoom_anchor_view: QPointF | None = None
 
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
@@ -276,6 +289,7 @@ class VideoGraphicsView(QGraphicsView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setStyleSheet("background-color: #0D0D0D;")
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.NoAnchor)
 
     @property
     def video_item(self) -> QGraphicsVideoItem:
@@ -310,20 +324,115 @@ class VideoGraphicsView(QGraphicsView):
         t.translate(-center.x(), -center.y())
         self._video_item.setTransform(t)
 
+    def reset_view(self) -> None:
+        """Reset zoom and pan to fit the video in the view."""
+        self._zoom_level = 1.0
+        self._fit_video()
+
     def _fit_video(self, _size=None) -> None:
         """Fit the video item into the view keeping aspect ratio."""
+        if self._zoom_level > 1.001:
+            return
         rect = self._video_item.boundingRect()
         if rect.width() > 0 and rect.height() > 0:
             self._scene.setSceneRect(rect)
             self.fitInView(self._video_item, Qt.AspectRatioMode.KeepAspectRatio)
 
+    def _apply_zoom(self, factor: float, anchor_view: QPointF) -> None:
+        """Apply zoom factor, keeping the anchor point stable in the view.
+
+        Args:
+            factor: Multiplicative zoom factor.
+            anchor_view: View-local coordinate that should remain stationary.
+        """
+        new_level = self._zoom_level * factor
+        if new_level < 1.0:
+            self._zoom_level = 1.0
+            self._fit_video()
+            return
+        if new_level > _ZOOM_MAX:
+            factor = _ZOOM_MAX / self._zoom_level
+            new_level = _ZOOM_MAX
+
+        scene_before = self.mapToScene(anchor_view.toPoint())
+        self.scale(factor, factor)
+        scene_after = self.mapToScene(anchor_view.toPoint())
+        delta = scene_after - scene_before
+        self.translate(delta.x(), delta.y())
+
+        self._zoom_level = new_level
+
+    # ------------------------------------------------------------------
+    # Event overrides
+    # ------------------------------------------------------------------
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._fit_video()
 
+    def wheelEvent(self, event):
+        if event.angleDelta().y() == 0:
+            super().wheelEvent(event)
+            return
+        factor = _ZOOM_FACTOR if event.angleDelta().y() > 0 else 1.0 / _ZOOM_FACTOR
+        self._apply_zoom(factor, event.position())
+        event.accept()
+
     def mousePressEvent(self, event):
+        alt = bool(event.modifiers() & Qt.KeyboardModifier.AltModifier)
+
+        if alt and event.button() == Qt.MouseButton.MiddleButton and self._zoom_level > 1.001:
+            self._pan_last_pos = event.position()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            event.accept()
+            return
+
+        if alt and event.button() == Qt.MouseButton.RightButton:
+            self._drag_zoom_start_pos = event.position()
+            self._drag_zoom_start_level = self._zoom_level
+            self._drag_zoom_anchor_view = event.position()
+            self.setCursor(Qt.CursorShape.SizeAllCursor)
+            event.accept()
+            return
+
         self._focus_widget.setFocus()
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._pan_last_pos is not None:
+            delta = event.position() - self._pan_last_pos
+            self._pan_last_pos = event.position()
+            t = self.transform()
+            self.setTransform(QTransform(t).translate(delta.x() / t.m11(), delta.y() / t.m22()))
+            event.accept()
+            return
+
+        if self._drag_zoom_start_pos is not None and self._drag_zoom_anchor_view is not None:
+            dx = event.position().x() - self._drag_zoom_start_pos.x()
+            dy = event.position().y() - self._drag_zoom_start_pos.y()
+            target_level = self._drag_zoom_start_level * (2.0 ** ((dx + dy) / 200.0))
+            target_level = max(1.0, min(_ZOOM_MAX, target_level))
+            factor = target_level / self._zoom_level
+            if abs(factor - 1.0) > 1e-6:
+                self._apply_zoom(factor, self._drag_zoom_anchor_view)
+            event.accept()
+            return
+
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if self._pan_last_pos is not None and event.button() == Qt.MouseButton.MiddleButton:
+            self._pan_last_pos = None
+            self.unsetCursor()
+            event.accept()
+            return
+        if self._drag_zoom_start_pos is not None and event.button() == Qt.MouseButton.RightButton:
+            self._drag_zoom_start_pos = None
+            self._drag_zoom_anchor_view = None
+            self.unsetCursor()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event):
         self.open_requested.emit()
