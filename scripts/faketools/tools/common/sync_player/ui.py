@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from logging import getLogger
 import os
-from pathlib import Path
 
 import maya.api.OpenMaya as om2
 import maya.cmds as cmds
@@ -18,351 +17,37 @@ from ....lib_ui import (
     ToolSettingsManager,
     error_handler,
     get_maya_main_window,
-    icons,
 )
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
-    QColor,
-    QFont,
     QFrame,
-    QGraphicsScene,
-    QGraphicsVideoItem,
-    QGraphicsView,
     QHBoxLayout,
-    QIcon,
     QLabel,
     QMenu,
-    QPainter,
-    QPen,
-    QRect,
     QSize,
     QSizePolicy,
     QSlider,
-    QSpinBox,
     Qt,
     QTimer,
     QToolButton,
-    QTransform,
     QVBoxLayout,
     QWidget,
     QWidgetAction,
-    Signal,
     get_open_file_name,
     get_playback_state,
 )
 from ....lib_ui.ui_utils import get_relative_size, scale_by_dpi
 from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton, IconToolButton
 from . import command
+from .widgets import ICONS_DIR, LoopRangeBar, OffsetSpinBox, PlaceholderWidget, SeekSlider, VideoGraphicsView
 
 logger = getLogger(__name__)
 
 _instance = None
 
-_ICONS_DIR = str(Path(__file__).parent / "icons")
-
 _SPEED_OPTIONS = ["0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x"]
 _SPEED_VALUES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 _DEFAULT_SPEED_INDEX = 3  # 1.0x
-
-
-class _LoopRangeBar(QWidget):
-    """Dedicated A-B loop range bar with draggable markers."""
-
-    loop_in_changed = Signal(int)
-    loop_out_changed = Signal(int)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._loop_in_ms: int | None = None
-        self._loop_out_ms: int | None = None
-        self._total_ms: int = 0
-        self._dragging: str | None = None
-        self.setMouseTracking(True)
-        self.setFixedHeight(int(scale_by_dpi(16, self)))
-
-    def set_loop_markers(self, loop_in: int | None, loop_out: int | None, total_ms: int) -> None:
-        """Update A-B loop marker positions.
-
-        Args:
-            loop_in: A point in milliseconds, or None.
-            loop_out: B point in milliseconds, or None.
-            total_ms: Total duration in milliseconds.
-        """
-        self._loop_in_ms = loop_in
-        self._loop_out_ms = loop_out
-        self._total_ms = total_ms
-        self.update()
-
-    def set_total_ms(self, ms: int) -> None:
-        """Update total duration.
-
-        Args:
-            ms: Total duration in milliseconds.
-        """
-        self._total_ms = ms
-        self.update()
-
-    def _value_to_pixel(self, ms: int) -> int:
-        if self._total_ms <= 0:
-            return 0
-        return int(ms / self._total_ms * self.width())
-
-    def _pixel_to_value(self, px: int) -> int:
-        if self.width() <= 0 or self._total_ms <= 0:
-            return 0
-        ratio = max(0.0, min(1.0, px / self.width()))
-        return int(ratio * self._total_ms)
-
-    def _hit_test(self, x: int) -> str | None:
-        if self._loop_in_ms is None or self._loop_out_ms is None:
-            return None
-        grab_px = int(scale_by_dpi(6, self))
-        x_a = self._value_to_pixel(self._loop_in_ms)
-        x_b = self._value_to_pixel(self._loop_out_ms)
-        dist_a = abs(x - x_a)
-        dist_b = abs(x - x_b)
-        if dist_a <= grab_px and dist_b <= grab_px:
-            return "in" if dist_a <= dist_b else "out"
-        if dist_a <= grab_px:
-            return "in"
-        if dist_b <= grab_px:
-            return "out"
-        return None
-
-    def mousePressEvent(self, event):
-        if self.isEnabled() and event.button() == Qt.MouseButton.LeftButton:
-            hit = self._hit_test(event.pos().x())
-            if hit:
-                self._dragging = hit
-                event.accept()
-                return
-        super().mousePressEvent(event)
-
-    def mouseMoveEvent(self, event):
-        if self._dragging:
-            value = self._pixel_to_value(event.pos().x())
-            value = max(0, min(self._total_ms, value))
-            if self._dragging == "in" and self._loop_out_ms is not None:
-                value = min(value, self._loop_out_ms - 1)
-                self.loop_in_changed.emit(max(0, value))
-            elif self._dragging == "out" and self._loop_in_ms is not None:
-                value = max(value, self._loop_in_ms + 1)
-                self.loop_out_changed.emit(min(self._total_ms, value))
-            event.accept()
-            return
-        if self._loop_in_ms is not None and self._loop_out_ms is not None:
-            if self._hit_test(event.pos().x()):
-                self.setCursor(Qt.CursorShape.SizeHorCursor)
-            else:
-                self.unsetCursor()
-        super().mouseMoveEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        if self._dragging:
-            self._dragging = None
-            event.accept()
-            return
-        super().mouseReleaseEvent(event)
-
-    def leaveEvent(self, event):
-        if not self._dragging:
-            self.unsetCursor()
-        super().leaveEvent(event)
-
-    def paintEvent(self, event):
-        if self._loop_in_ms is None or self._loop_out_ms is None:
-            return
-        w = self.width()
-        h = self.height()
-        x_a = self._value_to_pixel(self._loop_in_ms)
-        x_b = self._value_to_pixel(self._loop_out_ms)
-        disabled = not self.isEnabled()
-
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Colors
-        accent = QColor("#555555") if disabled else QColor("#4A9EFF")
-        highlight = QColor(85, 85, 85, 60) if disabled else QColor(74, 158, 255, 90)
-
-        # Rail line
-        rail_h = max(1, int(scale_by_dpi(3, self)))
-        rail_y = (h - rail_h) // 2
-        painter.fillRect(QRect(0, rail_y, w, rail_h), QColor("#2A2A2A"))
-
-        # A-B highlight
-        painter.fillRect(QRect(x_a, rail_y, x_b - x_a, rail_h), highlight)
-
-        # A line
-        line_w = max(1, int(scale_by_dpi(2, self)))
-        pen = QPen(accent)
-        pen.setWidth(line_w)
-        painter.setPen(pen)
-        painter.drawLine(x_a, 0, x_a, h)
-
-        # B line
-        painter.drawLine(x_b, 0, x_b, h)
-
-        # A/B labels
-        font_size = max(1, int(scale_by_dpi(11, self)))
-        font = QFont()
-        font.setPixelSize(font_size)
-        font.setBold(True)
-        painter.setFont(font)
-
-        label_offset = int(scale_by_dpi(2, self))
-        fm = painter.fontMetrics()
-        painter.drawText(x_a + label_offset, font_size, "A")
-        painter.drawText(x_b - label_offset - fm.horizontalAdvance("B"), font_size, "B")
-
-        painter.end()
-
-
-class _OffsetSpinBox(QSpinBox):
-    """QSpinBox that returns focus to the parent MainWindow on Enter/Escape or focus loss."""
-
-    def __init__(self, main_window: MainWindow, parent=None):
-        super().__init__(parent)
-        self._main_window = main_window
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Escape):
-            self._main_window.setFocus()
-
-    def focusOutEvent(self, event):
-        super().focusOutEvent(event)
-        if event.reason() != Qt.FocusReason.ActiveWindowFocusReason:
-            self._main_window.setFocus()
-
-
-class _SeekSlider(QSlider):
-    """Seek slider with click-to-jump behavior."""
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and self.maximum() > self.minimum() and self.width() > 0:
-            ratio = max(0.0, min(1.0, event.pos().x() / self.width()))
-            value = int(self.minimum() + ratio * (self.maximum() - self.minimum()))
-            self.setValue(value)
-        super().mousePressEvent(event)
-
-
-class _PlaceholderWidget(QWidget):
-    """Empty-state placeholder with icon and instruction text."""
-
-    def __init__(self, main_window: MainWindow, parent=None):
-        super().__init__(parent)
-        self._main_window = main_window
-        self.setAutoFillBackground(True)
-        palette = self.palette()
-        palette.setColor(self.backgroundRole(), QColor("#0D0D0D"))
-        self.setPalette(palette)
-
-        layout = QVBoxLayout(self)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Monitor icon
-        icon_size = int(scale_by_dpi(64, self))
-        icon_path = icons.get_path("monitor", base_dir=_ICONS_DIR)
-        pixmap = QIcon(icon_path).pixmap(QSize(icon_size, icon_size))
-        icon_label = QLabel()
-        icon_label.setPixmap(pixmap)
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(icon_label)
-
-        # Instruction text
-        font_size = max(11, int(scale_by_dpi(13, self)))
-        text_label = QLabel("Double-click to open")
-        text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        text_label.setStyleSheet(f"color: rgba(255, 255, 255, 0.4); font-size: {font_size}px;")
-        layout.addWidget(text_label)
-
-    def mousePressEvent(self, event):
-        self._main_window.setFocus()
-        super().mousePressEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        self._main_window._on_open()
-
-
-class _VideoGraphicsView(QGraphicsView):
-    """QGraphicsView hosting a QGraphicsVideoItem with flip support."""
-
-    def __init__(self, parent: MainWindow):
-        super().__init__(parent)
-        self._main_window = parent
-        self._flip_h = False
-        self._flip_v = False
-
-        self._scene = QGraphicsScene(self)
-        self.setScene(self._scene)
-
-        self._video_item = QGraphicsVideoItem()
-        self._scene.addItem(self._video_item)
-        self._video_item.nativeSizeChanged.connect(self._fit_video)
-
-        # Appearance
-        self.setFrameShape(QFrame.Shape.NoFrame)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setStyleSheet("background-color: #0D0D0D;")
-
-    @property
-    def video_item(self) -> QGraphicsVideoItem:
-        """The underlying QGraphicsVideoItem (pass to VideoPlayerCore)."""
-        return self._video_item
-
-    @property
-    def flip_h(self) -> bool:
-        """Current horizontal flip state."""
-        return self._flip_h
-
-    @property
-    def flip_v(self) -> bool:
-        """Current vertical flip state."""
-        return self._flip_v
-
-    def set_flip(self, horizontal: bool, vertical: bool) -> None:
-        """Apply horizontal / vertical flip via QTransform on the video item.
-
-        Args:
-            horizontal: True to mirror left-right.
-            vertical: True to mirror top-bottom.
-        """
-        self._flip_h = horizontal
-        self._flip_v = vertical
-        sx = -1.0 if horizontal else 1.0
-        sy = -1.0 if vertical else 1.0
-        center = self._video_item.boundingRect().center()
-        t = QTransform()
-        t.translate(center.x(), center.y())
-        t.scale(sx, sy)
-        t.translate(-center.x(), -center.y())
-        self._video_item.setTransform(t)
-
-    def _fit_video(self, _size=None) -> None:
-        """Fit the video item into the view keeping aspect ratio."""
-        rect = self._video_item.boundingRect()
-        if rect.width() > 0 and rect.height() > 0:
-            self._scene.setSceneRect(rect)
-            self.fitInView(self._video_item, Qt.AspectRatioMode.KeepAspectRatio)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._fit_video()
-
-    def mousePressEvent(self, event):
-        self._main_window.setFocus()
-        super().mousePressEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        sync = self._main_window._sync_controller
-        if sync is not None and sync.is_enabled:
-            return
-        if self._main_window._is_playing():
-            cmds.warning("Sync Player: Cannot open a new video while playing")
-            return
-        self._main_window._on_open()
 
 
 class MainWindow(BaseMainWindow):
@@ -408,16 +93,74 @@ class MainWindow(BaseMainWindow):
         left, _top, _right, _bottom = self.central_layout.getContentsMargins()
         self.central_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Video area — placeholder shown until a video is loaded
+        self._setup_video_area()
+
+        # -- bottom_widget: scrub + controls container --
+        border_w = max(1, int(scale_by_dpi(1, self)))
+        bottom_widget = QWidget()
+        bottom_widget.setStyleSheet(f"QWidget#SyncPlayerBottom {{ background-color: #1A1A1A; border-top: {border_w}px solid #333333; }}")
+        bottom_widget.setObjectName("SyncPlayerBottom")
+        bottom_layout = QVBoxLayout(bottom_widget)
+        bottom_layout.setContentsMargins(0, 0, 0, int(scale_by_dpi(4, self)))
+        bottom_layout.setSpacing(0)
+
+        self._setup_scrub_section(bottom_layout, left)
+
+        # -- controls row --
+        controls = QWidget()
+        ctrl_layout = QHBoxLayout(controls)
+        ctrl_layout.setContentsMargins(left, 0, left, 0)
+        h_spacing = int(get_spacing(self, direction="horizontal") * 0.3)
+        ctrl_layout.setSpacing(0)
+
+        # Icon / button sizes
+        icon_size = int(scale_by_dpi(18, self))
+        play_icon_size = int(scale_by_dpi(30, self))
+        btn_icon_size = QSize(icon_size, icon_size)
+        play_btn_icon_size = QSize(play_icon_size, play_icon_size)
+        btn_size = int(scale_by_dpi(30, self))
+        play_btn_size = int(scale_by_dpi(36, self))
+        sep_margin = int(scale_by_dpi(12, self))
+
+        ctrl_layout.addWidget(self._setup_controls_left(h_spacing, btn_icon_size, btn_size, border_w, sep_margin), stretch=1)
+        ctrl_layout.addWidget(self._setup_controls_center(h_spacing, btn_icon_size, play_btn_icon_size, btn_size, play_btn_size), stretch=0)
+        ctrl_layout.addWidget(self._setup_controls_right(h_spacing, btn_icon_size, btn_size, border_w, sep_margin), stretch=1)
+
+        # Focus policy: all controls NoFocus so keyPressEvent handles shortcuts
+        for widget in (
+            self._seek_slider,
+            self._loop_bar,
+            self._btn_ab,
+            self._btn_loop,
+            self._btn_sync,
+            self._btn_opacity,
+            self._btn_prev,
+            self._btn_play_pause,
+            self._btn_next,
+            self._btn_flip_h,
+            self._btn_flip_v,
+            self._btn_mute,
+            self._volume_slider,
+            self._options_btn,
+        ):
+            widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
+        bottom_layout.addWidget(controls)
+        self.central_layout.addWidget(bottom_widget)
+
+    def _setup_video_area(self):
+        """Set up the video container, placeholder, player core, and sync controller."""
         self._video_container = QWidget()
         container_layout = QVBoxLayout(self._video_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
         container_layout.setSpacing(0)
 
-        self._placeholder = _PlaceholderWidget(self)
+        self._placeholder = PlaceholderWidget(focus_widget=self)
+        self._placeholder.open_requested.connect(self._on_open)
         container_layout.addWidget(self._placeholder)
 
-        self._video_graphics_view = _VideoGraphicsView(self)
+        self._video_graphics_view = VideoGraphicsView(focus_widget=self, parent=self)
+        self._video_graphics_view.open_requested.connect(self._on_video_open_requested)
         self._video_graphics_view.hide()
         container_layout.addWidget(self._video_graphics_view)
 
@@ -434,31 +177,28 @@ class MainWindow(BaseMainWindow):
         self._player_core.ab_loop_changed.connect(self._on_ab_loop_changed)
         self._sync_controller = command.MayaSyncController(self._player_core)
 
-        # -- bottom_widget: scrub + controls container --
-        border_w = max(1, int(scale_by_dpi(1, self)))
-        bottom_widget = QWidget()
-        bottom_widget.setStyleSheet(f"QWidget#SyncPlayerBottom {{ background-color: #1A1A1A; border-top: {border_w}px solid #333333; }}")
-        bottom_widget.setObjectName("SyncPlayerBottom")
-        bottom_layout = QVBoxLayout(bottom_widget)
-        bottom_layout.setContentsMargins(0, 0, 0, int(scale_by_dpi(4, self)))
-        bottom_layout.setSpacing(0)
+    def _setup_scrub_section(self, parent_layout, pad_h):
+        """Set up the time label, seek slider, and loop range bar.
 
-        # -- scrub section --
+        Args:
+            parent_layout: Layout to add the scrub widgets to.
+            pad_h: Horizontal padding in pixels.
+        """
         # scrub header row: time_label (left) + fps_label (right)
         scrub_header = QWidget()
         scrub_header_layout = QHBoxLayout(scrub_header)
         pad_v = int(scale_by_dpi(6, self))
-        scrub_header_layout.setContentsMargins(left, pad_v, left, 0)
+        scrub_header_layout.setContentsMargins(pad_h, pad_v, pad_h, 0)
         scrub_header_layout.setSpacing(0)
         self._time_label = QLabel("00:00 / 00:00    [ 0 / 0 ]")
         scrub_header_layout.addWidget(self._time_label)
         scrub_header_layout.addStretch()
         self._fps_label = QLabel(f"{command.DEFAULT_FPS:.0f}fps")
         scrub_header_layout.addWidget(self._fps_label)
-        bottom_layout.addWidget(scrub_header)
+        parent_layout.addWidget(scrub_header)
 
         # seek slider
-        self._seek_slider = _SeekSlider(Qt.Orientation.Horizontal)
+        self._seek_slider = SeekSlider(Qt.Orientation.Horizontal)
         self._seek_slider.setRange(0, 0)
         self._seek_slider.sliderPressed.connect(self._on_seek_pressed)
         self._seek_slider.sliderReleased.connect(self._on_seek_released)
@@ -496,7 +236,7 @@ class MainWindow(BaseMainWindow):
             }}
         """)
 
-        self._loop_bar = _LoopRangeBar(self)
+        self._loop_bar = LoopRangeBar(self)
         self._loop_bar.loop_in_changed.connect(self._on_slider_loop_in)
         self._loop_bar.loop_out_changed.connect(self._on_slider_loop_out)
 
@@ -504,39 +244,25 @@ class MainWindow(BaseMainWindow):
         slider_wrap_layout = QVBoxLayout(slider_wrap)
         pad_slider_top = int(scale_by_dpi(2, self))
         pad_slider_bottom = int(scale_by_dpi(4, self))
-        slider_wrap_layout.setContentsMargins(left, pad_slider_top, left, pad_slider_bottom)
+        slider_wrap_layout.setContentsMargins(pad_h, pad_slider_top, pad_h, pad_slider_bottom)
         slider_wrap_layout.setSpacing(int(scale_by_dpi(4, self)))
         slider_wrap_layout.addWidget(self._seek_slider)
         slider_wrap_layout.addWidget(self._loop_bar)
-        bottom_layout.addWidget(slider_wrap)
+        parent_layout.addWidget(slider_wrap)
 
-        # -- controls row --
-        controls = QWidget()
-        ctrl_layout = QHBoxLayout(controls)
-        ctrl_layout.setContentsMargins(left, 0, left, 0)
-        h_spacing = int(get_spacing(self, direction="horizontal") * 0.3)
-        ctrl_layout.setSpacing(0)
+    def _setup_controls_left(self, h_spacing, btn_icon_size, btn_size, border_w, sep_margin):
+        """Set up the left control group: AB loop, loop, sync, opacity, and offset.
 
-        # Icon / button sizes
-        icon_size = int(scale_by_dpi(18, self))
-        play_icon_size = int(scale_by_dpi(30, self))
-        btn_icon_size = QSize(icon_size, icon_size)
-        play_btn_icon_size = QSize(play_icon_size, play_icon_size)
-        btn_size = int(scale_by_dpi(30, self))
-        play_btn_size = int(scale_by_dpi(36, self))
+        Args:
+            h_spacing: Horizontal spacing between buttons.
+            btn_icon_size: Icon size for standard buttons.
+            btn_size: Fixed size for standard buttons.
+            border_w: Border width in pixels.
+            sep_margin: Margin around separator lines.
 
-        # Separator helper
-        sep_h = int(scale_by_dpi(18, self))
-        sep_border = max(1, int(scale_by_dpi(1, self)))
-
-        def _make_vline():
-            line = QFrame()
-            line.setFrameShape(QFrame.Shape.VLine)
-            line.setFixedHeight(sep_h)
-            line.setStyleSheet(f"QFrame {{ color: #333333; border: none; border-left: {sep_border}px solid #333333; }}")
-            return line
-
-        # -- Left group: speed | vline | loop | sync --
+        Returns:
+            QWidget: The left control group widget.
+        """
         left_widget = QWidget()
         left_layout = QHBoxLayout(left_widget)
         left_layout.setContentsMargins(0, 0, 0, 0)
@@ -544,9 +270,7 @@ class MainWindow(BaseMainWindow):
         left_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         left_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        sep_margin = int(scale_by_dpi(12, self))
-
-        self._btn_ab = IconToggleButton(icon_on="ab_on", icon_off="ab_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_ab = IconToggleButton(icon_on="ab_on", icon_off="ab_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_ab.setToolTip("A-B Loop")
         self._btn_ab.setIconSize(btn_icon_size)
         self._btn_ab.setFixedSize(btn_size, btn_size)
@@ -554,7 +278,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.toggled.connect(self._on_ab_toggled)
         left_layout.addWidget(self._btn_ab)
 
-        self._btn_loop = IconToggleButton(icon_on="loop_on", icon_off="loop_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_loop = IconToggleButton(icon_on="loop_on", icon_off="loop_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_loop.setToolTip("Loop")
         self._btn_loop.setIconSize(btn_icon_size)
         self._btn_loop.setFixedSize(btn_size, btn_size)
@@ -562,7 +286,7 @@ class MainWindow(BaseMainWindow):
         self._btn_loop.toggled.connect(self._on_loop_toggled)
         left_layout.addWidget(self._btn_loop)
 
-        self._btn_sync = IconToggleButton(icon_on="sync_on", icon_off="sync_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_sync = IconToggleButton(icon_on="sync_on", icon_off="sync_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_sync.setToolTip("Maya Sync")
         self._btn_sync.setIconSize(btn_icon_size)
         self._btn_sync.setFixedSize(btn_size, btn_size)
@@ -570,9 +294,7 @@ class MainWindow(BaseMainWindow):
         self._btn_sync.toggled.connect(self._on_sync_toggled)
         left_layout.addWidget(self._btn_sync)
 
-        self._btn_opacity = IconToggleButton(
-            icon_on="opacity_on", icon_off="opacity_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR
-        )
+        self._btn_opacity = IconToggleButton(icon_on="opacity_on", icon_off="opacity_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_opacity.setToolTip("Opacity (Ctrl+T)")
         self._btn_opacity.setIconSize(btn_icon_size)
         self._btn_opacity.setFixedSize(btn_size, btn_size)
@@ -580,7 +302,7 @@ class MainWindow(BaseMainWindow):
         left_layout.addWidget(self._btn_opacity)
 
         left_layout.addSpacing(sep_margin)
-        left_layout.addWidget(_make_vline())
+        left_layout.addWidget(self._create_separator_line())
         left_layout.addSpacing(sep_margin)
 
         offset_label = QLabel("Offset")
@@ -589,7 +311,7 @@ class MainWindow(BaseMainWindow):
 
         left_layout.addSpacing(int(scale_by_dpi(4, self)))
 
-        self._offset_spin = _OffsetSpinBox(self)
+        self._offset_spin = OffsetSpinBox(focus_widget=self)
         self._offset_spin.setRange(-999999, 999999)
         self._offset_spin.setValue(0)
         self._offset_spin.setFixedHeight(int(scale_by_dpi(24, self)))
@@ -621,9 +343,21 @@ class MainWindow(BaseMainWindow):
         self._offset_spin.valueChanged.connect(self._on_offset_changed)
         left_layout.addWidget(self._offset_spin)
 
-        ctrl_layout.addWidget(left_widget, stretch=1)
+        return left_widget
 
-        # -- Center group: prev | play | next --
+    def _setup_controls_center(self, h_spacing, btn_icon_size, play_btn_icon_size, btn_size, play_btn_size):
+        """Set up the center control group: previous, play/pause, and next buttons.
+
+        Args:
+            h_spacing: Horizontal spacing between buttons.
+            btn_icon_size: Icon size for standard buttons.
+            play_btn_icon_size: Icon size for the play/pause button.
+            btn_size: Fixed size for standard buttons.
+            play_btn_size: Fixed size for the play/pause button.
+
+        Returns:
+            QWidget: The center control group widget.
+        """
         center_widget = QWidget()
         center_layout = QHBoxLayout(center_widget)
         center_layout.setContentsMargins(0, 0, 0, 0)
@@ -631,30 +365,42 @@ class MainWindow(BaseMainWindow):
         center_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         center_widget.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
-        self._btn_prev = IconButton(icon_name="frame_prev", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_prev = IconButton(icon_name="frame_prev", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_prev.setToolTip("Previous frame")
         self._btn_prev.setIconSize(btn_icon_size)
         self._btn_prev.setFixedSize(btn_size, btn_size)
         self._btn_prev.clicked.connect(self._on_step_backward)
         center_layout.addWidget(self._btn_prev)
 
-        self._btn_play_pause = IconToggleButton(icon_on="pause", icon_off="play", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_play_pause = IconToggleButton(icon_on="pause", icon_off="play", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_play_pause.setToolTip("Play / Pause")
         self._btn_play_pause.setIconSize(play_btn_icon_size)
         self._btn_play_pause.setFixedSize(play_btn_size, play_btn_size)
         self._btn_play_pause.toggled.connect(self._on_play_pause_toggled)
         center_layout.addWidget(self._btn_play_pause)
 
-        self._btn_next = IconButton(icon_name="frame_next", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_next = IconButton(icon_name="frame_next", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_next.setToolTip("Next frame")
         self._btn_next.setIconSize(btn_icon_size)
         self._btn_next.setFixedSize(btn_size, btn_size)
         self._btn_next.clicked.connect(self._on_step_forward)
         center_layout.addWidget(self._btn_next)
 
-        ctrl_layout.addWidget(center_widget, stretch=0)
+        return center_widget
 
-        # -- Right group: mute | volume | vline --
+    def _setup_controls_right(self, h_spacing, btn_icon_size, btn_size, border_w, sep_margin):
+        """Set up the right control group: flip, mute, volume, and options menu.
+
+        Args:
+            h_spacing: Horizontal spacing between buttons.
+            btn_icon_size: Icon size for standard buttons.
+            btn_size: Fixed size for standard buttons.
+            border_w: Border width in pixels.
+            sep_margin: Margin around separator lines.
+
+        Returns:
+            QWidget: The right control group widget.
+        """
         right_widget = QWidget()
         right_layout = QHBoxLayout(right_widget)
         right_layout.setContentsMargins(0, 0, 0, 0)
@@ -664,21 +410,21 @@ class MainWindow(BaseMainWindow):
 
         right_layout.addStretch(1)
 
-        self._btn_flip_h = IconToggleButton(icon_on="flip_h_on", icon_off="flip_h_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_flip_h = IconToggleButton(icon_on="flip_h_on", icon_off="flip_h_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_flip_h.setToolTip("Flip Horizontal")
         self._btn_flip_h.setIconSize(btn_icon_size)
         self._btn_flip_h.setFixedSize(btn_size, btn_size)
         self._btn_flip_h.toggled.connect(self._on_flip_changed)
         right_layout.addWidget(self._btn_flip_h)
 
-        self._btn_flip_v = IconToggleButton(icon_on="flip_v_on", icon_off="flip_v_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_flip_v = IconToggleButton(icon_on="flip_v_on", icon_off="flip_v_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_flip_v.setToolTip("Flip Vertical")
         self._btn_flip_v.setIconSize(btn_icon_size)
         self._btn_flip_v.setFixedSize(btn_size, btn_size)
         self._btn_flip_v.toggled.connect(self._on_flip_changed)
         right_layout.addWidget(self._btn_flip_v)
 
-        self._btn_mute = IconToggleButton(icon_on="volume_off", icon_off="volume_on", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
+        self._btn_mute = IconToggleButton(icon_on="volume_off", icon_off="volume_on", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_mute.setToolTip("Mute")
         self._btn_mute.setIconSize(btn_icon_size)
         self._btn_mute.setFixedSize(btn_size, btn_size)
@@ -693,14 +439,14 @@ class MainWindow(BaseMainWindow):
         right_layout.addWidget(self._volume_slider)
 
         right_layout.addSpacing(sep_margin)
-        right_layout.addWidget(_make_vline())
+        right_layout.addWidget(self._create_separator_line())
         right_layout.addSpacing(sep_margin)
 
         self._options_btn = IconToolButton(
             icon_name="options",
             style_mode=IconButtonStyle.TRANSPARENT,
             auto_size=False,
-            icon_dir=_ICONS_DIR,
+            icon_dir=ICONS_DIR,
         )
         self._options_btn.setToolTip("Options")
         self._options_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
@@ -742,29 +488,17 @@ class MainWindow(BaseMainWindow):
         self._options_btn.setMenu(self._options_menu)
         right_layout.addWidget(self._options_btn)
 
-        ctrl_layout.addWidget(right_widget, stretch=1)
+        return right_widget
 
-        # Focus policy: all controls NoFocus so keyPressEvent handles shortcuts
-        for widget in (
-            self._seek_slider,
-            self._loop_bar,
-            self._btn_ab,
-            self._btn_loop,
-            self._btn_sync,
-            self._btn_opacity,
-            self._btn_prev,
-            self._btn_play_pause,
-            self._btn_next,
-            self._btn_flip_h,
-            self._btn_flip_v,
-            self._btn_mute,
-            self._volume_slider,
-            self._options_btn,
-        ):
-            widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-
-        bottom_layout.addWidget(controls)
-        self.central_layout.addWidget(bottom_widget)
+    def _create_separator_line(self) -> QFrame:
+        """Create a vertical separator line for the controls row."""
+        sep_h = int(scale_by_dpi(18, self))
+        sep_border = max(1, int(scale_by_dpi(1, self)))
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.VLine)
+        line.setFixedHeight(sep_h)
+        line.setStyleSheet(f"QFrame {{ color: #333333; border: none; border-left: {sep_border}px solid #333333; }}")
+        return line
 
     # ------------------------------------------------------------------
     # Public API
@@ -822,6 +556,15 @@ class MainWindow(BaseMainWindow):
         )
         if path:
             self.load_video(path)
+
+    def _on_video_open_requested(self):
+        """Handle open request from video view (with sync/playing guards)."""
+        if self._sync_controller and self._sync_controller.is_enabled:
+            return
+        if self._is_playing():
+            cmds.warning("Sync Player: Cannot open a new video while playing")
+            return
+        self._on_open()
 
     @error_handler
     def _on_play_pause_toggled(self, checked: bool):
