@@ -533,37 +533,45 @@ class VideoPlayerCore(QObject):
     def _on_verify_timeout(self) -> None:
         """Handle verification timeout — frame signal did not fire.
 
-        Falls back to position-based check: if position advanced the backend
-        is likely working (frame signal unsupported); otherwise stall/retry.
+        If the frame signal was connected but never fired, the WMF
+        rendering pipeline failed to deliver frames to the video output.
+        Recreate the player and retry.  If the frame signal was never
+        available (connect_frame_signal returned None), fall back to
+        position-based detection.
         """
         if not self._verifying:
             return
+        frame_signal_was_connected = self._frame_source is not None
         self._cleanup_verify()
 
         pos = self._player.position()
         self._player.pause()
 
-        if pos > 0:
-            # Position advanced but no frame signal — proceed anyway.
+        if pos > 0 and not frame_signal_was_connected:
+            # Position advanced and frame signal unsupported — assume OK.
             self._player.setPosition(0)
-            logger.warning("Verify timeout but pos=%d; frame signal may not be supported", pos)
+            logger.warning("Verify timeout but pos=%d; frame signal not available — proceeding", pos)
             self.video_ready.emit()
             return
 
-        # Position stuck at 0 — backend is stalled.
-        if self._retry_count < 1:
+        # Either pos==0 (complete stall) or pos>0 but frames never
+        # reached the video output (broken WMF rendering pipeline).
+        if self._retry_count < 2:
             self._retry_count += 1
+            reason = f"no frames to video output (pos={pos})" if pos > 0 else f"backend stall (pos={pos})"
             logger.warning(
-                "Backend stall detected (pos=0), recreating player and retrying load (%d): %s",
+                "Verify failed: %s — recreating player (attempt %d): %s",
+                reason,
                 self._retry_count,
                 self._loaded_path,
             )
             self._recreate_player()
             self.load(self._loaded_path)
         else:
-            msg = f"Sync Player: Failed to load video after retry: {self._loaded_path}"
+            msg = f"Sync Player: Failed to load video after retries: {self._loaded_path}"
             logger.error(
-                "Backend stall persists after player recreation: %s",
+                "Verify failed after %d retries: %s",
+                self._retry_count,
                 self._loaded_path,
             )
             om2.MGlobal.displayError(msg)
