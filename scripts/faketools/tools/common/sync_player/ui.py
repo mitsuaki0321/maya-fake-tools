@@ -519,6 +519,10 @@ class MainWindow(BaseMainWindow):
         self._seeking = False
         self._was_playing_before_seek = False
         self._was_muted_before_seek = False
+        self._pending_scrub_pos: int | None = None
+        self._scrub_timer = QTimer(self)
+        self._scrub_timer.setInterval(30)
+        self._scrub_timer.timeout.connect(self._apply_scrub_seek)
         self._current_speed_index = _DEFAULT_SPEED_INDEX
         self._opacity_value = 50
         self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
@@ -980,33 +984,35 @@ class MainWindow(BaseMainWindow):
             if not self._was_muted_before_seek:
                 self._player_core.set_muted(True)
             self._player_core.set_ab_enforcement(False)
-            # Rate-zero scrub: WMF renders exactly one frame per seek
-            # without advancing playback.
-            self._player_core.set_playback_rate(0.0)
-            self._player_core.play()
-            self._player_core.seek(self._seek_slider.value())
-            self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
+            self._player_core.pause()
+            pos = self._seek_slider.value()
+            self._player_core.seek(pos)
+            self._pending_scrub_pos = None
+            self._scrub_timer.start()
+            self._update_time_display(pos, self._seek_slider.maximum())
 
     def _on_seek_released(self):
+        self._scrub_timer.stop()
         if self._player_core:
             self._player_core.seek(self._seek_slider.value())
-            # Pause first to cleanly exit the rate-zero state, then
-            # restore the playback rate on the paused player.
-            self._player_core.pause()
-            self._player_core.set_playback_rate(_SPEED_VALUES[self._current_speed_index])
             if self._was_playing_before_seek:
                 self._player_core.play()
             if not self._was_muted_before_seek:
                 self._player_core.set_muted(False)
             self._player_core.set_ab_enforcement(True)
             self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
+        self._pending_scrub_pos = None
         # Unblock _on_state_changed only after all state is restored.
         self._seeking = False
 
     def _on_seek_moved(self, position: int):
-        if self._player_core:
-            self._player_core.seek(position)
+        self._pending_scrub_pos = position
         self._update_time_display(position, self._seek_slider.maximum())
+
+    def _apply_scrub_seek(self):
+        if self._pending_scrub_pos is not None and self._player_core:
+            self._player_core.seek(self._pending_scrub_pos)
+            self._pending_scrub_pos = None
 
     # ------------------------------------------------------------------
     # Signal handlers — player feedback
