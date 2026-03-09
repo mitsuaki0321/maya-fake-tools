@@ -73,7 +73,7 @@ try:
         QValidator,
     )
     from PySide2.QtMultimedia import QMediaContent, QMediaPlayer
-    from PySide2.QtMultimediaWidgets import QVideoWidget
+    from PySide2.QtMultimediaWidgets import QGraphicsVideoItem, QVideoWidget
     from PySide2.QtWidgets import (
         QAbstractItemView,
         QAction,
@@ -240,7 +240,7 @@ except ImportError:
         QValidator,
     )
     from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
-    from PySide6.QtMultimediaWidgets import QVideoWidget
+    from PySide6.QtMultimediaWidgets import QGraphicsVideoItem, QVideoWidget
     from PySide6.QtWidgets import (
         QAbstractItemView,
         QApplication,
@@ -455,12 +455,12 @@ def connect_state_changed(player: QMediaPlayer, callback) -> None:
         player.playbackStateChanged.connect(lambda _state: callback(player))
 
 
-def connect_frame_signal(player: "QMediaPlayer", video_widget: "QVideoWidget", callback) -> "QObject | None":
+def connect_frame_signal(player: "QMediaPlayer", video_output, callback) -> "QObject | None":
     """Connect a callback to the video frame output signal.
 
     Args:
         player: QMediaPlayer instance.
-        video_widget: QVideoWidget receiving frames.
+        video_output: QVideoWidget or QGraphicsVideoItem receiving frames.
         callback: Callable that receives a QVideoFrame.
 
     Returns:
@@ -476,7 +476,7 @@ def connect_frame_signal(player: "QMediaPlayer", video_widget: "QVideoWidget", c
         probe.videoFrameProbed.connect(callback)
         return probe
     else:
-        sink = video_widget.videoSink()
+        sink = video_output.videoSink()
         if sink is None:
             return None
         sink.videoFrameChanged.connect(callback)
@@ -682,6 +682,7 @@ __all__ = [
     "shiboken",
     # QtMultimedia
     "QMediaPlayer",
+    "QGraphicsVideoItem",
     "QVideoWidget",
     "create_media_player",
     "set_media_source",

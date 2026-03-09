@@ -25,12 +25,16 @@ from ....lib_ui.qt_compat import (
     QColor,
     QFont,
     QFrame,
+    QGraphicsScene,
+    QGraphicsVideoItem,
+    QGraphicsView,
     QHBoxLayout,
     QIcon,
     QLabel,
     QMenu,
     QPainter,
     QPen,
+    QPointF,
     QRect,
     QSize,
     QSizePolicy,
@@ -39,8 +43,8 @@ from ....lib_ui.qt_compat import (
     Qt,
     QTimer,
     QToolButton,
+    QTransform,
     QVBoxLayout,
-    QVideoWidget,
     QWidget,
     QWidgetAction,
     Signal,
@@ -282,12 +286,71 @@ class _PlaceholderWidget(QWidget):
         self._main_window._on_open()
 
 
-class _VideoWidget(QVideoWidget):
-    """QVideoWidget with double-click support for opening files."""
+class _VideoGraphicsView(QGraphicsView):
+    """QGraphicsView hosting a QGraphicsVideoItem with flip support."""
 
     def __init__(self, parent: MainWindow):
         super().__init__(parent)
         self._main_window = parent
+        self._flip_h = False
+        self._flip_v = False
+
+        self._scene = QGraphicsScene(self)
+        self.setScene(self._scene)
+
+        self._video_item = QGraphicsVideoItem()
+        self._scene.addItem(self._video_item)
+        self._video_item.nativeSizeChanged.connect(self._fit_video)
+
+        # Appearance
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setStyleSheet("background-color: #0D0D0D;")
+
+    @property
+    def video_item(self) -> QGraphicsVideoItem:
+        """The underlying QGraphicsVideoItem (pass to VideoPlayerCore)."""
+        return self._video_item
+
+    @property
+    def flip_h(self) -> bool:
+        """Current horizontal flip state."""
+        return self._flip_h
+
+    @property
+    def flip_v(self) -> bool:
+        """Current vertical flip state."""
+        return self._flip_v
+
+    def set_flip(self, horizontal: bool, vertical: bool) -> None:
+        """Apply horizontal / vertical flip via QTransform on the video item.
+
+        Args:
+            horizontal: True to mirror left-right.
+            vertical: True to mirror top-bottom.
+        """
+        self._flip_h = horizontal
+        self._flip_v = vertical
+        sx = -1.0 if horizontal else 1.0
+        sy = -1.0 if vertical else 1.0
+        center = self._video_item.boundingRect().center()
+        t = QTransform()
+        t.translate(center.x(), center.y())
+        t.scale(sx, sy)
+        t.translate(-center.x(), -center.y())
+        self._video_item.setTransform(t)
+
+    def _fit_video(self, _size=None) -> None:
+        """Fit the video item into the view keeping aspect ratio."""
+        rect = self._video_item.boundingRect()
+        if rect.width() > 0 and rect.height() > 0:
+            self._scene.setSceneRect(rect)
+            self.fitInView(self._video_item, Qt.AspectRatioMode.KeepAspectRatio)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._fit_video()
 
     def mousePressEvent(self, event):
         self._main_window.setFocus()
@@ -301,6 +364,144 @@ class _VideoWidget(QVideoWidget):
             cmds.warning("Sync Player: Cannot open a new video while playing")
             return
         self._main_window._on_open()
+
+
+class _DPadWidget(QWidget):
+    """D-pad (directional pad) widget for toggling horizontal/vertical flip.
+
+    Left/Right arrows toggle horizontal flip, Up/Down arrows toggle vertical flip.
+    """
+
+    flip_h_toggled = Signal(bool)
+    flip_v_toggled = Signal(bool)
+
+    _ZONE_NONE = 0
+    _ZONE_UP = 1
+    _ZONE_DOWN = 2
+    _ZONE_LEFT = 3
+    _ZONE_RIGHT = 4
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._flip_h = False
+        self._flip_v = False
+        self._hover_zone = self._ZONE_NONE
+        self._pressed_zone = self._ZONE_NONE
+        self.setMouseTracking(True)
+        size = int(scale_by_dpi(36, self))
+        self.setFixedSize(size, size)
+        self.setToolTip("Flip: Left/Right = Horizontal, Up/Down = Vertical")
+
+    @property
+    def flip_h(self) -> bool:
+        """Current horizontal flip state."""
+        return self._flip_h
+
+    @flip_h.setter
+    def flip_h(self, value: bool) -> None:
+        self._flip_h = value
+        self.update()
+
+    @property
+    def flip_v(self) -> bool:
+        """Current vertical flip state."""
+        return self._flip_v
+
+    @flip_v.setter
+    def flip_v(self, value: bool) -> None:
+        self._flip_v = value
+        self.update()
+
+    def _hit_zone(self, pos) -> int:
+        """Determine which arrow zone the position falls in."""
+        cx = self.width() / 2.0
+        cy = self.height() / 2.0
+        dx = pos.x() - cx
+        dy = pos.y() - cy
+        dead = self.width() * 0.15
+        if abs(dx) < dead and abs(dy) < dead:
+            return self._ZONE_NONE
+        if abs(dx) > abs(dy):
+            return self._ZONE_RIGHT if dx > 0 else self._ZONE_LEFT
+        return self._ZONE_DOWN if dy > 0 else self._ZONE_UP
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._pressed_zone = self._hit_zone(event.pos())
+            self.update()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._pressed_zone != self._ZONE_NONE:
+            zone = self._hit_zone(event.pos())
+            if zone == self._pressed_zone:
+                if zone in (self._ZONE_LEFT, self._ZONE_RIGHT):
+                    self._flip_h = not self._flip_h
+                    self.flip_h_toggled.emit(self._flip_h)
+                elif zone in (self._ZONE_UP, self._ZONE_DOWN):
+                    self._flip_v = not self._flip_v
+                    self.flip_v_toggled.emit(self._flip_v)
+            self._pressed_zone = self._ZONE_NONE
+            self.update()
+        super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, event):
+        self._hover_zone = self._hit_zone(event.pos())
+        self.update()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover_zone = self._ZONE_NONE
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        w = self.width()
+        h = self.height()
+        cx = w / 2.0
+        cy = h / 2.0
+        arrow_len = w * 0.28
+        arrow_half = w * 0.10
+
+        active_color = QColor("#0078D4")
+        inactive_color = QColor("#666666")
+
+        def _arrow_color(zone: int) -> QColor:
+            is_active = (zone in (self._ZONE_LEFT, self._ZONE_RIGHT) and self._flip_h) or (zone in (self._ZONE_UP, self._ZONE_DOWN) and self._flip_v)
+            base = active_color if is_active else inactive_color
+            if zone == self._hover_zone:
+                return base.lighter(140)
+            return base
+
+        # Up arrow
+        tip_y = cy - arrow_len
+        base_y = cy - arrow_half * 0.5
+        p.setBrush(_arrow_color(self._ZONE_UP))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawPolygon([QPointF(cx, tip_y), QPointF(cx - arrow_half, base_y), QPointF(cx + arrow_half, base_y)])
+
+        # Down arrow
+        tip_y = cy + arrow_len
+        base_y = cy + arrow_half * 0.5
+        p.setBrush(_arrow_color(self._ZONE_DOWN))
+        p.drawPolygon([QPointF(cx, tip_y), QPointF(cx - arrow_half, base_y), QPointF(cx + arrow_half, base_y)])
+
+        # Left arrow
+        tip_x = cx - arrow_len
+        base_x = cx - arrow_half * 0.5
+        p.setBrush(_arrow_color(self._ZONE_LEFT))
+        p.drawPolygon([QPointF(tip_x, cy), QPointF(base_x, cy - arrow_half), QPointF(base_x, cy + arrow_half)])
+
+        # Right arrow
+        tip_x = cx + arrow_len
+        base_x = cx + arrow_half * 0.5
+        p.setBrush(_arrow_color(self._ZONE_RIGHT))
+        p.drawPolygon([QPointF(tip_x, cy), QPointF(base_x, cy - arrow_half), QPointF(base_x, cy + arrow_half)])
+
+        p.end()
 
 
 class MainWindow(BaseMainWindow):
@@ -351,14 +552,14 @@ class MainWindow(BaseMainWindow):
         self._placeholder = _PlaceholderWidget(self)
         container_layout.addWidget(self._placeholder)
 
-        self._video_widget = _VideoWidget(self)
-        self._video_widget.hide()
-        container_layout.addWidget(self._video_widget)
+        self._video_graphics_view = _VideoGraphicsView(self)
+        self._video_graphics_view.hide()
+        container_layout.addWidget(self._video_graphics_view)
 
         self.central_layout.addWidget(self._video_container, stretch=1)
 
         # Player core + sync controller
-        self._player_core = command.VideoPlayerCore(self._video_widget, parent=self)
+        self._player_core = command.VideoPlayerCore(self._video_graphics_view.video_item, parent=self)
         self._player_core.position_changed.connect(self._on_position_changed)
         self._player_core.duration_changed.connect(self._on_duration_changed)
         self._player_core.state_changed.connect(self._on_state_changed)
@@ -598,6 +799,11 @@ class MainWindow(BaseMainWindow):
 
         right_layout.addStretch(1)
 
+        self._dpad = _DPadWidget(self)
+        self._dpad.flip_h_toggled.connect(self._on_flip_changed)
+        self._dpad.flip_v_toggled.connect(self._on_flip_changed)
+        right_layout.addWidget(self._dpad)
+
         self._btn_mute = IconToggleButton(icon_on="volume_off", icon_off="volume_on", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=_ICONS_DIR)
         self._btn_mute.setToolTip("Mute")
         self._btn_mute.setIconSize(btn_icon_size)
@@ -675,6 +881,7 @@ class MainWindow(BaseMainWindow):
             self._btn_prev,
             self._btn_play_pause,
             self._btn_next,
+            self._dpad,
             self._btn_mute,
             self._volume_slider,
             self._options_btn,
@@ -699,7 +906,7 @@ class MainWindow(BaseMainWindow):
             self.setCursor(Qt.CursorShape.WaitCursor)
             self._load_timer.start(10000)
             self._placeholder.hide()
-            self._video_widget.show()
+            self._video_graphics_view.show()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
 
@@ -839,7 +1046,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setEnabled(False)
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
-        self._video_widget.hide()
+        self._video_graphics_view.hide()
         self._placeholder.show()
 
     def _on_load_timeout(self):
@@ -847,7 +1054,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setEnabled(False)
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
-        self._video_widget.hide()
+        self._video_graphics_view.hide()
         self._placeholder.show()
         om2.MGlobal.displayError("Sync Player: Video load timed out")
 
@@ -999,6 +1206,14 @@ class MainWindow(BaseMainWindow):
         else:
             self.setWindowOpacity(1.0)
 
+    # ------------------------------------------------------------------
+    # Signal handlers — flip
+    # ------------------------------------------------------------------
+
+    @error_handler
+    def _on_flip_changed(self, _checked: bool):
+        self._video_graphics_view.set_flip(self._dpad.flip_h, self._dpad.flip_v)
+
     def _set_sync_locked(self, locked: bool):
         """Enable or disable player controls based on Maya sync state."""
         enabled = not locked
@@ -1021,6 +1236,8 @@ class MainWindow(BaseMainWindow):
             "frame_offset": self._offset_spin.value(),
             "speed_index": self._current_speed_index,
             "opacity_value": self._opacity_value,
+            "flip_h": self._dpad.flip_h,
+            "flip_v": self._dpad.flip_v,
         }
 
     def _apply_settings(self, data: dict) -> None:
@@ -1043,6 +1260,12 @@ class MainWindow(BaseMainWindow):
         self._on_speed_selected(speed_index)
 
         self._opacity_value = data.get("opacity_value", 50)
+
+        flip_h = data.get("flip_h", False)
+        flip_v = data.get("flip_v", False)
+        self._dpad.flip_h = flip_h
+        self._dpad.flip_v = flip_v
+        self._video_graphics_view.set_flip(flip_h, flip_v)
 
     def _restore_settings(self):
         data = self._settings.load_settings("default")

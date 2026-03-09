@@ -17,7 +17,6 @@ from ....lib_ui.qt_compat import (
     QObject,
     QTimer,
     QUrl,
-    QVideoWidget,
     Signal,
     connect_frame_signal,
     connect_state_changed,
@@ -111,9 +110,9 @@ class VideoPlayerCore(QObject):
     load_failed = Signal(str)
     ab_loop_changed = Signal()
 
-    def __init__(self, video_widget: QVideoWidget, parent: QObject | None = None):
+    def __init__(self, video_output, parent: QObject | None = None):
         super().__init__(parent)
-        self._video_widget = video_widget
+        self._video_output = video_output
         self._loop = False
         self._fps = DEFAULT_FPS
         self._pending_pause = False
@@ -193,7 +192,7 @@ class VideoPlayerCore(QObject):
         # pipeline.  On Windows the D3D11 video surface can become stale
         # between loads, resulting in audio/metadata working but no frames
         # being rendered (black screen).
-        self._player.setVideoOutput(self._video_widget)
+        self._player.setVideoOutput(self._video_output)
 
         # Set pending_pause BEFORE set_media_source so that synchronous
         # BufferedMedia callbacks (common for cached local files) can see it.
@@ -485,7 +484,7 @@ class VideoPlayerCore(QObject):
         self._verifying = True
         self._verify_phase = 1
 
-        self._frame_source = connect_frame_signal(self._player, self._video_widget, self._on_verify_frame)
+        self._frame_source = connect_frame_signal(self._player, self._video_output, self._on_verify_frame)
 
         self._player.play()
 
