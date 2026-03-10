@@ -32,7 +32,7 @@ from ....lib_ui.qt_compat import (
 logger = getLogger(__name__)
 
 DEFAULT_FPS = 24.0
-_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 _NUMBER_PATTERN = re.compile(r"(\d+)")
 
 

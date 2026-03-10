@@ -54,11 +54,11 @@ _SPEED_VALUES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 _DEFAULT_SPEED_INDEX = 3  # 1.0x
 
 _VIDEO_EXTENSIONS = {".mov", ".avi", ".mp4", ".wmv"}
-_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 _SEQUENCE_FILE_FILTER = (
-    "Video and Image Files (*.mov *.avi *.mp4 *.wmv *.jpg *.jpeg *.png);;"
+    "Video and Image Files (*.mov *.avi *.mp4 *.wmv *.jpg *.jpeg *.png *.tif *.tiff);;"
     "Video Files (*.mov *.avi *.mp4 *.wmv);;"
-    "Image Files (*.jpg *.jpeg *.png);;"
+    "Image Files (*.jpg *.jpeg *.png *.tif *.tiff);;"
     "All Files (*)"
 )
 
