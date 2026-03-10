@@ -21,6 +21,7 @@ from ....lib_ui import (
 )
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
+    QColor,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -191,18 +192,61 @@ class MainWindow(BaseMainWindow):
 
         # Progress overlay for ffmpeg extraction (hidden by default)
         self._progress_overlay = QWidget(self._video_container)
+        self._progress_overlay.setAutoFillBackground(True)
+        palette = self._progress_overlay.palette()
+        palette.setColor(self._progress_overlay.backgroundRole(), QColor("#0D0D0D"))
+        self._progress_overlay.setPalette(palette)
         self._progress_overlay.hide()
         overlay_layout = QVBoxLayout(self._progress_overlay)
         overlay_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._progress_label = QLabel("Extracting frames...")
         self._progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._progress_label.setStyleSheet("color: #CCCCCC;")
+        self._progress_label.setStyleSheet("color: rgba(255, 255, 255, 0.5);")
         overlay_layout.addWidget(self._progress_label)
+
+        bar_w = int(scale_by_dpi(200, self))
+        bar_h = int(scale_by_dpi(4, self))
+        bar_r = bar_h // 2
         self._progress_bar = QProgressBar()
         self._progress_bar.setRange(0, 100)
-        self._progress_bar.setFixedWidth(int(scale_by_dpi(200, self)))
+        self._progress_bar.setTextVisible(False)
+        self._progress_bar.setFixedSize(bar_w, bar_h)
+        self._progress_bar.setStyleSheet(f"""
+            QProgressBar {{
+                background: #2D2D2D;
+                border: none;
+                border-radius: {bar_r}px;
+            }}
+            QProgressBar::chunk {{
+                background: #555555;
+                border-radius: {bar_r}px;
+            }}
+        """)
         overlay_layout.addWidget(self._progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        overlay_layout.addSpacing(int(scale_by_dpi(8, self)))
+
+        border_w = max(1, int(scale_by_dpi(1, self)))
+        btn_r = int(scale_by_dpi(2, self))
+        btn_pad_v = int(scale_by_dpi(4, self))
+        btn_pad_h = int(scale_by_dpi(12, self))
         self._progress_cancel_btn = QPushButton("Cancel")
+        self._progress_cancel_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                border: {border_w}px solid #444444;
+                border-radius: {btn_r}px;
+                color: #CCCCCC;
+                padding: {btn_pad_v}px {btn_pad_h}px;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(255, 255, 255, 0.1);
+                border-color: #555555;
+            }}
+            QPushButton:pressed {{
+                background-color: rgba(255, 255, 255, 0.05);
+            }}
+        """)
         self._progress_cancel_btn.clicked.connect(self._on_extraction_cancel)
         overlay_layout.addWidget(self._progress_cancel_btn, alignment=Qt.AlignmentFlag.AlignCenter)
 
@@ -1030,6 +1074,7 @@ class MainWindow(BaseMainWindow):
         self._placeholder.hide()
         self._video_widget.hide()
         self._image_display.hide()
+        self._progress_overlay.setGeometry(self._video_container.rect())
         self._progress_overlay.show()
         self._progress_overlay.raise_()
         self._progress_bar.setValue(0)
@@ -1186,8 +1231,12 @@ class MainWindow(BaseMainWindow):
     def resizeEvent(self, event):
         """Keep progress overlay sized to match container."""
         super().resizeEvent(event)
+        if self._progress_overlay is not None and self._progress_overlay.isVisible():
+            QTimer.singleShot(0, self._sync_overlay_geometry)
+
+    def _sync_overlay_geometry(self):
         if self._progress_overlay is not None:
-            self._progress_overlay.setGeometry(self._video_container.geometry())
+            self._progress_overlay.setGeometry(self._video_container.rect())
 
     def closeEvent(self, event):
         self._save_settings()
