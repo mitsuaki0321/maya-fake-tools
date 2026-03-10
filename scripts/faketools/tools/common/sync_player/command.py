@@ -704,6 +704,17 @@ class MayaSyncController:
         self._drift_timer.setInterval(500)
         self._drift_timer.timeout.connect(self._correct_drift)
 
+        # Debounce for play mode transitions
+        self._play_start_debounce = QTimer()
+        self._play_start_debounce.setSingleShot(True)
+        self._play_start_debounce.setInterval(150)
+        self._play_start_debounce.timeout.connect(self._start_play_mode)
+
+        self._play_stop_debounce = QTimer()
+        self._play_stop_debounce.setSingleShot(True)
+        self._play_stop_debounce.setInterval(200)
+        self._play_stop_debounce.timeout.connect(self._deferred_stop_play_mode)
+
     def _frame_to_ms(self, frame: float) -> int:
         """Convert a frame number to milliseconds.
 
@@ -752,16 +763,17 @@ class MayaSyncController:
         current_frame = cmds.currentTime(query=True)
         self._player_core.seek(self._frame_to_ms(current_frame))
 
-        # Start in the correct mode
+        # Start in the correct mode (always begin with scrub; debounce into play)
+        self._throttle_timer.start()
         if cmds.play(query=True, state=True):
-            self._start_play_mode()
-        else:
-            self._throttle_timer.start()
+            self._play_start_debounce.start()
 
         logger.info("Maya sync enabled (%.2f fps)", self._fps)
 
     def disable(self) -> None:
         """Stop syncing and remove all callbacks."""
+        self._play_start_debounce.stop()
+        self._play_stop_debounce.stop()
         self._stop_play_mode()
         self._throttle_timer.stop()
         self._pending_seek_ms = None
@@ -797,15 +809,25 @@ class MayaSyncController:
         self._pending_seek_ms = self._frame_to_ms(mtime.value)
 
     def _on_maya_playback_changed(self, state: bool, _client_data) -> None:
-        """Called when Maya's playingBack condition changes."""
+        """Called when Maya's playingBack condition changes.
+
+        Both start and stop transitions are debounced to avoid rapid
+        toggling when clicking/holding on Maya's timeline or at loop points.
+        """
         if state:
-            self._start_play_mode()
+            self._play_stop_debounce.stop()
+            if self._maya_playing:
+                # Already in play mode (stop was debounced) — correct drift
+                # in case Maya looped back to the start of the range.
+                self._correct_drift()
+            else:
+                self._play_start_debounce.start()
         else:
-            self._stop_play_mode()
-            # Resume scrub mode
-            current_frame = cmds.currentTime(query=True)
-            self._player_core.seek(self._frame_to_ms(current_frame))
-            self._throttle_timer.start()
+            self._play_start_debounce.stop()
+            if self._maya_playing:
+                self._play_stop_debounce.start()
+            else:
+                self._throttle_timer.start()
 
     # ------------------------------------------------------------------
     # Play mode — continuous playback with drift correction
@@ -839,6 +861,13 @@ class MayaSyncController:
         self._player_core.set_playback_rate(1.0)
 
         logger.debug("Play mode: stopped, returning to scrub mode")
+
+    def _deferred_stop_play_mode(self) -> None:
+        """Complete the transition out of play mode after debounce."""
+        self._stop_play_mode()
+        current_frame = cmds.currentTime(query=True)
+        self._player_core.seek(self._frame_to_ms(current_frame))
+        self._throttle_timer.start()
 
     def _correct_drift(self) -> None:
         """Periodically correct drift between Maya time and video position."""

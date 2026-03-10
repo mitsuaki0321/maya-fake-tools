@@ -39,7 +39,7 @@ from ....lib_ui.qt_compat import (
 from ....lib_ui.ui_utils import get_relative_size, scale_by_dpi
 from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton, IconToolButton
 from . import command
-from .widgets import ICONS_DIR, LoopRangeBar, OffsetSpinBox, PlaceholderWidget, SeekSlider, VideoGraphicsView
+from .widgets import ICONS_DIR, LoopRangeBar, OffsetSpinBox, PlaceholderWidget, SeekSlider, VideoWidget
 
 logger = getLogger(__name__)
 
@@ -137,8 +137,6 @@ class MainWindow(BaseMainWindow):
             self._btn_prev,
             self._btn_play_pause,
             self._btn_next,
-            self._btn_flip_h,
-            self._btn_flip_v,
             self._btn_mute,
             self._volume_slider,
             self._options_btn,
@@ -159,15 +157,15 @@ class MainWindow(BaseMainWindow):
         self._placeholder.open_requested.connect(self._on_open)
         container_layout.addWidget(self._placeholder)
 
-        self._video_graphics_view = VideoGraphicsView(focus_widget=self, parent=self)
-        self._video_graphics_view.open_requested.connect(self._on_video_open_requested)
-        self._video_graphics_view.hide()
-        container_layout.addWidget(self._video_graphics_view)
+        self._video_widget = VideoWidget(focus_widget=self, parent=self)
+        self._video_widget.open_requested.connect(self._on_video_open_requested)
+        self._video_widget.hide()
+        container_layout.addWidget(self._video_widget)
 
         self.central_layout.addWidget(self._video_container, stretch=1)
 
         # Player core + sync controller
-        self._player_core = command.VideoPlayerCore(self._video_graphics_view.video_item, parent=self)
+        self._player_core = command.VideoPlayerCore(self._video_widget, parent=self)
         self._player_core.position_changed.connect(self._on_position_changed)
         self._player_core.duration_changed.connect(self._on_duration_changed)
         self._player_core.state_changed.connect(self._on_state_changed)
@@ -389,7 +387,7 @@ class MainWindow(BaseMainWindow):
         return center_widget
 
     def _setup_controls_right(self, h_spacing, btn_icon_size, btn_size, border_w, sep_margin):
-        """Set up the right control group: flip, mute, volume, and options menu.
+        """Set up the right control group: mute, volume, and options menu.
 
         Args:
             h_spacing: Horizontal spacing between buttons.
@@ -409,20 +407,6 @@ class MainWindow(BaseMainWindow):
         right_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         right_layout.addStretch(1)
-
-        self._btn_flip_h = IconToggleButton(icon_on="flip_h_on", icon_off="flip_h_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
-        self._btn_flip_h.setToolTip("Flip Horizontal")
-        self._btn_flip_h.setIconSize(btn_icon_size)
-        self._btn_flip_h.setFixedSize(btn_size, btn_size)
-        self._btn_flip_h.toggled.connect(self._on_flip_changed)
-        right_layout.addWidget(self._btn_flip_h)
-
-        self._btn_flip_v = IconToggleButton(icon_on="flip_v_on", icon_off="flip_v_off", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
-        self._btn_flip_v.setToolTip("Flip Vertical")
-        self._btn_flip_v.setIconSize(btn_icon_size)
-        self._btn_flip_v.setFixedSize(btn_size, btn_size)
-        self._btn_flip_v.toggled.connect(self._on_flip_changed)
-        right_layout.addWidget(self._btn_flip_v)
 
         self._btn_mute = IconToggleButton(icon_on="volume_off", icon_off="volume_on", style_mode=IconButtonStyle.TRANSPARENT, icon_dir=ICONS_DIR)
         self._btn_mute.setToolTip("Mute")
@@ -512,11 +496,10 @@ class MainWindow(BaseMainWindow):
         """
         if self._player_core:
             self._player_core.clear_ab_loop()
-            self._video_graphics_view.reset_view()
             self.setCursor(Qt.CursorShape.WaitCursor)
             self._load_timer.start(10000)
             self._placeholder.hide()
-            self._video_graphics_view.show()
+            self._video_widget.show()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
 
@@ -667,7 +650,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setEnabled(False)
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
-        self._video_graphics_view.hide()
+        self._video_widget.hide()
         self._placeholder.show()
 
     def _on_load_timeout(self):
@@ -675,7 +658,7 @@ class MainWindow(BaseMainWindow):
         self._btn_ab.setEnabled(False)
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
-        self._video_graphics_view.hide()
+        self._video_widget.hide()
         self._placeholder.show()
         om2.MGlobal.displayError("Sync Player: Video load timed out")
 
@@ -827,14 +810,6 @@ class MainWindow(BaseMainWindow):
         else:
             self.setWindowOpacity(1.0)
 
-    # ------------------------------------------------------------------
-    # Signal handlers — flip
-    # ------------------------------------------------------------------
-
-    @error_handler
-    def _on_flip_changed(self, _checked: bool):
-        self._video_graphics_view.set_flip(self._btn_flip_h.isChecked(), self._btn_flip_v.isChecked())
-
     def _set_sync_locked(self, locked: bool):
         """Enable or disable player controls based on Maya sync state."""
         enabled = not locked
@@ -920,11 +895,6 @@ class MainWindow(BaseMainWindow):
             self._btn_opacity.setChecked(False)
             self._btn_opacity.blockSignals(False)
             self.setWindowOpacity(1.0)
-            return
-
-        # Pan/zoom reset (available even during sync)
-        if key in (Qt.Key.Key_A, Qt.Key.Key_F):
-            self._video_graphics_view.reset_view()
             return
 
         if self._sync_controller and self._sync_controller.is_enabled:
