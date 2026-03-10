@@ -330,6 +330,15 @@ class VideoPlayerCore(QObject):
         """Current FPS setting."""
         return self._fps
 
+    @property
+    def supports_continuous_playback(self) -> bool:
+        """True if the core supports continuous playback with drift correction.
+
+        QMediaPlayer-based cores return True; frame-based cores (image
+        sequence) return False so MayaSyncController stays in scrub mode.
+        """
+        return True
+
     # ------------------------------------------------------------------
     # A-B Loop
     # ------------------------------------------------------------------
@@ -771,9 +780,11 @@ class MayaSyncController:
         current_frame = cmds.currentTime(query=True)
         self._player_core.seek(self._frame_to_ms(current_frame))
 
-        # Start in the correct mode (always begin with scrub; debounce into play)
+        # Start in the correct mode (always begin with scrub; debounce into play).
+        # Cores without continuous playback (e.g. image sequences) stay in
+        # scrub mode permanently — seek-per-frame is fast enough.
         self._throttle_timer.start()
-        if cmds.play(query=True, state=True):
+        if self._player_core.supports_continuous_playback and cmds.play(query=True, state=True):
             self._play_start_debounce.start()
 
         logger.info("Maya sync enabled (%.2f fps)", self._fps)
@@ -821,7 +832,14 @@ class MayaSyncController:
 
         Both start and stop transitions are debounced to avoid rapid
         toggling when clicking/holding on Maya's timeline or at loop points.
+
+        For cores without continuous playback (image sequences), play mode
+        is never entered — scrub mode handles all sync via timeChanged.
         """
+        if not self._player_core.supports_continuous_playback:
+            # Scrub-only: ignore playingBack transitions entirely.
+            # The throttle timer + timeChanged callback handle sync.
+            return
         if state:
             self._play_stop_debounce.stop()
             if self._maya_playing:

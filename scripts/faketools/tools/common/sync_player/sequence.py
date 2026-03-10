@@ -416,7 +416,9 @@ class SequencePlayerCore(QObject):
     def _frame_to_ms(self, frame: int) -> int:
         if self._fps <= 0:
             return 0
-        return int(round(frame / self._fps * 1000.0))
+        # +0.5 seeks to the centre of the frame's time window so that
+        # int(ms * fps / 1000) round-trips back to the correct frame.
+        return int(round((frame + 0.5) / self._fps * 1000.0))
 
     def _ms_to_frame(self, ms: int) -> int:
         if ms <= 0 or self._fps <= 0:
@@ -539,6 +541,11 @@ class SequencePlayerCore(QObject):
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
+
+    @property
+    def supports_continuous_playback(self) -> bool:
+        """False — image sequences use scrub-only sync (seek per frame)."""
+        return False
 
     def set_playback_rate(self, rate: float) -> None:
         """Set playback speed multiplier.
