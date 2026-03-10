@@ -11,8 +11,6 @@ order: 145
 
 Proxy Builder is a tool for splitting a character model into per-bone pieces and assembling proxy geometry that follows each bone. It is used for creating simplified geometry for layout rigs and game engines.
 
-![image](../../images/rig/proxy_builder/image000.png)
-
 ## How to Launch
 
 Launch the tool from the dedicated menu or using the following command:
