@@ -22,7 +22,6 @@ from ....lib_ui import (
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
     QColor,
-    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -683,13 +682,6 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.warning(f"Sync Player: Unsupported file type: {ext}")
 
-    @error_handler
-    def _on_open_folder(self):
-        """Open a folder as image sequence."""
-        folder = QFileDialog.getExistingDirectory(self, "Open Image Sequence Folder")
-        if folder:
-            self._load_image_sequence(folder)
-
     def _on_video_open_requested(self):
         """Handle open request from video view (with sync/playing guards)."""
         if self._sync_controller and self._sync_controller.is_enabled:
@@ -887,10 +879,6 @@ class MainWindow(BaseMainWindow):
         seq_action.setCheckable(True)
         seq_action.setChecked(self._sequence_mode)
         seq_action.toggled.connect(self._on_sequence_mode_toggled)
-
-        # Open Folder action (only visible in sequence mode)
-        if self._sequence_mode:
-            self._options_menu.addAction("Open Folder...", self._on_open_folder)
 
         self._options_menu.addSeparator()
 
@@ -1102,9 +1090,10 @@ class MainWindow(BaseMainWindow):
     @error_handler
     def _on_extraction_finished(self, output_folder: str):
         self._progress_overlay.hide()
+        video_fps = self._extractor.video_fps if self._extractor else None
         self._extractor = None
         self._temp_dirs.append(output_folder)
-        self._load_image_sequence(output_folder)
+        self._load_image_sequence(output_folder, video_fps=video_fps)
 
     @error_handler
     def _on_extraction_failed(self, error: str):
@@ -1113,14 +1102,15 @@ class MainWindow(BaseMainWindow):
         self._placeholder.show()
         om2.MGlobal.displayError(f"Sync Player: Frame extraction failed: {error}")
 
-    def _load_image_sequence(self, folder: str) -> None:
+    def _load_image_sequence(self, folder: str, video_fps: float | None = None) -> None:
         """Load an image sequence from a folder into the sequence core.
 
         Args:
             folder: Path to folder containing image files.
+            video_fps: Native FPS from source video (ffprobe). If None, uses Maya scene FPS.
         """
-        maya_fps = command.get_maya_fps()
-        self._sequence_core.set_fps(maya_fps)
+        fps = video_fps if video_fps and video_fps > 0 else command.get_maya_fps()
+        self._sequence_core.set_fps(fps)
 
         self._placeholder.hide()
         self._video_widget.hide()

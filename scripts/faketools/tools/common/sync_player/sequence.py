@@ -300,6 +300,7 @@ class FfmpegExtractor(QThread):
         self._cancelled = False
         self._output_dir: str = ""
         self._total_frames = 0
+        self._video_fps: float | None = None
 
     def run(self) -> None:
         """Probe video then extract all frames as JPEG sequence."""
@@ -309,6 +310,7 @@ class FfmpegExtractor(QThread):
             return
 
         self._total_frames = probe.total_frames
+        self._video_fps = probe.fps
 
         self._output_dir = tempfile.mkdtemp(prefix="sync_player_seq_")
         output_pattern = str(Path(self._output_dir) / "frame_%06d.jpg")
@@ -360,6 +362,11 @@ class FfmpegExtractor(QThread):
             self.extraction_failed.emit(str(e))
         finally:
             self._process = None
+
+    @property
+    def video_fps(self) -> float | None:
+        """Video FPS detected by ffprobe, available after extraction finishes."""
+        return self._video_fps
 
     def cancel(self) -> None:
         """Cancel the extraction."""
