@@ -69,6 +69,8 @@ This mode plays the video directly. It is the only mode with audio support.
 
 This mode converts the video into an image sequence before loading. Use this when video playback responsiveness is poor due to RDP or network drive conditions.
 
+> **Note**: This mode requires **ffmpeg**. An error message is displayed if ffmpeg is not found in the system PATH.
+
 **Image Sequence Mode**
 
 1. Turn on `Image Sequence Mode` in the options menu.

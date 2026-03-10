@@ -172,9 +172,15 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <li>中央のビデオ読み込みエリアでダブルクリックします。</li>
                 <li>開いたダイアログから動画フォーマットのファイルを選択してください。</li>
                 </ol>
-                <p>このモードは動画を一度画像シーケンスに変換してから読み込みます。<br />
+                <p>このモードは動画を一度画像シーケンスに変換してから読み込みます。
                 RDP や
                 ネットワークドライブの関係で動画再生のレスポンスが悪い場合に使用します。</p>
+                <blockquote>
+                <p><strong>Note</strong>: このモードには
+                <strong>ffmpeg</strong> が必要です。ffmpeg がシステムの
+                PATH
+                に含まれていない場合、エラーメッセージが表示されます。</p>
+                </blockquote>
                 <p><strong>画像シーケンスモード</strong></p>
                 <ol type="1">
                 <li>オプションメニューの
