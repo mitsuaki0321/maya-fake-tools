@@ -330,15 +330,6 @@ class VideoPlayerCore(QObject):
         """Current FPS setting."""
         return self._fps
 
-    @property
-    def supports_continuous_playback(self) -> bool:
-        """True if the core supports continuous playback with drift correction.
-
-        QMediaPlayer-based cores return True; frame-based cores (image
-        sequence) return False so MayaSyncController stays in scrub mode.
-        """
-        return True
-
     # ------------------------------------------------------------------
     # A-B Loop
     # ------------------------------------------------------------------
@@ -693,14 +684,9 @@ def get_maya_fps() -> float:
 class MayaSyncController:
     """Synchronizes video playback position with Maya's timeline.
 
-    Uses two modes depending on Maya's playback state:
-    - **Scrub mode** (Maya stopped): seek-per-frame via timeChanged callback
-      with throttle timer. Accurate but slow (random-access decode).
-    - **Play mode** (Maya playing): continuous QMediaPlayer.play() with
-      periodic drift correction. Uses efficient sequential decoding.
-
-    Switches between modes automatically via MConditionMessage on
-    the ``playingBack`` condition.
+    Seeks the player to the corresponding video position on every Maya
+    frame change (timeChanged callback) with a throttle timer to avoid
+    flooding the media backend with seek requests.
     """
 
     def __init__(self, player_core: VideoPlayerCore):
@@ -708,29 +694,11 @@ class MayaSyncController:
         self._fps = DEFAULT_FPS
         self._callbacks: list[int] = []
         self._frame_offset: int = 0
-        self._maya_playing = False
 
-        # Scrub mode: seek per frame
         self._pending_seek_ms: int | None = None
         self._throttle_timer = QTimer()
         self._throttle_timer.setInterval(30)
         self._throttle_timer.timeout.connect(self._apply_pending_seek)
-
-        # Play mode: continuous playback + drift correction
-        self._drift_timer = QTimer()
-        self._drift_timer.setInterval(500)
-        self._drift_timer.timeout.connect(self._correct_drift)
-
-        # Debounce for play mode transitions
-        self._play_start_debounce = QTimer()
-        self._play_start_debounce.setSingleShot(True)
-        self._play_start_debounce.setInterval(150)
-        self._play_start_debounce.timeout.connect(self._start_play_mode)
-
-        self._play_stop_debounce = QTimer()
-        self._play_stop_debounce.setSingleShot(True)
-        self._play_stop_debounce.setInterval(200)
-        self._play_stop_debounce.timeout.connect(self._deferred_stop_play_mode)
 
     def _frame_to_ms(self, frame: float) -> int:
         """Convert a frame number to milliseconds.
@@ -774,26 +742,15 @@ class MayaSyncController:
         cb_time = om2.MDGMessage.addTimeChangeCallback(self._on_time_changed)
         self._callbacks.append(cb_time)
 
-        cb_play = om2.MConditionMessage.addConditionCallback("playingBack", self._on_maya_playback_changed)
-        self._callbacks.append(cb_play)
-
         current_frame = cmds.currentTime(query=True)
         self._player_core.seek(self._frame_to_ms(current_frame))
 
-        # Start in the correct mode (always begin with scrub; debounce into play).
-        # Cores without continuous playback (e.g. image sequences) stay in
-        # scrub mode permanently — seek-per-frame is fast enough.
         self._throttle_timer.start()
-        if self._player_core.supports_continuous_playback and cmds.play(query=True, state=True):
-            self._play_start_debounce.start()
 
         logger.info("Maya sync enabled (%.2f fps)", self._fps)
 
     def disable(self) -> None:
         """Stop syncing and remove all callbacks."""
-        self._play_start_debounce.stop()
-        self._play_stop_debounce.stop()
-        self._stop_play_mode()
         self._throttle_timer.stop()
         self._pending_seek_ms = None
         self._player_core.set_auto_play_suppressed(False)
@@ -820,103 +777,12 @@ class MayaSyncController:
     def _on_time_changed(self, mtime, _client_data) -> None:
         """Called every time Maya's current time changes.
 
-        In scrub mode, stores the target position for the throttle timer.
-        In play mode, ignored (drift correction handles sync).
+        Stores the target position for the throttle timer to apply.
         """
-        if self._maya_playing:
-            return
         self._pending_seek_ms = self._frame_to_ms(mtime.value)
 
-    def _on_maya_playback_changed(self, state: bool, _client_data) -> None:
-        """Called when Maya's playingBack condition changes.
-
-        Both start and stop transitions are debounced to avoid rapid
-        toggling when clicking/holding on Maya's timeline or at loop points.
-
-        For cores without continuous playback (image sequences), play mode
-        is never entered — scrub mode handles all sync via timeChanged.
-        """
-        if not self._player_core.supports_continuous_playback:
-            # Scrub-only: ignore playingBack transitions entirely.
-            # The throttle timer + timeChanged callback handle sync.
-            return
-        if state:
-            self._play_stop_debounce.stop()
-            if self._maya_playing:
-                # Already in play mode (stop was debounced) — correct drift
-                # in case Maya looped back to the start of the range.
-                self._correct_drift()
-            else:
-                self._play_start_debounce.start()
-        else:
-            self._play_start_debounce.stop()
-            if self._maya_playing:
-                self._play_stop_debounce.start()
-            else:
-                self._throttle_timer.start()
-
     # ------------------------------------------------------------------
-    # Play mode — continuous playback with drift correction
-    # ------------------------------------------------------------------
-
-    def _start_play_mode(self) -> None:
-        """Switch to continuous playback mode for smooth Maya sync."""
-        self._maya_playing = True
-        self._throttle_timer.stop()
-        self._pending_seek_ms = None
-
-        # Match playback rate to compensate for video/Maya FPS difference
-        video_fps = self._player_core.get_video_fps()
-        if video_fps and video_fps > 0:
-            self._player_core.set_playback_rate(self._fps / video_fps)
-
-        current_frame = cmds.currentTime(query=True)
-        self._player_core.seek(self._frame_to_ms(current_frame))
-        self._player_core.play()
-        self._drift_timer.start()
-
-        logger.debug("Play mode: continuous playback started")
-
-    def _stop_play_mode(self) -> None:
-        """Switch back to scrub (seek-per-frame) mode."""
-        if not self._maya_playing:
-            return
-        self._maya_playing = False
-        self._drift_timer.stop()
-        self._player_core.pause()
-        self._player_core.set_playback_rate(1.0)
-
-        logger.debug("Play mode: stopped, returning to scrub mode")
-
-    def _deferred_stop_play_mode(self) -> None:
-        """Complete the transition out of play mode after debounce."""
-        self._stop_play_mode()
-        current_frame = cmds.currentTime(query=True)
-        self._player_core.seek(self._frame_to_ms(current_frame))
-        self._throttle_timer.start()
-
-    def _correct_drift(self) -> None:
-        """Periodically correct drift between Maya time and video position."""
-        if not self._maya_playing:
-            return
-
-        current_frame = cmds.currentTime(query=True)
-        target_ms = self._frame_to_ms(current_frame)
-
-        # If player stopped unexpectedly (e.g. EndOfMedia), restart
-        if self._player_core.get_playback_state() != "playing":
-            self._player_core.seek(target_ms)
-            self._player_core.play()
-            return
-
-        actual_ms = self._player_core.position
-        drift_ms = abs(target_ms - actual_ms)
-        threshold_ms = int(3000.0 / self._fps)  # 3 frames
-        if drift_ms > threshold_ms:
-            self._player_core.seek(target_ms)
-
-    # ------------------------------------------------------------------
-    # Scrub mode — seek per frame (original behavior)
+    # Seek
     # ------------------------------------------------------------------
 
     def _apply_pending_seek(self) -> None:

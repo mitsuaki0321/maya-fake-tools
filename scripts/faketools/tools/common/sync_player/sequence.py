@@ -542,11 +542,6 @@ class SequencePlayerCore(QObject):
     # Properties
     # ------------------------------------------------------------------
 
-    @property
-    def supports_continuous_playback(self) -> bool:
-        """False — image sequences use scrub-only sync (seek per frame)."""
-        return False
-
     def set_playback_rate(self, rate: float) -> None:
         """Set playback speed multiplier.
 
