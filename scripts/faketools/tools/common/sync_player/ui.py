@@ -1,13 +1,14 @@
 """Sync Player UI layer.
 
 Full-featured playback window with seek slider, transport controls,
-volume, speed, loop toggle, and Maya sync toggle.
+volume, speed, loop toggle, Maya sync toggle, and image sequence mode.
 """
 
 from __future__ import annotations
 
 from logging import getLogger
 import os
+import shutil
 
 import maya.api.OpenMaya as om2
 import maya.cmds as cmds
@@ -20,10 +21,13 @@ from ....lib_ui import (
 )
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.qt_compat import (
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QProgressBar,
+    QPushButton,
     QSize,
     QSizePolicy,
     QSlider,
@@ -34,11 +38,11 @@ from ....lib_ui.qt_compat import (
     QWidget,
     QWidgetAction,
     get_open_file_name,
-    get_playback_state,
 )
 from ....lib_ui.ui_utils import get_relative_size, scale_by_dpi
 from ....lib_ui.widgets.icon_button import IconButton, IconButtonStyle, IconToggleButton, IconToolButton
 from . import command
+from .sequence import FfmpegExtractor, ImageDisplayWidget, SequencePlayerCore
 from .widgets import ICONS_DIR, LoopRangeBar, OffsetSpinBox, PlaceholderWidget, SeekSlider, VideoWidget
 
 logger = getLogger(__name__)
@@ -48,6 +52,15 @@ _instance = None
 _SPEED_OPTIONS = ["0.25x", "0.5x", "0.75x", "1.0x", "1.25x", "1.5x", "2.0x"]
 _SPEED_VALUES = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 _DEFAULT_SPEED_INDEX = 3  # 1.0x
+
+_VIDEO_EXTENSIONS = {".mov", ".avi", ".mp4", ".wmv"}
+_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+_SEQUENCE_FILE_FILTER = (
+    "Video and Image Files (*.mov *.avi *.mp4 *.wmv *.jpg *.jpeg *.png);;"
+    "Video Files (*.mov *.avi *.mp4 *.wmv);;"
+    "Image Files (*.jpg *.jpeg *.png);;"
+    "All Files (*)"
+)
 
 
 class MainWindow(BaseMainWindow):
@@ -76,6 +89,14 @@ class MainWindow(BaseMainWindow):
         self._load_timer = QTimer(self)
         self._load_timer.setSingleShot(True)
         self._load_timer.timeout.connect(self._on_load_timeout)
+
+        # Sequence mode state
+        self._sequence_mode: bool = False
+        self._image_display: ImageDisplayWidget | None = None
+        self._sequence_core: SequencePlayerCore | None = None
+        self._active_core: command.VideoPlayerCore | SequencePlayerCore | None = None
+        self._extractor: FfmpegExtractor | None = None
+        self._temp_dirs: list[str] = []
 
         self._setup_ui()
 
@@ -147,7 +168,7 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addWidget(bottom_widget)
 
     def _setup_video_area(self):
-        """Set up the video container, placeholder, player core, and sync controller."""
+        """Set up the video container, placeholder, player core, sequence core, and sync controller."""
         self._video_container = QWidget()
         container_layout = QVBoxLayout(self._video_container)
         container_layout.setContentsMargins(0, 0, 0, 0)
@@ -162,18 +183,69 @@ class MainWindow(BaseMainWindow):
         self._video_widget.hide()
         container_layout.addWidget(self._video_widget)
 
+        # Image display widget for sequence mode
+        self._image_display = ImageDisplayWidget(focus_widget=self, parent=self)
+        self._image_display.open_requested.connect(self._on_video_open_requested)
+        self._image_display.hide()
+        container_layout.addWidget(self._image_display)
+
+        # Progress overlay for ffmpeg extraction (hidden by default)
+        self._progress_overlay = QWidget(self._video_container)
+        self._progress_overlay.hide()
+        overlay_layout = QVBoxLayout(self._progress_overlay)
+        overlay_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._progress_label = QLabel("Extracting frames...")
+        self._progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._progress_label.setStyleSheet("color: #CCCCCC;")
+        overlay_layout.addWidget(self._progress_label)
+        self._progress_bar = QProgressBar()
+        self._progress_bar.setRange(0, 100)
+        self._progress_bar.setFixedWidth(int(scale_by_dpi(200, self)))
+        overlay_layout.addWidget(self._progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
+        self._progress_cancel_btn = QPushButton("Cancel")
+        self._progress_cancel_btn.clicked.connect(self._on_extraction_cancel)
+        overlay_layout.addWidget(self._progress_cancel_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
         self.central_layout.addWidget(self._video_container, stretch=1)
 
-        # Player core + sync controller
+        # Player core (video mode)
         self._player_core = command.VideoPlayerCore(self._video_widget, parent=self)
-        self._player_core.position_changed.connect(self._on_position_changed)
-        self._player_core.duration_changed.connect(self._on_duration_changed)
-        self._player_core.state_changed.connect(self._on_state_changed)
-        self._player_core.video_fps_detected.connect(self._on_video_fps_detected)
-        self._player_core.video_ready.connect(self._on_video_ready)
-        self._player_core.load_failed.connect(self._on_load_failed)
-        self._player_core.ab_loop_changed.connect(self._on_ab_loop_changed)
+        self._connect_core_signals(self._player_core)
+        self._active_core = self._player_core
+
+        # Sequence core (image sequence mode)
+        self._sequence_core = SequencePlayerCore(self._image_display, parent=self)
+
+        # Sync controller
         self._sync_controller = command.MayaSyncController(self._player_core)
+
+    def _connect_core_signals(self, core) -> None:
+        """Connect a player core's signals to the UI handlers.
+
+        Args:
+            core: VideoPlayerCore or SequencePlayerCore.
+        """
+        core.position_changed.connect(self._on_position_changed)
+        core.duration_changed.connect(self._on_duration_changed)
+        core.state_changed.connect(self._on_state_changed)
+        core.video_fps_detected.connect(self._on_video_fps_detected)
+        core.video_ready.connect(self._on_video_ready)
+        core.load_failed.connect(self._on_load_failed)
+        core.ab_loop_changed.connect(self._on_ab_loop_changed)
+
+    def _disconnect_core_signals(self, core) -> None:
+        """Disconnect a player core's signals from the UI handlers.
+
+        Args:
+            core: VideoPlayerCore or SequencePlayerCore.
+        """
+        core.position_changed.disconnect(self._on_position_changed)
+        core.duration_changed.disconnect(self._on_duration_changed)
+        core.state_changed.disconnect(self._on_state_changed)
+        core.video_fps_detected.disconnect(self._on_video_fps_detected)
+        core.video_ready.disconnect(self._on_video_ready)
+        core.load_failed.disconnect(self._on_load_failed)
+        core.ab_loop_changed.disconnect(self._on_ab_loop_changed)
 
     def _setup_scrub_section(self, parent_layout, pad_h):
         """Set up the time label, seek slider, and loop range bar.
@@ -489,17 +561,18 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def load_video(self, path: str) -> None:
-        """Load a video file.
+        """Load a video file (in video mode).
 
         Args:
             path: Absolute file path.
         """
-        if self._player_core:
-            self._player_core.clear_ab_loop()
+        if self._active_core:
+            self._active_core.clear_ab_loop()
             self.setCursor(Qt.CursorShape.WaitCursor)
             self._load_timer.start(10000)
             self._placeholder.hide()
             self._video_widget.show()
+            self._image_display.hide()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
 
@@ -509,17 +582,17 @@ class MainWindow(BaseMainWindow):
 
     def _update_time_display(self, position_ms: int, duration_ms: int) -> None:
         """Update the time label with time and frame numbers."""
-        fps = self._player_core.fps if self._player_core else command.DEFAULT_FPS
+        fps = self._active_core.fps if self._active_core else command.DEFAULT_FPS
         current_frame = command.ms_to_frame(position_ms, fps)
         total_frames = command.ms_to_frame(duration_ms, fps)
         time_text = f"{command.format_time(position_ms)} / {command.format_time(duration_ms)}"
         frame_text = f"[ {current_frame} / {total_frames} ]"
         display = f"{time_text}    {frame_text}"
-        if self._player_core and self._player_core.has_ab_loop:
-            a_text = command.format_time(self._player_core.loop_in)
-            b_text = command.format_time(self._player_core.loop_out)
-            a_frame = command.ms_to_frame(self._player_core.loop_in, fps)
-            b_frame = command.ms_to_frame(self._player_core.loop_out, fps)
+        if self._active_core and self._active_core.has_ab_loop:
+            a_text = command.format_time(self._active_core.loop_in)
+            b_text = command.format_time(self._active_core.loop_out)
+            a_frame = command.ms_to_frame(self._active_core.loop_in, fps)
+            b_frame = command.ms_to_frame(self._active_core.loop_out, fps)
             display += f"      A-B: {a_text} - {b_text} [ {a_frame} - {b_frame} ]"
         self._time_label.setText(display)
 
@@ -533,6 +606,13 @@ class MainWindow(BaseMainWindow):
 
     @error_handler
     def _on_open(self):
+        if self._sequence_mode:
+            self._on_open_sequence()
+        else:
+            self._on_open_video()
+
+    def _on_open_video(self):
+        """Open a video file (video mode)."""
         path, _ = get_open_file_name(
             self,
             caption="Open Video",
@@ -540,6 +620,31 @@ class MainWindow(BaseMainWindow):
         )
         if path:
             self.load_video(path)
+
+    @error_handler
+    def _on_open_sequence(self):
+        """Open a file in sequence mode — auto-detect video vs image."""
+        path, _ = get_open_file_name(
+            self,
+            caption="Open Video or Image",
+            filter=_SEQUENCE_FILE_FILTER,
+        )
+        if not path:
+            return
+        ext = os.path.splitext(path)[1].lower()
+        if ext in _VIDEO_EXTENSIONS:
+            self._start_ffmpeg_extraction(path)
+        elif ext in _IMAGE_EXTENSIONS:
+            self._load_image_sequence(os.path.dirname(path))
+        else:
+            cmds.warning(f"Sync Player: Unsupported file type: {ext}")
+
+    @error_handler
+    def _on_open_folder(self):
+        """Open a folder as image sequence."""
+        folder = QFileDialog.getExistingDirectory(self, "Open Image Sequence Folder")
+        if folder:
+            self._load_image_sequence(folder)
 
     def _on_video_open_requested(self):
         """Handle open request from video view (with sync/playing guards)."""
@@ -552,21 +657,21 @@ class MainWindow(BaseMainWindow):
 
     @error_handler
     def _on_play_pause_toggled(self, checked: bool):
-        if self._player_core:
+        if self._active_core:
             if checked:
-                self._player_core.play()
+                self._active_core.play()
             else:
-                self._player_core.pause()
+                self._active_core.pause()
 
     @error_handler
     def _on_step_forward(self):
-        if self._player_core:
-            self._player_core.step_forward()
+        if self._active_core:
+            self._active_core.step_forward()
 
     @error_handler
     def _on_step_backward(self):
-        if self._player_core:
-            self._player_core.step_backward()
+        if self._active_core:
+            self._active_core.step_backward()
 
     # ------------------------------------------------------------------
     # Signal handlers — seek
@@ -576,28 +681,28 @@ class MainWindow(BaseMainWindow):
         self._seeking = True
         self._was_playing_before_seek = False
         self._was_muted_before_seek = False
-        if self._player_core:
-            self._was_playing_before_seek = get_playback_state(self._player_core.player) == "playing"
+        if self._active_core:
+            self._was_playing_before_seek = self._active_core.get_playback_state() == "playing"
             self._was_muted_before_seek = self._btn_mute.isChecked()
             if not self._was_muted_before_seek:
-                self._player_core.set_muted(True)
-            self._player_core.set_ab_enforcement(False)
-            self._player_core.pause()
+                self._active_core.set_muted(True)
+            self._active_core.set_ab_enforcement(False)
+            self._active_core.pause()
             pos = self._seek_slider.value()
-            self._player_core.seek(pos)
+            self._active_core.seek(pos)
             self._pending_scrub_pos = None
             self._scrub_timer.start()
             self._update_time_display(pos, self._seek_slider.maximum())
 
     def _on_seek_released(self):
         self._scrub_timer.stop()
-        if self._player_core:
-            self._player_core.seek(self._seek_slider.value())
+        if self._active_core:
+            self._active_core.seek(self._seek_slider.value())
             if self._was_playing_before_seek:
-                self._player_core.play()
+                self._active_core.play()
             if not self._was_muted_before_seek:
-                self._player_core.set_muted(False)
-            self._player_core.set_ab_enforcement(True)
+                self._active_core.set_muted(False)
+            self._active_core.set_ab_enforcement(True)
             self._update_time_display(self._seek_slider.value(), self._seek_slider.maximum())
         self._pending_scrub_pos = None
         # Unblock _on_state_changed only after all state is restored.
@@ -608,8 +713,8 @@ class MainWindow(BaseMainWindow):
         self._update_time_display(position, self._seek_slider.maximum())
 
     def _apply_scrub_seek(self):
-        if self._pending_scrub_pos is not None and self._player_core:
-            self._player_core.seek(self._pending_scrub_pos)
+        if self._pending_scrub_pos is not None and self._active_core:
+            self._active_core.seek(self._pending_scrub_pos)
             self._pending_scrub_pos = None
 
     # ------------------------------------------------------------------
@@ -651,6 +756,7 @@ class MainWindow(BaseMainWindow):
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
         self._video_widget.hide()
+        self._image_display.hide()
         self._placeholder.show()
 
     def _on_load_timeout(self):
@@ -659,6 +765,7 @@ class MainWindow(BaseMainWindow):
         self._btn_loop.setEnabled(False)
         self._btn_sync.setEnabled(False)
         self._video_widget.hide()
+        self._image_display.hide()
         self._placeholder.show()
         om2.MGlobal.displayError("Sync Player: Video load timed out")
 
@@ -668,40 +775,40 @@ class MainWindow(BaseMainWindow):
 
     @error_handler
     def _on_ab_toggled(self, checked: bool):
-        if not self._player_core:
+        if not self._active_core:
             return
         if checked:
-            if not self._player_core.has_media():
+            if not self._active_core.has_media():
                 self._btn_ab.blockSignals(True)
                 self._btn_ab.setChecked(False)
                 self._btn_ab.blockSignals(False)
                 return
-            self._player_core.set_loop_in(0)
-            self._player_core.set_loop_out(self._player_core.duration)
+            self._active_core.set_loop_in(0)
+            self._active_core.set_loop_out(self._active_core.duration)
         else:
-            self._player_core.clear_ab_loop()
+            self._active_core.clear_ab_loop()
 
     @error_handler
     def _on_loop_toggled(self, checked: bool):
-        if self._player_core:
-            self._player_core.set_loop(checked)
+        if self._active_core:
+            self._active_core.set_loop(checked)
 
     @error_handler
     def _on_speed_selected(self, index: int):
         if 0 <= index < len(_SPEED_VALUES):
             self._current_speed_index = index
-            if self._player_core:
-                self._player_core.set_playback_rate(_SPEED_VALUES[index])
+            if self._active_core:
+                self._active_core.set_playback_rate(_SPEED_VALUES[index])
 
     @error_handler
     def _on_volume_changed(self, value: int):
-        if self._player_core:
-            self._player_core.set_volume(value)
+        if self._active_core:
+            self._active_core.set_volume(value)
 
     @error_handler
     def _on_mute_toggled(self, checked: bool):
-        if self._player_core:
-            self._player_core.set_muted(checked)
+        if self._active_core:
+            self._active_core.set_muted(checked)
 
     @error_handler
     def _on_offset_changed(self, value: int):
@@ -709,27 +816,40 @@ class MainWindow(BaseMainWindow):
             self._sync_controller.set_frame_offset(value)
 
     def _on_ab_loop_changed(self):
-        if self._player_core:
-            has_loop = self._player_core.has_ab_loop
+        if self._active_core:
+            has_loop = self._active_core.has_ab_loop
             self._btn_ab.blockSignals(True)
             self._btn_ab.setChecked(has_loop)
             self._btn_ab.blockSignals(False)
             if has_loop:
-                self._loop_bar.set_loop_markers(self._player_core.loop_in, self._player_core.loop_out, self._player_core.duration)
+                self._loop_bar.set_loop_markers(self._active_core.loop_in, self._active_core.loop_out, self._active_core.duration)
             else:
-                self._loop_bar.set_loop_markers(None, None, self._player_core.duration)
-            self._update_time_display(self._player_core.position, self._player_core.duration)
+                self._loop_bar.set_loop_markers(None, None, self._active_core.duration)
+            self._update_time_display(self._active_core.position, self._active_core.duration)
 
     def _on_slider_loop_in(self, ms: int):
-        if self._player_core:
-            self._player_core.set_loop_in(ms)
+        if self._active_core:
+            self._active_core.set_loop_in(ms)
 
     def _on_slider_loop_out(self, ms: int):
-        if self._player_core:
-            self._player_core.set_loop_out(ms)
+        if self._active_core:
+            self._active_core.set_loop_out(ms)
 
     def _populate_options_menu(self):
         self._options_menu.clear()
+
+        # Image Sequence Mode checkbox
+        seq_action = self._options_menu.addAction("Image Sequence Mode")
+        seq_action.setCheckable(True)
+        seq_action.setChecked(self._sequence_mode)
+        seq_action.toggled.connect(self._on_sequence_mode_toggled)
+
+        # Open Folder action (only visible in sequence mode)
+        if self._sequence_mode:
+            self._options_menu.addAction("Open Folder...", self._on_open_folder)
+
+        self._options_menu.addSeparator()
+
         current_label = _SPEED_OPTIONS[self._current_speed_index]
         speed_menu = self._options_menu.addMenu(f"Speed: {current_label}")
         speed_menu.setWindowFlags(speed_menu.windowFlags() | Qt.WindowType.NoDropShadowWindowHint)
@@ -785,9 +905,9 @@ class MainWindow(BaseMainWindow):
             maya_fps = command.get_maya_fps()
             self._sync_controller.set_fps(maya_fps)
             self._sync_controller.enable()
-            if self._player_core:
-                self._player_core.set_fps(maya_fps)
-                video_fps = self._player_core.get_video_fps()
+            if self._active_core:
+                self._active_core.set_fps(maya_fps)
+                video_fps = self._active_core.get_video_fps()
                 if video_fps is not None and abs(video_fps - maya_fps) > 0.1:
                     cmds.warning(
                         f"Sync Player: Video FPS ({video_fps:.4g}) differs from Maya FPS ({maya_fps:.4g}). "
@@ -795,8 +915,8 @@ class MainWindow(BaseMainWindow):
                     )
         else:
             self._sync_controller.disable()
-        if self._player_core:
-            self._player_core.set_ab_enforcement(not checked)
+        if self._active_core:
+            self._active_core.set_ab_enforcement(not checked)
         self._set_sync_locked(checked)
 
     # ------------------------------------------------------------------
@@ -822,6 +942,149 @@ class MainWindow(BaseMainWindow):
         self._loop_bar.setEnabled(enabled)
 
     # ------------------------------------------------------------------
+    # Sequence mode
+    # ------------------------------------------------------------------
+
+    @error_handler
+    def _on_sequence_mode_toggled(self, checked: bool):
+        """Handle sequence mode checkbox toggle."""
+        if checked == self._sequence_mode:
+            return
+
+        # Disable sync if active
+        if self._sync_controller and self._sync_controller.is_enabled:
+            self._btn_sync.blockSignals(True)
+            self._btn_sync.setChecked(False)
+            self._btn_sync.blockSignals(False)
+            self._sync_controller.disable()
+            self._set_sync_locked(False)
+
+        # Stop current playback
+        if self._active_core:
+            self._active_core.stop()
+
+        self._sequence_mode = checked
+
+        # Switch active core
+        old_core = self._active_core
+        if checked:
+            new_core = self._sequence_core
+        else:
+            new_core = self._player_core
+
+        self._disconnect_core_signals(old_core)
+        self._connect_core_signals(new_core)
+        self._active_core = new_core
+
+        # Switch display widgets
+        self._video_widget.hide()
+        self._image_display.hide()
+        self._placeholder.show()
+
+        # Reset UI state
+        self._seek_slider.setRange(0, 0)
+        self._loop_bar.set_total_ms(0)
+        self._loop_bar.set_loop_markers(None, None, 0)
+        self._time_label.setText("00:00 / 00:00    [ 0 / 0 ]")
+        self._fps_label.setText(f"{command.DEFAULT_FPS:.0f}fps")
+        self._btn_ab.setEnabled(False)
+        self._btn_loop.setEnabled(False)
+        self._btn_sync.setEnabled(False)
+        self._btn_play_pause.blockSignals(True)
+        self._btn_play_pause.setChecked(False)
+        self._btn_play_pause.blockSignals(False)
+
+        # Recreate sync controller with new active core
+        if self._sync_controller:
+            self._sync_controller.cleanup()
+        self._sync_controller = command.MayaSyncController(self._active_core)
+        if self._offset_spin.value() != 0:
+            self._sync_controller.set_frame_offset(self._offset_spin.value())
+
+        # Update audio controls
+        self._update_audio_controls()
+
+        self.setWindowTitle("Sync Player")
+        logger.info("Sequence mode: %s", "ON" if checked else "OFF")
+
+    def _update_audio_controls(self) -> None:
+        """Enable or disable audio controls based on current mode."""
+        audio_enabled = not self._sequence_mode
+        self._btn_mute.setEnabled(audio_enabled)
+        self._volume_slider.setEnabled(audio_enabled)
+
+    def _start_ffmpeg_extraction(self, path: str) -> None:
+        """Start extracting JPEG frames from a video file using ffmpeg.
+
+        Args:
+            path: Video file path.
+        """
+        if shutil.which("ffmpeg") is None:
+            om2.MGlobal.displayError("Sync Player: ffmpeg not found. Please install ffmpeg and add it to PATH.")
+            return
+
+        if self._extractor is not None:
+            self._extractor.cancel()
+            self._extractor.wait(3000)
+
+        self._placeholder.hide()
+        self._video_widget.hide()
+        self._image_display.hide()
+        self._progress_overlay.show()
+        self._progress_overlay.raise_()
+        self._progress_bar.setValue(0)
+        self._progress_label.setText(f"Extracting frames from {os.path.basename(path)}...")
+
+        self._extractor = FfmpegExtractor(path, parent=self)
+        self._extractor.progress_changed.connect(self._on_extraction_progress)
+        self._extractor.extraction_finished.connect(self._on_extraction_finished)
+        self._extractor.extraction_failed.connect(self._on_extraction_failed)
+        self._extractor.start()
+
+    def _on_extraction_progress(self, current: int, total: int) -> None:
+        if total > 0:
+            self._progress_bar.setValue(int(current / total * 100))
+        self._progress_label.setText(f"Extracting frames... {current}/{total}")
+
+    def _on_extraction_cancel(self) -> None:
+        if self._extractor is not None:
+            self._extractor.cancel()
+            self._extractor.wait(3000)
+            self._extractor = None
+        self._progress_overlay.hide()
+        self._placeholder.show()
+
+    @error_handler
+    def _on_extraction_finished(self, output_folder: str):
+        self._progress_overlay.hide()
+        self._extractor = None
+        self._temp_dirs.append(output_folder)
+        self._load_image_sequence(output_folder)
+
+    @error_handler
+    def _on_extraction_failed(self, error: str):
+        self._progress_overlay.hide()
+        self._extractor = None
+        self._placeholder.show()
+        om2.MGlobal.displayError(f"Sync Player: Frame extraction failed: {error}")
+
+    def _load_image_sequence(self, folder: str) -> None:
+        """Load an image sequence from a folder into the sequence core.
+
+        Args:
+            folder: Path to folder containing image files.
+        """
+        maya_fps = command.get_maya_fps()
+        self._sequence_core.set_fps(maya_fps)
+
+        self._placeholder.hide()
+        self._video_widget.hide()
+        self._image_display.show()
+
+        self._sequence_core.load(folder)
+        self.setWindowTitle(f"Sync Player - {os.path.basename(folder)} (sequence)")
+
+    # ------------------------------------------------------------------
     # Settings persistence
     # ------------------------------------------------------------------
 
@@ -832,18 +1095,19 @@ class MainWindow(BaseMainWindow):
             "frame_offset": self._offset_spin.value(),
             "speed_index": self._current_speed_index,
             "opacity_value": self._opacity_value,
+            "sequence_mode": self._sequence_mode,
         }
 
     def _apply_settings(self, data: dict) -> None:
         volume = data.get("volume", 100)
         self._volume_slider.setValue(volume)
-        if self._player_core:
-            self._player_core.set_volume(volume)
+        if self._active_core:
+            self._active_core.set_volume(volume)
 
         muted = data.get("muted", False)
         self._btn_mute.setChecked(muted)
-        if self._player_core:
-            self._player_core.set_muted(muted)
+        if self._active_core:
+            self._active_core.set_muted(muted)
 
         frame_offset = data.get("frame_offset", 0)
         self._offset_spin.setValue(frame_offset)
@@ -854,6 +1118,10 @@ class MainWindow(BaseMainWindow):
         self._on_speed_selected(speed_index)
 
         self._opacity_value = data.get("opacity_value", 50)
+
+        sequence_mode = data.get("sequence_mode", False)
+        if sequence_mode != self._sequence_mode:
+            self._on_sequence_mode_toggled(sequence_mode)
 
     def _restore_settings(self):
         data = self._settings.load_settings("default")
@@ -915,12 +1183,33 @@ class MainWindow(BaseMainWindow):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    def resizeEvent(self, event):
+        """Keep progress overlay sized to match container."""
+        super().resizeEvent(event)
+        if self._progress_overlay is not None:
+            self._progress_overlay.setGeometry(self._video_container.geometry())
+
     def closeEvent(self, event):
         self._save_settings()
+
+        # Cancel extractor if running
+        if self._extractor is not None:
+            self._extractor.cancel()
+            self._extractor.wait(3000)
+            self._extractor = None
+
         if self._sync_controller:
             self._sync_controller.cleanup()
-        if self._player_core:
-            self._player_core.stop()
+        if self._active_core:
+            self._active_core.stop()
+        if self._sequence_core:
+            self._sequence_core.cleanup()
+
+        # Clean up temp directories
+        for temp_dir in self._temp_dirs:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        self._temp_dirs.clear()
+
         super().closeEvent(event)
 
 

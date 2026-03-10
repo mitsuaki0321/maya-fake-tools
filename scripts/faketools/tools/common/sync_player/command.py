@@ -414,6 +414,14 @@ class VideoPlayerCore(QObject):
         """Current playback position in milliseconds."""
         return self._player.position()
 
+    def get_playback_state(self) -> str:
+        """Get current playback state.
+
+        Returns:
+            str: "playing", "paused", or "stopped".
+        """
+        return get_playback_state(self._player)
+
     @property
     def player(self) -> QMediaPlayer:
         """Access the underlying QMediaPlayer."""
@@ -878,7 +886,7 @@ class MayaSyncController:
         target_ms = self._frame_to_ms(current_frame)
 
         # If player stopped unexpectedly (e.g. EndOfMedia), restart
-        if get_playback_state(self._player_core.player) != "playing":
+        if self._player_core.get_playback_state() != "playing":
             self._player_core.seek(target_ms)
             self._player_core.play()
             return
