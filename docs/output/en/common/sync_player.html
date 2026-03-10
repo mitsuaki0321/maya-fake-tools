@@ -49,9 +49,8 @@
                     <li><a href="#basic-usage"
                     id="toc-basic-usage">Basic Usage</a>
                     <ul>
-                    <li><a href="#loading-a-video-file"
-                    id="toc-loading-a-video-file">Loading a Video
-                    File</a></li>
+                    <li><a href="#loading-a-video"
+                    id="toc-loading-a-video">Loading a Video</a></li>
                     <li><a href="#playback-controls"
                     id="toc-playback-controls">Playback
                     Controls</a></li>
@@ -106,7 +105,7 @@
                 synchronization</strong>, allowing you to review
                 reference footage while working on animations.</p>
                 <h3 id="supported-formats">Supported Formats</h3>
-                <p>mov, avi, mp4, wmv</p>
+                <p>mov, avi, mp4, wmv, jpeg, png, tif/tiff</p>
                 <h2 id="how-to-launch">How to Launch</h2>
                 <p>Launch the tool from the dedicated menu or using the
                 following command:</p>
@@ -160,17 +159,49 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <h2 id="basic-usage">Basic Usage</h2>
-                <h3 id="loading-a-video-file">Loading a Video File</h3>
+                <h3 id="loading-a-video">Loading a Video</h3>
                 <p><img
                 src="../../images/common/sync_player/iamge005.png"
                 alt="image" /></p>
-                <p>Open a video file using the following method:</p>
+                <p>There are three loading modes, each with a different
+                loading method:</p>
                 <ul>
-                <li><strong>Double-click</strong> the video display area
-                to open a file dialog</li>
-                <li>Double-click is blocked while a video is
-                playing</li>
+                <li>Video mode</li>
+                <li>Video image sequence mode</li>
+                <li>Image sequence mode</li>
                 </ul>
+                <p>Each mode is described below.</p>
+                <p><strong>Video Mode</strong></p>
+                <ol type="1">
+                <li>Turn off <code>Image Sequence Mode</code> in the
+                options menu.</li>
+                <li>Double-click the video display area.</li>
+                <li>Select a video file from the dialog.</li>
+                </ol>
+                <p>This mode plays the video directly. It is the only
+                mode with audio support.</p>
+                <p><strong>Video Image Sequence Mode</strong></p>
+                <ol type="1">
+                <li>Turn on <code>Image Sequence Mode</code> in the
+                options menu.</li>
+                <li>Double-click the video display area.</li>
+                <li>Select a video file from the dialog.</li>
+                </ol>
+                <p>This mode converts the video into an image sequence
+                before loading. Use this when video playback
+                responsiveness is poor due to RDP or network drive
+                conditions.</p>
+                <p><strong>Image Sequence Mode</strong></p>
+                <ol type="1">
+                <li>Turn on <code>Image Sequence Mode</code> in the
+                options menu.</li>
+                <li>Double-click the video display area.</li>
+                <li>Select an image file from the dialog.</li>
+                </ol>
+                <p>This mode collects numbered image files from the
+                selected image’s directory and loads them as a video.
+                Use this when video playback responsiveness is poor due
+                to RDP or network drive conditions.</p>
                 <blockquote>
                 <p><strong>Note</strong>: Double-click file loading is
                 disabled when Maya Sync is active.</p>
@@ -291,10 +322,10 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 <li><strong>When sync is enabled</strong>: The video
                 playback position follows Maya’s timeline
                 <ul>
-                <li>Playing the Maya timeline also plays the video</li>
-                <li>Stopping Maya playback pauses the video</li>
-                <li>Scrubbing (dragging) the timeline seeks the video to
-                the corresponding frame</li>
+                <li>Whenever Maya’s current frame changes, the video
+                seeks to the corresponding position</li>
+                <li>This works the same way for both timeline scrubbing
+                (dragging) and playback</li>
                 </ul></li>
                 <li><strong>When sync is disabled</strong>: Operates as
                 a standalone video player</li>
@@ -358,6 +389,10 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 src="../../images/common/sync_player/options.svg"
                 alt="image" /> button to the right of the volume slider
                 to open the menu.</p>
+                <h4 id="image-sequence-mode-toggle">Image Sequence Mode
+                Toggle</h4>
+                <p>Use the <strong>Image Sequence Mode</strong> checkbox
+                to select the video loading method.</p>
                 <h4 id="playback-speed">Playback Speed</h4>
                 <p>Select the playback speed from the
                 <strong>Speed</strong> submenu.</p>

@@ -13,7 +13,7 @@ Sync Player is a tool for playing video files within Maya. In addition to functi
 
 ### Supported Formats
 
-mov, avi, mp4, wmv
+mov, avi, mp4, wmv, jpeg, png, tif/tiff
 
 ## How to Launch
 
@@ -41,14 +41,41 @@ The window consists of the following elements:
 
 ## Basic Usage
 
-### Loading a Video File
+### Loading a Video
 
 ![image](../../images/common/sync_player/iamge005.png)
 
-Open a video file using the following method:
+There are three loading modes, each with a different loading method:
 
-- **Double-click** the video display area to open a file dialog
-- Double-click is blocked while a video is playing
+- Video mode
+- Video image sequence mode
+- Image sequence mode
+
+Each mode is described below.
+
+**Video Mode**
+
+1. Turn off `Image Sequence Mode` in the options menu.
+2. Double-click the video display area.
+3. Select a video file from the dialog.
+
+This mode plays the video directly. It is the only mode with audio support.
+
+**Video Image Sequence Mode**
+
+1. Turn on `Image Sequence Mode` in the options menu.
+2. Double-click the video display area.
+3. Select a video file from the dialog.
+
+This mode converts the video into an image sequence before loading. Use this when video playback responsiveness is poor due to RDP or network drive conditions.
+
+**Image Sequence Mode**
+
+1. Turn on `Image Sequence Mode` in the options menu.
+2. Double-click the video display area.
+3. Select an image file from the dialog.
+
+This mode collects numbered image files from the selected image's directory and loads them as a video. Use this when video playback responsiveness is poor due to RDP or network drive conditions.
 
 > **Note**: Double-click file loading is disabled when Maya Sync is active.
 
@@ -132,9 +159,8 @@ When sync is enabled, the button icon changes to ![image](../../images/common/sy
 #### Sync Mode Behavior
 
 - **When sync is enabled**: The video playback position follows Maya's timeline
-  - Playing the Maya timeline also plays the video
-  - Stopping Maya playback pauses the video
-  - Scrubbing (dragging) the timeline seeks the video to the corresponding frame
+  - Whenever Maya's current frame changes, the video seeks to the corresponding position
+  - This works the same way for both timeline scrubbing (dragging) and playback
 - **When sync is disabled**: Operates as a standalone video player
 
 #### Frame Offset
@@ -175,6 +201,10 @@ The mute button and volume slider are on the right side.
 ### Options Menu
 
 Click the ![image](../../images/common/sync_player/options.svg) button to the right of the volume slider to open the menu.
+
+#### Image Sequence Mode Toggle
+
+Use the **Image Sequence Mode** checkbox to select the video loading method.
 
 #### Playback Speed
 
