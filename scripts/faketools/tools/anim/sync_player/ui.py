@@ -84,7 +84,7 @@ class MainWindow(BaseMainWindow):
         self._scrub_timer.timeout.connect(self._apply_scrub_seek)
         self._current_speed_index = _DEFAULT_SPEED_INDEX
         self._opacity_value = 50
-        self._settings = ToolSettingsManager(tool_name="sync_player", category="common")
+        self._settings = ToolSettingsManager(tool_name="sync_player", category="anim")
 
         self._load_timer = QTimer(self)
         self._load_timer.setSingleShot(True)

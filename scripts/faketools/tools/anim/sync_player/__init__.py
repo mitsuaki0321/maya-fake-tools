@@ -12,7 +12,7 @@ TOOL_CONFIG = {
     "menu_order": 60,
     "requires_selection": False,
     "author": "FakeTools",
-    "category": "common",
+    "category": "anim",
 }
 
 __all__ = ["TOOL_CONFIG"]

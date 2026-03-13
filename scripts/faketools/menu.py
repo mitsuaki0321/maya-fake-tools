@@ -23,6 +23,7 @@ MENU_LABEL = "FakeTools"
 # Category display names
 CATEGORY_LABELS = {
     "common": "Common",
+    "anim": "Animation",
     "rig": "Rigging",
     "model": "Modeling",
 }

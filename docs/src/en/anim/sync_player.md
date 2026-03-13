@@ -1,6 +1,6 @@
 ---
 title: Sync Player
-category: common
+category: anim
 description: Video player with Maya timeline sync support
 lang: en
 lang-ref: sync_player
