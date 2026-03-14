@@ -39,6 +39,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from .....lib_ui.tool_settings import ToolSettingsManager
 from ..core.ffmpeg import get_scene_fps
 from ..core.model import LayerStack
 from ..core.playblast import (
@@ -187,6 +188,7 @@ class PlayblastWindow(QDialog):
         self._panel = panel
         self._cancelled = False
         self._running = False
+        self._settings = ToolSettingsManager(tool_name="vpcomp", category="anim")
 
         # Load QSS (top-level window) + combo arrow with absolute path
         css = load_qss()
@@ -198,6 +200,7 @@ class PlayblastWindow(QDialog):
         self._populate_layers()
         self._update_resolution_mode()
         self._update_frame_mode()
+        self._restore_settings()
 
     # ------------------------------------------------------------------
     # UI Construction
@@ -641,3 +644,57 @@ class PlayblastWindow(QDialog):
         self._progress.setValue(current)
         self._status_label.setText(message)
         QApplication.processEvents()
+
+    # ------------------------------------------------------------------
+    # Settings persistence
+    # ------------------------------------------------------------------
+
+    def _restore_settings(self) -> None:
+        """Restore UI values from saved settings."""
+        data = self._settings.load_settings("playblast")
+        if not data:
+            return
+        # Output
+        fmt = data.get("format")
+        if fmt is not None:
+            idx = self._format_combo.findData(OutputMode(fmt))
+            if idx >= 0:
+                self._format_combo.setCurrentIndex(idx)
+        delivery = data.get("delivery")
+        if delivery is not None:
+            idx = self._delivery_combo.findData(DeliveryMode(delivery))
+            if idx >= 0:
+                self._delivery_combo.setCurrentIndex(idx)
+        path = data.get("path", "")
+        if path:
+            self._dir_edit.setText(path)
+        filename = data.get("filename", "")
+        if filename:
+            self._prefix_edit.setText(filename)
+        # Resolution
+        width = data.get("width")
+        if width is not None:
+            self._width_spin.setValue(width)
+        height = data.get("height")
+        if height is not None:
+            self._height_spin.setValue(height)
+        scale = data.get("scale")
+        if scale is not None:
+            self._scale_spin.setValue(scale)
+
+    def _save_settings(self) -> None:
+        """Save current UI values to settings."""
+        data = {
+            "format": self._format_combo.currentData().value if self._format_combo.currentData() else OutputMode.IMAGE_SEQUENCE.value,
+            "delivery": self._delivery_combo.currentData().value if self._delivery_combo.currentData() else DeliveryMode.COMPOSITE.value,
+            "path": self._dir_edit.text().strip(),
+            "filename": self._prefix_edit.text().strip(),
+            "width": self._width_spin.value(),
+            "height": self._height_spin.value(),
+            "scale": self._scale_spin.value(),
+        }
+        self._settings.save_settings(data, "playblast")
+
+    def closeEvent(self, event) -> None:
+        self._save_settings()
+        super().closeEvent(event)
