@@ -143,9 +143,9 @@ Layer = Union[CameraLayer, ImageLayer, SequenceLayer]
 # ---------------------------------------------------------------------------
 
 # Default per-type maximum layer counts (configurable)
-DEFAULT_MAX_CAMERA_LAYERS = 3
-DEFAULT_MAX_IMAGE_LAYERS = 3
-DEFAULT_MAX_SEQUENCE_LAYERS = 3
+DEFAULT_MAX_CAMERA_LAYERS = 5
+DEFAULT_MAX_IMAGE_LAYERS = 5
+DEFAULT_MAX_SEQUENCE_LAYERS = 5
 
 
 class LayerStack:
