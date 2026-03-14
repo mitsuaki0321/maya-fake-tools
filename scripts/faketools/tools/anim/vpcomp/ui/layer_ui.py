@@ -27,6 +27,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from .....lib_ui.tool_data import ToolDataManager
 from .....lib_ui.ui_utils import get_relative_size
 from ..core.builder import OVERRIDE_NAME, build_override
 from ..core.model import (
@@ -95,15 +96,20 @@ class VpcompWindow(QMainWindow):
         super().__init__(parent)
         self.setObjectName(WINDOW_OBJECT_NAME)
         self.setWindowTitle(WINDOW_TITLE)
-        _, h = get_relative_size(self, width_ratio=0.0, height_ratio=1.6)
-        self.resize(0, h)
-
         self._stack = LayerStack()
         self._override_obj = None
         self._applied_panel: str | None = None
 
+        tool_data_manager = ToolDataManager("vpcomp", "anim")
+        tool_data_manager.ensure_data_dir()
+        self._data_dir = str(tool_data_manager.get_data_dir())
+
         self._build_ui()
         self._refresh_panels()
+
+        _, h = get_relative_size(self, width_ratio=0.0, height_ratio=1.0)
+        self.adjustSize()
+        self.resize(self.width() // 2, h)
 
     # -- UI construction ----------------------------------------------------
 
@@ -167,8 +173,6 @@ class VpcompWindow(QMainWindow):
         self._layer_model = LayerModel(self)
         self._layer_view = LayerView(self)
         self._layer_view.setModel(self._layer_model)
-        _, min_h = get_relative_size(self, width_ratio=0.0, height_ratio=0.8)
-        self._layer_view.setMinimumHeight(min_h)
 
         # Context menu on right-click
         self._layer_view.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -451,7 +455,7 @@ class VpcompWindow(QMainWindow):
         path, _ = QFileDialog.getSaveFileName(
             self,
             "Export Layers",
-            "",
+            self._data_dir,
             self._LAYER_FILE_FILTER,
         )
         if not path:
@@ -502,7 +506,7 @@ class VpcompWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(
             self,
             "Import Layers",
-            "",
+            self._data_dir,
             f"{self._LAYER_FILE_FILTER};;All Files (*)",
         )
         if not path:
