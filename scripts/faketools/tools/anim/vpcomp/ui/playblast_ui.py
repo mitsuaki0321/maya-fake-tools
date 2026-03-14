@@ -11,6 +11,7 @@ import os
 
 import maya.cmds as cmds  # type: ignore
 
+from .....lib_ui.base_window import get_margins, get_spacing
 from .....lib_ui.qt_compat import (
     QApplication,
     QButtonGroup,
@@ -40,6 +41,7 @@ from .....lib_ui.qt_compat import (
     QWidget,
 )
 from .....lib_ui.tool_settings import ToolSettingsManager
+from .....lib_ui.ui_utils import get_relative_size
 from ..core.ffmpeg import get_scene_fps
 from ..core.model import LayerStack
 from ..core.playblast import (
@@ -181,8 +183,9 @@ class PlayblastWindow(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Playblast Composite")
-        self.setMinimumWidth(360)
-        self.resize(380, 520)
+        w, h = get_relative_size(self, width_ratio=1.4, height_ratio=1.7)
+        self.setMinimumWidth(int(w * 0.95))
+        self.resize(w, h)
 
         self._stack = stack
         self._panel = panel
@@ -207,6 +210,10 @@ class PlayblastWindow(QDialog):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
+        self._margins = get_margins(self)
+        self._spacing = get_spacing(self, "horizontal")
+        self._compact_margins = (self._margins[0], int(self._margins[1] * 0.6), self._margins[2], self._margins[3])
+
         root = QVBoxLayout(self)
         root.setSpacing(0)
         root.setContentsMargins(0, 0, 0, 0)
@@ -232,7 +239,7 @@ class PlayblastWindow(QDialog):
         # Playblast button
         btn_body = QWidget()
         btn_lay = QHBoxLayout(btn_body)
-        btn_lay.setContentsMargins(10, 6, 10, 8)
+        btn_lay.setContentsMargins(*self._margins)
         self._run_btn = QPushButton("Playblast")
         self._run_btn.setObjectName("applyBtn")
         self._run_btn.clicked.connect(self._on_run_clicked)
@@ -250,7 +257,7 @@ class PlayblastWindow(QDialog):
     def _build_panel_section(self) -> QWidget:
         body = QWidget()
         lay = QHBoxLayout(body)
-        lay.setContentsMargins(10, 6, 10, 6)
+        lay.setContentsMargins(*self._margins)
         lbl = QLabel("PANEL")
         lbl.setObjectName("panelLabel")
         lay.addWidget(lbl)
@@ -268,9 +275,10 @@ class PlayblastWindow(QDialog):
     def _build_layers_section(self) -> QWidget:
         body = QWidget()
         lay = QVBoxLayout(body)
-        lay.setContentsMargins(10, 4, 10, 8)
+        lay.setContentsMargins(*self._compact_margins)
         self._layer_list = QListWidget()
-        self._layer_list.setMinimumHeight(100)
+        _, min_h = get_relative_size(self, width_ratio=0.0, height_ratio=0.35)
+        self._layer_list.setMinimumHeight(min_h)
         self._layer_list.setSelectionMode(QListWidget.NoSelection)
         self._layer_list.setItemDelegate(_PlayblastLayerDelegate(self._layer_list))
         lay.addWidget(self._layer_list)
@@ -279,8 +287,8 @@ class PlayblastWindow(QDialog):
     def _build_output_section(self) -> QWidget:
         body = QWidget()
         grid = QGridLayout(body)
-        grid.setContentsMargins(10, 4, 10, 8)
-        grid.setSpacing(6)
+        grid.setContentsMargins(*self._compact_margins)
+        grid.setSpacing(self._spacing)
 
         # Renderer
         grid.addWidget(_form_label("Renderer"), 0, 0)
@@ -347,8 +355,8 @@ class PlayblastWindow(QDialog):
     def _build_resolution_section(self) -> QWidget:
         body = QWidget()
         lay = QVBoxLayout(body)
-        lay.setContentsMargins(10, 4, 10, 8)
-        lay.setSpacing(6)
+        lay.setContentsMargins(*self._compact_margins)
+        lay.setSpacing(self._spacing)
 
         # Radio buttons
         radio_row = QHBoxLayout()
@@ -397,8 +405,8 @@ class PlayblastWindow(QDialog):
     def _build_frame_range_section(self) -> QWidget:
         body = QWidget()
         lay = QVBoxLayout(body)
-        lay.setContentsMargins(10, 4, 10, 8)
-        lay.setSpacing(6)
+        lay.setContentsMargins(*self._compact_margins)
+        lay.setSpacing(self._spacing)
 
         # Radio buttons
         radio_row = QHBoxLayout()
@@ -434,7 +442,7 @@ class PlayblastWindow(QDialog):
     def _build_play_section(self) -> QWidget:
         body = QWidget()
         lay = QHBoxLayout(body)
-        lay.setContentsMargins(10, 6, 10, 6)
+        lay.setContentsMargins(*self._margins)
         self._play_cb = QCheckBox("Play after save")
         lay.addWidget(self._play_cb)
         self._player_combo = QComboBox()
@@ -448,8 +456,8 @@ class PlayblastWindow(QDialog):
     def _build_progress_section(self) -> QWidget:
         body = QWidget()
         lay = QVBoxLayout(body)
-        lay.setContentsMargins(10, 6, 10, 6)
-        lay.setSpacing(4)
+        lay.setContentsMargins(*self._margins)
+        lay.setSpacing(int(self._spacing * 0.7))
         self._progress = QProgressBar()
         self._progress.setTextVisible(True)
         self._progress.setValue(0)

@@ -9,6 +9,7 @@ import os
 import maya.api.OpenMayaRender as omr  # type: ignore
 import maya.cmds as cmds  # type: ignore
 
+from .....lib_ui.base_window import get_margins, get_spacing
 from .....lib_ui.maya_qt import get_maya_main_window
 from .....lib_ui.qt_compat import (
     QCheckBox,
@@ -26,6 +27,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
     QWidget,
 )
+from .....lib_ui.ui_utils import get_relative_size
 from ..core.builder import OVERRIDE_NAME, build_override
 from ..core.model import (
     CameraLayer,
@@ -93,7 +95,8 @@ class VpcompWindow(QMainWindow):
         super().__init__(parent)
         self.setObjectName(WINDOW_OBJECT_NAME)
         self.setWindowTitle(WINDOW_TITLE)
-        self.resize(0, 500)
+        _, h = get_relative_size(self, width_ratio=0.0, height_ratio=1.6)
+        self.resize(0, h)
 
         self._stack = LayerStack()
         self._override_obj = None
@@ -106,6 +109,9 @@ class VpcompWindow(QMainWindow):
 
     def _build_ui(self):
         self.setStyleSheet(load_qss())
+
+        margins = get_margins(self)
+        spacing_h = get_spacing(self, "horizontal")
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -125,8 +131,8 @@ class VpcompWindow(QMainWindow):
         # ── Panel row ──
         panel_w = QWidget()
         pl = QHBoxLayout(panel_w)
-        pl.setContentsMargins(8, 6, 8, 6)
-        pl.setSpacing(6)
+        pl.setContentsMargins(*margins)
+        pl.setSpacing(spacing_h)
 
         lbl = QLabel("PANEL")
         lbl.setObjectName("panelLabel")
@@ -148,8 +154,8 @@ class VpcompWindow(QMainWindow):
         # ── Layers header ──
         lh_w = QWidget()
         lh = QHBoxLayout(lh_w)
-        lh.setContentsMargins(8, 5, 8, 5)
-        lh.setSpacing(4)
+        lh.setContentsMargins(*margins)
+        lh.setSpacing(int(spacing_h * 0.7))
 
         header_lbl = QLabel("LAYERS")
         header_lbl.setObjectName("layersHeader")
@@ -161,7 +167,8 @@ class VpcompWindow(QMainWindow):
         self._layer_model = LayerModel(self)
         self._layer_view = LayerView(self)
         self._layer_view.setModel(self._layer_model)
-        self._layer_view.setMinimumHeight(240)
+        _, min_h = get_relative_size(self, width_ratio=0.0, height_ratio=0.8)
+        self._layer_view.setMinimumHeight(min_h)
 
         # Context menu on right-click
         self._layer_view.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -179,8 +186,8 @@ class VpcompWindow(QMainWindow):
         # ── Add / Delete row ──
         add_w = QWidget()
         al = QHBoxLayout(add_w)
-        al.setContentsMargins(8, 6, 8, 6)
-        al.setSpacing(4)
+        al.setContentsMargins(*margins)
+        al.setSpacing(int(spacing_h * 0.7))
 
         self._add_cam_btn = QPushButton()
         self._add_cam_btn.setObjectName("iconBtn")
@@ -216,8 +223,8 @@ class VpcompWindow(QMainWindow):
         # ── Footer ──
         footer_w = QWidget()
         fl = QHBoxLayout(footer_w)
-        fl.setContentsMargins(8, 6, 8, 6)
-        fl.setSpacing(6)
+        fl.setContentsMargins(*margins)
+        fl.setSpacing(spacing_h)
 
         self._auto_cb = QCheckBox("Auto Update")
         fl.addWidget(self._auto_cb)

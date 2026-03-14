@@ -14,6 +14,7 @@ from .....lib_ui.qt_compat import (
     Qt,
     QVBoxLayout,
 )
+from .....lib_ui.ui_utils import get_relative_size
 from ..core.model import FitMode
 from ..core.scene_queries import list_user_cameras
 from ..core.sequence_detect import detect_sequence
@@ -42,7 +43,7 @@ class AddCameraDialog(QDialog):
         super().__init__(parent)
         _apply_qss(self)
         self.setWindowTitle("Add Camera Layer")
-        self.setMinimumWidth(280)
+        self.setMinimumWidth(get_relative_size(self, width_ratio=1.0)[0])
 
         self.selected_camera: str | None = None
 
@@ -82,7 +83,7 @@ class AddImageDialog(QDialog):
         super().__init__(parent)
         _apply_qss(self)
         self.setWindowTitle("Add Image Layer")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(get_relative_size(self, width_ratio=1.5)[0])
 
         self.selected_path: str | None = None
         self.selected_fit: FitMode = FitMode.VIEWPORT_HEIGHT
@@ -149,7 +150,7 @@ class AddSequenceDialog(QDialog):
         super().__init__(parent)
         _apply_qss(self)
         self.setWindowTitle("Add Sequence Layer")
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(get_relative_size(self, width_ratio=1.5)[0])
 
         self.seq_info = None  # SequenceInfo | None
         self.selected_fit: FitMode = FitMode.VIEWPORT_HEIGHT
