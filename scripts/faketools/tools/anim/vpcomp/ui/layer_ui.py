@@ -9,6 +9,14 @@ import os
 import maya.api.OpenMayaRender as omr  # type: ignore
 import maya.cmds as cmds  # type: ignore
 
+# Check PIL availability
+try:
+    from PIL import Image  # noqa: F401
+
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+
 from .....lib_ui.base_window import get_margins, get_spacing
 from .....lib_ui.maya_qt import get_maya_main_window
 from .....lib_ui.qt_compat import (
@@ -667,6 +675,11 @@ _instance: VpcompWindow | None = None
 def show():
     """Show the VP Compositor window (singleton)."""
     global _instance
+
+    # Check PIL availability
+    if not PIL_AVAILABLE:
+        cmds.error("VP Compositor requires PIL (Pillow) library. Please install it with: pip install Pillow")
+        return None
 
     # Close existing instance
     if _instance is not None:

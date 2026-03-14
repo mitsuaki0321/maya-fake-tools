@@ -11,6 +11,7 @@ from logging import getLogger
 import os
 
 import maya.cmds as cmds  # type: ignore
+from PIL import Image  # type: ignore
 
 from .geometry import compute_film_gate_rect_from_params, compute_placement_rect
 from .model import (
@@ -23,17 +24,6 @@ from .model import (
 from .scene_queries import camera_shape, parse_film_fit
 
 logger = getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Pillow import guard
-# ---------------------------------------------------------------------------
-
-try:
-    from PIL import Image  # type: ignore
-
-    HAS_PILLOW = True
-except ImportError:
-    HAS_PILLOW = False
 
 # ---------------------------------------------------------------------------
 # ABC

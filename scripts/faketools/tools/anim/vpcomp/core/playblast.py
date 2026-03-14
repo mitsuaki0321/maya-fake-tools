@@ -17,9 +17,10 @@ import tempfile
 from typing import Callable
 
 import maya.cmds as cmds  # type: ignore
+from PIL import Image  # type: ignore
 
 from .ffmpeg import check_ffmpeg, encode_sequence_to_mp4
-from .layer_renderers import HAS_PILLOW, get_camera_film_gate_wh, get_renderer
+from .layer_renderers import get_camera_film_gate_wh, get_renderer
 from .model import CameraLayer, LayerStack
 
 logger = getLogger(__name__)
@@ -27,7 +28,6 @@ logger = getLogger(__name__)
 # Re-export for external consumers (playblast_ui.py etc.)
 __all__ = [
     "DeliveryMode",
-    "HAS_PILLOW",
     "LayerRenderConfig",
     "OutputMode",
     "PlayblastSettings",
@@ -69,15 +69,6 @@ class DeliveryMode(Enum):
     PER_LAYER = "per_layer"  # Each layer as a separate sequence
     BOTH = "both"  # Composite + per-layer
 
-
-# ---------------------------------------------------------------------------
-# Pillow import guard (conditional — only when actually running)
-# ---------------------------------------------------------------------------
-
-try:
-    from PIL import Image  # type: ignore
-except ImportError:
-    pass
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -415,11 +406,8 @@ def run_playblast_composite(
         and metadata for external player launch.
 
     Raises:
-        RuntimeError: If Pillow is unavailable or no layers are enabled.
+        RuntimeError: If no layers are enabled.
     """
-    if not HAS_PILLOW:
-        raise RuntimeError("Pillow is required for playblast compositing. Install it with: pip install Pillow")
-
     is_movie = settings.output_mode is OutputMode.MOVIE
     delivery = settings.delivery_mode
     do_composite = delivery in (DeliveryMode.COMPOSITE, DeliveryMode.BOTH)

@@ -45,7 +45,6 @@ from .....lib_ui.ui_utils import get_relative_size
 from ..core.ffmpeg import get_scene_fps
 from ..core.model import LayerStack
 from ..core.playblast import (
-    HAS_PILLOW,
     DeliveryMode,
     LayerRenderConfig,
     OutputMode,
@@ -250,10 +249,6 @@ class PlayblastWindow(QDialog):
         # Connections for radio buttons
         self._res_group.buttonClicked.connect(lambda: self._update_resolution_mode())
         self._frame_group.buttonClicked.connect(lambda: self._update_frame_mode())
-
-        if not HAS_PILLOW:
-            self._run_btn.setEnabled(False)
-            self._status_label.setText("Pillow not installed — playblast disabled")
 
     def _build_panel_section(self) -> QWidget:
         body = QWidget()
