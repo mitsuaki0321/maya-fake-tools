@@ -672,7 +672,7 @@ class VpcompWindow(QMainWindow):
 _instance: VpcompWindow | None = None
 
 
-def show():
+def show_ui():
     """Show the VP Compositor window (singleton)."""
     global _instance
 

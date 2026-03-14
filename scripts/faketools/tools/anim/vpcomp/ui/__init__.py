@@ -5,6 +5,6 @@ __all__ = ["show_ui"]
 
 def show_ui():
     """Show the VP Compositor UI."""
-    from .layer_ui import show
+    from .layer_ui import show_ui
 
-    show()
+    show_ui()
