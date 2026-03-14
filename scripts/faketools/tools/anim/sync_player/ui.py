@@ -604,11 +604,14 @@ class MainWindow(BaseMainWindow):
     # ------------------------------------------------------------------
 
     def load_video(self, path: str) -> None:
-        """Load a video file (in video mode).
+        """Load a video file in video mode.
+
+        Automatically switches to video mode if currently in sequence mode.
 
         Args:
-            path: Absolute file path.
+            path: Absolute file path to a video (.mov, .avi, .mp4, .wmv).
         """
+        self._on_sequence_mode_toggled(False)
         if self._active_core:
             self._active_core.clear_ab_loop()
             self.setCursor(Qt.CursorShape.WaitCursor)
@@ -618,6 +621,32 @@ class MainWindow(BaseMainWindow):
             self._image_display.hide()
             self._player_core.load(path)
             self.setWindowTitle(f"Sync Player - {os.path.basename(path)}")
+
+    def load_sequence(self, path: str) -> None:
+        """Load an image sequence from an image file path.
+
+        Automatically switches to sequence mode if needed.
+        The folder containing the specified image is scanned for numbered
+        image files (.jpg, .jpeg, .png, .tif, .tiff).
+
+        Args:
+            path: Path to any image file in the sequence.
+        """
+        self._on_sequence_mode_toggled(True)
+        folder = os.path.dirname(path)
+        self._load_image_sequence(folder)
+
+    def load_video_as_sequence(self, path: str) -> None:
+        """Load a video file as an image sequence using ffmpeg.
+
+        Automatically switches to sequence mode if needed.
+        Requires ffmpeg to be available in PATH.
+
+        Args:
+            path: Path to a video file (.mov, .avi, .mp4, .wmv).
+        """
+        self._on_sequence_mode_toggled(True)
+        self._start_ffmpeg_extraction(path)
 
     # ------------------------------------------------------------------
     # Time display helper
@@ -1250,6 +1279,21 @@ class MainWindow(BaseMainWindow):
         self._temp_dirs.clear()
 
         super().closeEvent(event)
+
+
+def get_ui() -> MainWindow | None:
+    """Return the existing Sync Player instance, or None if not running.
+
+    Returns:
+        MainWindow | None: The active instance, or None.
+    """
+    global _instance
+    if _instance is not None:
+        try:
+            _instance.isVisible()
+        except RuntimeError:
+            _instance = None
+    return _instance
 
 
 def show_ui():
