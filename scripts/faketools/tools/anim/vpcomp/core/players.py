@@ -61,19 +61,15 @@ class OpenRVPlayer(Player):
     """Launch OpenRV via *rvpush* (reuses running instance)."""
 
     name = "OpenRV"
-    RVPUSH_PATHS: tuple[str, ...] = (r"D:/OpenRV/_install/bin/rvpush.exe",)
 
     @classmethod
     def is_available(cls) -> bool:
-        """True if rvpush is found at a known path or on PATH."""
-        return cls._resolve_rvpush() is not None
+        """True if rvpush is found on PATH."""
+        return shutil.which("rvpush") is not None
 
     @classmethod
     def _resolve_rvpush(cls) -> str | None:
-        """Return the first usable rvpush path, or None."""
-        for path in cls.RVPUSH_PATHS:
-            if os.path.isfile(path):
-                return path
+        """Return rvpush path from PATH, or None."""
         return shutil.which("rvpush")
 
     def launch(self, result: PlayblastResult) -> None:
