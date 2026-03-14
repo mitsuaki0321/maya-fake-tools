@@ -24,7 +24,7 @@ import faketools.tools.common.sync_player.ui
 faketools.tools.common.sync_player.ui.show_ui()
 ```
 
-![image](../../images/common/sync_player/iamge001.png)
+![image](../../images/anim/sync_player/iamge001.png)
 
 ## UI Layout
 
@@ -43,7 +43,7 @@ The window consists of the following elements:
 
 ### Loading a Video
 
-![image](../../images/common/sync_player/iamge005.png)
+![image](../../images/anim/sync_player/iamge005.png)
 
 There are three loading modes, each with a different loading method:
 
@@ -83,7 +83,7 @@ This mode collects numbered image files from the selected image's directory and 
 
 ### Playback Controls
 
-![image](../../images/common/sync_player/iamge004.png)
+![image](../../images/anim/sync_player/iamge004.png)
 
 Use the center buttons on the control bar for playback operations.
 
@@ -95,7 +95,7 @@ Use the center buttons on the control bar for playback operations.
 
 ### Seek Bar
 
-![image](../../images/common/sync_player/iamge006.png)
+![image](../../images/anim/sync_player/iamge006.png)
 
 Drag the seek bar to jump to any playback position.
 
@@ -117,17 +117,17 @@ MM:SS / MM:SS    [ current frame / total frames ]      A-B: MM:SS - MM:SS [ star
 
 ## Control Bar
 
-![image](../../images/common/sync_player/iamge003.png)
+![image](../../images/anim/sync_player/iamge003.png)
 
 ### A-B Loop
 
-Click the ![image](../../images/common/sync_player/ab_off.svg) button to enable the A-B loop feature.
+Click the ![image](../../images/anim/sync_player/ab_off.svg) button to enable the A-B loop feature.
 
-When A-B loop is enabled, the button icon changes to ![image](../../images/common/sync_player/ab_on.svg).
+When A-B loop is enabled, the button icon changes to ![image](../../images/anim/sync_player/ab_on.svg).
 
 #### A-B Loop Behavior
 
-![image](../../images/common/sync_player/iamge007.png)
+![image](../../images/anim/sync_player/iamge007.png)
 
 - Enabling A-B loop sets the initial range to the entire video (start to end)
 - Use the **A-B loop bar** below the seek bar to drag the A (start) and B (end) markers to adjust the range
@@ -138,15 +138,15 @@ When A-B loop is enabled, the button icon changes to ![image](../../images/commo
 
 ### Loop Playback
 
-Click the ![image](../../images/common/sync_player/loop_off.svg) button to automatically restart playback from the beginning when the video reaches the end.
+Click the ![image](../../images/anim/sync_player/loop_off.svg) button to automatically restart playback from the beginning when the video reaches the end.
 
-When loop is enabled, the button icon changes to ![image](../../images/common/sync_player/loop_on.svg).
+When loop is enabled, the button icon changes to ![image](../../images/anim/sync_player/loop_on.svg).
 
 ### Window Opacity
 
-Click the ![image](../../images/common/sync_player/opacity_off.svg) button to make the entire window (video and controls) semi-transparent. This is useful for overlaying the window on the Maya viewport to reference footage while working.
+Click the ![image](../../images/anim/sync_player/opacity_off.svg) button to make the entire window (video and controls) semi-transparent. This is useful for overlaying the window on the Maya viewport to reference footage while working.
 
-When opacity is enabled, the button icon changes to ![image](../../images/common/sync_player/opacity_on.svg).
+When opacity is enabled, the button icon changes to ![image](../../images/anim/sync_player/opacity_on.svg).
 
 - The opacity preset value can be adjusted from 10% to 100% using the Opacity slider in the options menu
 - While opacity is enabled, changes to the slider are applied immediately
@@ -154,9 +154,9 @@ When opacity is enabled, the button icon changes to ![image](../../images/common
 
 ### Maya Sync (Timeline Synchronization)
 
-Click the ![image](../../images/common/sync_player/sync_off.svg) button to enable Maya timeline synchronization mode.
+Click the ![image](../../images/anim/sync_player/sync_off.svg) button to enable Maya timeline synchronization mode.
 
-When sync is enabled, the button icon changes to ![image](../../images/common/sync_player/sync_on.svg).
+When sync is enabled, the button icon changes to ![image](../../images/anim/sync_player/sync_on.svg).
 
 #### Sync Mode Behavior
 
@@ -167,7 +167,7 @@ When sync is enabled, the button icon changes to ![image](../../images/common/sy
 
 #### Frame Offset
 
-![image](../../images/common/sync_player/iamge008.png)
+![image](../../images/anim/sync_player/iamge008.png)
 
 Use the **Offset** field on the left side of the control bar to set a frame-based offset between the Maya timeline and the video sync position.
 
@@ -191,7 +191,7 @@ When enabling sync, a warning message is displayed if the video's FPS differs fr
 
 ### Volume Controls
 
-![image](../../images/common/sync_player/iamge002.png)
+![image](../../images/anim/sync_player/iamge002.png)
 
 The mute button and volume slider are on the right side.
 
@@ -202,7 +202,7 @@ The mute button and volume slider are on the right side.
 
 ### Options Menu
 
-Click the ![image](../../images/common/sync_player/options.svg) button to the right of the volume slider to open the menu.
+Click the ![image](../../images/anim/sync_player/options.svg) button to the right of the volume slider to open the menu.
 
 #### Image Sequence Mode Toggle
 

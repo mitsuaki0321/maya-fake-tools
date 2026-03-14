@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VP Compositor - FakeTools Help</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <!-- highlight.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+        <meta name="description" content="Mayaビューポート上でPhotoshop風のレイヤー合成を行うツール">
+    </head>
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <div class="logo">
+                <a href="../../index.html">FakeTools ヘルプ</a>
+            </div>
+            <nav class="language-switcher">
+                                <a href="../../en/anim/vpcomp.html" class="lang-switch-btn">English</a>
+                            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <ol>
+                        <li><a href="../../index.html">ホーム</a></li>
+                        <li>アニメーション</li>
+                        <li class="active">VP Compositor</li>
+                    </ol>
+                </nav>
+        
+        <div class="content-wrapper">
+                        <aside class="toc-sidebar">
+                <div class="toc-wrapper">
+                    <h2>目次</h2>
+                    <ul>
+                    <li><a href="#概要" id="toc-概要">概要</a>
+                    <ul>
+                    <li><a href="#主な機能"
+                    id="toc-主な機能">主な機能</a></li>
+                    </ul></li>
+                    <li><a href="#起動方法"
+                    id="toc-起動方法">起動方法</a></li>
+                    <li><a href="#ui-構成" id="toc-ui-構成">UI 構成</a>
+                    <ul>
+                    <li><a href="#メニューバー"
+                    id="toc-メニューバー">メニューバー</a></li>
+                    </ul></li>
+                    <li><a href="#基本的な使い方例"
+                    id="toc-基本的な使い方例">基本的な使い方例</a>
+                    <ul>
+                    <li><a
+                    href="#パネルセレクターで対象のビューポートを選択"
+                    id="toc-パネルセレクターで対象のビューポートを選択">1.
+                    パネルセレクターで対象のビューポートを選択</a></li>
+                    <li><a href="#レイヤーを追加camera-image-sequence"
+                    id="toc-レイヤーを追加camera-image-sequence">2.
+                    レイヤーを追加（Camera / Image / Sequence）</a></li>
+                    <li><a href="#レイヤーにオブジェクトを登録"
+                    id="toc-レイヤーにオブジェクトを登録">3.
+                    レイヤーにオブジェクトを登録</a></li>
+                    <li><a href="#vp2-オーバーライドを適用"
+                    id="toc-vp2-オーバーライドを適用">4. VP2
+                    オーバーライドを適用</a></li>
+                    <li><a href="#必要に応じてプレイブラストを作成"
+                    id="toc-必要に応じてプレイブラストを作成">5.
+                    必要に応じてプレイブラストを作成</a></li>
+                    </ul></li>
+                    <li><a href="#レイヤーについて"
+                    id="toc-レイヤーについて">レイヤーについて</a>
+                    <ul>
+                    <li><a href="#レイヤーの種類"
+                    id="toc-レイヤーの種類">レイヤーの種類</a></li>
+                    <li><a href="#レイヤーの操作"
+                    id="toc-レイヤーの操作">レイヤーの操作</a></li>
+                    <li><a href="#フィッティングモード"
+                    id="toc-フィッティングモード">フィッティングモード</a></li>
+                    <li><a href="#レイヤー構成のエクスポート-インポート"
+                    id="toc-レイヤー構成のエクスポート-インポート">レイヤー構成のエクスポート
+                    / インポート</a></li>
+                    </ul></li>
+                    <li><a href="#playblast"
+                    id="toc-playblast">Playblast</a>
+                    <ul>
+                    <li><a href="#設定項目"
+                    id="toc-設定項目">設定項目</a></li>
+                    <li><a href="#playblast-の実行"
+                    id="toc-playblast-の実行">Playblast の実行</a></li>
+                    <li><a href="#設定の保存"
+                    id="toc-設定の保存">設定の保存</a></li>
+                    </ul></li>
+                    <li><a href="#レイヤーの制限"
+                    id="toc-レイヤーの制限">レイヤーの制限</a></li>
+                    <li><a href="#外部依存"
+                    id="toc-外部依存">外部依存</a></li>
+                    <li><a href="#注意事項"
+                    id="toc-注意事項">注意事項</a></li>
+                    </ul>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                                <h1 class="page-title">VP Compositor</h1>
+                
+                <h2 id="概要">概要</h2>
+                <p>VP Compositor は、Maya のビューポート上で
+                <strong>Photoshop 風のレイヤー合成</strong>
+                を行うツールです。VP2 RenderOverride
+                を使用して、複数のカメラ映像・静止画・画像シーケンスをリアルタイムに重ね合わせて表示します。</p>
+                <p>合成結果は PNG シーケンスや MP4
+                動画として書き出すことができ、アニメーション作業における
+                <strong>レイアウト確認</strong> や
+                <strong>リファレンス映像のオーバーレイ</strong>
+                に活用できます。</p>
+                <blockquote>
+                <p>現在はプレビュー版であり、最低限の機能を追加しています。</p>
+                </blockquote>
+                <h3 id="主な機能">主な機能</h3>
+                <ul>
+                <li>リアルタイムのレイヤー合成表示（VP2
+                RenderOverride）</li>
+                <li>ドラッグ＆ドロップによるレイヤー並び替え</li>
+                <li>4 種類のフィッティングモード（ビューポート /
+                フィルムゲート基準）</li>
+                <li>Playblast 機能（合成・レイヤー個別・動画出力）</li>
+                <li>レイヤー構成の JSON エクスポート / インポート</li>
+                </ul>
+                <h2 id="起動方法">起動方法</h2>
+                <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
+                <pre class="python"><code>import faketools.tools.anim.vpcomp.ui
+faketools.tools.anim.vpcomp.ui.show_ui()</code></pre>
+                <p><img src="../../images/anim/vpcomp/image001.png"
+                alt="image" /></p>
+                <h2 id="ui-構成">UI 構成</h2>
+                <p>メインウィンドウは以下の要素で構成されています。</p>
+                <table>
+                <colgroup>
+                <col style="width: 50%" />
+                <col style="width: 50%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>領域</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>パネルセレクター</td>
+                <td>合成対象のモデルパネルを選択するドロップダウン</td>
+                </tr>
+                <tr>
+                <td>レイヤーリスト</td>
+                <td>合成レイヤーの一覧（最前面が上、ドラッグで並び替え可能）</td>
+                </tr>
+                <tr>
+                <td>追加ボタン群</td>
+                <td>Camera / Image / Sequence レイヤーの追加ボタン</td>
+                </tr>
+                <tr>
+                <td>Auto Update</td>
+                <td>チェックすると、レイヤー変更時にオーバーライドを自動更新</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="メニューバー">メニューバー</h3>
+                <table>
+                <thead>
+                <tr>
+                <th>メニュー</th>
+                <th>内容</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>File &gt; Export Layers</td>
+                <td>現在のレイヤー構成を JSON ファイルに保存</td>
+                </tr>
+                <tr>
+                <td>File &gt; Import Layers</td>
+                <td>JSON ファイルからレイヤー構成を読み込み</td>
+                </tr>
+                <tr>
+                <td>Edit &gt; Playblast</td>
+                <td>Playblast ウィンドウを開く</td>
+                </tr>
+                </tbody>
+                </table>
+                <h2 id="基本的な使い方例">基本的な使い方例</h2>
+                <h3 id="パネルセレクターで対象のビューポートを選択">1.
+                パネルセレクターで対象のビューポートを選択</h3>
+                <p>合成に使用するパネルを選択します。</p>
+                <p><img src="../../images/anim/vpcomp/image002.png"
+                alt="image" /></p>
+                <p>ここでは、<strong>persp</strong> を選択します。</p>
+                <h3 id="レイヤーを追加camera-image-sequence">2.
+                レイヤーを追加（Camera / Image / Sequence）</h3>
+                <p>追加したいレイヤーのボタンを選択します。</p>
+                <p><img src="../../images/anim/vpcomp/add_cam.svg"
+                alt="image" />
+                ボタンからカメラレイヤーを追加します。</p>
+                <p>開いたダイアログからカメラを選択します。<br />
+                <img src="../../images/anim/vpcomp/image003.png"
+                alt="image" /></p>
+                <p>ここでは、<strong>charCamShape
+                (キャラクター用カメラ)</strong>、<strong>bgCamShape
+                (背景モデル用)</strong>
+                の順でレイヤーを追加します。<br />
+                <img src="../../images/anim/vpcomp/image004.png"
+                alt="image" /></p>
+                <h3 id="レイヤーにオブジェクトを登録">3.
+                レイヤーにオブジェクトを登録</h3>
+                <p>Camera レイヤーを追加すると
+                <code>vpcomp_&lt;カメラ名&gt;_set</code> という
+                objectSet が自動作成されます。VP2
+                オーバーライドで特定カメラのオブジェクトのみを表示するには、この
+                objectSet へオブジェクトを追加します。</p>
+                <p>オブジェクトを選択し、カメラレイヤーの右側にある <img
+                src="../../images/anim/vpcomp/menu_dots.svg"
+                alt="image" /> アイコンから追加できます。</p>
+                <p><img src="../../images/anim/vpcomp/image005.png"
+                alt="image" /></p>
+                <p>それぞれのレイヤーに必要なオブジェクトを追加してください。</p>
+                <p><img src="../../images/anim/vpcomp/image006.png"
+                alt="image" /></p>
+                <h3 id="vp2-オーバーライドを適用">4. VP2
+                オーバーライドを適用</h3>
+                <p><code>Apply</code> ボタンをクリックして VP2
+                オーバーライドを適用すると、以下のように
+                <strong>persp</strong> パネルに <strong>charCam</strong>
+                と <strong>bgCam</strong> が合成表示されます。</p>
+                <p><img src="../../images/anim/vpcomp/image007.png"
+                alt="image" /></p>
+                <p>上の画像のように合成順に問題がある場合は、レイヤーをドラッグ＆ドロップして順序を入れ替えることができます。
+                &gt; <code>Auto Update</code>
+                のチェックボックスがオンの場合はレイヤーの構成が変更されたタイミングでビューが自動的に更新されます。</p>
+                <p><img src="../../images/anim/vpcomp/image008.png"
+                alt="image" /></p>
+                <h3 id="必要に応じてプレイブラストを作成">5.
+                必要に応じてプレイブラストを作成</h3>
+                <p>必要に応じて <code>Edit</code> メニューの
+                <code>to playblast...</code> から
+                <code>Playblast Composite</code>
+                ウィンドウを起動してプレイブラストを作成します。</p>
+                <h2 id="レイヤーについて">レイヤーについて</h2>
+                <h3 id="レイヤーの種類">レイヤーの種類</h3>
+                <p>レイヤーには以下の種類があります。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>タイプ</th>
+                <th>バッジ</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Camera</td>
+                <td>CAM</td>
+                <td>カメラ + objectSet によるシーン描画レイヤー</td>
+                </tr>
+                <tr>
+                <td>Image</td>
+                <td>IMG</td>
+                <td>静止画オーバーレイレイヤー（PNG / JPG）</td>
+                </tr>
+                <tr>
+                <td>Sequence</td>
+                <td>SEQ</td>
+                <td>連番画像レイヤー（タイムラインに同期）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="レイヤーの操作">レイヤーの操作</h3>
+                <h4 id="表示-非表示">表示 / 非表示</h4>
+                <p>レイヤーリスト左端の目のアイコンをクリックすると、レイヤーの表示
+                / 非表示を切り替えます。</p>
+                <h4 id="並び替え">並び替え</h4>
+                <p>レイヤーをドラッグ＆ドロップして描画順序を変更できます。リストの上が最前面、下が背面です。</p>
+                <h4 id="コンテキストメニュー">コンテキストメニュー</h4>
+                <p>レイヤーリスト右端のメニューアイコンをクリックすると、レイヤーの種類に応じたコンテキストメニューが表示されます。</p>
+                <p><strong>Camera レイヤー:</strong></p>
+                <table>
+                <thead>
+                <tr>
+                <th>項目</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Add Members</td>
+                <td>選択中のオブジェクトを objectSet に追加</td>
+                </tr>
+                <tr>
+                <td>Remove Members</td>
+                <td>選択中のオブジェクトを objectSet から削除</td>
+                </tr>
+                <tr>
+                <td>Select Set</td>
+                <td>objectSet のメンバーを選択</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>Image / Sequence レイヤー:</strong></p>
+                <table>
+                <thead>
+                <tr>
+                <th>項目</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Fit Mode</td>
+                <td>フィッティングモードの変更</td>
+                </tr>
+                </tbody>
+                </table>
+                <h3 id="フィッティングモード">フィッティングモード</h3>
+                <p>Image レイヤーと Sequence
+                レイヤーの配置方法を指定します。</p>
+                <table>
+                <colgroup>
+                <col style="width: 57%" />
+                <col style="width: 42%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Viewport Height</td>
+                <td>ビューポートの高さに合わせて表示（幅はアスペクト比に応じてスケール）</td>
+                </tr>
+                <tr>
+                <td>Viewport Width</td>
+                <td>ビューポートの幅に合わせて表示（高さはアスペクト比に応じてスケール）</td>
+                </tr>
+                <tr>
+                <td>Filmgate Height</td>
+                <td>カメラのフィルムゲートの高さに合わせて表示</td>
+                </tr>
+                <tr>
+                <td>Filmgate Width</td>
+                <td>カメラのフィルムゲートの幅に合わせて表示</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: Filmgate
+                系のモードは、CameraLayer
+                が存在する場合にのみ正しく動作します。CameraLayer
+                がない場合は Viewport 系にフォールバックします。</p>
+                </blockquote>
+                <h3
+                id="レイヤー構成のエクスポート-インポート">レイヤー構成のエクスポート
+                / インポート</h3>
+                <p><strong>File &gt; Export Layers</strong>
+                で現在のレイヤー構成を <code>.vpcomp.json</code>
+                ファイルとして保存できます。</p>
+                <p><strong>File &gt; Import Layers</strong>
+                で保存したレイヤー構成を読み込みます。インポート時にはシーン内のカメラやファイルの存在が検証され、不足がある場合は警告が表示されます。Camera
+                レイヤーの objectSet
+                が存在しない場合は自動作成されます。</p>
+                <h2 id="playblast">Playblast</h2>
+                <p><strong>Edit &gt; Playblast</strong> メニューから
+                Playblast ダイアログを開きます。</p>
+                <p><img src="../../images/anim/vpcomp/image009.png"
+                alt="image" /></p>
+                <h3 id="設定項目">設定項目</h3>
+                <h4 id="レイヤー選択">レイヤー選択</h4>
+                <p>合成に含めるレイヤーをチェックボックスで選択します。最前面のレイヤーがリストの上に表示されます。</p>
+                <h4 id="レンダラー">レンダラー</h4>
+                <p>使用する VP2 レンダラーを選択します。Viewport 2.0
+                および登録済みの VP2
+                オーバーライドから選択できます。</p>
+                <h4 id="出力フォーマット">出力フォーマット</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>フォーマット</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Image Sequence</td>
+                <td>PNG シーケンスとして出力</td>
+                </tr>
+                <tr>
+                <td>Movie</td>
+                <td>H.264 MP4 動画として出力（ffmpeg が必要）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="デリバリーモード">デリバリーモード</h4>
+                <p>Image Sequence 選択時に使用可能です。</p>
+                <table>
+                <colgroup>
+                <col style="width: 57%" />
+                <col style="width: 42%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Composite</td>
+                <td>全レイヤーを合成した単一シーケンスを出力</td>
+                </tr>
+                <tr>
+                <td>Per-Layer</td>
+                <td>レイヤーごとに個別のシーケンスを出力（サブフォルダに分割）</td>
+                </tr>
+                <tr>
+                <td>Both</td>
+                <td>Composite と Per-Layer の両方を出力</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: Movie
+                出力の場合、デリバリーモードは自動的に Composite
+                固定になります。</p>
+                </blockquote>
+                <h4 id="出力先">出力先</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>項目</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Path</td>
+                <td>出力ディレクトリ</td>
+                </tr>
+                <tr>
+                <td>Filename</td>
+                <td>ファイル名プレフィックス（デフォルト:
+                <code>vpcomp</code>）</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="解像度">解像度</h4>
+                <table>
+                <colgroup>
+                <col style="width: 57%" />
+                <col style="width: 42%" />
+                </colgroup>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Render Settings</td>
+                <td>Maya シーンの Render
+                Settings（defaultResolution）を使用</td>
+                </tr>
+                <tr>
+                <td>Custom</td>
+                <td>幅と高さを手動で指定</td>
+                </tr>
+                </tbody>
+                </table>
+                <p><strong>Scale</strong>
+                スライダーで解像度に対するスケール比率（1〜100%）を設定できます。</p>
+                <h4 id="フレーム範囲">フレーム範囲</h4>
+                <table>
+                <thead>
+                <tr>
+                <th>モード</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Timeline</td>
+                <td>Maya タイムラインの再生範囲を使用</td>
+                </tr>
+                <tr>
+                <td>Custom</td>
+                <td>開始・終了フレームを手動で指定</td>
+                </tr>
+                </tbody>
+                </table>
+                <h4 id="play-after-save">Play after save</h4>
+                <p>チェックを入れると、書き出し完了後に指定したプレイヤーで結果を再生します。</p>
+                <table>
+                <thead>
+                <tr>
+                <th>プレイヤー</th>
+                <th>説明</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>OpenRV</td>
+                <td>rvpush 経由で OpenRV に送信（rvpush が PATH
+                に必要）</td>
+                </tr>
+                <tr>
+                <td>Sync Player</td>
+                <td>FakeTools の Sync Player で再生</td>
+                </tr>
+                <tr>
+                <td>System Default</td>
+                <td>OS のデフォルトアプリケーションで開く</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>:
+                プレイヤーのドロップダウンは「Play after
+                save」チェックがオフの場合はグレーアウトされます。</p>
+                </blockquote>
+                <h3 id="playblast-の実行">Playblast の実行</h3>
+                <p><strong>Apply</strong> ボタンをクリックすると
+                Playblast
+                が開始されます。進行状況はプログレスバーで確認でき、処理中に
+                <strong>Cancel</strong> で中断可能です。</p>
+                <h4 id="処理の流れ">処理の流れ</h4>
+                <ol type="1">
+                <li><strong>キャプチャ</strong>: 各 Camera
+                レイヤーの映像を <code>cmds.playblast()</code>
+                で取得</li>
+                <li><strong>合成</strong>: Pillow
+                を使用してフレームごとにレイヤーを重ね合わせ</li>
+                <li><strong>出力</strong>: PNG シーケンスの保存、または
+                ffmpeg による MP4 エンコード</li>
+                </ol>
+                <h3 id="設定の保存">設定の保存</h3>
+                <p>Playblast
+                ダイアログの設定は自動的に保存され、次回起動時に復元されます。</p>
+                <h2 id="レイヤーの制限">レイヤーの制限</h2>
+                <ul>
+                <li>各レイヤータイプの最大値は 5
+                つまでに制限されています。</li>
+                <li>カメラレイヤーで同じカメラを指定することはできません。</li>
+                </ul>
+                <h2 id="外部依存">外部依存</h2>
+                <table>
+                <thead>
+                <tr>
+                <th>依存</th>
+                <th>用途</th>
+                <th>必須</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                <td>Pillow</td>
+                <td>Playblast 時のレイヤー合成</td>
+                <td>Playblast 使用時のみ</td>
+                </tr>
+                <tr>
+                <td>ffmpeg</td>
+                <td>MP4 動画エンコード</td>
+                <td>Movie 出力時のみ</td>
+                </tr>
+                </tbody>
+                </table>
+                <blockquote>
+                <p><strong>Note</strong>: Pillow
+                がインストールされていない場合、Playblast
+                メニューは無効になります。ffmpeg が PATH
+                に含まれていない場合、Movie
+                フォーマットは選択できません。</p>
+                </blockquote>
+                <h2 id="注意事項">注意事項</h2>
+                <ul>
+                <li>VP2 RenderOverride
+                はパネル単位で適用されます。合成対象のパネルを変更する場合は、先に現在のオーバーライドを解除してください</li>
+                <li>Camera レイヤーの objectSet
+                が空の場合、そのレイヤーには何も描画されません</li>
+                <li>Playblast
+                中はビューポートの状態（カメラ、表示設定、背景など）が一時的に変更され、完了後に元の状態に復元されます</li>
+                <li>Image / Sequence
+                レイヤーのフィルムゲートフィッティングは、シーン内に
+                CameraLayer が存在する場合にのみ有効です</li>
+                </ul>
+            </main>
+        </div>
+    </div>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <!-- highlight.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+</html>

@@ -24,7 +24,7 @@ import faketools.tools.common.sync_player.ui
 faketools.tools.common.sync_player.ui.show_ui()
 ```
 
-![image](../../images/common/sync_player/iamge001.png)
+![image](../../images/anim/sync_player/iamge001.png)
 
 ## UI 構成
 
@@ -43,7 +43,7 @@ faketools.tools.common.sync_player.ui.show_ui()
 
 ### ビデオの読み込み
 
-![image](../../images/common/sync_player/iamge005.png)
+![image](../../images/anim/sync_player/iamge005.png)
 
 ビデオの読み込みには以下の三つのタイプがありそれぞれ読み込み方が異なります。
 
@@ -86,7 +86,7 @@ RDP や ネットワークドライブの関係で動画再生のレスポンス
 
 ### 再生コントロール
 
-![image](../../images/common/sync_player/iamge004.png)
+![image](../../images/anim/sync_player/iamge004.png)
 
 コントロールバー中央のボタンで再生操作を行います。
 
@@ -98,7 +98,7 @@ RDP や ネットワークドライブの関係で動画再生のレスポンス
 
 ### シークバー
 
-![image](../../images/common/sync_player/iamge006.png)
+![image](../../images/anim/sync_player/iamge006.png)
 
 シークバーをドラッグして、任意の再生位置にジャンプできます。
 
@@ -120,17 +120,17 @@ MM:SS / MM:SS    [ 現在フレーム / 総フレーム数 ]      A-B: MM:SS - M
 
 ## コントロールバー
 
-![image](../../images/common/sync_player/iamge003.png)
+![image](../../images/anim/sync_player/iamge003.png)
 
 ### A-B ループ
 
-![image](../../images/common/sync_player/ab_off.svg) ボタンをクリックすると、A-B ループ機能が有効になります。
+![image](../../images/anim/sync_player/ab_off.svg) ボタンをクリックすると、A-B ループ機能が有効になります。
 
-A-B ループがオンの場合は、ボタンアイコンが ![image](../../images/common/sync_player/ab_on.svg) に変更されます。
+A-B ループがオンの場合は、ボタンアイコンが ![image](../../images/anim/sync_player/ab_on.svg) に変更されます。
 
 #### A-B ループの動作
 
-![image](../../images/common/sync_player/iamge007.png)
+![image](../../images/anim/sync_player/iamge007.png)
 
 - A-B ループを有効にすると、初期値としてビデオ全体の範囲（先頭〜末尾）が設定されます
 - シークバーの下に表示される **A-B ループバー** で、A（開始）マーカーと B（終了）マーカーをドラッグして範囲を調整できます
@@ -141,15 +141,15 @@ A-B ループがオンの場合は、ボタンアイコンが ![image](../../ima
 
 ### ループ再生
 
-![image](../../images/common/sync_player/loop_off.svg) ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。
+![image](../../images/anim/sync_player/loop_off.svg) ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。
 
-ループがオンの場合は、ボタンアイコンが、![image](../../images/common/sync_player/loop_on.svg) に変更されます。
+ループがオンの場合は、ボタンアイコンが、![image](../../images/anim/sync_player/loop_on.svg) に変更されます。
 
 ### ウィンドウ透過
 
-![image](../../images/common/sync_player/opacity_off.svg) ボタンをクリックすると、ウィンドウ全体（ビデオ映像とコントロール）が半透明になります。Maya ビューポートの上にウィンドウを重ねてリファレンス映像を確認しながら作業する際に便利です。
+![image](../../images/anim/sync_player/opacity_off.svg) ボタンをクリックすると、ウィンドウ全体（ビデオ映像とコントロール）が半透明になります。Maya ビューポートの上にウィンドウを重ねてリファレンス映像を確認しながら作業する際に便利です。
 
-透過がオンの場合は、ボタンアイコンが ![image](../../images/common/sync_player/opacity_on.svg) に変更されます。
+透過がオンの場合は、ボタンアイコンが ![image](../../images/anim/sync_player/opacity_on.svg) に変更されます。
 
 - 不透明度のプリセット値はオプションメニューの Opacity スライダーで 10%〜100% の範囲で調整できます
 - 透過がオンの間、スライダーで値を変更すると即座に反映されます
@@ -157,9 +157,9 @@ A-B ループがオンの場合は、ボタンアイコンが ![image](../../ima
 
 ### Maya Sync（タイムライン同期）
 
-![image](../../images/common/sync_player/sync_off.svg) ボタンをクリックすると、Maya タイムラインとの同期モードが有効になります。
+![image](../../images/anim/sync_player/sync_off.svg) ボタンをクリックすると、Maya タイムラインとの同期モードが有効になります。
 
-Sync がオンの場合は、ボタンアイコンが、![image](../../images/common/sync_player/sync_on.svg) に変更されます。
+Sync がオンの場合は、ボタンアイコンが、![image](../../images/anim/sync_player/sync_on.svg) に変更されます。
 
 #### 同期モードの動作
 
@@ -170,7 +170,7 @@ Sync がオンの場合は、ボタンアイコンが、![image](../../images/co
 
 #### フレームオフセット
 
-![image](../../images/common/sync_player/iamge008.png)
+![image](../../images/anim/sync_player/iamge008.png)
 
 コントロールバー左側の **Offset** 欄で、Maya タイムラインとビデオの同期位置にフレーム単位のオフセットを設定できます。
 
@@ -194,7 +194,7 @@ Sync がオンの場合は、ボタンアイコンが、![image](../../images/co
 
 ### 音量コントロール
 
-![image](../../images/common/sync_player/iamge002.png)
+![image](../../images/anim/sync_player/iamge002.png)
 
 右側にミュートボタンと音量スライダーがあります。
 
@@ -205,7 +205,7 @@ Sync がオンの場合は、ボタンアイコンが、![image](../../images/co
 
 ### オプションメニュー
 
-音量スライダーの右にある ![image](../../images/common/sync_player/options.svg) ボタンをクリックすると、メニューが表示されます。
+音量スライダーの右にある ![image](../../images/anim/sync_player/options.svg) ボタンをクリックすると、メニューが表示されます。
 
 #### 画像シーケンスモードの切り替え
 

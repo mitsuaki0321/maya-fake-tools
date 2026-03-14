@@ -16,7 +16,7 @@
                 <a href="../../index.html">FakeTools ヘルプ</a>
             </div>
             <nav class="language-switcher">
-                                <a href="../../en/common/sync_player.html" class="lang-switch-btn">English</a>
+                                <a href="../../en/anim/sync_player.html" class="lang-switch-btn">English</a>
                             </nav>
         </div>
     </header>
@@ -25,7 +25,7 @@
                 <nav class="breadcrumb" aria-label="breadcrumb">
                     <ol>
                         <li><a href="../../index.html">ホーム</a></li>
-                        <li>共通</li>
+                        <li>アニメーション</li>
                         <li class="active">Sync Player</li>
                     </ol>
                 </nav>
@@ -102,8 +102,7 @@
                 <p>専用のメニューか、以下のコマンドでツールを起動します。</p>
                 <pre class="python"><code>import faketools.tools.common.sync_player.ui
 faketools.tools.common.sync_player.ui.show_ui()</code></pre>
-                <p><img
-                src="../../images/common/sync_player/iamge001.png"
+                <p><img src="../../images/anim/sync_player/iamge001.png"
                 alt="image" /></p>
                 <h2 id="ui-構成">UI 構成</h2>
                 <p>ウィンドウは以下の要素で構成されています。</p>
@@ -147,8 +146,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </table>
                 <h2 id="基本的な使い方">基本的な使い方</h2>
                 <h3 id="ビデオの読み込み">ビデオの読み込み</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge005.png"
+                <p><img src="../../images/anim/sync_player/iamge005.png"
                 alt="image" /></p>
                 <p>ビデオの読み込みには以下の三つのタイプがありそれぞれ読み込み方が異なります。</p>
                 <ul>
@@ -196,8 +194,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 が有効な場合、ダブルクリックによるファイル読み込みは無効になります。</p>
                 </blockquote>
                 <h3 id="再生コントロール">再生コントロール</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge004.png"
+                <p><img src="../../images/anim/sync_player/iamge004.png"
                 alt="image" /></p>
                 <p>コントロールバー中央のボタンで再生操作を行います。</p>
                 <table>
@@ -223,8 +220,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </tbody>
                 </table>
                 <h3 id="シークバー">シークバー</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge006.png"
+                <p><img src="../../images/anim/sync_player/iamge006.png"
                 alt="image" /></p>
                 <p>シークバーをドラッグして、任意の再生位置にジャンプできます。</p>
                 <ul>
@@ -237,19 +233,17 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 ループが有効な場合は、右側にループ範囲の時間とフレーム番号が追加表示されます。</p>
                 <pre><code>MM:SS / MM:SS    [ 現在フレーム / 総フレーム数 ]      A-B: MM:SS - MM:SS [ 開始フレーム - 終了フレーム ]</code></pre>
                 <h2 id="コントロールバー">コントロールバー</h2>
-                <p><img
-                src="../../images/common/sync_player/iamge003.png"
+                <p><img src="../../images/anim/sync_player/iamge003.png"
                 alt="image" /></p>
                 <h3 id="a-b-ループ">A-B ループ</h3>
-                <p><img src="../../images/common/sync_player/ab_off.svg"
+                <p><img src="../../images/anim/sync_player/ab_off.svg"
                 alt="image" /> ボタンをクリックすると、A-B
                 ループ機能が有効になります。</p>
                 <p>A-B ループがオンの場合は、ボタンアイコンが <img
-                src="../../images/common/sync_player/ab_on.svg"
+                src="../../images/anim/sync_player/ab_on.svg"
                 alt="image" /> に変更されます。</p>
                 <h4 id="a-b-ループの動作">A-B ループの動作</h4>
-                <p><img
-                src="../../images/common/sync_player/iamge007.png"
+                <p><img src="../../images/anim/sync_player/iamge007.png"
                 alt="image" /></p>
                 <ul>
                 <li>A-B
@@ -267,21 +261,20 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 ループは無効になります。</p>
                 </blockquote>
                 <h3 id="ループ再生">ループ再生</h3>
-                <p><img
-                src="../../images/common/sync_player/loop_off.svg"
+                <p><img src="../../images/anim/sync_player/loop_off.svg"
                 alt="image" />
                 ボタンをクリックすると、ビデオの終端に達した際に自動的に先頭から再生を繰り返します。</p>
                 <p>ループがオンの場合は、ボタンアイコンが、<img
-                src="../../images/common/sync_player/loop_on.svg"
+                src="../../images/anim/sync_player/loop_on.svg"
                 alt="image" /> に変更されます。</p>
                 <h3 id="ウィンドウ透過">ウィンドウ透過</h3>
                 <p><img
-                src="../../images/common/sync_player/opacity_off.svg"
+                src="../../images/anim/sync_player/opacity_off.svg"
                 alt="image" />
                 ボタンをクリックすると、ウィンドウ全体（ビデオ映像とコントロール）が半透明になります。Maya
                 ビューポートの上にウィンドウを重ねてリファレンス映像を確認しながら作業する際に便利です。</p>
                 <p>透過がオンの場合は、ボタンアイコンが <img
-                src="../../images/common/sync_player/opacity_on.svg"
+                src="../../images/anim/sync_player/opacity_on.svg"
                 alt="image" /> に変更されます。</p>
                 <ul>
                 <li>不透明度のプリセット値はオプションメニューの Opacity
@@ -291,12 +284,11 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </ul>
                 <h3 id="maya-syncタイムライン同期">Maya
                 Sync（タイムライン同期）</h3>
-                <p><img
-                src="../../images/common/sync_player/sync_off.svg"
+                <p><img src="../../images/anim/sync_player/sync_off.svg"
                 alt="image" /> ボタンをクリックすると、Maya
                 タイムラインとの同期モードが有効になります。</p>
                 <p>Sync がオンの場合は、ボタンアイコンが、<img
-                src="../../images/common/sync_player/sync_on.svg"
+                src="../../images/anim/sync_player/sync_on.svg"
                 alt="image" /> に変更されます。</p>
                 <h4 id="同期モードの動作">同期モードの動作</h4>
                 <ul>
@@ -311,8 +303,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 通常のビデオプレイヤーとして独立して動作します</li>
                 </ul>
                 <h4 id="フレームオフセット">フレームオフセット</h4>
-                <p><img
-                src="../../images/common/sync_player/iamge008.png"
+                <p><img src="../../images/anim/sync_player/iamge008.png"
                 alt="image" /></p>
                 <p>コントロールバー左側の <strong>Offset</strong>
                 欄で、Maya
@@ -337,8 +328,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 が異なる場合、警告メッセージが表示されます。FPS
                 が異なると、フレーム送りやフレーム番号の表示がビデオの実際のフレームと一致しない場合があります。</p>
                 <h3 id="音量コントロール">音量コントロール</h3>
-                <p><img
-                src="../../images/common/sync_player/iamge002.png"
+                <p><img src="../../images/anim/sync_player/iamge002.png"
                 alt="image" /></p>
                 <p>右側にミュートボタンと音量スライダーがあります。</p>
                 <table>
@@ -361,7 +351,7 @@ faketools.tools.common.sync_player.ui.show_ui()</code></pre>
                 </table>
                 <h3 id="オプションメニュー">オプションメニュー</h3>
                 <p>音量スライダーの右にある <img
-                src="../../images/common/sync_player/options.svg"
+                src="../../images/anim/sync_player/options.svg"
                 alt="image" />
                 ボタンをクリックすると、メニューが表示されます。</p>
                 <h4
