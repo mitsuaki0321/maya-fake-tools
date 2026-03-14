@@ -116,7 +116,8 @@ class VpcompWindow(QMainWindow):
     def _build_ui(self):
         self.setStyleSheet(load_qss())
 
-        margins = get_margins(self)
+        m = get_margins(self)
+        margins = (m[0], m[1] // 2, m[2], m[3] // 2)
         spacing_h = get_spacing(self, "horizontal")
 
         central = QWidget()

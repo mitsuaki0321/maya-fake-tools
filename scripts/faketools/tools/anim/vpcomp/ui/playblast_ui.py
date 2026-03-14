@@ -210,7 +210,8 @@ class PlayblastWindow(QDialog):
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
-        self._margins = get_margins(self)
+        m = get_margins(self)
+        self._margins = (m[0], m[1] // 2, m[2], m[3] // 2)
         self._spacing = get_spacing(self, "horizontal")
         self._compact_margins = (self._margins[0], int(self._margins[1] * 0.6), self._margins[2], self._margins[3])
 
@@ -239,7 +240,7 @@ class PlayblastWindow(QDialog):
         # Playblast button
         btn_body = QWidget()
         btn_lay = QHBoxLayout(btn_body)
-        btn_lay.setContentsMargins(*self._margins)
+        btn_lay.setContentsMargins(self._margins[0], self._margins[1], self._margins[2], self._margins[0])
         self._run_btn = QPushButton("Playblast")
         self._run_btn.setObjectName("applyBtn")
         self._run_btn.clicked.connect(self._on_run_clicked)
