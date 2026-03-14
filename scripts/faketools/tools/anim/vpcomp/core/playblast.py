@@ -6,6 +6,7 @@ Heavy lifting is delegated to :mod:`vpcomp.core.layer_renderers`.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from enum import Enum
 from logging import getLogger
@@ -132,10 +133,8 @@ def _save_panel_state(panel: str) -> dict:
     """Save panel display state that will be modified during playblast."""
     state: dict = {}
     for key, query_fn, _ in _PANEL_PROPS:
-        try:
+        with contextlib.suppress(Exception):
             state[key] = query_fn(panel)
-        except Exception:
-            pass
 
     # Special: isolate select
     try:
@@ -157,27 +156,19 @@ def _restore_panel_state(panel: str, state: dict) -> None:
     for key, _, restore_fn in _PANEL_PROPS:
         if restore_fn is None or key not in state:
             continue
-        try:
+        with contextlib.suppress(Exception):
             restore_fn(panel, state[key])
-        except Exception:
-            pass
 
     # Special: isolate — turn off first, then restore
-    try:
+    with contextlib.suppress(Exception):
         cmds.isolateSelect(panel, state=False)
-    except Exception:
-        pass
     if state.get("isolate"):
-        try:
+        with contextlib.suppress(Exception):
             cmds.isolateSelect(panel, state=True)
-        except Exception:
-            pass
 
     # Always restore to Viewport 2.0 after playblast
-    try:
+    with contextlib.suppress(Exception):
         cmds.modelEditor(panel, e=True, rendererOverrideName="")
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -473,14 +464,12 @@ def run_playblast_composite(
     panel = settings.panel
     saved_state = _save_panel_state(panel)
 
-    try:
+    with contextlib.suppress(Exception):
         cmds.modelEditor(
             panel,
             e=True,
             rendererOverrideName=settings.renderer_override,
         )
-    except Exception:
-        pass
 
     try:
         cam_frames, interrupted = _capture_layers(
@@ -533,10 +522,8 @@ def run_playblast_composite(
 
     finally:
         _restore_panel_state(panel, saved_state)
-        try:
+        with contextlib.suppress(Exception):
             shutil.rmtree(tmp_dir, ignore_errors=True)
-        except Exception:
-            pass
 
     logger.info(
         "Playblast composite complete: %d frame(s) -> %s",

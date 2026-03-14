@@ -9,6 +9,7 @@ Converts the layer stack into an ordered sequence of render operations:
 
 from __future__ import annotations
 
+import contextlib
 from logging import getLogger
 import os
 
@@ -87,13 +88,12 @@ def _compute_viewport_rect(
     """
     film_gate_wh: tuple[float, float] | None = None
 
-    if fit_mode in (FitMode.FILMGATE_HEIGHT, FitMode.FILMGATE_WIDTH):
-        if reference_camera is not None:
-            try:
-                fg = compute_film_gate_rect(vp_w, vp_h, reference_camera)
-                film_gate_wh = (fg[2], fg[3])
-            except Exception:
-                film_gate_wh = None
+    if fit_mode in (FitMode.FILMGATE_HEIGHT, FitMode.FILMGATE_WIDTH) and reference_camera is not None:
+        try:
+            fg = compute_film_gate_rect(vp_w, vp_h, reference_camera)
+            film_gate_wh = (fg[2], fg[3])
+        except Exception:
+            film_gate_wh = None
 
     x, y, w, h = compute_placement_rect(
         img_w,
@@ -150,10 +150,8 @@ class _SceneRender(omr.MSceneRender):
         try:
             self._clear_op = omr.MSceneRender.clearOperation(self)
         except Exception:
-            try:
+            with contextlib.suppress(Exception):
                 self._clear_op = super().clearOperation()
-            except Exception:
-                pass
         self._configure_clear(clear_color, clear_depth)
 
     def _configure_clear(self, clear_color: bool, clear_depth: bool) -> None:
@@ -513,10 +511,8 @@ class _SequenceQuadRender(_QuadRenderBase):
             return False
 
         if self._texture is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._texture_mgr.releaseTexture(self._texture)
-            except Exception:
-                pass
             self._texture = None
 
         try:

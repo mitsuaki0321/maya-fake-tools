@@ -159,9 +159,7 @@ class _PlayblastLayerDelegate(QStyledItemDelegate):
             new_state = Qt.Unchecked if is_checked else Qt.Checked
             model.setData(index, new_state, Qt.CheckStateRole)
             return True
-        if etype == QEvent.MouseButtonPress:
-            return True
-        return False
+        return etype == QEvent.MouseButtonPress
 
 
 # ------------------------------------------------------------------

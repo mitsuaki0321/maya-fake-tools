@@ -200,9 +200,8 @@ class LayerStack:
             RuntimeError: If the per-type limit is exceeded.
         """
         self._check_limits(layer)
-        if isinstance(layer, CameraLayer):
-            if layer.camera in self.cameras_in_use():
-                raise ValueError(f"Camera already in use: {layer.camera}")
+        if isinstance(layer, CameraLayer) and layer.camera in self.cameras_in_use():
+            raise ValueError(f"Camera already in use: {layer.camera}")
         self._layers.append(layer)
         logger.debug("Layer added: %s (type=%s)", layer.name, layer.layer_type.value)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from logging import getLogger
 import os
 
@@ -618,17 +619,13 @@ class VpcompWindow(QMainWindow):
 
     def _remove_override(self):
         if self._applied_panel:
-            try:
+            with contextlib.suppress(Exception):
                 cmds.modelEditor(self._applied_panel, e=True, rendererOverrideName="")
-            except Exception:
-                pass
             logger.info("Override removed from %s", self._applied_panel)
             self._applied_panel = None
         if self._override_obj:
-            try:
+            with contextlib.suppress(Exception):
                 omr.MRenderer.deregisterOverride(self._override_obj)
-            except Exception:
-                pass
             self._override_obj = None
         self._update_layer_buttons()
 
