@@ -117,6 +117,52 @@ class OpenRVPlayer(Player):
         subprocess.Popen(cmd)
 
 
+class SyncPlayer(Player):
+    """Play back in Maya's built-in Sync Player."""
+
+    name = "Sync Player"
+
+    @classmethod
+    def is_available(cls) -> bool:
+        return True
+
+    def launch(self, result: PlayblastResult) -> None:
+        from ...sync_player.ui import get_ui, show_ui
+
+        win = get_ui() or show_ui()
+        s = result.settings
+
+        if s.output_mode is OutputMode.MOVIE:
+            if result.output_files:
+                win.load_video(result.output_files[0])
+            return
+
+        # Image Sequence — prefer composite if available
+        if result.composite_dir:
+            target_dir = result.composite_dir
+        elif result.active_layers:
+            foremost_idx = result.active_layers[-1][0]
+            target_dir = result.per_layer_dirs.get(foremost_idx)
+        else:
+            target_dir = None
+
+        if target_dir:
+            first = self._first_image(target_dir)
+            if first:
+                win.load_sequence(first)
+
+    @staticmethod
+    def _first_image(dir_path: str) -> str | None:
+        """Return the path of the first image file in a directory."""
+        try:
+            for entry in sorted(os.listdir(dir_path)):
+                if os.path.splitext(entry)[1].lower() in {".jpg", ".jpeg", ".png", ".tif", ".tiff"}:
+                    return os.path.join(dir_path, entry)
+        except OSError:
+            pass
+        return None
+
+
 class FallbackPlayer(Player):
     """Open the first output file with the OS default application."""
 
@@ -141,7 +187,7 @@ class FallbackPlayer(Player):
 # ---------------------------------------------------------------------------
 
 # Priority order: first match wins in get_available_players().
-PLAYERS: list[Player] = [OpenRVPlayer(), FallbackPlayer()]
+PLAYERS: list[Player] = [OpenRVPlayer(), SyncPlayer(), FallbackPlayer()]
 
 
 def get_available_players() -> list[Player]:
