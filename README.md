@@ -28,7 +28,8 @@ A collection of production-ready tools for Autodesk Maya, featuring rigging, mod
 - glTF/GLB mesh importer (via Blender)
 
 **Animation Tools**
-- Sync Player: video player synchronized with Maya timeline
+- Video player synchronized with Maya timeline
+- Photoshop-like layer compositing on Maya viewports
 
 **Common Tools**
 - Python code editor with syntax highlighting and Maya integration
