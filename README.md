@@ -9,18 +9,36 @@ A collection of production-ready tools for Autodesk Maya, featuring rigging, mod
 ## Features
 
 **Rigging Tools**
-- Skin weights management (copy, paste, relax, mirror)
-- Component selection and membership tools
-- Transform creation and manipulation
-- Remote sliders and driven keys
+- Skin weights management (copy/paste, transfer between influences, import/export, robust weight transfer)
+- Proxy geometry builder for joint-based mesh separation
+- Transform connection, creation, and snapping
+- Transform creation along curves
+- Curve/surface creation (offset curve, loft surface)
+- Remote attribute slider and driven key tools
+- Connection and attribute listing
+- Component Tag membership management
 
 **Modeling Tools**
-- Bounding box creator
+- Non-rigid ICP mesh fitting with landmark support
+- BlendShape transfer between meshes
 - Mesh and transform retargeting
+- Bounding box creator
+- Component selection and filtering
+- Texture path relocator
+- glTF/GLB mesh importer (via Blender)
+
+**Animation Tools**
+- Sync Player: video player synchronized with Maya timeline
 
 **Common Tools**
+- Python code editor with syntax highlighting and Maya integration
+- Selecter for selection filtering, hierarchical selection, and batch renaming
 - Node stocker for quick access
-- Attribute management
+- Scene optimizer for cleanup operations
+- Snapshot capture from viewport
+- Dependency installer for optional libraries
+
+**Single Commands** — 22 quick-access commands for common operations (snap, freeze, mirror joints, copy weights, etc.)
 
 ## Installation
 
