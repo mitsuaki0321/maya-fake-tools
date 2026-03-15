@@ -5,12 +5,16 @@ Automatically creates Maya menu based on registered tools.
 """
 
 import logging
+import os
 from pathlib import Path
+import subprocess
+import sys
 import webbrowser
 
 import maya.cmds as cmds
 
 from . import single_commands_menu
+from .config import get_global_config
 from .core.registry import get_registry
 from .logging_config import get_log_level, set_log_level
 
@@ -91,6 +95,9 @@ def add_menu():
     # Add separator and utility items
     cmds.menuItem(divider=True, parent=menu)
 
+    # Open Workspace
+    cmds.menuItem(label="Open Workspace Folder", command=lambda *args: open_workspace(), parent=menu)
+
     # Help/Documentation
     cmds.menuItem(label="Help", command=lambda *args: open_documentation(), parent=menu)
 
@@ -132,6 +139,27 @@ def open_documentation():
     else:
         logger.error(f"Documentation not found: {docs_index}")
         cmds.warning("Documentation not found. Please build documentation first.")
+
+
+def open_workspace():
+    """Open the faketools_workspace directory in the system file explorer."""
+    config = get_global_config()
+    data_root = config.get_data_root_dir()
+
+    if not data_root.exists():
+        data_root.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Created workspace directory: {data_root}")
+
+    path_str = str(data_root)
+
+    if sys.platform == "win32":
+        os.startfile(path_str)
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", path_str])
+    else:
+        subprocess.Popen(["xdg-open", path_str])
+
+    logger.info(f"Opening workspace: {data_root}")
 
 
 def _add_log_level_menu(parent_menu: str):
