@@ -7,7 +7,6 @@ compositing with Pillow.
 from __future__ import annotations
 
 from logging import getLogger
-import os
 
 import maya.cmds as cmds  # type: ignore
 
@@ -57,8 +56,6 @@ from .colors import LAYER_TYPE_COLORS, LAYER_TYPE_FALLBACK
 from .resource_utils import load_qss, make_separator
 
 logger = getLogger(__name__)
-
-_UI_DIR = os.path.dirname(__file__)
 
 # Badge data roles
 _BADGE_ROLE = Qt.UserRole + 1
@@ -193,11 +190,7 @@ class PlayblastWindow(QDialog):
         self._running = False
         self._settings = ToolSettingsManager(tool_name="vpcomp", category="anim")
 
-        # Load QSS (top-level window) + combo arrow with absolute path
-        css = load_qss()
-        arrow = os.path.join(_UI_DIR, "icons", "combo_arrow.svg").replace("\\", "/")
-        css += f'\nQComboBox::down-arrow {{ image: url("{arrow}"); width: 8px; height: 5px; }}'
-        self.setStyleSheet(css)
+        self.setStyleSheet(load_qss())
 
         self._build_ui()
         self._populate_layers()

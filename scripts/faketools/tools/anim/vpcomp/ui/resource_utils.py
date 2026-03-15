@@ -12,9 +12,17 @@ _QSS_PATH = os.path.join(_UI_DIR, "style.qss")
 
 
 def load_qss() -> str:
-    """Load the shared dark-theme QSS and return as a string."""
+    """Load the shared dark-theme QSS and return as a string.
+
+    Includes the combo-box down-arrow icon using an absolute path
+    so that it resolves correctly regardless of which window loads
+    the stylesheet.
+    """
     with open(_QSS_PATH, encoding="utf-8") as f:
-        return f.read()
+        css = f.read()
+    arrow = os.path.join(_ICONS_DIR, "combo_arrow.svg").replace("\\", "/")
+    css += f'\nQComboBox::down-arrow {{ image: url("{arrow}"); width: 8px; height: 5px; }}'
+    return css
 
 
 def make_separator() -> QFrame:

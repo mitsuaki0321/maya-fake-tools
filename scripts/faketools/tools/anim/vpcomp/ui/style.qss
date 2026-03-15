@@ -45,7 +45,18 @@ QComboBox QAbstractItemView {
     background-color: #1e2228;
     border: 1px solid #3d424d;
     color: #d0d4da;
-    selection-background-color: #1d3a5a;
+    outline: none;
+}
+QComboBox QAbstractItemView::item {
+    padding: 5px 6px;
+    border: none;
+}
+QComboBox QAbstractItemView::item:hover,
+QComboBox QAbstractItemView::item:selected {
+    padding: 5px 6px;
+    border: none;
+    background-color: rgba(29, 143, 255, 0.18);
+    color: #a8ccf0;
 }
 
 /* ── QLineEdit ── */
