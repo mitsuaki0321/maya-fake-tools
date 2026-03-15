@@ -5,6 +5,8 @@ Builds HTML documentation from Markdown sources using Pandoc.
 Integrates with ToolRegistry to automatically generate tool listings.
 """
 
+import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -39,6 +41,9 @@ class DocBuilder:
 
         # Load tool information from ToolRegistry
         self.tools_info = self._load_tools_info()
+
+        # Search index cache (populated during build)
+        self._search_indices: dict[str, str] = {}
 
     def _load_tools_info(self) -> dict:
         """
@@ -283,6 +288,10 @@ class DocBuilder:
         if breadcrumb:
             breadcrumb_html = self.render_breadcrumb_html(breadcrumb, root_path, home_link, home_text)
             template_vars["breadcrumb_html"] = breadcrumb_html
+
+        # Add search index inline script
+        if lang in self._search_indices:
+            template_vars["search_index_script"] = f'<script>window.__SEARCH_INDEX__={self._search_indices[lang]};</script>'
 
         # Write content to temp file (without front matter)
         temp_md = md_file.with_suffix(".tmp.md")
@@ -654,9 +663,15 @@ class DocBuilder:
         html_parts.append('            <div class="logo">')
         html_parts.append(f'                <a href="{data["home_link"]}">{data["project_name"]}</a>')
         html_parts.append("            </div>")
-        html_parts.append('            <nav class="language-switcher">')
-        html_parts.append(f'                <a href="{data["lang_link"]}" class="lang-switch-btn">{data["lang_link_text"]}</a>')
-        html_parts.append("            </nav>")
+        html_parts.append('            <div class="header-actions">')
+        html_parts.append('                <button class="search-trigger-btn" aria-label="Search">')
+        html_parts.append('                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>')
+        html_parts.append('                    <span class="search-shortcut-hint">Ctrl+K</span>')
+        html_parts.append("                </button>")
+        html_parts.append('                <nav class="language-switcher">')
+        html_parts.append(f'                    <a href="{data["lang_link"]}" class="lang-switch-btn">{data["lang_link_text"]}</a>')
+        html_parts.append("                </nav>")
+        html_parts.append("            </div>")
         html_parts.append("        </div>")
         html_parts.append("    </header>")
 
@@ -678,6 +693,10 @@ class DocBuilder:
         html_parts.append("            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>")
         html_parts.append("        </div>")
         html_parts.append("    </footer>")
+
+        # Search index inline script
+        if data["lang"] in self._search_indices:
+            html_parts.append(f'    <script>window.__SEARCH_INDEX__={self._search_indices[data["lang"]]};</script>')
 
         # Scripts
         html_parts.append('    <script src="js/main.js"></script>')
@@ -751,6 +770,65 @@ class DocBuilder:
 
         return "\n".join(html_parts)
 
+    def build_search_index(self, lang: str) -> str:
+        """
+        Build search index JSON string for a language.
+
+        Args:
+            lang: Language code
+
+        Returns:
+            str: JSON string of search index entries
+        """
+        entries = []
+        lang_dir = self.src_dir / lang
+
+        if not lang_dir.exists():
+            return "[]"
+
+        for md_file in lang_dir.rglob("*.md"):
+            # Skip index files
+            if md_file.stem == "index":
+                continue
+
+            metadata, content = self.parse_front_matter(md_file)
+
+            # Skip hidden pages (sub-pages)
+            if metadata.get("hidden"):
+                continue
+
+            title = metadata.get("title", md_file.stem)
+            description = metadata.get("description", "")
+
+            # Determine category
+            rel_path = md_file.relative_to(lang_dir)
+            category = ""
+            category_name = ""
+            if len(rel_path.parts) > 1:
+                category = rel_path.parts[0]
+                for cat in self.config["categories"]:
+                    if cat["id"] == category:
+                        category_name = cat["name_ja"] if lang == "ja" else cat["name_en"]
+                        break
+
+            # Strip markdown syntax for body text
+            body_text = re.sub(r"[#*`\[\]()!]", "", content)
+            body_text = re.sub(r"\n+", " ", body_text)
+            body_text = re.sub(r"\s+", " ", body_text).strip()[:500]
+
+            # Calculate URL
+            url = f"{lang}/{str(rel_path.with_suffix('.html')).replace(chr(92), '/')}"
+
+            entries.append({
+                "title": title,
+                "description": description,
+                "category": category_name,
+                "url": url,
+                "body": body_text,
+            })
+
+        return json.dumps(entries, ensure_ascii=False)
+
     def build(self):
         """Run the complete build process."""
         print("=" * 60)
@@ -771,6 +849,14 @@ class DocBuilder:
 
         # Copy assets
         self.copy_assets()
+
+        # Build search indices (before processing markdown so they can be embedded)
+        print("\nBuilding search indices...")
+        for lang_config in self.config["languages"]:
+            lang_code = lang_config["code"]
+            self._search_indices[lang_code] = self.build_search_index(lang_code)
+            entry_count = self._search_indices[lang_code].count('"title"')
+            print(f"  [{lang_code}] {entry_count} entries")
 
         # Process markdown files
         print("\nProcessing markdown files...")

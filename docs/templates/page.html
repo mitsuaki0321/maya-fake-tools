@@ -17,11 +17,17 @@
             <div class="logo">
                 <a href="$root_path$$home_link$">$project_name$</a>
             </div>
-            <nav class="language-switcher">
-                $if(lang_link)$
-                <a href="$lang_link$" class="lang-switch-btn">$lang_link_text$</a>
-                $endif$
-            </nav>
+            <div class="header-actions">
+                <button class="search-trigger-btn" aria-label="Search">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>
+                    <span class="search-shortcut-hint">Ctrl+K</span>
+                </button>
+                <nav class="language-switcher">
+                    $if(lang_link)$
+                    <a href="$lang_link$" class="lang-switch-btn">$lang_link_text$</a>
+                    $endif$
+                </nav>
+            </div>
         </div>
     </header>
 
@@ -60,11 +66,23 @@
         </div>
     </footer>
 
+    $if(search_index_script)$
+    $search_index_script$
+    $endif$
     <script src="$root_path$js/main.js"></script>
     <!-- highlight.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/mel.min.js"></script>
-    <script>hljs.highlightAll();</script>
+    <script>
+    // Transfer language class from <pre> to <code> for highlight.js
+    document.querySelectorAll('pre[class] > code').forEach(function(code) {
+        var lang = code.parentElement.className.split(/\s+/).find(function(c) {
+            return c && c !== 'sourceCode' && c !== 'has-lang-label';
+        });
+        if (lang && !code.className) code.classList.add('language-' + lang);
+    });
+    hljs.highlightAll();
+    </script>
 </body>
 </html>
