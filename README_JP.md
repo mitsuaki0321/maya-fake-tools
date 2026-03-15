@@ -41,13 +41,11 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 
 **シングルコマンド** — スナップ、フリーズ、ジョイントミラー、ウェイトコピーなど、22の即実行コマンド
 
-## インストール
+## クイックスタート
 
 1. [Releases](https://github.com/mitsuaki0321/maya-fake-tools/releases)から最新版をダウンロード
 2. `maya-fake-tools_vX.X.X.zip`を任意のディレクトリに展開（例：`C:/maya_tools/`）
-3. 展開したディレクトリをMayaの`MAYA_MODULE_PATH`環境変数に追加：
-   - **Windows**: `set MAYA_MODULE_PATH=C:/maya_tools;%MAYA_MODULE_PATH%`
-   - **Linux/Mac**: `export MAYA_MODULE_PATH=/path/to/maya_tools:$MAYA_MODULE_PATH`
+3. 展開したディレクトリをMayaの`MAYA_MODULE_PATH`環境変数に追加
 4. Mayaを再起動
 5. Mayaのスクリプトエディタを開き、以下を実行：
    ```python
@@ -55,6 +53,8 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
    faketools.menu.add_menu()
    ```
 6. Mayaのメインメニューバーに「FakeTools」メニューが表示されます
+
+環境変数の設定方法、Python ライブラリ・ffmpeg・OpenRV の導入についての詳しい手順は **[インストールガイド](INSTALL_JP.md)** を参照してください。
 
 ## ドキュメント
 
@@ -84,14 +84,7 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 | Snapshot Capture | Common | Pillow |
 
 
-これらのライブラリは、FakeTools に同梱されている **Dependency Installer**（FakeTools > Common > Dependency Installer）からインストールできます。Maya を起動せずにリポジトリルートの `install_dependencies.bat` を実行してインストールすることも可能です。
-
-また一部のツールで追加ライブラリをインストールすると機能が向上するものがあります。
-
-| ツール | カテゴリ | 追加ライブラリ | 効果 |
-|--------|----------|----------------|------|
-| Snapshot Capture | Common | aggdraw | アノテーションのアンチエイリアシングあり保存 |
-| Snapshot Capture | Common | mss | 高速スクリーンショットキャプチャ |
+これらのライブラリは、FakeTools に同梱されている **Dependency Installer**（FakeTools > Common > Dependency Installer）からインストールできます。詳しい手順は **[インストールガイド](INSTALL_JP.md)** を参照してください。
 
 
 ## ライセンス

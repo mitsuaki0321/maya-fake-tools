@@ -41,13 +41,11 @@ A collection of production-ready tools for Autodesk Maya, featuring rigging, mod
 
 **Single Commands** — 22 quick-access commands for common operations (snap, freeze, mirror joints, copy weights, etc.)
 
-## Installation
+## Quick Start
 
 1. Download the latest release from [Releases](https://github.com/mitsuaki0321/maya-fake-tools/releases)
 2. Extract `maya-fake-tools_vX.X.X.zip` to a directory (e.g., `C:/maya_tools/`)
-3. Add the extracted directory to Maya's `MAYA_MODULE_PATH` environment variable:
-   - **Windows**: `set MAYA_MODULE_PATH=C:/maya_tools;%MAYA_MODULE_PATH%`
-   - **Linux/Mac**: `export MAYA_MODULE_PATH=/path/to/maya_tools:$MAYA_MODULE_PATH`
+3. Add the extracted directory to Maya's `MAYA_MODULE_PATH` environment variable
 4. Restart Maya
 5. Open Maya's Script Editor and run:
    ```python
@@ -55,6 +53,8 @@ A collection of production-ready tools for Autodesk Maya, featuring rigging, mod
    faketools.menu.add_menu()
    ```
 6. The "FakeTools" menu will appear in Maya's main menu bar
+
+For detailed setup instructions including environment variable configuration, Python library installation, ffmpeg, and OpenRV setup, see the **[Installation Guide](INSTALL.md)**.
 
 ## Documentation
 
@@ -84,14 +84,7 @@ These tools will not launch if the required libraries are not installed.
 | Snapshot Capture | Common | Pillow |
 
 
-These libraries can be installed from the **Dependency Installer** included in FakeTools (FakeTools > Common > Dependency Installer), or by running `install_dependencies.bat` at the repository root without launching Maya.
-
-Some tools can be enhanced with optional libraries:
-
-| Tool | Category | Optional Libraries | Enhancement |
-|------|----------|-------------------|-------------|
-| Snapshot Capture | Common | aggdraw | Anti-aliased annotation rendering |
-| Snapshot Capture | Common | mss | Faster screenshot capture |
+These libraries can be installed using the built-in **Dependency Installer** (FakeTools > Common > Dependency Installer). See the **[Installation Guide](INSTALL.md)** for step-by-step instructions.
 
 ## License
 

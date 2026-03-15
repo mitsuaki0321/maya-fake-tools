@@ -25,6 +25,7 @@ jobs:
           cp -r plug-ins release_package/
           cp -r scripts release_package/
           cp faketools.mod release_package/
+          cp .env.example release_package/
           cp LICENSE release_package/
           cp README.md release_package/
 
@@ -55,6 +56,7 @@ jobs:
           - \`plug-ins/\` - Maya plugins
           - \`scripts/\` - Python tools and utilities
           - \`faketools.mod\` - Maya module descriptor
+          - \`.env.example\` - Custom site-packages path template
           - \`LICENSE\` - MIT License
           - \`README.md\` - Basic information
 
