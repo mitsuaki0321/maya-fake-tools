@@ -32,6 +32,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Full-text search
     setupSearch();
+
+    // Navigation sidebar
+    setupNavSidebar();
+    setupNavToggle();
+
+    // Position sidebars below sticky header + breadcrumb
+    setupSidebarPositions();
 });
 
 /**
@@ -589,4 +596,114 @@ function setupSearch() {
     overlay.addEventListener('click', function(e) {
         if (e.target === overlay) closeSearch();
     });
+}
+
+/**
+ * Navigation sidebar rendered from inline __NAV_DATA__
+ */
+function setupNavSidebar() {
+    var navData = window.__NAV_DATA__ || null;
+    var sidebar = document.getElementById('navSidebar');
+    if (!navData || !sidebar) return;
+
+    var currentTool = sidebar.getAttribute('data-current-tool') || '';
+    var currentCategory = sidebar.getAttribute('data-current-category') || '';
+    var content = sidebar.querySelector('.nav-sidebar-content');
+    if (!content) return;
+
+    // Determine root path from logo link
+    var rootPath = '';
+    var rootLink = document.querySelector('.logo a');
+    if (rootLink) {
+        var href = rootLink.getAttribute('href');
+        var idx = href.lastIndexOf('index');
+        if (idx > 0) rootPath = href.substring(0, idx);
+    }
+
+    var html = '';
+    for (var c = 0; c < navData.length; c++) {
+        var category = navData[c];
+        var isCurrentCat = category.id === currentCategory;
+        var expandedClass = isCurrentCat ? ' expanded' : '';
+
+        html += '<div class="nav-category">';
+        html += '<button class="nav-category-header' + expandedClass + '">' +
+            '<span class="nav-category-name">' + category.name + '</span>' +
+            '<span class="nav-category-count">' + category.tools.length + '</span>' +
+            '</button>';
+        html += '<ul class="nav-tool-list"' + (isCurrentCat ? '' : ' style="display:none"') + '>';
+
+        for (var t = 0; t < category.tools.length; t++) {
+            var tool = category.tools[t];
+            var isActive = tool.tool_name === currentTool && isCurrentCat ? ' active' : '';
+            html += '<li><a href="' + rootPath + tool.url + '" class="nav-tool-link' + isActive + '">' + tool.name + '</a></li>';
+        }
+
+        html += '</ul></div>';
+    }
+
+    content.innerHTML = html;
+
+    // Collapse/expand handlers
+    content.querySelectorAll('.nav-category-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            header.classList.toggle('expanded');
+            var list = header.nextElementSibling;
+            list.style.display = list.style.display === 'none' ? '' : 'none';
+        });
+    });
+
+    // Scroll active item into view
+    var activeLink = content.querySelector('.nav-tool-link.active');
+    if (activeLink) {
+        activeLink.scrollIntoView({ block: 'center', behavior: 'instant' });
+    }
+}
+
+/**
+ * Mobile hamburger toggle for nav sidebar
+ */
+function setupNavToggle() {
+    var toggleBtn = document.querySelector('.nav-toggle-btn');
+    var sidebar = document.getElementById('navSidebar');
+    if (!toggleBtn || !sidebar) return;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'nav-overlay';
+    document.body.appendChild(overlay);
+
+    toggleBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('active');
+    });
+
+    overlay.addEventListener('click', function() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+    });
+}
+
+/**
+ * Position nav and TOC sidebars below sticky header + breadcrumb
+ */
+function setupSidebarPositions() {
+    var navSidebar = document.querySelector('.nav-sidebar');
+    var tocSidebar = document.querySelector('.toc-sidebar');
+    if (!navSidebar && !tocSidebar) return;
+
+    function update() {
+        var offset = getStickyOffset();
+        var height = 'calc(100vh - ' + offset + 'px)';
+        if (navSidebar) {
+            navSidebar.style.top = offset + 'px';
+            navSidebar.style.height = height;
+        }
+        if (tocSidebar) {
+            tocSidebar.style.top = offset + 'px';
+            tocSidebar.style.height = height;
+        }
+    }
+
+    update();
+    window.addEventListener('resize', update);
 }

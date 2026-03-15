@@ -18,6 +18,7 @@
                 <a href="$root_path$$home_link$">$project_name$</a>
             </div>
             <div class="header-actions">
+                <button class="nav-toggle-btn" aria-label="Toggle navigation">&#9776;</button>
                 <button class="search-trigger-btn" aria-label="Search">
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>
                     <span class="search-shortcut-hint">Ctrl+K</span>
@@ -39,23 +40,42 @@
     </div>
     $endif$
 
-    <div class="container">
-        <div class="content-wrapper">
-            $if(toc)$
-            <aside class="toc-sidebar">
-                <div class="toc-wrapper">
-                    <h2>$toc_title$</h2>
-                    $toc$
-                </div>
-            </aside>
-            $endif$
+    <div class="page-layout">
+        <aside class="nav-sidebar" id="navSidebar"
+               data-current-tool="$current_tool$"
+               data-current-category="$current_category$">
+            <div class="nav-sidebar-content"></div>
+        </aside>
 
+        $if(toc)$
+        <aside class="toc-sidebar">
+            <div class="toc-wrapper">
+                <h2>$toc_title$</h2>
+                $toc$
+            </div>
+        </aside>
+        $endif$
+
+        <div class="content-area">
             <main class="main-content">
                 $if(title)$
                 <h1 class="page-title">$title$</h1>
                 $endif$
 
                 $body$
+
+                $if(has_page_nav)$
+                <nav class="page-nav">
+                    $if(prev_link)$
+                    <a href="$prev_link$" class="page-nav-link page-nav-prev">$prev_title$</a>
+                    $else$
+                    <span class="page-nav-spacer"></span>
+                    $endif$
+                    $if(next_link)$
+                    <a href="$next_link$" class="page-nav-link page-nav-next">$next_title$</a>
+                    $endif$
+                </nav>
+                $endif$
             </main>
         </div>
     </div>
@@ -66,6 +86,9 @@
         </div>
     </footer>
 
+    $if(nav_data_script)$
+    $nav_data_script$
+    $endif$
     $if(search_index_script)$
     $search_index_script$
     $endif$

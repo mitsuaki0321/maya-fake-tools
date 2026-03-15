@@ -45,6 +45,13 @@ class DocBuilder:
         # Search index cache (populated during build)
         self._search_indices: dict[str, str] = {}
 
+        # Navigation data cache (populated during build)
+        self._nav_data: dict[str, list[dict]] = {}
+        self._nav_json: dict[str, str] = {}
+
+        # Page order cache for prev/next links (populated during build)
+        self._page_order: dict[str, dict[str, dict]] = {}
+
     def _load_tools_info(self) -> dict:
         """
         Load all tools information from ToolRegistry.
@@ -292,6 +299,32 @@ class DocBuilder:
         # Add search index inline script
         if lang in self._search_indices:
             template_vars["search_index_script"] = f'<script>window.__SEARCH_INDEX__={self._search_indices[lang]};</script>'
+
+        # Add navigation data inline script
+        if lang in self._nav_json:
+            template_vars["nav_data_script"] = f'<script>window.__NAV_DATA__={self._nav_json[lang]};</script>'
+
+        # Add current tool/category info for sidebar highlighting
+        lang_dir = self.src_dir / lang
+        try:
+            rel_path = md_file.relative_to(lang_dir)
+            if len(rel_path.parts) > 1:
+                template_vars["current_category"] = rel_path.parts[0]
+                template_vars["current_tool"] = md_file.stem
+
+                # Add prev/next navigation links
+                page_key = f"{rel_path.parts[0]}/{md_file.stem}"
+                nav_info = self._page_order.get(lang, {}).get(page_key, {})
+                if nav_info:
+                    template_vars["has_page_nav"] = "true"
+                    if "prev_title" in nav_info:
+                        template_vars["prev_title"] = nav_info["prev_title"]
+                        template_vars["prev_link"] = nav_info["prev_link"]
+                    if "next_title" in nav_info:
+                        template_vars["next_title"] = nav_info["next_title"]
+                        template_vars["next_link"] = nav_info["next_link"]
+        except ValueError:
+            pass
 
         # Write content to temp file (without front matter)
         temp_md = md_file.with_suffix(".tmp.md")
@@ -675,16 +708,21 @@ class DocBuilder:
         html_parts.append("        </div>")
         html_parts.append("    </header>")
 
-        # Container
-        html_parts.append('    <div class="container">')
-        html_parts.append('        <main class="main-content">')
-        html_parts.append(f'            <h1 class="page-title">{data["title"]}</h1>')
+        # Page layout with nav sidebar
+        html_parts.append('    <div class="page-layout">')
+        html_parts.append('        <aside class="nav-sidebar" id="navSidebar">')
+        html_parts.append('            <div class="nav-sidebar-content"></div>')
+        html_parts.append("        </aside>")
+        html_parts.append('        <div class="content-area">')
+        html_parts.append('            <main class="main-content">')
+        html_parts.append(f'                <h1 class="page-title">{data["title"]}</h1>')
 
         # Categories
         if data.get("categories"):
             html_parts.append(self.render_categories(data["categories"]))
 
-        html_parts.append("        </main>")
+        html_parts.append("            </main>")
+        html_parts.append("        </div>")
         html_parts.append("    </div>")
 
         # Footer
@@ -693,6 +731,10 @@ class DocBuilder:
         html_parts.append("            <p>&copy; 2025 FakeTools. Generated with Pandoc.</p>")
         html_parts.append("        </div>")
         html_parts.append("    </footer>")
+
+        # Navigation data inline script
+        if data["lang"] in self._nav_json:
+            html_parts.append(f'    <script>window.__NAV_DATA__={self._nav_json[data["lang"]]};</script>')
 
         # Search index inline script
         if data["lang"] in self._search_indices:
@@ -769,6 +811,53 @@ class DocBuilder:
         html_parts.append("            </div>")
 
         return "\n".join(html_parts)
+
+    def build_nav_data(self, lang: str) -> list[dict]:
+        """
+        Build navigation data structure for sidebar.
+
+        Args:
+            lang: Language code
+
+        Returns:
+            list[dict]: Categories with their tools for navigation
+        """
+        nav_categories = []
+        for cat_config in self.config["categories"]:
+            cat_id = cat_config["id"]
+            cat_name = cat_config["name_ja"] if lang == "ja" else cat_config["name_en"]
+            tools = self._collect_tools_from_markdown(lang, cat_id)
+            if tools:
+                nav_tools = [{"name": t["name"], "url": t["url"], "tool_name": t["url"].rsplit("/", 1)[-1].replace(".html", "")} for t in tools]
+                nav_categories.append({"id": cat_id, "name": cat_name, "tools": nav_tools})
+        return nav_categories
+
+    def build_page_order(self, lang: str) -> dict[str, dict]:
+        """
+        Build prev/next link mapping for all tool pages within each category.
+
+        Args:
+            lang: Language code
+
+        Returns:
+            dict: Mapping of md file stem to {prev_title, prev_link, next_title, next_link}
+        """
+        page_nav = {}
+        for cat_config in self.config["categories"]:
+            cat_id = cat_config["id"]
+            tools = self._collect_tools_from_markdown(lang, cat_id)
+            for i, tool in enumerate(tools):
+                stem = tool["url"].rsplit("/", 1)[-1].replace(".html", "")
+                nav_info = {}
+                if i > 0:
+                    nav_info["prev_title"] = tools[i - 1]["name"]
+                    nav_info["prev_link"] = tools[i - 1]["url"].rsplit("/", 1)[-1]
+                if i < len(tools) - 1:
+                    nav_info["next_title"] = tools[i + 1]["name"]
+                    nav_info["next_link"] = tools[i + 1]["url"].rsplit("/", 1)[-1]
+                if nav_info:
+                    page_nav[f"{cat_id}/{stem}"] = nav_info
+        return page_nav
 
     def build_search_index(self, lang: str) -> str:
         """
@@ -849,6 +938,16 @@ class DocBuilder:
 
         # Copy assets
         self.copy_assets()
+
+        # Build navigation data and page order (before processing markdown)
+        print("\nBuilding navigation data...")
+        for lang_config in self.config["languages"]:
+            lang_code = lang_config["code"]
+            self._nav_data[lang_code] = self.build_nav_data(lang_code)
+            self._nav_json[lang_code] = json.dumps(self._nav_data[lang_code], ensure_ascii=False)
+            self._page_order[lang_code] = self.build_page_order(lang_code)
+            tool_count = sum(len(c["tools"]) for c in self._nav_data[lang_code])
+            print(f"  [{lang_code}] {tool_count} tools in {len(self._nav_data[lang_code])} categories")
 
         # Build search indices (before processing markdown so they can be embedded)
         print("\nBuilding search indices...")

@@ -177,27 +177,155 @@ a:hover {
     color: var(--text-secondary);
 }
 
-/* ===== Content Layout ===== */
-.content-wrapper {
+/* ===== Page Layout (3-column: Nav | TOC | Content) ===== */
+.page-layout {
     display: flex;
-    gap: 2rem;
+    min-height: calc(100vh - 60px);
 }
 
+/* --- Navigation Sidebar (left) --- */
+.nav-sidebar {
+    flex: 0 0 220px;
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+.nav-sidebar-content {
+    padding: 1rem 0;
+}
+
+.nav-category {
+    margin-bottom: 0.25rem;
+}
+
+.nav-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: none;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+
+.nav-category-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-category-header::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 0.4rem;
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+}
+
+.nav-category-header.expanded::before {
+    transform: rotate(90deg);
+}
+
+.nav-category-count {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-weight: 400;
+}
+
+.nav-tool-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0.25rem 0;
+}
+
+.nav-tool-list li {
+    margin: 0;
+}
+
+.nav-tool-link {
+    display: block;
+    padding: 0.3rem 1rem 0.3rem 2rem;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    border-left: 3px solid transparent;
+}
+
+.nav-tool-link:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary);
+}
+
+.nav-tool-link.active {
+    color: var(--accent-primary);
+    background: rgba(74, 158, 255, 0.08);
+    border-left-color: var(--accent-primary);
+    font-weight: 600;
+}
+
+/* Mobile nav toggle button */
+.nav-toggle-btn {
+    display: none;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-toggle-btn:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+/* Mobile nav overlay backdrop */
+.nav-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1499;
+}
+
+.nav-overlay.active {
+    display: block;
+}
+
+/* --- TOC Sidebar (middle) --- */
 .toc-sidebar {
-    flex: 0 0 250px;
+    flex: 0 0 200px;
+    border-right: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 .toc-wrapper {
-    background-color: var(--bg-secondary);
-    border-radius: 6px;
     padding: 1.25rem;
-    position: sticky;
-    top: calc(60px + 1rem);
 }
 
 .toc-wrapper h2 {
-    font-size: 1rem;
-    margin: 0 0 1rem 0;
+    font-size: 0.9rem;
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0;
+    border-bottom: none;
     color: var(--text-primary);
 }
 
@@ -207,26 +335,82 @@ a:hover {
 }
 
 .toc-wrapper li {
-    margin: 0.4rem 0;
+    margin: 0.3rem 0;
 }
 
 .toc-wrapper li ul {
-    padding-left: 1rem;
-    margin-top: 0.25rem;
+    padding-left: 0.85rem;
+    margin-top: 0.2rem;
 }
 
 .toc-wrapper a {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
 }
 
 .toc-wrapper a:hover {
     color: var(--accent-primary);
 }
 
-.main-content {
+/* --- Content Area (right) --- */
+.content-area {
     flex: 1;
     min-width: 0;
+    padding: 2rem 2.5rem;
+}
+
+.main-content {
+    min-width: 0;
+}
+
+/* Legacy content-wrapper (unused in new layout but kept for safety) */
+.content-wrapper {
+    display: flex;
+    gap: 2rem;
+}
+
+/* ===== Page Navigation (prev/next) ===== */
+.page-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    gap: 1rem;
+}
+
+.page-nav-link {
+    display: block;
+    padding: 0.6rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    max-width: 45%;
+    transition: border-color 0.2s;
+}
+
+.page-nav-link:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.page-nav-prev::before {
+    content: "\2190  ";
+}
+
+.page-nav-next {
+    margin-left: auto;
+    text-align: right;
+}
+
+.page-nav-next::after {
+    content: "  \2192";
+}
+
+.page-nav-spacer {
+    flex: 1;
 }
 
 /* ===== Code Blocks ===== */
@@ -445,16 +629,15 @@ blockquote {
 }
 
 /* ===== Responsive Design ===== */
-@media (max-width: 1024px) {
-    .content-wrapper {
-        flex-direction: column;
-    }
-
+@media (max-width: 1200px) {
     .toc-sidebar {
-        position: static;
-        flex: none;
-        max-height: none;
-        order: -1;
+        display: none;
+    }
+}
+
+@media (max-width: 1024px) {
+    .content-area {
+        padding: 1.5rem;
     }
 
     .tool-grid {
@@ -463,20 +646,30 @@ blockquote {
 }
 
 @media (max-width: 768px) {
-    .container {
+    .nav-toggle-btn {
+        display: block;
+    }
+
+    .nav-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1500;
+    }
+
+    .nav-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .content-area {
         padding: 1.5rem 1rem;
     }
 
     .header-content {
         padding: 0 1rem;
-    }
-
-    .content-wrapper {
-        flex-direction: column;
-    }
-
-    .toc-sidebar {
-        order: -1;
     }
 
     h1 {
@@ -497,6 +690,11 @@ blockquote {
 
     .breadcrumb {
         font-size: 0.8rem;
+    }
+
+    .page-nav-link {
+        max-width: 50%;
+        font-size: 0.85rem;
     }
 }
 
