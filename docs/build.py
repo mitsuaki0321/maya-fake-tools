@@ -296,13 +296,8 @@ class DocBuilder:
             breadcrumb_html = self.render_breadcrumb_html(breadcrumb, root_path, home_link, home_text)
             template_vars["breadcrumb_html"] = breadcrumb_html
 
-        # Add search index inline script
-        if lang in self._search_indices:
-            template_vars["search_index_script"] = f'<script>window.__SEARCH_INDEX__={self._search_indices[lang]};</script>'
-
-        # Add navigation data inline script
-        if lang in self._nav_json:
-            template_vars["nav_data_script"] = f'<script>window.__NAV_DATA__={self._nav_json[lang]};</script>'
+        # Note: search_index_script and nav_data_script are injected post-Pandoc
+        # to avoid Windows command-line length limits
 
         # Add current tool/category info for sidebar highlighting
         lang_dir = self.src_dir / lang
@@ -360,12 +355,41 @@ class DocBuilder:
                 print(f"Error converting {md_file}:")
                 print(result.stderr)
             else:
+                # Post-process: inject inline scripts that are too large for -V flags
+                self._inject_inline_scripts(output_file, lang)
                 print(f"Converted: {md_file} -> {output_file}")
 
         finally:
             # Clean up temporary files
             if temp_md.exists():
                 temp_md.unlink()
+
+    def _inject_inline_scripts(self, output_file: Path, lang: str):
+        """
+        Inject inline data scripts into generated HTML file.
+
+        Replaces template placeholders with actual script tags to avoid
+        Windows command-line length limits when passing large data via Pandoc -V flags.
+
+        Args:
+            output_file: Generated HTML file
+            lang: Language code
+        """
+        html = output_file.read_text(encoding="utf-8")
+
+        scripts = []
+        if lang in self._nav_json:
+            scripts.append(f"<script>window.__NAV_DATA__={self._nav_json[lang]};</script>")
+        if lang in self._search_indices:
+            scripts.append(f"<script>window.__SEARCH_INDEX__={self._search_indices[lang]};</script>")
+
+        if scripts:
+            injection = "\n    ".join(scripts)
+            # Inject before main.js script tag
+            html = html.replace(
+                '<script src="', f'{injection}\n    <script src="', 1
+            )
+            output_file.write_text(html, encoding="utf-8")
 
     def substitute_template_vars(self, template: str, vars: dict) -> str:
         """
@@ -903,7 +927,7 @@ class DocBuilder:
             # Strip markdown syntax for body text
             body_text = re.sub(r"[#*`\[\]()!]", "", content)
             body_text = re.sub(r"\n+", " ", body_text)
-            body_text = re.sub(r"\s+", " ", body_text).strip()[:500]
+            body_text = re.sub(r"\s+", " ", body_text).strip()
 
             # Calculate URL
             url = f"{lang}/{str(rel_path.with_suffix('.html')).replace(chr(92), '/')}"

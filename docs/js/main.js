@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Position sidebars below sticky header + breadcrumb
     setupSidebarPositions();
+
+    // Highlight and scroll to search term from URL
+    setupSearchHighlight();
 });
 
 /**
@@ -504,7 +507,8 @@ function setupSearch() {
         for (var i = 0; i < results.length; i++) {
             var entry = results[i].entry;
             var bodyMatchPos = results[i].bodyMatchPos;
-            html += '<a href="' + rootPath + entry.url + '" class="search-result-item" data-index="' + i + '">';
+            var resultUrl = rootPath + entry.url + '?highlight=' + encodeURIComponent(query);
+            html += '<a href="' + resultUrl + '" class="search-result-item" data-index="' + i + '">';
             html += '<div class="search-result-header">';
             html += '<span class="search-result-title">' + highlightText(entry.title, query) + '</span>';
             if (entry.category) {
@@ -706,4 +710,65 @@ function setupSidebarPositions() {
 
     update();
     window.addEventListener('resize', update);
+}
+
+/**
+ * Highlight search term in page content and scroll to first match.
+ * Triggered when navigating from search results via ?highlight=query
+ */
+function setupSearchHighlight() {
+    var params = new URLSearchParams(window.location.search);
+    var query = params.get('highlight');
+    if (!query) return;
+
+    var content = document.querySelector('.main-content');
+    if (!content) return;
+
+    var queryLower = query.toLowerCase();
+    var walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT, null);
+    var firstMark = null;
+    var nodesToProcess = [];
+
+    // Collect all matching text nodes (don't modify DOM during traversal)
+    while (walker.nextNode()) {
+        var node = walker.currentNode;
+        if (node.parentElement && node.parentElement.closest('pre, code, script, style')) continue;
+        if (node.textContent.toLowerCase().indexOf(queryLower) !== -1) {
+            nodesToProcess.push(node);
+        }
+    }
+
+    // Wrap matches with <mark> elements
+    for (var i = 0; i < nodesToProcess.length; i++) {
+        var node = nodesToProcess[i];
+        var text = node.textContent;
+        var idx = text.toLowerCase().indexOf(queryLower);
+        if (idx === -1) continue;
+
+        var before = document.createTextNode(text.substring(0, idx));
+        var mark = document.createElement('mark');
+        mark.className = 'search-page-highlight';
+        mark.textContent = text.substring(idx, idx + query.length);
+        var after = document.createTextNode(text.substring(idx + query.length));
+
+        var parent = node.parentNode;
+        parent.insertBefore(before, node);
+        parent.insertBefore(mark, node);
+        parent.insertBefore(after, node);
+        parent.removeChild(node);
+
+        if (!firstMark) firstMark = mark;
+    }
+
+    // Scroll to first match
+    if (firstMark) {
+        setTimeout(function() {
+            var offset = getStickyOffset();
+            var rect = firstMark.getBoundingClientRect();
+            var scrollTo = rect.top + window.pageYOffset - offset - 100;
+            document.documentElement.style.scrollBehavior = 'auto';
+            window.scrollTo({ top: scrollTo });
+            document.documentElement.style.scrollBehavior = '';
+        }, 100);
+    }
 }

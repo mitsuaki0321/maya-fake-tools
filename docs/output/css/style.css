@@ -84,8 +84,6 @@ a:hover {
 }
 
 .header-content {
-    max-width: 1200px;
-    margin: 0 auto;
     padding: 0 1.5rem;
     display: flex;
     justify-content: space-between;
@@ -141,8 +139,6 @@ a:hover {
 }
 
 .breadcrumb-content {
-    max-width: 1200px;
-    margin: 0 auto;
     padding: 0 1.5rem;
 }
 
@@ -867,6 +863,15 @@ blockquote {
     color: var(--accent-hover);
     border-radius: 2px;
     padding: 0 1px;
+}
+
+/* Page-level search highlight (after navigation from search) */
+.search-page-highlight {
+    background: rgba(255, 193, 7, 0.35);
+    color: var(--text-primary);
+    border-radius: 2px;
+    padding: 1px 2px;
+    outline: 2px solid rgba(255, 193, 7, 0.5);
 }
 
 .search-empty {
