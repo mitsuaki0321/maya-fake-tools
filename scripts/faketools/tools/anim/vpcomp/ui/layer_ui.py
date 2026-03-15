@@ -113,6 +113,7 @@ class VpcompWindow(QMainWindow):
         tool_data_manager.ensure_data_dir()
         self._data_dir = str(tool_data_manager.get_data_dir())
 
+        self._playblast_window: QMainWindow | None = None
         self._build_ui()
         self._refresh_panels()
 
@@ -600,9 +601,13 @@ class VpcompWindow(QMainWindow):
         if not panel:
             cmds.warning("No panel selected")
             return
+        if self._playblast_window is not None:
+            with contextlib.suppress(RuntimeError):
+                self._playblast_window.close()
         dlg = PlayblastWindow(self._stack, panel, parent=self)
         dlg.setWindowFlags(dlg.windowFlags() | Qt.Window)
         dlg.show()
+        self._playblast_window = dlg
 
     def _update_layer_buttons(self) -> None:
         """Enable/disable add/delete buttons based on override state."""
@@ -677,6 +682,10 @@ class VpcompWindow(QMainWindow):
     # -- Cleanup ------------------------------------------------------------
 
     def closeEvent(self, event):
+        if self._playblast_window is not None:
+            with contextlib.suppress(RuntimeError):
+                self._playblast_window.close()
+            self._playblast_window = None
         self._remove_override()
         super().closeEvent(event)
 
