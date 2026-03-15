@@ -788,6 +788,31 @@ class DocBuilder:
         pattern = rf"\$if\({condition}\)\$.*?\$endif\$"
         return re.sub(pattern, "", template, flags=re.DOTALL)
 
+    def _find_thumbnail(self, tool: dict) -> str:
+        """
+        Find thumbnail image for a tool card.
+
+        Checks docs/src/images/thumbnails/ for matching image files.
+
+        Args:
+            tool: Tool data dict with 'url' key
+
+        Returns:
+            str: Relative image path (e.g., 'images/thumbnails/tool_name.png') or empty string
+        """
+        if not tool.get("url"):
+            return ""
+
+        # Extract tool name from URL (e.g., 'ja/rig/skin_tools.html' -> 'skin_tools')
+        tool_stem = tool["url"].rsplit("/", 1)[-1].replace(".html", "")
+        thumb_dir = self.src_dir / "images" / "thumbnails"
+
+        for ext in (".png", ".jpg", ".gif"):
+            if (thumb_dir / f"{tool_stem}{ext}").exists():
+                return f"images/thumbnails/{tool_stem}{ext}"
+
+        return ""
+
     def render_categories(self, categories: list[dict]) -> str:
         """
         Render categories HTML.
@@ -812,7 +837,10 @@ class DocBuilder:
 
                 for tool in cat["tools"]:
                     has_doc_class = " has-doc" if tool.get("has_doc") else ""
-                    html_parts.append(f'                        <div class="tool-card{has_doc_class}">')
+                    thumb_path = self._find_thumbnail(tool)
+                    has_thumb_class = " has-thumb" if thumb_path else ""
+                    html_parts.append(f'                        <div class="tool-card{has_doc_class}{has_thumb_class}">')
+                    html_parts.append('                            <div class="tool-card-header">')
                     html_parts.append("                            <h3>")
 
                     if tool.get("url"):
@@ -821,11 +849,19 @@ class DocBuilder:
                         html_parts.append(f"                                {tool['name']}")
 
                     html_parts.append("                            </h3>")
+                    html_parts.append("                            </div>")
+
+                    # Thumbnail between title and description
+                    if thumb_path:
+                        html_parts.append(f'                            <img class="tool-card-thumb" src="{thumb_path}" alt="{tool["name"]}" loading="lazy">')
+
+                    html_parts.append('                            <div class="tool-card-body">')
                     html_parts.append(f'                            <p class="tool-description">{tool.get("description", "")}</p>')
 
                     if tool.get("version"):
                         html_parts.append(f'                            <span class="tool-version">v{tool["version"]}</span>')
 
+                    html_parts.append("                            </div>")
                     html_parts.append("                        </div>")
 
                 html_parts.append("                    </div>")

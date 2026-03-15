@@ -547,17 +547,27 @@ blockquote {
 
 .tool-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
+    align-items: start;
 }
 
 .tool-card {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 0.875rem 1rem;
+    padding: 0;
     transition: border-color 0.2s;
     position: relative;
+    overflow: hidden;
+}
+
+.tool-card-header {
+    padding: 0.5rem 1rem 0.35rem;
+}
+
+.tool-card-body {
+    padding: 0.35rem 1rem 0.75rem;
 }
 
 .tool-card.has-doc {
@@ -581,6 +591,16 @@ blockquote {
 
 .tool-card h3 a:hover {
     color: var(--accent-primary);
+}
+
+.tool-card-thumb {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    margin: 0;
+    border-radius: 0;
 }
 
 .tool-description {
@@ -637,7 +657,7 @@ blockquote {
     }
 
     .tool-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
