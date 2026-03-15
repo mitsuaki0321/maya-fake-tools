@@ -25,11 +25,15 @@
         </div>
     </header>
 
-    <div class="container">
-        $if(breadcrumb_html)$
-        $breadcrumb_html$
-        $endif$
+    $if(breadcrumb_html)$
+    <div class="breadcrumb-bar">
+        <div class="breadcrumb-content">
+            $breadcrumb_html$
+        </div>
+    </div>
+    $endif$
 
+    <div class="container">
         <div class="content-wrapper">
             $if(toc)$
             <aside class="toc-sidebar">

@@ -130,9 +130,25 @@ a:hover {
     padding: 2rem 1.5rem;
 }
 
+/* ===== Breadcrumb Bar ===== */
+.breadcrumb-bar {
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.5rem 0;
+}
+
+.breadcrumb-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
 /* ===== Breadcrumb ===== */
 .breadcrumb {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
     padding: 0;
     font-size: 0.85rem;
 }

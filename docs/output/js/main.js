@@ -3,6 +3,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Position breadcrumb bar below sticky header
+    setupBreadcrumbBar();
+
     // Smooth scrolling for TOC links
     setupSmoothScrolling();
 
@@ -15,6 +18,34 @@ document.addEventListener('DOMContentLoaded', function() {
     // Make tool cards clickable
     setupToolCardClicks();
 });
+
+/**
+ * Get total height of sticky bars (header + breadcrumb) for scroll offset
+ */
+function getStickyOffset() {
+    let offset = 0;
+    const header = document.querySelector('.site-header');
+    if (header) offset += header.offsetHeight;
+    const breadcrumbBar = document.querySelector('.breadcrumb-bar');
+    if (breadcrumbBar) offset += breadcrumbBar.offsetHeight;
+    return offset;
+}
+
+/**
+ * Position breadcrumb bar below the sticky header
+ */
+function setupBreadcrumbBar() {
+    const header = document.querySelector('.site-header');
+    const breadcrumbBar = document.querySelector('.breadcrumb-bar');
+    if (!header || !breadcrumbBar) return;
+
+    function updatePosition() {
+        breadcrumbBar.style.top = header.offsetHeight + 'px';
+    }
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+}
 
 /**
  * Setup smooth scrolling for anchor links
@@ -30,9 +61,8 @@ function setupSmoothScrolling() {
             const targetElement = document.getElementById(targetId);
 
             if (targetElement) {
-                const headerOffset = 80; // Adjust for sticky header
                 const elementPosition = targetElement.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                const offsetPosition = elementPosition + window.pageYOffset - getStickyOffset();
 
                 window.scrollTo({
                     top: offsetPosition,
@@ -66,7 +96,7 @@ function setupTOCHighlight() {
             }
         });
     }, {
-        rootMargin: '-80px 0px -80% 0px'
+        rootMargin: `-${getStickyOffset()}px 0px -80% 0px`
     });
 
     // Observe all headings that have IDs
