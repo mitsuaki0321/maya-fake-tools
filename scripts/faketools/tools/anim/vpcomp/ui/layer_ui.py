@@ -18,6 +18,7 @@ except ImportError:
     PIL_AVAILABLE = False
 
 from .....lib_ui.base_window import get_margins, get_spacing
+from .....lib_ui.maya_decorator import error_handler
 from .....lib_ui.maya_qt import get_maya_main_window
 from .....lib_ui.qt_compat import (
     QCheckBox,
@@ -256,6 +257,7 @@ class VpcompWindow(QMainWindow):
 
     # -- Panel selector -----------------------------------------------------
 
+    @error_handler
     def _refresh_panels(self):
         self._panel_combo.clear()
         panels = list_model_panels()
@@ -287,11 +289,13 @@ class VpcompWindow(QMainWindow):
 
     # -- Visibility ---------------------------------------------------------
 
+    @error_handler
     def _on_visibility_changed(self, stack_idx: int, visible: bool):
         if stack_idx < len(self._stack):
             self._stack[stack_idx].visible = visible
             self._auto_rebuild()
 
+    @error_handler
     def _on_model_data_changed(self, top_left, bottom_right, roles):
         if ROLE_VISIBLE in roles:
             stack_idx = top_left.data(ROLE_STACK_IDX)
@@ -300,12 +304,14 @@ class VpcompWindow(QMainWindow):
 
     # -- DnD order change ---------------------------------------------------
 
+    @error_handler
     def _on_order_changed(self):
         self._layer_model.rows_moved_to_stack(self._stack)
         self._auto_rebuild()
 
     # -- Add layers ---------------------------------------------------------
 
+    @error_handler
     def _add_camera(self):
         dlg = AddCameraDialog(self._stack.cameras_in_use(), self)
         if dlg.exec_() != QDialog.Accepted or not dlg.selected_camera:
@@ -317,11 +323,12 @@ class VpcompWindow(QMainWindow):
         try:
             self._stack.add(layer)
         except (ValueError, RuntimeError) as exc:
-            logger.warning("Cannot add camera layer: %s", exc)
+            cmds.warning(f"Cannot add camera layer: {exc}")
             return
         self._sync_list()
         self._auto_rebuild()
 
+    @error_handler
     def _add_image(self):
         dlg = AddImageDialog(self)
         if dlg.exec_() != QDialog.Accepted or not dlg.selected_path:
@@ -331,11 +338,12 @@ class VpcompWindow(QMainWindow):
         try:
             self._stack.add(layer)
         except RuntimeError as exc:
-            logger.warning("Cannot add image layer: %s", exc)
+            cmds.warning(f"Cannot add image layer: {exc}")
             return
         self._sync_list()
         self._auto_rebuild()
 
+    @error_handler
     def _add_sequence(self):
         dlg = AddSequenceDialog(self)
         if dlg.exec_() != QDialog.Accepted or not dlg.seq_info:
@@ -352,11 +360,12 @@ class VpcompWindow(QMainWindow):
         try:
             self._stack.add(layer)
         except RuntimeError as exc:
-            logger.warning("Cannot add sequence layer: %s", exc)
+            cmds.warning(f"Cannot add sequence layer: {exc}")
             return
         self._sync_list()
         self._auto_rebuild()
 
+    @error_handler
     def _delete_layer(self):
         idx = self._selected_stack_index()
         if idx is None:
@@ -367,6 +376,7 @@ class VpcompWindow(QMainWindow):
 
     # -- Context menu -------------------------------------------------------
 
+    @error_handler
     def _on_menu_requested(self, row: int):
         item = self._layer_model.item(row)
         if item is None:
@@ -376,6 +386,7 @@ class VpcompWindow(QMainWindow):
             return
         self._show_context_menu_for(stack_idx)
 
+    @error_handler
     def _on_context_menu(self, pos):
         index = self._layer_view.indexAt(pos)
         if index.isValid():
@@ -444,7 +455,7 @@ class VpcompWindow(QMainWindow):
             return
         info = detect_sequence(path)
         if info is None:
-            logger.warning("No sequence pattern detected from: %s", path)
+            cmds.warning(f"No sequence pattern detected from: {path}")
             return
         layer.file_pattern = info.file_pattern
         layer.frame_start = info.frame_start
@@ -457,6 +468,7 @@ class VpcompWindow(QMainWindow):
 
     _LAYER_FILE_FILTER = "VP Compositor Layers (*.vpcomp.json)"
 
+    @error_handler
     def _export_layers(self):
         if len(self._stack) == 0:
             QMessageBox.warning(self, "Export", "No layers to export.")
@@ -511,6 +523,7 @@ class VpcompWindow(QMainWindow):
             valid.append(layer)
         return valid
 
+    @error_handler
     def _import_layers(self):
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -575,16 +588,17 @@ class VpcompWindow(QMainWindow):
 
     # -- Playblast ----------------------------------------------------------
 
+    @error_handler
     def _open_playblast(self):
         if len(self._stack) == 0:
-            logger.warning("No layers to playblast")
+            cmds.warning("No layers to playblast")
             return
 
         from .playblast_ui import PlayblastWindow
 
         panel = self._current_panel()
         if not panel:
-            logger.warning("No panel selected")
+            cmds.warning("No panel selected")
             return
         dlg = PlayblastWindow(self._stack, panel, parent=self)
         dlg.setWindowFlags(dlg.windowFlags() | Qt.Window)
@@ -600,21 +614,22 @@ class VpcompWindow(QMainWindow):
 
     # -- Override lifecycle -------------------------------------------------
 
+    @error_handler
     def _apply_override(self):
         panel = self._current_panel()
         if not panel:
-            logger.warning("No panel selected")
+            cmds.warning("No panel selected")
             return
 
         errors = self._stack.validate_all()
         if errors:
             for idx, msgs in errors.items():
                 for msg in msgs:
-                    logger.warning("Layer %d: %s", idx, msg)
+                    cmds.warning(f"Layer {idx}: {msg}")
             return
 
         if len(self._stack) == 0:
-            logger.warning("No layers to apply")
+            cmds.warning("No layers to apply")
             return
 
         self._remove_override()
@@ -622,7 +637,7 @@ class VpcompWindow(QMainWindow):
         try:
             override = build_override(self._stack, panel=panel)
         except RuntimeError as exc:
-            logger.error("Build failed: %s", exc)
+            cmds.warning(f"Build failed: {exc}")
             return
 
         self._override_obj = override
@@ -637,6 +652,7 @@ class VpcompWindow(QMainWindow):
         self._update_layer_buttons()
         logger.info("Override applied to %s", panel)
 
+    @error_handler
     def _remove_override(self):
         if self._applied_panel:
             with contextlib.suppress(Exception):

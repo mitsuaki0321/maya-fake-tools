@@ -12,6 +12,7 @@ import os
 import maya.cmds as cmds  # type: ignore
 
 from .....lib_ui.base_window import get_margins, get_spacing
+from .....lib_ui.maya_decorator import error_handler
 from .....lib_ui.qt_compat import (
     QApplication,
     QButtonGroup,
@@ -481,6 +482,7 @@ class PlayblastWindow(QDialog):
             item.setData(_BADGE_COLOR_ROLE, LAYER_TYPE_COLORS.get(layer.layer_type, LAYER_TYPE_FALLBACK))
             self._layer_list.addItem(item)
 
+    @error_handler
     def _update_resolution_mode(self) -> None:
         is_render = self._res_render_radio.isChecked()
         self._width_spin.setEnabled(not is_render)
@@ -494,6 +496,7 @@ class PlayblastWindow(QDialog):
             except Exception:
                 pass
 
+    @error_handler
     def _update_frame_mode(self) -> None:
         is_timeline = self._frame_timeline_radio.isChecked()
         self._start_spin.setEnabled(not is_timeline)
@@ -507,7 +510,8 @@ class PlayblastWindow(QDialog):
             except Exception:
                 pass
 
-    def _on_format_changed(self) -> None:
+    @error_handler
+    def _on_format_changed(self, _index: int = 0) -> None:
         is_movie = self._format_combo.currentData() is OutputMode.MOVIE
         if is_movie:
             self._delivery_combo.setCurrentIndex(0)  # Composite
@@ -519,6 +523,7 @@ class PlayblastWindow(QDialog):
     # Browse
     # ------------------------------------------------------------------
 
+    @error_handler
     def _browse_output(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "Select Output Directory")
         if path:
@@ -593,7 +598,7 @@ class PlayblastWindow(QDialog):
                 try:
                     player.launch(result)
                 except Exception as exc:
-                    logger.warning("Player launch failed: %s", exc)
+                    cmds.warning(f"Player launch failed: {exc}")
 
     def keyPressEvent(self, event) -> None:
         """Eat Esc to prevent reject(). During a run, also request cancel."""
@@ -606,6 +611,7 @@ class PlayblastWindow(QDialog):
             return
         super().keyPressEvent(event)
 
+    @error_handler
     def _on_run_clicked(self) -> None:
         if self._running:
             self._cancelled = True
@@ -635,7 +641,7 @@ class PlayblastWindow(QDialog):
             )
             self._handle_result(result, settings, render_configs)
         except Exception as exc:
-            logger.error("Playblast failed: %s", exc)
+            cmds.warning(f"Playblast failed: {exc}")
             self._status_label.setText(f"Error: {exc}")
         finally:
             self._running = False
