@@ -381,7 +381,7 @@ class SetNodesWidgets(QWidget):
 
     def _set_nodes(self):
         """Set the nodes."""
-        sel_nodes = cmds.ls(sl=True, dag=True, type="mesh")
+        sel_nodes = [mesh for mesh in cmds.ls(sl=True, dag=True, type="mesh") or [] if cmds.getAttr(f"{mesh}.intermediateObject") == 0]
         if not sel_nodes:
             cmds.warning("Please select transform nodes.")
             return
