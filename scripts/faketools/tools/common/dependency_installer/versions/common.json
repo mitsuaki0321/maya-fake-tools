@@ -32,7 +32,7 @@
     {
         "pip_name": "Pillow",
         "import_name": "PIL",
-        "required_by": ["Snapshot Capture"],
+        "required_by": ["Snapshot Capture", "VP Compositor"],
         "optional": false
     },
     {
