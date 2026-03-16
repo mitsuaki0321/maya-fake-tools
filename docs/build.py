@@ -829,9 +829,6 @@ class DocBuilder:
             html_parts.append('                <section class="category-section">')
             html_parts.append(f'                    <h2 id="{cat["id"]}">{cat["name"]}</h2>')
 
-            if cat.get("description"):
-                html_parts.append(f'                    <p class="category-description">{cat["description"]}</p>')
-
             if cat.get("tools"):
                 html_parts.append('                    <div class="tool-grid">')
 
