@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Full-text search
     setupSearch();
 
+    // Tool card GIF hover
+    setupToolCardGifHover();
+
     // Navigation sidebar
     setupNavSidebar();
     setupNavToggle();
@@ -186,6 +189,40 @@ function setupToolCardClicks() {
             if (link) {
                 link.click();
             }
+        });
+    });
+}
+
+/**
+ * Swap tool card thumbnail to GIF on hover, back to static on leave
+ */
+function setupToolCardGifHover() {
+    document.querySelectorAll('.tool-card-thumb[data-gif]').forEach(function(img) {
+        var staticSrc = img.src;
+        var gifSrc = img.getAttribute('data-gif');
+
+        // Resolve relative GIF path to absolute
+        var a = document.createElement('a');
+        a.href = gifSrc;
+        var absoluteGif = a.href;
+
+        // Preload GIF on first hover
+        var preloaded = false;
+
+        var card = img.closest('.tool-card');
+        if (!card) return;
+
+        card.addEventListener('mouseenter', function() {
+            if (!preloaded) {
+                var preload = new Image();
+                preload.src = absoluteGif;
+                preloaded = true;
+            }
+            img.src = absoluteGif;
+        });
+
+        card.addEventListener('mouseleave', function() {
+            img.src = staticSrc;
         });
     });
 }

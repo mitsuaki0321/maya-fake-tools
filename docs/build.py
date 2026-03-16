@@ -788,30 +788,36 @@ class DocBuilder:
         pattern = rf"\$if\({condition}\)\$.*?\$endif\$"
         return re.sub(pattern, "", template, flags=re.DOTALL)
 
-    def _find_thumbnail(self, tool: dict) -> str:
+    def _find_thumbnail(self, tool: dict) -> dict:
         """
-        Find thumbnail image for a tool card.
+        Find thumbnail images for a tool card.
 
-        Checks docs/src/images/thumbnails/ for matching image files.
+        Checks docs/src/images/thumbnails/ for static and animated images.
 
         Args:
             tool: Tool data dict with 'url' key
 
         Returns:
-            str: Relative image path (e.g., 'images/thumbnails/tool_name.png') or empty string
+            dict: {'static': path, 'gif': path} - either or both may be empty
         """
+        result = {"static": "", "gif": ""}
         if not tool.get("url"):
-            return ""
+            return result
 
-        # Extract tool name from URL (e.g., 'ja/rig/skin_tools.html' -> 'skin_tools')
         tool_stem = tool["url"].rsplit("/", 1)[-1].replace(".html", "")
         thumb_dir = self.src_dir / "images" / "thumbnails"
 
-        for ext in (".png", ".jpg", ".gif"):
-            if (thumb_dir / f"{tool_stem}{ext}").exists():
-                return f"images/thumbnails/{tool_stem}{ext}"
+        # Check for GIF
+        if (thumb_dir / f"{tool_stem}.gif").exists():
+            result["gif"] = f"images/thumbnails/{tool_stem}.gif"
 
-        return ""
+        # Check for static image (PNG or JPG)
+        for ext in (".png", ".jpg"):
+            if (thumb_dir / f"{tool_stem}{ext}").exists():
+                result["static"] = f"images/thumbnails/{tool_stem}{ext}"
+                break
+
+        return result
 
     def render_categories(self, categories: list[dict]) -> str:
         """
@@ -834,8 +840,9 @@ class DocBuilder:
 
                 for tool in cat["tools"]:
                     has_doc_class = " has-doc" if tool.get("has_doc") else ""
-                    thumb_path = self._find_thumbnail(tool)
-                    has_thumb_class = " has-thumb" if thumb_path else ""
+                    thumb = self._find_thumbnail(tool)
+                    has_thumb = thumb["static"] or thumb["gif"]
+                    has_thumb_class = " has-thumb" if has_thumb else ""
                     html_parts.append(f'                        <div class="tool-card{has_doc_class}{has_thumb_class}">')
                     html_parts.append('                            <div class="tool-card-header">')
                     html_parts.append("                            <h3>")
@@ -849,8 +856,10 @@ class DocBuilder:
                     html_parts.append("                            </div>")
 
                     # Thumbnail between title and description
-                    if thumb_path:
-                        html_parts.append(f'                            <img class="tool-card-thumb" src="{thumb_path}" alt="{tool["name"]}" loading="lazy">')
+                    if has_thumb:
+                        src = thumb["static"] or thumb["gif"]
+                        gif_attr = f' data-gif="{thumb["gif"]}"' if thumb["gif"] and thumb["static"] else ""
+                        html_parts.append(f'                            <img class="tool-card-thumb" src="{src}"{gif_attr} alt="{tool["name"]}" loading="lazy">')
 
                     html_parts.append('                            <div class="tool-card-body">')
                     html_parts.append(f'                            <p class="tool-description">{tool.get("description", "")}</p>')
