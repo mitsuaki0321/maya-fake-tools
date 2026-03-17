@@ -29,9 +29,10 @@ Dependency Installer は、FakeTools の一部ツールが必要とするオプ�
 | trimesh | Mesh Fitter, BlendShape Transfer | Yes |
 | rtree | Mesh Fitter, BlendShape Transfer | Yes |
 | fast-simplification | Mesh Fitter, BlendShape Transfer | Yes |
-| Pillow | Snapshot Capture | Yes |
+| Pillow | Snapshot Capture, VP Compositor | Yes |
 | aggdraw | Snapshot Capture | No |
 | mss | Snapshot Capture | No |
+| robust-laplacian | Robust Weight Transfer | No |
 
 
 ## 起動方法

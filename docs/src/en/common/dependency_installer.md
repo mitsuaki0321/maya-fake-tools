@@ -29,9 +29,10 @@ Two launch methods are supported:
 | trimesh | Mesh Fitter, BlendShape Transfer | Yes |
 | rtree | Mesh Fitter, BlendShape Transfer | Yes |
 | fast-simplification | Mesh Fitter, BlendShape Transfer | Yes |
-| Pillow | Snapshot Capture | Yes |
+| Pillow | Snapshot Capture, VP Compositor | Yes |
 | aggdraw | Snapshot Capture | No |
 | mss | Snapshot Capture | No |
+| robust-laplacian | Robust Weight Transfer | No |
 
 
 ## How to Launch

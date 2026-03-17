@@ -195,8 +195,8 @@ Weights for unmatched vertices are solved as an optimization problem using a Lap
 
 ### Dependencies
 
-- **numpy**: Numerical computation (included in Maya 2022+)
-- **scipy**: Sparse matrix operations (included in Maya 2022+)
+- **numpy**: Numerical computation
+- **scipy**: Sparse matrix operations
 - **robust-laplacian**: Fast Laplacian computation (optional, fallback implementation available)
 
 If `robust-laplacian` is not installed, the built-in fallback implementation is used.
