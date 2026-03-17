@@ -63,8 +63,6 @@ TOOLBAR_MARGINS = (4, 4, 4, 4)
 MODE_COMBO_WIDTH = 60
 RESOLUTION_INPUT_WIDTH = 45
 
-# Recording Constants
-MAX_GIF_FRAMES = 500
 
 # Tooltip style (Maya's default)
 TOOLTIP_STYLE = "QToolTip { background-color: #FFFFDC; color: #000000; border: 1px solid #767676; border-radius: 0px; }"
@@ -1385,11 +1383,6 @@ class SnapshotCaptureWindow(QMainWindow):
             cmds.warning("Start frame must be less than or equal to end frame")
             return
 
-        frame_count = end_frame - start_frame + 1
-        if frame_count > MAX_GIF_FRAMES:
-            cmds.warning(f"Frame range too large (max {MAX_GIF_FRAMES} frames)")
-            return
-
         # Get save path from user (with format selection)
         file_filter = self._get_animation_file_filter()
         file_path = cmds.fileDialog2(
@@ -1416,7 +1409,7 @@ class SnapshotCaptureWindow(QMainWindow):
 
         try:
             cmds.waitCursor(state=True)
-            logger.debug(f"Capturing {frame_count} frames...")
+            logger.debug(f"Capturing {end_frame - start_frame + 1} frames...")
 
             images = command.capture_frame_range(self.panel_name, start_frame, end_frame, width, height)
 
