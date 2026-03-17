@@ -13,6 +13,12 @@ order: 10
 A custom Python code editor for Maya.\
 It features syntax highlighting, file explorer, terminal, and more.
 
+- [Toolbar](code_editor_toolbar.html)
+- [File Explorer](code_editor_file_explorer.html)
+- [Code Editor](code_editor_editor.html)
+- [Terminal](code_editor_terminal.html)
+- [User Settings](code_editor_settings.html)
+
 
 ## How to Launch
 

@@ -13,6 +13,12 @@ order: 10
 Maya 用のカスタム Python コードエディターです。\
 シンタックスハイライト、ファイルエクスプローラー、ターミナルなどの機能を備えています。
 
+- [ツールバー](code_editor_toolbar.html)
+- [ファイルエクスプローラー](code_editor_file_explorer.html)
+- [コードエディター](code_editor_editor.html)
+- [ターミナル](code_editor_terminal.html)
+- [ユーザー設定](code_editor_settings.html)
+
 
 ## 起動方法
 
