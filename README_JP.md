@@ -82,7 +82,14 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 | Mesh Fitter | Model | trimesh, rtree, fast-simplification |
 | BlendShape Transfer | Model | trimesh, rtree, fast-simplification |
 | Snapshot Capture | Common | Pillow |
+| VP Compositor | Anim | Pillow |
 
+以下のライブラリはオプションです。インストールしなくてもツールはフォールバック実装で動作しますが、インストールするとパフォーマンスが向上します。
+
+| ツール | カテゴリ | オプションライブラリ |
+|--------|----------|---------------------|
+| Snapshot Capture | Common | aggdraw, mss |
+| Robust Weight Transfer | Rig | robust-laplacian |
 
 これらのライブラリは、FakeTools に同梱されている **Dependency Installer**（FakeTools > Common > Dependency Installer）からインストールできます。詳しい手順は **[インストールガイド](INSTALL_JP.md)** を参照してください。
 

@@ -82,7 +82,14 @@ These tools will not launch if the required libraries are not installed.
 | Mesh Fitter | Model | trimesh, rtree, fast-simplification |
 | BlendShape Transfer | Model | trimesh, rtree, fast-simplification |
 | Snapshot Capture | Common | Pillow |
+| VP Compositor | Anim | Pillow |
 
+The following libraries are optional. The tool will work without them using a fallback implementation, but installing them provides better performance.
+
+| Tool | Category | Optional Libraries |
+|------|----------|--------------------|
+| Snapshot Capture | Common | aggdraw, mss |
+| Robust Weight Transfer | Rig | robust-laplacian |
 
 These libraries can be installed using the built-in **Dependency Installer** (FakeTools > Common > Dependency Installer). See the **[Installation Guide](INSTALL.md)** for step-by-step instructions.
 

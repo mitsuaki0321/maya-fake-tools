@@ -47,5 +47,11 @@
         "import_name": "mss",
         "required_by": ["Snapshot Capture"],
         "optional": true
+    },
+    {
+        "pip_name": "robust-laplacian",
+        "import_name": "robust_laplacian",
+        "required_by": ["Robust Weight Transfer"],
+        "optional": true
     }
 ]
