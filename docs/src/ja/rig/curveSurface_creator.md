@@ -155,14 +155,14 @@ faketools.tools.rig.curveSurface_creator_ui.show_ui()
 * 閉じられたカーブの CV をカーブに対して１つ選択して実行します。
 * CV 番号が 0 の位置を選択した CV の位置に移動します。
 
-![image009](../../images/curveSurface_creator/image009.png) ![image010](../../images/rig/curveSurface_creator/image010.png)
+![image009](../../images/rig/curveSurface_creator/image009.png)  ![image010](../../images/rig/curveSurface_creator/image010.png)
 
 ### Create Curve to Vertices
 
 * Vertex ( メッシュの頂点 ) を選択し ( 複数選択可 ) 実行します。
 * 選択した Vertex を基準にカーブを作成します。
   
-![image011](../../images/curveSurface_creator/image011.png) ![image012](../../images/rig/curveSurface_creator/image012.png)
+![image011](../../images/rig/curveSurface_creator/image011.png) ![image012](../../images/rig/curveSurface_creator/image012.png)
 
 ### Create Curve on SurfaceU V
 

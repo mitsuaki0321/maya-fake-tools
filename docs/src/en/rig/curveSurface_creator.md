@@ -155,14 +155,14 @@ Contains commands used when creating/editing curves.
 * Select one CV for closed curve and execute.
 * Moves CV number 0 position to selected CV position.
 
-![image009](../../images/curveSurface_creator/image009.png) ![image010](../../images/rig/curveSurface_creator/image010.png)
+![image009](../../images/rig/curveSurface_creator/image009.png)  ![image010](../../images/rig/curveSurface_creator/image010.png)
 
 ### Create Curve to Vertices
 
 * Select Vertex (mesh vertices) (multiple selection allowed) and execute.
 * Creates curve based on selected Vertex.
 
-![image011](../../images/curveSurface_creator/image011.png) ![image012](../../images/rig/curveSurface_creator/image012.png)
+![image009](../../images/rig/curveSurface_creator/image009.png)  ![image010](../../images/rig/curveSurface_creator/image010.png)
 
 ### Create Curve on SurfaceU V
 
