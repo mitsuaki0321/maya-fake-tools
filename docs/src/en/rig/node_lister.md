@@ -1,7 +1,7 @@
 ---
 title: Node Lister
 category: rig
-description: List and filter Maya scene nodes with attribute management
+description: List and filter scene nodes with attribute management
 lang: en
 lang-ref: node_lister
 order: 90

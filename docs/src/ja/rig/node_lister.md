@@ -1,7 +1,7 @@
 ---
 title: Node Lister
 category: rig
-description: Mayaシーンのノードをリスト・フィルタリングし、アトリビュートの管理を行うツール
+description: ノードをリスト・フィルタリングし、アトリビュートの管理を行うツール
 lang: ja
 lang-ref: node_lister
 order: 90
