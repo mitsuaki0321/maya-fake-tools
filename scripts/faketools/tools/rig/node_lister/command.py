@@ -13,6 +13,8 @@ import re
 
 import maya.cmds as cmds
 
+from ....lib.lib_selection import get_hierarchy
+
 logger = getLogger(__name__)
 
 # Default transform attributes to display
@@ -76,10 +78,80 @@ class ShapesOfSelected(SelectFilterBase):
         return cmds.listRelatives(sel, shapes=True) or []
 
 
+class HierarchyOfSelected(SelectFilterBase):
+    """Return selected nodes and all their descendants."""
+
+    label = "Hierarchy of Selected"
+
+    def get_nodes(self) -> list[str]:
+        sel = cmds.ls(sl=True)
+        if not sel:
+            return []
+        return get_hierarchy(sel)
+
+
+class HistoryOfSelected(SelectFilterBase):
+    """Return construction history of selected nodes."""
+
+    label = "History of Selected"
+
+    def get_nodes(self) -> list[str]:
+        sel = cmds.ls(sl=True)
+        if not sel:
+            return []
+        return cmds.listHistory(sel) or []
+
+
+class FutureOfSelected(SelectFilterBase):
+    """Return future history of selected nodes."""
+
+    label = "Future of Selected"
+
+    def get_nodes(self) -> list[str]:
+        sel = cmds.ls(sl=True)
+        if not sel:
+            return []
+        return cmds.listHistory(sel, future=True) or []
+
+
+class ConnectionsOfSelected(SelectFilterBase):
+    """Return nodes connected to the current selection."""
+
+    label = "Connections of Selected"
+
+    def get_nodes(self) -> list[str]:
+        sel = cmds.ls(sl=True)
+        if not sel:
+            return []
+        connections = cmds.listConnections(sel) or []
+        # Remove duplicates while preserving order
+        seen: set[str] = set()
+        result: list[str] = []
+        for node in connections:
+            if node not in seen:
+                seen.add(node)
+                result.append(node)
+        return result
+
+
+class DAGNodes(SelectFilterBase):
+    """Return all DAG nodes in the scene."""
+
+    label = "DAG Nodes"
+
+    def get_nodes(self) -> list[str]:
+        return cmds.ls(dag=True) or []
+
+
 DEFAULT_SELECT_FILTERS: list[SelectFilterBase] = [
     AllNodes(),
     SelectedNodes(),
     ShapesOfSelected(),
+    HierarchyOfSelected(),
+    HistoryOfSelected(),
+    FutureOfSelected(),
+    ConnectionsOfSelected(),
+    DAGNodes(),
 ]
 
 
