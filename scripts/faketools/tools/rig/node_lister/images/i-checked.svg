@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- ON state: light grey circle + dark "i" matching button background -->
+  <circle cx="8" cy="8" r="7" fill="#E0E0E0"/>
+  <text x="8" y="12" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#444444">i</text>
+</svg>

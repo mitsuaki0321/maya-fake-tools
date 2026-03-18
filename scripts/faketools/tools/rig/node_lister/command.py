@@ -49,7 +49,7 @@ class SelectFilterBase(ABC):
 class AllNodes(SelectFilterBase):
     """Return all nodes in the scene."""
 
-    label = "cmds.ls()"
+    label = "All Nodes"
 
     def get_nodes(self) -> list[str]:
         return cmds.ls() or []
@@ -58,7 +58,7 @@ class AllNodes(SelectFilterBase):
 class SelectedNodes(SelectFilterBase):
     """Return currently selected nodes."""
 
-    label = "cmds.ls(sl=True)"
+    label = "Selected Nodes"
 
     def get_nodes(self) -> list[str]:
         return cmds.ls(sl=True) or []

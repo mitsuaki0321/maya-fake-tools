@@ -5,31 +5,35 @@ for node acquisition, with attribute list, value editing, and deletion.
 """
 
 from logging import getLogger
+from pathlib import Path
 
 import maya.cmds as cmds
 
 from ....lib_ui import BaseMainWindow, ToolSettingsManager, error_handler, get_maya_main_window, get_spacing, undo_chunk
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
-    QCheckBox,
     QComboBox,
     QHBoxLayout,
-    QLabel,
+    QItemSelectionModel,
     QLineEdit,
     QListView,
     QMenu,
     QPushButton,
+    QSizePolicy,
     QSortFilterProxyModel,
     QStandardItem,
     QStandardItemModel,
     Qt,
 )
 from ....lib_ui.ui_utils import get_relative_size
+from ....lib_ui.widgets import IconToggleButton
 from . import command
 
 logger = getLogger(__name__)
 
 _instance = None
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 
 class MainWindow(BaseMainWindow):
@@ -46,6 +50,7 @@ class MainWindow(BaseMainWindow):
 
         self._raw_nodes: list[str] = []
         self._updating_selection = False
+        self._previous_selected_attrs: list[str] = []
 
         self.settings = ToolSettingsManager(tool_name="node_lister", category="rig")
 
@@ -53,53 +58,57 @@ class MainWindow(BaseMainWindow):
         self._connect_signals()
         self._restore_settings()
 
-        width, height = get_relative_size(self, width_ratio=2.0, height_ratio=3.5)
+        width, height = get_relative_size(self, width_ratio=1.2, height_ratio=1.5)
         self.resize(width, height)
 
     def _setup_ui(self) -> None:
         """Build the UI widgets."""
         spacing = get_spacing(self, direction="vertical")
 
-        # --- selectFilter row ---
+        # --- selectFilter + Load row ---
         select_row = QHBoxLayout()
         select_row.setSpacing(int(spacing * 0.5))
-        select_label = QLabel("selectFilter:")
         self.select_combo = QComboBox()
         for f in command.DEFAULT_SELECT_FILTERS:
             self.select_combo.addItem(f.label)
-        select_row.addWidget(select_label)
-        select_row.addWidget(self.select_combo, 1)
-        self.central_layout.addLayout(select_row)
-
-        # --- Load button ---
         self.load_button = QPushButton("Load")
-        self.central_layout.addWidget(self.load_button)
+        self.load_button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        select_row.addWidget(self.select_combo, 1)
+        select_row.addWidget(self.load_button)
+        self.central_layout.addLayout(select_row)
 
         # --- nodeFilter row ---
         node_filter_row = QHBoxLayout()
         node_filter_row.setSpacing(int(spacing * 0.5))
-        node_filter_label = QLabel("nodeFilter:")
         self.node_filter_edit = QLineEdit()
-        self.node_filter_edit.setPlaceholderText("node type")
-        self.node_filter_inherited_cb = QCheckBox("i")
-        self.node_filter_inherited_cb.setToolTip("inherited")
-        node_filter_row.addWidget(node_filter_label)
+        self.node_filter_edit.setPlaceholderText("node type filter")
+        self.node_filter_inherited_btn = IconToggleButton(icon_on="i-checked", icon_off="i", icon_dir=str(_IMAGES_DIR))
+        self.node_filter_inherited_btn.setToolTip("inherited")
+        self.node_filter_inherited_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         node_filter_row.addWidget(self.node_filter_edit, 1)
-        node_filter_row.addWidget(self.node_filter_inherited_cb)
+        node_filter_row.addWidget(self.node_filter_inherited_btn)
         self.central_layout.addLayout(node_filter_row)
 
         # --- matchFilter row ---
         match_filter_row = QHBoxLayout()
         match_filter_row.setSpacing(int(spacing * 0.5))
-        match_filter_label = QLabel("matchFilter:")
         self.match_filter_edit = QLineEdit()
-        self.match_filter_edit.setPlaceholderText("name regex")
-        self.match_filter_ignorecase_cb = QCheckBox("i")
-        self.match_filter_ignorecase_cb.setToolTip("ignorecase")
-        match_filter_row.addWidget(match_filter_label)
+        self.match_filter_edit.setPlaceholderText("name regex filter")
+        self.match_filter_ignorecase_btn = IconToggleButton(icon_on="i-checked", icon_off="i", icon_dir=str(_IMAGES_DIR))
+        self.match_filter_ignorecase_btn.setToolTip("ignorecase")
+        self.match_filter_ignorecase_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         match_filter_row.addWidget(self.match_filter_edit, 1)
-        match_filter_row.addWidget(self.match_filter_ignorecase_cb)
+        match_filter_row.addWidget(self.match_filter_ignorecase_btn)
         self.central_layout.addLayout(match_filter_row)
+
+        # Unify Load button and IconToggleButton widths
+        btn_width = self.load_button.sizeHint().width()
+        inherited_width = self.node_filter_inherited_btn.minimumWidth()
+        ignorecase_width = self.match_filter_ignorecase_btn.minimumWidth()
+        unified_width = max(btn_width, inherited_width, ignorecase_width)
+        self.load_button.setFixedWidth(unified_width)
+        self.node_filter_inherited_btn.setFixedWidth(unified_width)
+        self.match_filter_ignorecase_btn.setFixedWidth(unified_width)
 
         # --- Node list ---
         self.node_list = QListView()
@@ -142,9 +151,9 @@ class MainWindow(BaseMainWindow):
         # Node filter signals
         self.load_button.clicked.connect(self._load_nodes)
         self.node_filter_edit.textChanged.connect(self._apply_filters)
-        self.node_filter_inherited_cb.toggled.connect(self._apply_filters)
+        self.node_filter_inherited_btn.toggled.connect(self._apply_filters)
         self.match_filter_edit.textChanged.connect(self._apply_filters)
-        self.match_filter_ignorecase_cb.toggled.connect(self._apply_filters)
+        self.match_filter_ignorecase_btn.toggled.connect(self._apply_filters)
         self.node_list.selectionModel().selectionChanged.connect(self._on_node_selection_changed)
         self.node_list.customContextMenuRequested.connect(self._show_node_context_menu)
 
@@ -173,11 +182,11 @@ class MainWindow(BaseMainWindow):
         nodes = list(self._raw_nodes)
 
         type_str = self.node_filter_edit.text().strip()
-        inherited = self.node_filter_inherited_cb.isChecked()
+        inherited = self.node_filter_inherited_btn.isChecked()
         nodes = command.filter_by_node_type(nodes, type_str, inherited)
 
         pattern = self.match_filter_edit.text().strip()
-        ignorecase = self.match_filter_ignorecase_cb.isChecked()
+        ignorecase = self.match_filter_ignorecase_btn.isChecked()
         nodes = command.filter_by_name(nodes, pattern, ignorecase)
 
         self._update_node_list(nodes)
@@ -196,51 +205,61 @@ class MainWindow(BaseMainWindow):
         finally:
             self._updating_selection = False
 
-    def _on_node_selection_changed(self) -> None:
-        """Update attribute list when node selection changes."""
+    @error_handler
+    def _on_node_selection_changed(self, _selected=None, _deselected=None) -> None:
+        """Sync list selection to Maya scene and update attribute list."""
         if self._updating_selection:
             return
+
+        # Select in Maya scene
+        selected = self._get_selected_nodes()
+        valid = [n for n in selected if cmds.objExists(n)]
+        if valid:
+            cmds.select(valid, replace=True)
+        else:
+            cmds.select(clear=True)
+
+        # Save current attribute selection before refreshing
+        self._previous_selected_attrs = self._get_selected_attributes()
+
         self._display_attributes()
 
     def _show_node_context_menu(self, pos) -> None:
         """Show context menu on the node list."""
         menu = QMenu(self)
-        menu.addAction("Select All Nodes", self._select_all_nodes)
-        menu.addSeparator()
-        menu.addAction("Select Scene Nodes", self._select_scene_nodes)
-        menu.addAction("Select All Scene Nodes", self._select_all_scene_nodes)
+        menu.addAction("Select All", self._select_all)
         menu.exec_(self.node_list.mapToGlobal(pos))
 
-    def _select_all_nodes(self) -> None:
-        """Select all nodes in the list."""
-        self.node_list.selectAll()
-
     @error_handler
-    @undo_chunk("Node Lister: Select Scene Nodes")
-    def _select_scene_nodes(self) -> None:
-        """Select the nodes in Maya scene that are selected in the node list."""
-        selected = self._get_selected_nodes()
-        if selected:
-            cmds.select(selected, replace=True)
-        else:
-            cmds.select(clear=True)
+    @undo_chunk("Node Lister: Select All")
+    def _select_all(self) -> None:
+        """Select all nodes in the list and in Maya scene."""
+        self._updating_selection = True
+        try:
+            self.node_list.selectAll()
+        finally:
+            self._updating_selection = False
 
-    @error_handler
-    @undo_chunk("Node Lister: Select All Scene Nodes")
-    def _select_all_scene_nodes(self) -> None:
-        """Select all nodes in the list in Maya scene."""
         all_nodes = self._get_all_nodes()
-        if all_nodes:
-            cmds.select(all_nodes, replace=True)
+        valid = [n for n in all_nodes if cmds.objExists(n)]
+        if valid:
+            cmds.select(valid, replace=True)
         else:
             cmds.select(clear=True)
+
+        self._previous_selected_attrs = self._get_selected_attributes()
+        self._display_attributes()
 
     # ------------------------------------------------------------------
     # Attribute slots
     # ------------------------------------------------------------------
 
     def _display_attributes(self) -> None:
-        """Display the common attributes of the selected nodes."""
+        """Display the common attributes of the selected nodes.
+
+        Restores previous attribute selection if possible, otherwise selects
+        the first attribute.
+        """
         selected_nodes = self._get_selected_nodes()
         common_attrs = command.get_common_attributes(selected_nodes)
 
@@ -251,7 +270,27 @@ class MainWindow(BaseMainWindow):
             self.attr_source_model.appendRow(item)
         self.attr_source_model.endResetModel()
 
-    def _display_value(self) -> None:
+        # Restore attribute selection
+        if not common_attrs:
+            return
+
+        selection_model = self.attr_list.selectionModel()
+        prev = self._previous_selected_attrs
+
+        if prev and all(a in common_attrs for a in prev):
+            # All previously selected attributes still exist -> re-select them
+            for row in range(self.attr_proxy_model.rowCount()):
+                proxy_index = self.attr_proxy_model.index(row, 0)
+                attr_name = proxy_index.data()
+                if attr_name in prev:
+                    selection_model.select(proxy_index, QItemSelectionModel.SelectionFlag.Select)
+        else:
+            # Otherwise select the first attribute
+            if self.attr_proxy_model.rowCount() > 0:
+                first_index = self.attr_proxy_model.index(0, 0)
+                selection_model.select(first_index, QItemSelectionModel.SelectionFlag.Select)
+
+    def _display_value(self, _selected=None, _deselected=None) -> None:
         """Display the value of the selected attribute."""
         nodes = self._get_selected_nodes()
         attrs = self._get_selected_attributes()
@@ -439,18 +478,18 @@ class MainWindow(BaseMainWindow):
         """Apply settings to UI widgets."""
         self.select_combo.setCurrentIndex(settings_data.get("select_filter_index", 0))
         self.node_filter_edit.setText(settings_data.get("node_filter_text", ""))
-        self.node_filter_inherited_cb.setChecked(settings_data.get("node_filter_inherited", False))
+        self.node_filter_inherited_btn.setChecked(settings_data.get("node_filter_inherited", False))
         self.match_filter_edit.setText(settings_data.get("match_filter_text", ""))
-        self.match_filter_ignorecase_cb.setChecked(settings_data.get("match_filter_ignorecase", False))
+        self.match_filter_ignorecase_btn.setChecked(settings_data.get("match_filter_ignorecase", False))
 
     def _collect_settings(self) -> dict:
         """Collect current UI state into a dict."""
         return {
             "select_filter_index": self.select_combo.currentIndex(),
             "node_filter_text": self.node_filter_edit.text(),
-            "node_filter_inherited": self.node_filter_inherited_cb.isChecked(),
+            "node_filter_inherited": self.node_filter_inherited_btn.isChecked(),
             "match_filter_text": self.match_filter_edit.text(),
-            "match_filter_ignorecase": self.match_filter_ignorecase_cb.isChecked(),
+            "match_filter_ignorecase": self.match_filter_ignorecase_btn.isChecked(),
         }
 
     def _save_settings(self) -> None:
