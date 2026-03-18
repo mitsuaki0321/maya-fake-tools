@@ -13,6 +13,7 @@ from ....lib_ui import BaseMainWindow, ToolSettingsManager, error_handler, get_m
 from ....lib_ui.qt_compat import (
     QAbstractItemView,
     QComboBox,
+    QEvent,
     QHBoxLayout,
     QItemSelectionModel,
     QLineEdit,
@@ -116,8 +117,9 @@ class MainWindow(BaseMainWindow):
         self.node_list.setModel(self.node_model)
         self.node_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.node_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.node_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.node_list.viewport().installEventFilter(self)
         self.central_layout.addWidget(self.node_list, 1)
+        self._node_list_viewport = self.node_list.viewport()
 
         # --- Attribute list ---
         self.attr_source_model = QStandardItemModel()
@@ -129,7 +131,8 @@ class MainWindow(BaseMainWindow):
         self.attr_list.setModel(self.attr_proxy_model)
         self.attr_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.attr_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.attr_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.attr_list.viewport().installEventFilter(self)
+        self._attr_list_viewport = self.attr_list.viewport()
         self.central_layout.addWidget(self.attr_list, 1)
 
         # --- Attribute filter ---
@@ -146,6 +149,23 @@ class MainWindow(BaseMainWindow):
         self.delete_button = QPushButton("Delete Attributes")
         self.central_layout.addWidget(self.delete_button)
 
+    def eventFilter(self, source, event) -> bool:
+        """Block right/middle click selection on list views."""
+        if event.type() == QEvent.MouseButtonPress:
+            if source is self._node_list_viewport:
+                if event.button() == Qt.MiddleButton:
+                    return True
+                if event.button() == Qt.RightButton:
+                    self._show_node_context_menu(event.pos())
+                    return True
+            elif source is self._attr_list_viewport:
+                if event.button() == Qt.MiddleButton:
+                    return True
+                if event.button() == Qt.RightButton:
+                    self._show_attr_context_menu(event.pos())
+                    return True
+        return super().eventFilter(source, event)
+
     def _connect_signals(self) -> None:
         """Connect signals to slots."""
         # Node filter signals
@@ -155,12 +175,10 @@ class MainWindow(BaseMainWindow):
         self.match_filter_edit.textChanged.connect(self._apply_filters)
         self.match_filter_ignorecase_btn.toggled.connect(self._apply_filters)
         self.node_list.selectionModel().selectionChanged.connect(self._on_node_selection_changed)
-        self.node_list.customContextMenuRequested.connect(self._show_node_context_menu)
 
         # Attribute signals
         self.attr_filter_edit.textChanged.connect(self.attr_proxy_model.setFilterFixedString)
         self.attr_list.selectionModel().selectionChanged.connect(self._display_value)
-        self.attr_list.customContextMenuRequested.connect(self._show_attr_context_menu)
         self.value_field.returnPressed.connect(self._set_value)
         self.delete_button.clicked.connect(self._delete_attributes)
 
