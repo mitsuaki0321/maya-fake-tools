@@ -41,6 +41,7 @@ class MainWindow(BaseMainWindow):
 
         self.size_field = extra_widgets.ModifierSpinBox()
         self.size_field.setDecimals(2)
+        self.size_field.setMinimum(0.01)
         layout.addWidget(self.size_field, stretch=1)
 
         self.central_layout.addLayout(layout)
