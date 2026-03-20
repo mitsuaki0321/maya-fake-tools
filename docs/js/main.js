@@ -423,6 +423,11 @@ function setupLightbox() {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeLightbox();
     });
+
+    // Close lightbox when returning via browser back button (bfcache)
+    window.addEventListener('pageshow', (e) => {
+        if (e.persisted) closeLightbox();
+    });
 }
 
 /**
