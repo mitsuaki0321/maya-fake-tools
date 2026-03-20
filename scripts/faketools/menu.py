@@ -128,17 +128,9 @@ def reload_menu():
 
 def open_documentation():
     """Open documentation in default browser."""
-    # Calculate path to documentation
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent
-    docs_index = project_root / "docs" / "output" / "index.html"
-
-    if docs_index.exists():
-        webbrowser.open(f"file:///{docs_index.as_posix()}")
-        logger.info(f"Opening documentation: {docs_index}")
-    else:
-        logger.error(f"Documentation not found: {docs_index}")
-        cmds.warning("Documentation not found. Please build documentation first.")
+    url = "https://mitsuaki0321.github.io/maya-fake-tools/"
+    webbrowser.open(url)
+    logger.info(f"Opening documentation: {url}")
 
 
 def open_workspace():
