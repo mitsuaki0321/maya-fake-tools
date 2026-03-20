@@ -21,7 +21,6 @@ jobs:
           mkdir -p release_package
 
           # Copy necessary files and directories
-          cp -r docs/output release_package/docs
           cp -r plug-ins release_package/
           cp -r scripts release_package/
           cp faketools.mod release_package/
@@ -52,7 +51,6 @@ jobs:
           5. Find "FakeTools" menu in Maya's main menu bar
 
           ### Package Contents
-          - \`docs/\` - HTML documentation (open \`docs/index.html\` in browser)
           - \`plug-ins/\` - Maya plugins
           - \`scripts/\` - Python tools and utilities
           - \`faketools.mod\` - Maya module descriptor
@@ -61,7 +59,7 @@ jobs:
           - \`README.md\` - Basic information
 
           ### Documentation
-          Open \`docs/index.html\` in your web browser for detailed documentation.
+          https://mitsuaki0321.github.io/maya-fake-tools/
 
           ### Requirements
           - Autodesk Maya 2022 or later
