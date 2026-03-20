@@ -359,7 +359,7 @@ function setupCodeLanguageLabels() {
  */
 function setupLightbox() {
     const images = Array.from(
-        document.querySelectorAll('.main-content img:not([src$=".svg"])')
+        document.querySelectorAll('.main-content img:not([src$=".svg"]):not(.tool-card-thumb)')
     );
     if (images.length === 0) return;
 
