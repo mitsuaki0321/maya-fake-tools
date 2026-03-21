@@ -58,11 +58,10 @@ Autodesk Maya向けのプロダクション対応ツール集です。リギン�
 
 ## ドキュメント
 
-ブラウザで`docs/index.html`を開くと、スクリーンショットや使用例を含む詳細なドキュメントを参照できます。
+スクリーンショットや使用例を含む詳細なドキュメントをオンラインで参照できます：
 
-対応言語：
-- 日本語
-- English
+- 🇯🇵 [日本語](https://mitsuaki0321.github.io/maya-fake-tools/index.html)
+- 🇬🇧 [English](https://mitsuaki0321.github.io/maya-fake-tools/index_en.html)
 
 ## 動作環境
 

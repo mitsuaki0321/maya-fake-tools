@@ -58,11 +58,10 @@ For detailed setup instructions including environment variable configuration, Py
 
 ## Documentation
 
-Open `docs/index.html` in your web browser for comprehensive documentation with screenshots and usage examples.
+Comprehensive documentation with screenshots and usage examples is available online:
 
-Available in:
-- 🇯🇵 Japanese
-- 🇬🇧 English
+- 🇬🇧 [English](https://mitsuaki0321.github.io/maya-fake-tools/index_en.html)
+- 🇯🇵 [日本語](https://mitsuaki0321.github.io/maya-fake-tools/index.html)
 
 ## Requirements
 
