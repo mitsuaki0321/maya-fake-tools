@@ -18,6 +18,10 @@ logger = getLogger(__name__)
 
 FORMAT_IDENTIFIER = "faketools_animation"
 FORMAT_VERSION = "1.0.0"
+TIME_CURVE_TYPES = {"animCurveTL", "animCurveTA", "animCurveTU", "animCurveTT"}
+MODE_REPLACE = "replace"
+MODE_MERGE = "merge"
+IMPORT_MODES = (MODE_REPLACE, MODE_MERGE)
 
 
 # =============================================================================
@@ -79,15 +83,12 @@ def _get_animated_plugs(nodes: list[str]) -> list[str]:
     """
     animated_plugs = []
     for node in nodes:
-        attrs = cmds.listAttr(node, k=True)
-        if not attrs:
-            continue
-
-        for attr in attrs:
-            plug = f"{node}.{attr}"
-            times = cmds.keyframe(plug, query=True, timeChange=True)
-            if times:
-                animated_plugs.append(plug)
+        connections = cmds.listConnections(node, s=True, d=False, type="animCurve", p=True, c=True, scn=True) or []
+        for i in range(0, len(connections), 2):
+            node_plug = connections[i]
+            curve_plug = connections[i + 1]
+            if cmds.nodeType(curve_plug) in TIME_CURVE_TYPES:
+                animated_plugs.append(node_plug)
 
     return animated_plugs
 
@@ -98,19 +99,13 @@ def get_all_animated_nodes() -> list[str]:
     Returns:
         list[str]: List of animated node names.
     """
-    anim_curve_types = ["animCurveTL", "animCurveTA", "animCurveTU", "animCurveTT"]
-    anim_curves = cmds.ls(type=anim_curve_types)
+    anim_curves = cmds.ls(type=list(TIME_CURVE_TYPES))
     if not anim_curves:
         return []
 
-    nodes: dict[str, None] = {}
-    for anim_curve in anim_curves:
-        connected = cmds.listConnections(f"{anim_curve}.output", d=True, s=False)
-        if connected:
-            for node in connected:
-                nodes.setdefault(node, None)
-
-    return list(nodes.keys())
+    output_plugs = [f"{ac}.output" for ac in anim_curves]
+    connected = cmds.listConnections(output_plugs, d=True, s=False, scn=True) or []
+    return list(dict.fromkeys(connected))
 
 
 # =============================================================================
@@ -177,8 +172,8 @@ def import_animation(data: AnimationData, mode: str = "replace", target_namespac
     Raises:
         ValueError: If mode is invalid.
     """
-    if mode not in ("replace", "merge"):
-        raise ValueError(f"Invalid import mode: {mode}. Must be 'replace' or 'merge'.")
+    if mode not in IMPORT_MODES:
+        raise ValueError(f"Invalid import mode: {mode}. Must be one of {IMPORT_MODES}.")
 
     modified_nodes: dict[str, None] = {}
 
@@ -202,7 +197,7 @@ def import_animation(data: AnimationData, mode: str = "replace", target_namespac
                     logger.warning(f"Attribute does not exist, skipping: {plug}")
                     continue
 
-                if mode == "replace":
+                if mode == MODE_REPLACE:
                     cmds.cutKey(plug, clear=True)
 
                 try:

@@ -180,7 +180,7 @@ class MainWindow(BaseMainWindow):
             show_warning_dialog("Animation IO", "Please specify a file path.")
             return
 
-        mode = self.mode_combo.currentText().lower()
+        mode = command.IMPORT_MODES[self.mode_combo.currentIndex()]
         target_ns = self.target_namespace_edit.text().strip()
         target_namespace = target_ns if target_ns else None
 
