@@ -184,7 +184,7 @@ class MainWindow(BaseMainWindow):
         target_ns = self.target_namespace_edit.text().strip()
         target_namespace = target_ns if target_ns else None
 
-        modified_nodes = command.import_animation(file_path, mode=mode, target_namespace=target_namespace)
+        modified_nodes = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
 
         if modified_nodes:
             cmds.select(modified_nodes, r=True)
