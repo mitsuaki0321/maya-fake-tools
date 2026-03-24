@@ -1,37 +1,47 @@
 """Animation Import/Export UI layer."""
 
 from logging import getLogger
+import os
+from pathlib import Path
+import shutil
+import tempfile
+from typing import Optional
 
 import maya.cmds as cmds
 
-from ....lib_ui import (
-    BaseMainWindow,
-    ToolDataManager,
-    ToolSettingsManager,
-    error_handler,
-    get_maya_main_window,
-    get_save_file_name,
-    show_warning_dialog,
-    undo_chunk,
-)
-from ....lib_ui.base_window import get_margins, get_spacing
+from ....lib import lib_name
+from ....lib_ui import error_handler, maya_ui, show_warning_dialog, undo_chunk
+from ....lib_ui.base_window import BaseMainWindow, get_margins, get_spacing
+from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
     QButtonGroup,
     QComboBox,
-    QGroupBox,
+    QFileSystemWatcher,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QRadioButton,
-    QVBoxLayout,
+    Qt,
+    QTreeWidget,
+    QTreeWidgetItem,
 )
-from ....lib_ui.ui_utils import get_relative_size
+from ....lib_ui.tool_data import ToolDataManager
+from ....lib_ui.tool_settings import ToolSettingsManager
+from ....lib_ui.ui_utils import get_relative_size, get_text_width, scale_by_dpi
+from ....lib_ui.widgets import IconToggleButton, extra_widgets
 from . import command
+from .file_item_widget import FileItemWidget
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 logger = getLogger(__name__)
-
 _instance = None
+
+TEMP_DIR = os.path.normpath(os.path.join(tempfile.gettempdir(), "animIO"))
+NS_FILE = "(File Namespace)"
+NS_NONE = "(No Namespace)"
 
 
 class MainWindow(BaseMainWindow):
@@ -48,36 +58,45 @@ class MainWindow(BaseMainWindow):
 
         tool_data_manager = ToolDataManager("anim_io", "anim")
         tool_data_manager.ensure_data_dir()
-        self.default_directory = str(tool_data_manager.get_data_dir())
+        self.root_path = str(tool_data_manager.get_data_dir())
 
-        self.setup_ui()
+        self._setup_ui()
         self._restore_settings()
 
-    def setup_ui(self):
+    def _setup_ui(self):
         """Setup the user interface."""
         spacing = get_spacing(self, direction="vertical")
         left, top, right, bottom = get_margins(self)
 
-        # --- File Path ---
-        file_layout = QHBoxLayout()
-        file_layout.setSpacing(int(spacing * 0.5))
-        file_label = QLabel("File Path:")
-        self.file_path_edit = QLineEdit()
-        self.file_path_edit.setPlaceholderText("Select a JSON file...")
-        browse_button = QPushButton("...")
-        browse_button.setFixedWidth(int(get_relative_size(self, width_ratio=0.2, height_ratio=0.1)[0]))
-        browse_button.clicked.connect(self._browse_file)
-        file_layout.addWidget(file_label)
-        file_layout.addWidget(self.file_path_edit, 1)
-        file_layout.addWidget(browse_button)
-        self.central_layout.addLayout(file_layout)
+        # --- Quick Mode ---
+        label = QLabel("Quick Mode")
+        label.setStyleSheet("font-weight: bold;")
+        self.central_layout.addWidget(label)
 
-        # --- Export Group ---
-        export_group = QGroupBox("Export")
-        export_layout = QVBoxLayout()
-        export_layout.setSpacing(int(spacing * 0.5))
-        export_layout.setContentsMargins(left, top, right, bottom)
+        quick_layout = QHBoxLayout()
+        self.quick_export_button = QPushButton("Export")
+        self.quick_export_button.clicked.connect(self._on_quick_export)
+        self.quick_export_button.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.quick_export_button.customContextMenuRequested.connect(self._on_quick_context_menu)
+        quick_layout.addWidget(self.quick_export_button)
 
+        self.quick_import_button = QPushButton("Import")
+        self.quick_import_button.clicked.connect(self._on_quick_import)
+        self.quick_import_button.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.quick_import_button.customContextMenuRequested.connect(self._on_quick_context_menu)
+        quick_layout.addWidget(self.quick_import_button)
+
+        self.central_layout.addLayout(quick_layout)
+
+        separator = extra_widgets.HorizontalSeparator()
+        self.central_layout.addWidget(separator)
+
+        # --- Advanced Mode ---
+        label = QLabel("Advanced Mode")
+        label.setStyleSheet("font-weight: bold;")
+        self.central_layout.addWidget(label)
+
+        # Source selection
         source_layout = QHBoxLayout()
         source_layout.setSpacing(int(spacing * 0.5))
         source_label = QLabel("Source:")
@@ -91,120 +110,383 @@ class MainWindow(BaseMainWindow):
         source_layout.addWidget(self.selected_radio)
         source_layout.addWidget(self.all_animated_radio)
         source_layout.addStretch()
-        export_layout.addLayout(source_layout)
+        self.central_layout.addLayout(source_layout)
+
+        # File tree
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setSelectionMode(QTreeWidget.ExtendedSelection)
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self._on_tree_context_menu)
+        self.tree_widget.setHeaderHidden(True)
+        self.tree_widget.setIndentation(scale_by_dpi(16, self))
+        self.tree_widget.setStyleSheet(
+            """
+            QTreeWidget {
+                border: 1px solid palette(mid);
+                background-color: palette(base);
+            }
+            QTreeWidget::item {
+                border: none;
+                padding: 0px;
+            }
+            QTreeWidget::item:selected {
+                background-color: palette(highlight);
+            }
+            """
+        )
+        self.central_layout.addWidget(self.tree_widget)
+
+        # File system watcher
+        self.file_watcher = QFileSystemWatcher()
+        self.file_watcher.addPath(self.root_path)
+        self.file_watcher.directoryChanged.connect(self._populate_file_list)
+
+        self._populate_file_list()
+
+        # Export section
+        export_layout = QHBoxLayout()
+        export_layout.setSpacing(int(spacing * 0.5))
+
+        self.format_toggle = IconToggleButton(icon_on="binary", icon_off="ascii", icon_dir=_IMAGES_DIR)
+        self.format_toggle.setChecked(True)
+        export_layout.addWidget(self.format_toggle)
+
+        self.file_name_field = QLineEdit()
+        self.file_name_field.setPlaceholderText("File Name")
+        export_layout.addWidget(self.file_name_field, 1)
 
         export_button = QPushButton("Export")
         export_button.clicked.connect(self._on_export)
         export_layout.addWidget(export_button)
+        self.central_layout.addLayout(export_layout)
 
-        export_group.setLayout(export_layout)
-        self.central_layout.addWidget(export_group)
-
-        # --- Import Group ---
-        import_group = QGroupBox("Import")
-        import_layout = QVBoxLayout()
-        import_layout.setSpacing(int(spacing * 0.5))
-        import_layout.setContentsMargins(left, top, right, bottom)
+        # Import section
+        label_width = get_text_width("Target Namespace:", self) + int(spacing)
 
         mode_layout = QHBoxLayout()
         mode_layout.setSpacing(int(spacing * 0.5))
         mode_label = QLabel("Mode:")
+        mode_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        mode_label.setFixedWidth(label_width)
         self.mode_combo = QComboBox()
         self.mode_combo.addItems(["Replace", "Merge"])
         mode_layout.addWidget(mode_label)
         mode_layout.addWidget(self.mode_combo, 1)
-        import_layout.addLayout(mode_layout)
+        self.central_layout.addLayout(mode_layout)
 
         ns_layout = QHBoxLayout()
         ns_layout.setSpacing(int(spacing * 0.5))
         ns_label = QLabel("Target Namespace:")
-        self.target_namespace_edit = QLineEdit()
-        self.target_namespace_edit.setPlaceholderText("(use file namespace)")
+        ns_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        ns_label.setFixedWidth(label_width)
+        self.namespace_combo = QComboBox()
+        self.namespace_combo.setEditable(True)
+        self.namespace_combo.addItems([NS_FILE, NS_NONE])
         ns_layout.addWidget(ns_label)
-        ns_layout.addWidget(self.target_namespace_edit, 1)
-        import_layout.addLayout(ns_layout)
+        ns_layout.addWidget(self.namespace_combo, 1)
+        self.central_layout.addLayout(ns_layout)
 
         import_button = QPushButton("Import")
         import_button.clicked.connect(self._on_import)
-        import_layout.addWidget(import_button)
+        self.central_layout.addWidget(import_button)
 
-        import_group.setLayout(import_layout)
-        self.central_layout.addWidget(import_group)
-
-        self.central_layout.addStretch()
-
-        # --- Window Size ---
-        width, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.0)
+        # Window size
+        width, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.5)
         self.resize(width, height)
 
-    def _browse_file(self):
-        """Open file browser to select a file path."""
-        current_path = self.file_path_edit.text() or self.default_directory
-        file_path, _ = get_save_file_name(
-            parent=self,
-            caption="Select Animation File",
-            directory=current_path,
-            filter="JSON Files (*.json)",
-        )
-        if file_path:
-            self.file_path_edit.setText(file_path)
+    # -------------------------------------------------------------------------
+    # UI State Helpers
+    # -------------------------------------------------------------------------
+
+    def _get_export_format(self) -> str:
+        """Get the selected export format."""
+        return command.FORMAT_PICKLE if self.format_toggle.isChecked() else command.FORMAT_JSON
+
+    def _export_progress(self, current: int, total: int) -> bool:
+        """Progress callback for export. Manages Maya progress bar lifecycle.
+
+        Args:
+            current (int): Current progress count.
+            total (int): Total count.
+
+        Returns:
+            bool: True if the user cancelled.
+        """
+        if current == 0:
+            self._progress = maya_ui.ProgressBar(total, msg="Exporting Animation...")
+        cancelled = self._progress.breakPoint()
+        if cancelled or current >= total - 1:
+            cmds.progressBar(self._progress.pBar, e=True, endProgress=True)
+        return cancelled
+
+    def _resolve_target_namespace(self) -> Optional[str]:
+        """Resolve the target namespace from the combo box.
+
+        Returns:
+            str | None: None for file namespace, "" for no namespace, or the specified namespace.
+        """
+        text = self.namespace_combo.currentText()
+        if text == NS_FILE:
+            return None
+        if text == NS_NONE:
+            return ""
+        return text
+
+    def _refresh_namespace_combo(self):
+        """Refresh the namespace combo box with scene namespaces."""
+        current_text = self.namespace_combo.currentText()
+        self.namespace_combo.clear()
+        self.namespace_combo.addItems([NS_FILE, NS_NONE])
+
+        scene_namespaces = lib_name.list_all_namespace()
+        if scene_namespaces:
+            self.namespace_combo.addItems(scene_namespaces)
+
+        index = self.namespace_combo.findText(current_text)
+        if index >= 0:
+            self.namespace_combo.setCurrentIndex(index)
+        else:
+            self.namespace_combo.setEditText(current_text)
+
+    # -------------------------------------------------------------------------
+    # File Tree
+    # -------------------------------------------------------------------------
+
+    def _populate_file_list(self):
+        """Populate the tree widget with animation files."""
+        self.tree_widget.clear()
+
+        if not os.path.exists(self.root_path):
+            return
+
+        files = sorted(f for f in os.listdir(self.root_path) if f.endswith(".json") or f.endswith(".pickle"))
+        for file_name in files:
+            file_path = os.path.join(self.root_path, file_name)
+            tree_item = QTreeWidgetItem(self.tree_widget)
+            widget = FileItemWidget(
+                file_path,
+                on_select_nodes=self._select_nodes_from_file,
+                parent=self.tree_widget,
+            )
+            tree_item.setSizeHint(0, widget.sizeHint())
+            self.tree_widget.setItemWidget(tree_item, 0, widget)
+
+    def _get_selected_file_paths(self) -> list[str]:
+        """Get file paths from selected tree items."""
+        result = []
+        for item in self.tree_widget.selectedItems():
+            widget = self.tree_widget.itemWidget(item, 0)
+            if widget and os.path.isfile(widget.file_path):
+                result.append(widget.file_path)
+        return result
+
+    # -------------------------------------------------------------------------
+    # Node Selection
+    # -------------------------------------------------------------------------
+
+    @error_handler
+    def _select_nodes_from_file(self, file_path):
+        """Select scene nodes that match the animation file contents.
+
+        Args:
+            file_path (str): The animation file path.
+        """
+        file_io = command.AnimationFileIO()
+        data = file_io.load(file_path)
+
+        target_namespace = self._resolve_target_namespace()
+        effective_namespace = target_namespace if target_namespace is not None else data.namespace
+
+        node_names = []
+        for bare_name in data.nodes:
+            if effective_namespace:
+                full_name = f"{effective_namespace}:{bare_name}"
+            else:
+                full_name = bare_name
+
+            if cmds.objExists(full_name):
+                node_names.append(full_name)
+
+        if node_names:
+            cmds.select(node_names, r=True)
+            logger.info(f"Selected {len(node_names)} node(s)")
+        else:
+            logger.warning("No matching nodes found in scene")
+
+    # -------------------------------------------------------------------------
+    # Quick Mode
+    # -------------------------------------------------------------------------
+
+    @error_handler
+    def _on_quick_export(self):
+        """Quick export to temp directory."""
+        if os.path.exists(TEMP_DIR):
+            shutil.rmtree(TEMP_DIR)
+        os.makedirs(TEMP_DIR, exist_ok=True)
+
+        output_file = os.path.join(TEMP_DIR, "quick_anim")
+
+        if self.all_animated_radio.isChecked():
+            written = command.export_all_animation(output_file, format=command.FORMAT_PICKLE, on_progress=self._export_progress)
+        else:
+            written = command.export_animation(output_file, format=command.FORMAT_PICKLE, on_progress=self._export_progress)
+
+        logger.info(f"Quick exported to {len(written)} file(s)")
+
+    @error_handler
+    @undo_chunk("Animation IO: Quick Import")
+    def _on_quick_import(self):
+        """Quick import from temp directory."""
+        if not os.path.exists(TEMP_DIR):
+            show_warning_dialog("Animation IO", "No quick export data found.")
+            return
+
+        anim_files = [os.path.join(TEMP_DIR, f) for f in os.listdir(TEMP_DIR) if f.endswith(".json") or f.endswith(".pickle")]
+        if not anim_files:
+            show_warning_dialog("Animation IO", "No animation files found in temp directory.")
+            return
+
+        mode = command.IMPORT_MODES[self.mode_combo.currentIndex()]
+        target_namespace = self._resolve_target_namespace()
+
+        all_modified = []
+        for file_path in anim_files:
+            modified = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
+            all_modified.extend(modified)
+
+        if all_modified:
+            cmds.select(all_modified, r=True)
+            logger.info(f"Quick imported to {len(all_modified)} node(s)")
+        else:
+            logger.warning("No nodes were modified during quick import")
+
+    def _on_quick_context_menu(self, point):
+        """Show context menu for quick mode buttons."""
+        menu = QMenu()
+        action = menu.addAction("Open Directory")
+        action.triggered.connect(lambda: os.startfile(TEMP_DIR) if os.path.exists(TEMP_DIR) else None)
+
+        sender = self.sender()
+        menu.exec_(sender.mapToGlobal(point))
+
+    # -------------------------------------------------------------------------
+    # Advanced Export
+    # -------------------------------------------------------------------------
 
     @error_handler
     def _on_export(self):
-        """Handle export button click."""
-        file_path = self.file_path_edit.text()
-        if not file_path:
-            show_warning_dialog("Animation IO", "Please specify a file path.")
+        """Export animation to the tool data directory."""
+        file_name = self.file_name_field.text().strip()
+        if not file_name:
+            show_warning_dialog("Animation IO", "Please specify a file name.")
             return
 
-        use_all = self.all_animated_radio.isChecked()
+        fmt = self._get_export_format()
+        output_file = os.path.join(self.root_path, file_name)
 
-        if use_all:
-            written_files = command.export_all_animation(file_path)
+        if self.all_animated_radio.isChecked():
+            written = command.export_all_animation(output_file, format=fmt, on_progress=self._export_progress)
         else:
-            written_files = command.export_animation(file_path)
+            written = command.export_animation(output_file, format=fmt, on_progress=self._export_progress)
 
-        logger.info(f"Exported animation to {len(written_files)} file(s): {written_files}")
+        logger.info(f"Exported animation to {len(written)} file(s)")
+        self._populate_file_list()
+
+    # -------------------------------------------------------------------------
+    # Advanced Import
+    # -------------------------------------------------------------------------
 
     @error_handler
     @undo_chunk("Animation IO: Import")
     def _on_import(self):
-        """Handle import button click."""
-        file_path = self.file_path_edit.text()
-        if not file_path:
-            show_warning_dialog("Animation IO", "Please specify a file path.")
+        """Import animation from selected tree files."""
+        file_paths = self._get_selected_file_paths()
+        if not file_paths:
+            show_warning_dialog("Animation IO", "Please select a file from the list.")
             return
 
         mode = command.IMPORT_MODES[self.mode_combo.currentIndex()]
-        target_ns = self.target_namespace_edit.text().strip()
-        target_namespace = target_ns if target_ns else None
+        target_namespace = self._resolve_target_namespace()
 
-        modified_nodes = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
+        all_modified = []
+        for file_path in file_paths:
+            modified = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
+            all_modified.extend(modified)
 
-        if modified_nodes:
-            cmds.select(modified_nodes, r=True)
-            logger.info(f"Imported animation to {len(modified_nodes)} node(s): {modified_nodes}")
+        if all_modified:
+            cmds.select(all_modified, r=True)
+            logger.info(f"Imported animation to {len(all_modified)} node(s)")
         else:
             logger.warning("No nodes were modified during import")
+
+    # -------------------------------------------------------------------------
+    # Tree Context Menu
+    # -------------------------------------------------------------------------
+
+    def _on_tree_context_menu(self, point):
+        """Show context menu for the tree widget."""
+        menu = QMenu()
+
+        selected = self.tree_widget.selectedItems()
+        delete_action = menu.addAction("Delete")
+        delete_action.setEnabled(len(selected) > 0)
+        delete_action.triggered.connect(self._delete_selected_files)
+
+        menu.addSeparator()
+
+        open_action = menu.addAction("Open Directory")
+        open_action.triggered.connect(lambda: os.startfile(self.root_path))
+
+        menu.exec_(self.tree_widget.mapToGlobal(point))
+
+    @error_handler
+    def _delete_selected_files(self):
+        """Delete selected files from the tree."""
+        from ....lib_ui import maya_dialog
+
+        file_paths = self._get_selected_file_paths()
+        if not file_paths:
+            return
+
+        message = f"Delete {len(file_paths)} file(s)?\n\nThis action cannot be undone."
+        if not maya_dialog.confirm_dialog("Confirm Deletion", message):
+            return
+
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+                logger.debug(f"Deleted: {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to delete {file_path}: {e}")
+
+        self._populate_file_list()
+
+    # -------------------------------------------------------------------------
+    # Settings
+    # -------------------------------------------------------------------------
 
     def _collect_settings(self) -> dict:
         """Collect current UI settings."""
         return {
-            "file_path": self.file_path_edit.text(),
             "source_all": self.all_animated_radio.isChecked(),
             "import_mode": self.mode_combo.currentIndex(),
-            "target_namespace": self.target_namespace_edit.text(),
+            "target_namespace": self.namespace_combo.currentText(),
         }
 
     def _apply_settings(self, settings_data: dict):
         """Apply settings to UI."""
-        self.file_path_edit.setText(settings_data.get("file_path", ""))
         if settings_data.get("source_all", False):
             self.all_animated_radio.setChecked(True)
         else:
             self.selected_radio.setChecked(True)
         self.mode_combo.setCurrentIndex(settings_data.get("import_mode", 0))
-        self.target_namespace_edit.setText(settings_data.get("target_namespace", ""))
+
+        ns_text = settings_data.get("target_namespace", NS_FILE)
+        index = self.namespace_combo.findText(ns_text)
+        if index >= 0:
+            self.namespace_combo.setCurrentIndex(index)
+        else:
+            self.namespace_combo.setEditText(ns_text)
 
     def _restore_settings(self):
         """Restore UI settings from saved preferences."""
@@ -216,6 +498,11 @@ class MainWindow(BaseMainWindow):
         """Save UI settings to preferences."""
         settings_data = self._collect_settings()
         self.settings.save_settings(settings_data, "default")
+
+    def showEvent(self, event):
+        """Refresh namespace combo when window is shown."""
+        super().showEvent(event)
+        self._refresh_namespace_combo()
 
     def closeEvent(self, event):
         """Handle window close event."""

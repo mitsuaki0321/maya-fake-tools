@@ -1,6 +1,6 @@
 """Animation Import/Export business logic.
 
-Provides export and import of time-based keyframe animation data as JSON files.
+Provides export and import of time-based keyframe animation data as JSON and pickle files.
 One file per namespace. Supports replace/merge import modes and namespace remapping.
 """
 
@@ -8,7 +8,8 @@ from dataclasses import asdict, dataclass, field
 import json
 from logging import getLogger
 import os
-from typing import Optional
+import pickle
+from typing import Callable, Optional
 
 import maya.cmds as cmds
 
@@ -22,6 +23,9 @@ TIME_CURVE_TYPES = {"animCurveTL", "animCurveTA", "animCurveTU", "animCurveTT"}
 MODE_REPLACE = "replace"
 MODE_MERGE = "merge"
 IMPORT_MODES = (MODE_REPLACE, MODE_MERGE)
+FORMAT_JSON = "json"
+FORMAT_PICKLE = "pickle"
+FILE_FORMATS = (FORMAT_JSON, FORMAT_PICKLE)
 
 
 # =============================================================================
@@ -95,27 +99,35 @@ class AnimationData:
 class AnimationDataBuilder:
     """Build AnimationData from Maya scene nodes."""
 
-    def build(self, nodes: list[str]) -> list[AnimationData]:
+    def build(self, nodes: list[str], on_progress: Optional[Callable[[int, int], bool]] = None) -> list[AnimationData]:
         """Build animation data from specified nodes.
 
         Automatically splits by namespace, returning one AnimationData per namespace.
 
         Args:
             nodes (list[str]): The node names to collect animation from.
+            on_progress (callable | None): Progress callback receiving (current, total).
+                Return True to cancel the operation.
 
         Returns:
             list[AnimationData]: List of animation data, one per namespace.
         """
+        # Collect all animated plugs first for progress counting
+        node_plugs: list[tuple[str, list[str]]] = []
+        for node in nodes:
+            animated_plugs = self._get_animated_plugs([node])
+            if animated_plugs:
+                node_plugs.append((node, animated_plugs))
+
+        total_plugs = sum(len(plugs) for _, plugs in node_plugs)
+        current_plug = 0
+
         ns_nodes: dict[str, dict[str, dict[str, lib_keyframe.AnimCurveData]]] = {}
 
-        for node in nodes:
+        for node, animated_plugs in node_plugs:
             leaf_name = lib_name.get_local_name(node)
             namespace = lib_name.get_namespace(leaf_name)
             bare_name = lib_name.get_without_namespace(leaf_name)
-
-            animated_plugs = self._get_animated_plugs([node])
-            if not animated_plugs:
-                continue
 
             if namespace not in ns_nodes:
                 ns_nodes[namespace] = {}
@@ -124,6 +136,10 @@ class AnimationDataBuilder:
                 ns_nodes[namespace][bare_name] = {}
 
             for plug in animated_plugs:
+                if on_progress and on_progress(current_plug, total_plugs):
+                    logger.warning("Export cancelled by user.")
+                    break
+
                 attr_name = plug.split(".")[-1]
 
                 try:
@@ -131,14 +147,20 @@ class AnimationDataBuilder:
                     anim_curve_data = time_anim_curve.get_keyframes()
                 except (ValueError, RuntimeError) as e:
                     logger.warning(f"Failed to get keyframes for {plug}: {e}")
+                    current_plug += 1
                     continue
 
                 ns_nodes[namespace][bare_name][attr_name] = anim_curve_data
+                current_plug += 1
 
         return [AnimationData(namespace=ns, nodes=nodes_data) for ns, nodes_data in ns_nodes.items()]
 
-    def build_from_all(self) -> list[AnimationData]:
+    def build_from_all(self, on_progress: Optional[Callable[[int, int], bool]] = None) -> list[AnimationData]:
         """Build animation data from all animated nodes in the scene.
+
+        Args:
+            on_progress (callable | None): Progress callback receiving (current, total).
+                Return True to cancel the operation.
 
         Returns:
             list[AnimationData]: List of animation data, one per namespace.
@@ -150,7 +172,7 @@ class AnimationDataBuilder:
         if not all_nodes:
             raise ValueError("No animated nodes found in the scene.")
 
-        return self.build(all_nodes)
+        return self.build(all_nodes, on_progress=on_progress)
 
     def _get_animated_plugs(self, nodes: list[str]) -> list[str]:
         """Get all time-based animated plugs from the given nodes.
@@ -193,27 +215,28 @@ class AnimationDataBuilder:
 
 
 class AnimationFileIO:
-    """Read and write AnimationData as JSON files."""
+    """Read and write AnimationData as JSON or pickle files."""
 
-    def write(self, output_file: str, data_list: list[AnimationData]) -> list[str]:
-        """Write animation data to JSON file(s).
+    def write(self, output_file: str, data_list: list[AnimationData], format: str = FORMAT_JSON) -> list[str]:
+        """Write animation data to file(s).
 
         One file per AnimationData (one per namespace).
         If multiple items, namespace is appended to the filename.
 
         Args:
-            output_file (str): The base output file path. Extension must be .json.
+            output_file (str): The base output file path (without extension).
             data_list (list[AnimationData]): The animation data list to write.
+            format (str): File format - "json" or "pickle".
 
         Returns:
             list[str]: List of files that were written.
 
         Raises:
-            ValueError: If invalid file format or empty data list.
+            ValueError: If invalid format or empty data list.
             FileNotFoundError: If output directory does not exist.
         """
-        if not output_file.endswith(".json"):
-            raise ValueError(f"Invalid file format. Must be JSON file: {output_file}")
+        if format not in FILE_FORMATS:
+            raise ValueError(f"Invalid format: {format}. Must be one of {FILE_FORMATS}.")
 
         output_dir = os.path.dirname(output_file)
         if output_dir and not os.path.exists(output_dir):
@@ -230,12 +253,11 @@ class AnimationFileIO:
                 continue
 
             if use_namespace_suffix:
-                file_path = self._derive_namespace_filename(output_file, data.namespace)
+                file_path = self._derive_namespace_filename(output_file, data.namespace, format)
             else:
-                file_path = output_file
+                file_path = f"{output_file}.{format}"
 
-            with open(file_path, mode="w", encoding="utf-8") as f:
-                json.dump(asdict(data), f, indent=4)
+            self._write_file(file_path, asdict(data), format)
             written_files.append(file_path)
             logger.info(f"Exported animation ({data.namespace or 'root'}) to: {file_path}")
 
@@ -243,6 +265,8 @@ class AnimationFileIO:
 
     def load(self, file_path: str) -> AnimationData:
         """Load and validate a faketools animation file.
+
+        Format is determined by file extension (.json or .pickle).
 
         Args:
             file_path (str): The file path to load.
@@ -252,35 +276,53 @@ class AnimationFileIO:
 
         Raises:
             FileNotFoundError: If file does not exist.
-            ValueError: If file is not a valid faketools animation file.
+            ValueError: If file format is unsupported or data is invalid.
         """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File does not exist: {file_path}")
 
-        with open(file_path, encoding="utf-8") as f:
-            raw_data = json.load(f)
+        if file_path.endswith(".json"):
+            with open(file_path, encoding="utf-8") as f:
+                raw_data = json.load(f)
+        elif file_path.endswith(".pickle"):
+            with open(file_path, "rb") as f:
+                raw_data = pickle.load(f)  # noqa: S301
+        else:
+            raise ValueError(f"Unsupported file format: {file_path}")
 
         return AnimationData.from_dict(raw_data)
 
-    def _derive_namespace_filename(self, base_path: str, namespace: str) -> str:
+    def _write_file(self, file_path: str, data: dict, format: str) -> None:
+        """Write data to a single file.
+
+        Args:
+            file_path (str): The output file path.
+            data (dict): The data dictionary to write.
+            format (str): File format - "json" or "pickle".
+        """
+        if format == FORMAT_JSON:
+            with open(file_path, mode="w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4)
+        elif format == FORMAT_PICKLE:
+            with open(file_path, "wb") as f:
+                pickle.dump(data, f)
+
+    def _derive_namespace_filename(self, base_path: str, namespace: str, format: str) -> str:
         """Derive the output filename for a namespace.
 
         Args:
-            base_path (str): The base output file path (e.g., "C:/path/foo.json").
+            base_path (str): The base output file path without extension (e.g., "C:/path/foo").
             namespace (str): The namespace string (e.g., "", "hoge", "char:sub").
+            format (str): File format for extension.
 
         Returns:
             str: The derived file path (e.g., "C:/path/foo.hoge.json").
         """
-        directory = os.path.dirname(base_path)
-        base_name = os.path.basename(base_path)
-        stem = base_name.rsplit(".json", 1)[0]
-
         if not namespace:
-            return os.path.join(directory, f"{stem}.json")
+            return f"{base_path}.{format}"
 
         safe_namespace = namespace.replace(":", "_")
-        return os.path.join(directory, f"{stem}.{safe_namespace}.json")
+        return f"{base_path}.{safe_namespace}.{format}"
 
 
 # =============================================================================
@@ -349,20 +391,28 @@ def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_names
 # =============================================================================
 
 
-def export_animation(output_file: str, nodes: Optional[list[str]] = None) -> list[str]:
+def export_animation(
+    output_file: str,
+    nodes: Optional[list[str]] = None,
+    format: str = FORMAT_JSON,
+    on_progress: Optional[Callable[[int, int], bool]] = None,
+) -> list[str]:
     """Build animation data from nodes and export to file(s).
 
     Automatically splits into separate files when multiple namespaces exist.
 
     Args:
-        output_file (str): The base output file path. Extension must be .json.
+        output_file (str): The base output file path (without extension).
         nodes (list[str] | None): Nodes to export. If None, uses selected nodes.
+        format (str): File format - "json" or "pickle".
+        on_progress (callable | None): Progress callback receiving (current, total).
+            Return True to cancel.
 
     Returns:
         list[str]: List of files that were written.
 
     Raises:
-        ValueError: If no animated nodes found or invalid file format.
+        ValueError: If no animated nodes found or invalid format.
         FileNotFoundError: If output directory does not exist.
     """
     if nodes is None:
@@ -372,17 +422,24 @@ def export_animation(output_file: str, nodes: Optional[list[str]] = None) -> lis
         raise ValueError("No nodes specified and no nodes selected.")
 
     builder = AnimationDataBuilder()
-    data_list = builder.build(nodes)
+    data_list = builder.build(nodes, on_progress=on_progress)
 
     file_io = AnimationFileIO()
-    return file_io.write(output_file, data_list)
+    return file_io.write(output_file, data_list, format=format)
 
 
-def export_all_animation(output_file: str) -> list[str]:
+def export_all_animation(
+    output_file: str,
+    format: str = FORMAT_JSON,
+    on_progress: Optional[Callable[[int, int], bool]] = None,
+) -> list[str]:
     """Export animation from all animated nodes in the scene.
 
     Args:
-        output_file (str): The base output file path.
+        output_file (str): The base output file path (without extension).
+        format (str): File format - "json" or "pickle".
+        on_progress (callable | None): Progress callback receiving (current, total).
+            Return True to cancel.
 
     Returns:
         list[str]: List of files that were written.
@@ -391,10 +448,10 @@ def export_all_animation(output_file: str) -> list[str]:
         ValueError: If no animated nodes found in the scene.
     """
     builder = AnimationDataBuilder()
-    data_list = builder.build_from_all()
+    data_list = builder.build_from_all(on_progress=on_progress)
 
     file_io = AnimationFileIO()
-    return file_io.write(output_file, data_list)
+    return file_io.write(output_file, data_list, format=format)
 
 
 def import_animation_from_file(input_file: str, mode: str = MODE_REPLACE, target_namespace: Optional[str] = None) -> list[str]:
