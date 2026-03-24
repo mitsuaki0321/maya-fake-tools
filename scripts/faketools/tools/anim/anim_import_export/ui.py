@@ -45,18 +45,18 @@ NS_NONE = "(No Namespace)"
 
 
 class MainWindow(BaseMainWindow):
-    """Animation IO Main Window."""
+    """Animation I/E Main Window."""
 
     def __init__(self, parent=None):
         super().__init__(
             parent=parent,
-            object_name="AnimIOMainWindow",
-            window_title="Animation IO",
+            object_name="AnimImportExportMainWindow",
+            window_title="Animation Import/Export",
             central_layout="vertical",
         )
-        self.settings = ToolSettingsManager(tool_name="anim_io", category="anim")
+        self.settings = ToolSettingsManager(tool_name="anim_import_export", category="anim")
 
-        tool_data_manager = ToolDataManager("anim_io", "anim")
+        tool_data_manager = ToolDataManager("anim_import_export", "anim")
         tool_data_manager.ensure_data_dir()
         self.root_path = str(tool_data_manager.get_data_dir())
 
@@ -118,7 +118,7 @@ class MainWindow(BaseMainWindow):
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self._on_tree_context_menu)
         self.tree_widget.setHeaderHidden(True)
-        self.tree_widget.setIndentation(scale_by_dpi(16, self))
+        self.tree_widget.setIndentation(scale_by_dpi(5, self))
         self.tree_widget.setStyleSheet(
             """
             QTreeWidget {
@@ -159,6 +159,8 @@ class MainWindow(BaseMainWindow):
         export_button.clicked.connect(self._on_export)
         export_layout.addWidget(export_button)
         self.central_layout.addLayout(export_layout)
+
+        self.central_layout.addWidget(extra_widgets.HorizontalSeparator())
 
         # Import section
         label_width = get_text_width("Target Namespace:", self) + int(spacing)
@@ -334,16 +336,16 @@ class MainWindow(BaseMainWindow):
         logger.info(f"Quick exported to {len(written)} file(s)")
 
     @error_handler
-    @undo_chunk("Animation IO: Quick Import")
+    @undo_chunk("Animation I/E: Quick Import")
     def _on_quick_import(self):
         """Quick import from temp directory."""
         if not os.path.exists(TEMP_DIR):
-            show_warning_dialog("Animation IO", "No quick export data found.")
+            show_warning_dialog("Animation I/E", "No quick export data found.")
             return
 
         anim_files = [os.path.join(TEMP_DIR, f) for f in os.listdir(TEMP_DIR) if f.endswith(".json") or f.endswith(".pickle")]
         if not anim_files:
-            show_warning_dialog("Animation IO", "No animation files found in temp directory.")
+            show_warning_dialog("Animation I/E", "No animation files found in temp directory.")
             return
 
         mode = command.IMPORT_MODES[self.mode_combo.currentIndex()]
@@ -378,7 +380,7 @@ class MainWindow(BaseMainWindow):
         """Export animation to the tool data directory."""
         file_name = self.file_name_field.text().strip()
         if not file_name:
-            show_warning_dialog("Animation IO", "Please specify a file name.")
+            show_warning_dialog("Animation I/E", "Please specify a file name.")
             return
 
         fmt = self._get_export_format()
@@ -397,12 +399,12 @@ class MainWindow(BaseMainWindow):
     # -------------------------------------------------------------------------
 
     @error_handler
-    @undo_chunk("Animation IO: Import")
+    @undo_chunk("Animation I/E: Import")
     def _on_import(self):
         """Import animation from selected tree files."""
         file_paths = self._get_selected_file_paths()
         if not file_paths:
-            show_warning_dialog("Animation IO", "Please select a file from the list.")
+            show_warning_dialog("Animation I/E", "Please select a file from the list.")
             return
 
         mode = command.IMPORT_MODES[self.mode_combo.currentIndex()]
@@ -511,7 +513,7 @@ class MainWindow(BaseMainWindow):
 
 
 def show_ui():
-    """Show the Animation IO UI."""
+    """Show the Animation I/E UI."""
     global _instance
     if _instance is not None:
         try:
