@@ -180,7 +180,7 @@ class TimeKeyframe:
             return None
 
         if cmds.nodeType(source_plugs[0]) in ["animCurveTL", "animCurveTA", "animCurveTU", "animCurveTT"]:
-            return source_plugs[0]
+            return cmds.ls(source_plugs[0], objectsOnly=True)[0]
 
         logger.warning(f"Found input plug is not animation curve: {self.plug}")
 
@@ -543,14 +543,35 @@ class TimeAnimCurve:
             anim_curve (AnimCurve): The animation curve data.
         """
         keyframe = TimeKeyframe(self.plug)
-        for keyframe_data in anim_curve_data.keyframes:
-            keyframe.set_keyframe(keyframe_data)
 
+        # Set keyframe values first
+        for keyframe_data in anim_curve_data.keyframes:
+            cmds.setKeyframe(self.plug, time=keyframe_data.x_value, value=keyframe_data.y_value)
+
+        # Set curve-level properties before per-key tangents
         anim_curve = keyframe.find_anim_curve()
         cmds.keyTangent(anim_curve, e=True, weightedTangents=anim_curve_data.weighted_tangents)
         infinity = InfinityType(anim_curve)
         infinity.set_pre_infinity(anim_curve_data.pre_infinity)
         infinity.set_post_infinity(anim_curve_data.post_infinity)
+
+        # Set per-key tangent properties
+        for keyframe_data in anim_curve_data.keyframes:
+            tangent_kwargs = {
+                "inTangentType": keyframe_data.in_tangent_type,
+                "outTangentType": keyframe_data.out_tangent_type,
+                "inWeight": keyframe_data.in_weight,
+                "outWeight": keyframe_data.out_weight,
+                "inAngle": keyframe_data.in_angle,
+                "outAngle": keyframe_data.out_angle,
+            }
+            if anim_curve_data.weighted_tangents:
+                tangent_kwargs["weightLock"] = keyframe_data.lock
+            cmds.keyTangent(
+                self.plug,
+                time=(keyframe_data.x_value, keyframe_data.x_value),
+                **tangent_kwargs,
+            )
 
         logger.debug(f"Set keyframes: {self.plug}")
 
