@@ -1,7 +1,7 @@
 """Animation Import/Export business logic.
 
 Provides export and import of time-based keyframe animation data as JSON files.
-Supports namespace separation, replace/merge import modes, and flexible namespace remapping.
+One file per namespace. Supports replace/merge import modes and namespace remapping.
 """
 
 from dataclasses import asdict, dataclass, field
@@ -31,15 +31,17 @@ IMPORT_MODES = (MODE_REPLACE, MODE_MERGE)
 
 @dataclass
 class AnimationData:
-    """Animation data structure for import/export.
+    """Animation data for a single namespace.
 
     Args:
-        namespaces (dict): Nested dict of namespace -> node_name -> attr_name -> AnimCurveData.
+        namespace (str): The namespace (empty string for root namespace).
+        nodes (dict): Nested dict of node_name -> attr_name -> AnimCurveData.
         version (str): The format version.
         format (str): The format identifier for file validation.
     """
 
-    namespaces: dict[str, dict[str, dict[str, lib_keyframe.AnimCurveData]]] = field(default_factory=dict)
+    namespace: str = ""
+    nodes: dict[str, dict[str, lib_keyframe.AnimCurveData]] = field(default_factory=dict)
     version: str = FORMAT_VERSION
     format: str = FORMAT_IDENTIFIER
 
@@ -65,19 +67,21 @@ class AnimationData:
         if "version" not in data:
             raise ValueError("Missing 'version' key.")
 
-        if "namespaces" not in data or not isinstance(data["namespaces"], dict):
-            raise ValueError("Missing or invalid 'namespaces' key.")
+        if "namespace" not in data or not isinstance(data["namespace"], str):
+            raise ValueError("Missing or invalid 'namespace' key.")
 
-        namespaces: dict[str, dict[str, dict[str, lib_keyframe.AnimCurveData]]] = {}
-        for ns, nodes_data in data["namespaces"].items():
-            namespaces[ns] = {}
-            for node_name, attrs_data in nodes_data.items():
-                namespaces[ns][node_name] = {}
-                for attr_name, curve_data in attrs_data.items():
-                    namespaces[ns][node_name][attr_name] = lib_keyframe.AnimCurveData.from_dict(curve_data)
+        if "nodes" not in data or not isinstance(data["nodes"], dict):
+            raise ValueError("Missing or invalid 'nodes' key.")
+
+        nodes: dict[str, dict[str, lib_keyframe.AnimCurveData]] = {}
+        for node_name, attrs_data in data["nodes"].items():
+            nodes[node_name] = {}
+            for attr_name, curve_data in attrs_data.items():
+                nodes[node_name][attr_name] = lib_keyframe.AnimCurveData.from_dict(curve_data)
 
         return cls(
-            namespaces=namespaces,
+            namespace=data["namespace"],
+            nodes=nodes,
             version=data["version"],
             format=data["format"],
         )
@@ -91,16 +95,18 @@ class AnimationData:
 class AnimationDataBuilder:
     """Build AnimationData from Maya scene nodes."""
 
-    def build(self, nodes: list[str]) -> AnimationData:
+    def build(self, nodes: list[str]) -> list[AnimationData]:
         """Build animation data from specified nodes.
+
+        Automatically splits by namespace, returning one AnimationData per namespace.
 
         Args:
             nodes (list[str]): The node names to collect animation from.
 
         Returns:
-            AnimationData: The structured animation data with namespace separation.
+            list[AnimationData]: List of animation data, one per namespace.
         """
-        namespaces: dict[str, dict[str, dict[str, lib_keyframe.AnimCurveData]]] = {}
+        ns_nodes: dict[str, dict[str, dict[str, lib_keyframe.AnimCurveData]]] = {}
 
         for node in nodes:
             leaf_name = lib_name.get_local_name(node)
@@ -111,11 +117,11 @@ class AnimationDataBuilder:
             if not animated_plugs:
                 continue
 
-            if namespace not in namespaces:
-                namespaces[namespace] = {}
+            if namespace not in ns_nodes:
+                ns_nodes[namespace] = {}
 
-            if bare_name not in namespaces[namespace]:
-                namespaces[namespace][bare_name] = {}
+            if bare_name not in ns_nodes[namespace]:
+                ns_nodes[namespace][bare_name] = {}
 
             for plug in animated_plugs:
                 attr_name = plug.split(".")[-1]
@@ -127,15 +133,15 @@ class AnimationDataBuilder:
                     logger.warning(f"Failed to get keyframes for {plug}: {e}")
                     continue
 
-                namespaces[namespace][bare_name][attr_name] = anim_curve_data
+                ns_nodes[namespace][bare_name][attr_name] = anim_curve_data
 
-        return AnimationData(namespaces=namespaces)
+        return [AnimationData(namespace=ns, nodes=nodes_data) for ns, nodes_data in ns_nodes.items()]
 
-    def build_from_all(self) -> AnimationData:
+    def build_from_all(self) -> list[AnimationData]:
         """Build animation data from all animated nodes in the scene.
 
         Returns:
-            AnimationData: The structured animation data.
+            list[AnimationData]: List of animation data, one per namespace.
 
         Raises:
             ValueError: If no animated nodes found in the scene.
@@ -189,19 +195,21 @@ class AnimationDataBuilder:
 class AnimationFileIO:
     """Read and write AnimationData as JSON files."""
 
-    def write(self, output_file: str, data: AnimationData, split_by_namespace: bool = False) -> list[str]:
+    def write(self, output_file: str, data_list: list[AnimationData]) -> list[str]:
         """Write animation data to JSON file(s).
 
+        One file per AnimationData (one per namespace).
+        If multiple items, namespace is appended to the filename.
+
         Args:
-            output_file (str): The output file path. Extension must be .json.
-            data (AnimationData): The animation data to write.
-            split_by_namespace (bool): If True, write separate files per namespace.
+            output_file (str): The base output file path. Extension must be .json.
+            data_list (list[AnimationData]): The animation data list to write.
 
         Returns:
             list[str]: List of files that were written.
 
         Raises:
-            ValueError: If invalid file format or no animation data.
+            ValueError: If invalid file format or empty data list.
             FileNotFoundError: If output directory does not exist.
         """
         if not output_file.endswith(".json"):
@@ -211,28 +219,25 @@ class AnimationFileIO:
         if output_dir and not os.path.exists(output_dir):
             raise FileNotFoundError(f"Output directory does not exist: {output_dir}")
 
-        if not data.namespaces:
+        if not data_list:
             raise ValueError("No animation data to export.")
 
         written_files = []
+        use_namespace_suffix = len(data_list) > 1
 
-        if not split_by_namespace:
-            with open(output_file, mode="w", encoding="utf-8") as f:
+        for data in data_list:
+            if not data.nodes:
+                continue
+
+            if use_namespace_suffix:
+                file_path = self._derive_namespace_filename(output_file, data.namespace)
+            else:
+                file_path = output_file
+
+            with open(file_path, mode="w", encoding="utf-8") as f:
                 json.dump(asdict(data), f, indent=4)
-            written_files.append(output_file)
-            logger.info(f"Exported animation to: {output_file}")
-        else:
-            for namespace, nodes_data in data.namespaces.items():
-                ns_data = AnimationData(
-                    namespaces={namespace: nodes_data},
-                    version=data.version,
-                    format=data.format,
-                )
-                ns_file = self._derive_namespace_filename(output_file, namespace)
-                with open(ns_file, mode="w", encoding="utf-8") as f:
-                    json.dump(asdict(ns_data), f, indent=4)
-                written_files.append(ns_file)
-                logger.info(f"Exported animation ({namespace or 'root'}) to: {ns_file}")
+            written_files.append(file_path)
+            logger.info(f"Exported animation ({data.namespace or 'root'}) to: {file_path}")
 
         return written_files
 
@@ -295,6 +300,7 @@ def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_names
         list[str]: List of nodes that were modified.
 
     Raises:
+        TypeError: If data is not AnimationData.
         ValueError: If mode is invalid.
     """
     if not isinstance(data, AnimationData):
@@ -303,39 +309,37 @@ def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_names
     if mode not in IMPORT_MODES:
         raise ValueError(f"Invalid import mode: {mode}. Must be one of {IMPORT_MODES}.")
 
+    effective_namespace = target_namespace if target_namespace is not None else data.namespace
     modified_nodes: dict[str, None] = {}
 
-    for namespace, nodes_data in data.namespaces.items():
-        effective_namespace = target_namespace if target_namespace is not None else namespace
+    for bare_name, attrs_data in data.nodes.items():
+        if effective_namespace:
+            full_node_name = f"{effective_namespace}:{bare_name}"
+        else:
+            full_node_name = bare_name
 
-        for bare_name, attrs_data in nodes_data.items():
-            if effective_namespace:
-                full_node_name = f"{effective_namespace}:{bare_name}"
-            else:
-                full_node_name = bare_name
+        if not cmds.objExists(full_node_name):
+            logger.warning(f"Node does not exist, skipping: {full_node_name}")
+            continue
 
-            if not cmds.objExists(full_node_name):
-                logger.warning(f"Node does not exist, skipping: {full_node_name}")
+        for attr_name, anim_curve_data in attrs_data.items():
+            plug = f"{full_node_name}.{attr_name}"
+
+            if not cmds.objExists(plug):
+                logger.warning(f"Attribute does not exist, skipping: {plug}")
                 continue
 
-            for attr_name, anim_curve_data in attrs_data.items():
-                plug = f"{full_node_name}.{attr_name}"
+            if mode == MODE_REPLACE:
+                cmds.cutKey(plug, clear=True)
 
-                if not cmds.objExists(plug):
-                    logger.warning(f"Attribute does not exist, skipping: {plug}")
-                    continue
+            try:
+                time_anim_curve = lib_keyframe.TimeAnimCurve(plug)
+                time_anim_curve.set_keyframes(anim_curve_data)
+            except (ValueError, RuntimeError) as e:
+                logger.warning(f"Failed to set keyframes for {plug}: {e}")
+                continue
 
-                if mode == MODE_REPLACE:
-                    cmds.cutKey(plug, clear=True)
-
-                try:
-                    time_anim_curve = lib_keyframe.TimeAnimCurve(plug)
-                    time_anim_curve.set_keyframes(anim_curve_data)
-                except (ValueError, RuntimeError) as e:
-                    logger.warning(f"Failed to set keyframes for {plug}: {e}")
-                    continue
-
-                modified_nodes.setdefault(full_node_name, None)
+            modified_nodes.setdefault(full_node_name, None)
 
     return list(modified_nodes.keys())
 
@@ -345,13 +349,14 @@ def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_names
 # =============================================================================
 
 
-def export_animation(output_file: str, nodes: Optional[list[str]] = None, split_by_namespace: bool = False) -> list[str]:
+def export_animation(output_file: str, nodes: Optional[list[str]] = None) -> list[str]:
     """Build animation data from nodes and export to file(s).
 
+    Automatically splits into separate files when multiple namespaces exist.
+
     Args:
-        output_file (str): The output file path. Extension must be .json.
+        output_file (str): The base output file path. Extension must be .json.
         nodes (list[str] | None): Nodes to export. If None, uses selected nodes.
-        split_by_namespace (bool): If True, write separate files per namespace.
 
     Returns:
         list[str]: List of files that were written.
@@ -367,18 +372,17 @@ def export_animation(output_file: str, nodes: Optional[list[str]] = None, split_
         raise ValueError("No nodes specified and no nodes selected.")
 
     builder = AnimationDataBuilder()
-    data = builder.build(nodes)
+    data_list = builder.build(nodes)
 
     file_io = AnimationFileIO()
-    return file_io.write(output_file, data, split_by_namespace=split_by_namespace)
+    return file_io.write(output_file, data_list)
 
 
-def export_all_animation(output_file: str, split_by_namespace: bool = False) -> list[str]:
+def export_all_animation(output_file: str) -> list[str]:
     """Export animation from all animated nodes in the scene.
 
     Args:
-        output_file (str): The output file path.
-        split_by_namespace (bool): If True, write separate files per namespace.
+        output_file (str): The base output file path.
 
     Returns:
         list[str]: List of files that were written.
@@ -387,10 +391,10 @@ def export_all_animation(output_file: str, split_by_namespace: bool = False) -> 
         ValueError: If no animated nodes found in the scene.
     """
     builder = AnimationDataBuilder()
-    data = builder.build_from_all()
+    data_list = builder.build_from_all()
 
     file_io = AnimationFileIO()
-    return file_io.write(output_file, data, split_by_namespace=split_by_namespace)
+    return file_io.write(output_file, data_list)
 
 
 def import_animation_from_file(input_file: str, mode: str = MODE_REPLACE, target_namespace: Optional[str] = None) -> list[str]:

@@ -17,7 +17,6 @@ from ....lib_ui import (
 from ....lib_ui.base_window import get_margins, get_spacing
 from ....lib_ui.qt_compat import (
     QButtonGroup,
-    QCheckBox,
     QComboBox,
     QGroupBox,
     QHBoxLayout,
@@ -94,9 +93,6 @@ class MainWindow(BaseMainWindow):
         source_layout.addStretch()
         export_layout.addLayout(source_layout)
 
-        self.split_namespace_check = QCheckBox("Split by Namespace")
-        export_layout.addWidget(self.split_namespace_check)
-
         export_button = QPushButton("Export")
         export_button.clicked.connect(self._on_export)
         export_layout.addWidget(export_button)
@@ -162,12 +158,11 @@ class MainWindow(BaseMainWindow):
             return
 
         use_all = self.all_animated_radio.isChecked()
-        split = self.split_namespace_check.isChecked()
 
         if use_all:
-            written_files = command.export_all_animation(file_path, split_by_namespace=split)
+            written_files = command.export_all_animation(file_path)
         else:
-            written_files = command.export_animation(file_path, split_by_namespace=split)
+            written_files = command.export_animation(file_path)
 
         logger.info(f"Exported animation to {len(written_files)} file(s): {written_files}")
 
@@ -197,7 +192,6 @@ class MainWindow(BaseMainWindow):
         return {
             "file_path": self.file_path_edit.text(),
             "source_all": self.all_animated_radio.isChecked(),
-            "split_namespace": self.split_namespace_check.isChecked(),
             "import_mode": self.mode_combo.currentIndex(),
             "target_namespace": self.target_namespace_edit.text(),
         }
@@ -209,7 +203,6 @@ class MainWindow(BaseMainWindow):
             self.all_animated_radio.setChecked(True)
         else:
             self.selected_radio.setChecked(True)
-        self.split_namespace_check.setChecked(settings_data.get("split_namespace", False))
         self.mode_combo.setCurrentIndex(settings_data.get("import_mode", 0))
         self.target_namespace_edit.setText(settings_data.get("target_namespace", ""))
 
