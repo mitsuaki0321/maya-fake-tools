@@ -213,22 +213,25 @@ class MainWindow(BaseMainWindow):
         """Get the selected export format."""
         return command.FORMAT_PICKLE if self.format_toggle.isChecked() else command.FORMAT_JSON
 
-    def _export_progress(self, current: int, total: int) -> bool:
-        """Progress callback for export. Manages Maya progress bar lifecycle.
+    def _make_progress_callback(self, msg: str):
+        """Create a progress callback for Maya progress bar.
 
         Args:
-            current (int): Current progress count.
-            total (int): Total count.
+            msg (str): Progress bar status message.
 
         Returns:
-            bool: True if the user cancelled.
+            callable: Progress callback receiving (current, total). Returns True if cancelled.
         """
-        if current == 0:
-            self._progress = maya_ui.ProgressBar(total, msg="Exporting Animation...")
-        cancelled = self._progress.breakPoint()
-        if cancelled or current >= total - 1:
-            cmds.progressBar(self._progress.pBar, e=True, endProgress=True)
-        return cancelled
+
+        def callback(current: int, total: int) -> bool:
+            if current == 0:
+                self._progress = maya_ui.ProgressBar(total, msg=msg)
+            cancelled = self._progress.breakPoint()
+            if cancelled or current >= total - 1:
+                cmds.progressBar(self._progress.pBar, e=True, endProgress=True)
+            return cancelled
+
+        return callback
 
     def _resolve_target_namespace(self) -> Optional[str]:
         """Resolve the target namespace from the combo box.
@@ -338,9 +341,13 @@ class MainWindow(BaseMainWindow):
         output_file = os.path.join(TEMP_DIR, "quick_anim")
 
         if self.all_animated_radio.isChecked():
-            written = command.export_all_animation(output_file, format=command.FORMAT_PICKLE, on_progress=self._export_progress)
+            written = command.export_all_animation(
+                output_file, format=command.FORMAT_PICKLE, on_progress=self._make_progress_callback("Exporting Animation...")
+            )
         else:
-            written = command.export_animation(output_file, format=command.FORMAT_PICKLE, on_progress=self._export_progress)
+            written = command.export_animation(
+                output_file, format=command.FORMAT_PICKLE, on_progress=self._make_progress_callback("Exporting Animation...")
+            )
 
         logger.info(f"Quick exported to {len(written)} file(s)")
 
@@ -363,7 +370,11 @@ class MainWindow(BaseMainWindow):
         all_modified = []
         for file_path in anim_files:
             modified = command.import_animation_from_file(
-                file_path, mode=mode, target_namespace=target_namespace, time_offset=self.time_offset_spin.value()
+                file_path,
+                mode=mode,
+                target_namespace=target_namespace,
+                time_offset=self.time_offset_spin.value(),
+                on_progress=self._make_progress_callback("Importing Animation..."),
             )
             all_modified.extend(modified)
 
@@ -398,9 +409,9 @@ class MainWindow(BaseMainWindow):
         output_file = os.path.join(self.root_path, file_name)
 
         if self.all_animated_radio.isChecked():
-            written = command.export_all_animation(output_file, format=fmt, on_progress=self._export_progress)
+            written = command.export_all_animation(output_file, format=fmt, on_progress=self._make_progress_callback("Exporting Animation..."))
         else:
-            written = command.export_animation(output_file, format=fmt, on_progress=self._export_progress)
+            written = command.export_animation(output_file, format=fmt, on_progress=self._make_progress_callback("Exporting Animation..."))
 
         logger.info(f"Exported animation to {len(written)} file(s)")
         self._populate_file_list()
@@ -424,7 +435,11 @@ class MainWindow(BaseMainWindow):
         all_modified = []
         for file_path in file_paths:
             modified = command.import_animation_from_file(
-                file_path, mode=mode, target_namespace=target_namespace, time_offset=self.time_offset_spin.value()
+                file_path,
+                mode=mode,
+                target_namespace=target_namespace,
+                time_offset=self.time_offset_spin.value(),
+                on_progress=self._make_progress_callback("Importing Animation..."),
             )
             all_modified.extend(modified)
 

@@ -335,6 +335,7 @@ def import_animation(
     mode: str = MODE_REPLACE,
     target_namespace: Optional[str] = None,
     time_offset: int = 0,
+    on_progress: Optional[Callable[[int, int], bool]] = None,
 ) -> list[str]:
     """Apply animation data to the scene.
 
@@ -343,6 +344,8 @@ def import_animation(
         mode (str): Import mode - "replace" (clear existing keys first) or "merge" (add/overwrite on same frame).
         target_namespace (str | None): Target namespace to apply. If None, uses the namespace from the data.
         time_offset (int): Frame offset to apply to all keyframes. Default is 0 (no offset).
+        on_progress (callable | None): Progress callback receiving (current, total).
+            Return True to cancel the operation.
 
     Returns:
         list[str]: List of nodes that were modified.
@@ -360,6 +363,10 @@ def import_animation(
     effective_namespace = target_namespace if target_namespace is not None else data.namespace
     modified_nodes: dict[str, None] = {}
 
+    # Count total plugs for progress
+    total_plugs = sum(len(attrs) for attrs in data.nodes.values())
+    current_plug = 0
+
     for bare_name, attrs_data in data.nodes.items():
         if effective_namespace:
             full_node_name = f"{effective_namespace}:{bare_name}"
@@ -368,13 +375,19 @@ def import_animation(
 
         if not cmds.objExists(full_node_name):
             logger.warning(f"Node does not exist, skipping: {full_node_name}")
+            current_plug += len(attrs_data)
             continue
 
         for attr_name, anim_curve_data in attrs_data.items():
+            if on_progress and on_progress(current_plug, total_plugs):
+                logger.warning("Import cancelled by user.")
+                return list(modified_nodes.keys())
+
             plug = f"{full_node_name}.{attr_name}"
 
             if not cmds.objExists(plug):
                 logger.warning(f"Attribute does not exist, skipping: {plug}")
+                current_plug += 1
                 continue
 
             if mode == MODE_REPLACE:
@@ -408,9 +421,11 @@ def import_animation(
                 time_anim_curve.set_keyframes(apply_data)
             except (ValueError, RuntimeError) as e:
                 logger.warning(f"Failed to set keyframes for {plug}: {e}")
+                current_plug += 1
                 continue
 
             modified_nodes.setdefault(full_node_name, None)
+            current_plug += 1
 
     return list(modified_nodes.keys())
 
@@ -488,6 +503,7 @@ def import_animation_from_file(
     mode: str = MODE_REPLACE,
     target_namespace: Optional[str] = None,
     time_offset: int = 0,
+    on_progress: Optional[Callable[[int, int], bool]] = None,
 ) -> list[str]:
     """Load animation data from file and apply to the scene.
 
@@ -496,6 +512,8 @@ def import_animation_from_file(
         mode (str): Import mode - "replace" or "merge".
         target_namespace (str | None): Target namespace to apply. If None, uses the namespace from the file.
         time_offset (int): Frame offset to apply to all keyframes.
+        on_progress (callable | None): Progress callback receiving (current, total).
+            Return True to cancel.
 
     Returns:
         list[str]: List of nodes that were modified.
@@ -506,4 +524,4 @@ def import_animation_from_file(
     """
     file_io = AnimationFileIO()
     data = file_io.load(input_file)
-    return import_animation(data, mode=mode, target_namespace=target_namespace, time_offset=time_offset)
+    return import_animation(data, mode=mode, target_namespace=target_namespace, time_offset=time_offset, on_progress=on_progress)
