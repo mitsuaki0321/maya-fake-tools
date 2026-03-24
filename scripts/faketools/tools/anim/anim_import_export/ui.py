@@ -23,13 +23,14 @@ from ....lib_ui.qt_compat import (
     QMenu,
     QPushButton,
     QRadioButton,
+    QSpinBox,
     Qt,
     QTreeWidget,
     QTreeWidgetItem,
 )
 from ....lib_ui.tool_data import ToolDataManager
 from ....lib_ui.tool_settings import ToolSettingsManager
-from ....lib_ui.ui_utils import get_relative_size, get_text_width, scale_by_dpi
+from ....lib_ui.ui_utils import get_text_width, scale_by_dpi
 from ....lib_ui.widgets import IconToggleButton, extra_widgets
 from . import command
 from .file_item_widget import FileItemWidget
@@ -188,13 +189,21 @@ class MainWindow(BaseMainWindow):
         ns_layout.addWidget(self.namespace_combo, 1)
         self.central_layout.addLayout(ns_layout)
 
+        offset_layout = QHBoxLayout()
+        offset_layout.setSpacing(int(spacing * 0.5))
+        offset_label = QLabel("Time Offset:")
+        offset_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        offset_label.setFixedWidth(label_width)
+        self.time_offset_spin = QSpinBox()
+        self.time_offset_spin.setRange(-100000, 100000)
+        self.time_offset_spin.setValue(0)
+        offset_layout.addWidget(offset_label)
+        offset_layout.addWidget(self.time_offset_spin, 1)
+        self.central_layout.addLayout(offset_layout)
+
         import_button = QPushButton("Import")
         import_button.clicked.connect(self._on_import)
         self.central_layout.addWidget(import_button)
-
-        # Window size
-        width, height = get_relative_size(self, width_ratio=1.5, height_ratio=1.5)
-        self.resize(width, height)
 
     # -------------------------------------------------------------------------
     # UI State Helpers
@@ -353,7 +362,9 @@ class MainWindow(BaseMainWindow):
 
         all_modified = []
         for file_path in anim_files:
-            modified = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
+            modified = command.import_animation_from_file(
+                file_path, mode=mode, target_namespace=target_namespace, time_offset=self.time_offset_spin.value()
+            )
             all_modified.extend(modified)
 
         if all_modified:
@@ -412,7 +423,9 @@ class MainWindow(BaseMainWindow):
 
         all_modified = []
         for file_path in file_paths:
-            modified = command.import_animation_from_file(file_path, mode=mode, target_namespace=target_namespace)
+            modified = command.import_animation_from_file(
+                file_path, mode=mode, target_namespace=target_namespace, time_offset=self.time_offset_spin.value()
+            )
             all_modified.extend(modified)
 
         if all_modified:
@@ -473,6 +486,7 @@ class MainWindow(BaseMainWindow):
             "source_all": self.all_animated_radio.isChecked(),
             "import_mode": self.mode_combo.currentIndex(),
             "target_namespace": self.namespace_combo.currentText(),
+            "time_offset": self.time_offset_spin.value(),
         }
 
     def _apply_settings(self, settings_data: dict):
@@ -482,6 +496,8 @@ class MainWindow(BaseMainWindow):
         else:
             self.selected_radio.setChecked(True)
         self.mode_combo.setCurrentIndex(settings_data.get("import_mode", 0))
+
+        self.time_offset_spin.setValue(settings_data.get("time_offset", 0))
 
         ns_text = settings_data.get("target_namespace", NS_FILE)
         index = self.namespace_combo.findText(ns_text)

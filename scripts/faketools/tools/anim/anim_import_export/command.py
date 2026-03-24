@@ -330,13 +330,19 @@ class AnimationFileIO:
 # =============================================================================
 
 
-def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_namespace: Optional[str] = None) -> list[str]:
+def import_animation(
+    data: AnimationData,
+    mode: str = MODE_REPLACE,
+    target_namespace: Optional[str] = None,
+    time_offset: int = 0,
+) -> list[str]:
     """Apply animation data to the scene.
 
     Args:
         data (AnimationData): The animation data to apply.
         mode (str): Import mode - "replace" (clear existing keys first) or "merge" (add/overwrite on same frame).
         target_namespace (str | None): Target namespace to apply. If None, uses the namespace from the data.
+        time_offset (int): Frame offset to apply to all keyframes. Default is 0 (no offset).
 
     Returns:
         list[str]: List of nodes that were modified.
@@ -374,9 +380,32 @@ def import_animation(data: AnimationData, mode: str = MODE_REPLACE, target_names
             if mode == MODE_REPLACE:
                 cmds.cutKey(plug, clear=True)
 
+            apply_data = anim_curve_data
+            if time_offset != 0:
+                offset_keyframes = [
+                    lib_keyframe.KeyframeData(
+                        x_value=kf.x_value + time_offset,
+                        y_value=kf.y_value,
+                        in_tangent_type=kf.in_tangent_type,
+                        out_tangent_type=kf.out_tangent_type,
+                        in_weight=kf.in_weight,
+                        out_weight=kf.out_weight,
+                        in_angle=kf.in_angle,
+                        out_angle=kf.out_angle,
+                        lock=kf.lock,
+                    )
+                    for kf in anim_curve_data.keyframes
+                ]
+                apply_data = lib_keyframe.AnimCurveData(
+                    keyframes=offset_keyframes,
+                    weighted_tangents=anim_curve_data.weighted_tangents,
+                    pre_infinity=anim_curve_data.pre_infinity,
+                    post_infinity=anim_curve_data.post_infinity,
+                )
+
             try:
                 time_anim_curve = lib_keyframe.TimeAnimCurve(plug)
-                time_anim_curve.set_keyframes(anim_curve_data)
+                time_anim_curve.set_keyframes(apply_data)
             except (ValueError, RuntimeError) as e:
                 logger.warning(f"Failed to set keyframes for {plug}: {e}")
                 continue
@@ -454,13 +483,19 @@ def export_all_animation(
     return file_io.write(output_file, data_list, format=format)
 
 
-def import_animation_from_file(input_file: str, mode: str = MODE_REPLACE, target_namespace: Optional[str] = None) -> list[str]:
+def import_animation_from_file(
+    input_file: str,
+    mode: str = MODE_REPLACE,
+    target_namespace: Optional[str] = None,
+    time_offset: int = 0,
+) -> list[str]:
     """Load animation data from file and apply to the scene.
 
     Args:
         input_file (str): The input file path.
         mode (str): Import mode - "replace" or "merge".
         target_namespace (str | None): Target namespace to apply. If None, uses the namespace from the file.
+        time_offset (int): Frame offset to apply to all keyframes.
 
     Returns:
         list[str]: List of nodes that were modified.
@@ -471,4 +506,4 @@ def import_animation_from_file(input_file: str, mode: str = MODE_REPLACE, target
     """
     file_io = AnimationFileIO()
     data = file_io.load(input_file)
-    return import_animation(data, mode=mode, target_namespace=target_namespace)
+    return import_animation(data, mode=mode, target_namespace=target_namespace, time_offset=time_offset)
