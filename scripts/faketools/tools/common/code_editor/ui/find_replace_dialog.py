@@ -444,6 +444,10 @@ class FindReplaceDialog(CodeEditorDialog):
                 found_cursor = self.editor.document().find(search_text, cursor)
 
         if not found_cursor.isNull():
+            # Auto-unfold if match is inside a folded region
+            block = found_cursor.block()
+            if not block.isVisible() and hasattr(self.editor, "fold_manager"):
+                self.editor.fold_manager.unfold_containing(block.blockNumber())
             self.editor.setTextCursor(found_cursor)
             return True
         if wrap_around:
@@ -477,6 +481,10 @@ class FindReplaceDialog(CodeEditorDialog):
                 found_cursor = self.editor.document().find(search_text, cursor)
 
         if not found_cursor.isNull():
+            # Auto-unfold if match is inside a folded region
+            block = found_cursor.block()
+            if not block.isVisible() and hasattr(self.editor, "fold_manager"):
+                self.editor.fold_manager.unfold_containing(block.blockNumber())
             self.editor.setTextCursor(found_cursor)
             return True
         CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")

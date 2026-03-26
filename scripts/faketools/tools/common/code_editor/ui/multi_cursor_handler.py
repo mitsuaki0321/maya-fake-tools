@@ -140,6 +140,9 @@ class MultiCursorMixin:
 
             # Add next occurrence if found and different from current
             if not found.isNull() and found.selectionStart() != current.selectionStart():
+                # Auto-unfold if occurrence is inside a folded region
+                if not found.block().isVisible() and hasattr(self, "fold_manager"):
+                    self.fold_manager.unfold_containing(found.block().blockNumber())
                 new_cursor = QTextCursor(self.document())
                 new_cursor.setPosition(found.selectionStart())
                 new_cursor.setPosition(found.selectionEnd(), QTextCursor.KeepAnchor)
@@ -182,6 +185,10 @@ class MultiCursorMixin:
                         return
 
         if not found.isNull():
+            # Auto-unfold if occurrence is inside a folded region
+            if not found.block().isVisible() and hasattr(self, "fold_manager"):
+                self.fold_manager.unfold_containing(found.block().blockNumber())
+
             # Create new cursor
             new_cursor = QTextCursor(self.document())
             new_cursor.setPosition(found.selectionStart())
@@ -222,6 +229,9 @@ class MultiCursorMixin:
             found = doc.find(text, pos)
             if found.isNull():
                 break
+            # Auto-unfold if occurrence is inside a folded region
+            if not found.block().isVisible() and hasattr(self, "fold_manager"):
+                self.fold_manager.unfold_containing(found.block().blockNumber())
             # Create new cursor for each occurrence
             new_cursor = QTextCursor(self.document())
             new_cursor.setPosition(found.selectionStart())

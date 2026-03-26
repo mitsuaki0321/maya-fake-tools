@@ -16,6 +16,8 @@ from .....lib_ui.qt_compat import (
     QPainter,
     QPen,
     QPlainTextEdit,
+    QPointF,
+    QPolygonF,
     Qt,
     QTabWidget,
     QTextCharFormat,
@@ -26,6 +28,7 @@ from .....lib_ui.qt_compat import (
 )
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
+from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
 from .editor_text_operations import EditorTextOperationsMixin
@@ -74,6 +77,9 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         # Initialize multi-cursor functionality
         self.init_multi_cursor()
+
+        # Initialize code folding
+        self.fold_manager = CodeFoldingManager(self)
 
         self.setup_line_numbers()
         self.connect_signals()
@@ -261,6 +267,18 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             self.update_line_number_area_width(0)
             self.line_number_area.update()
 
+    def fold_current(self):
+        """Fold the block at the current cursor position."""
+        block_number = self.textCursor().blockNumber()
+        if self.fold_manager.is_fold_header(block_number):
+            self.fold_manager.fold(block_number)
+
+    def unfold_current(self):
+        """Unfold the block at the current cursor position."""
+        block_number = self.textCursor().blockNumber()
+        if self.fold_manager.is_fold_header(block_number):
+            self.fold_manager.unfold(block_number)
+
     def set_word_wrap(self, enabled):
         """Set word wrap mode.
 
@@ -286,17 +304,24 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     # Line number area methods
     def lineNumberAreaWidth(self):
-        """Calculate the width needed for line numbers."""
+        """Calculate the width needed for line numbers and fold gutter."""
         digits = 1
         max_num = max(1, self.blockCount())
         while max_num >= 10:
             max_num //= 10
             digits += 1
 
+        char_width = self.fontMetrics().horizontalAdvance("9")
         # Add extra spacing between line numbers and code (2 characters worth)
         extra_spacing = self.fontMetrics().horizontalAdvance("  ")  # 2 spaces
-        space = 3 + self.fontMetrics().horizontalAdvance("9") * digits + extra_spacing
+        # Add fold gutter width (indicator triangle area)
+        fold_gutter_width = char_width + 4
+        space = 3 + char_width * digits + extra_spacing + fold_gutter_width
         return space
+
+    def _fold_gutter_width(self):
+        """Return the width of the fold indicator gutter area."""
+        return self.fontMetrics().horizontalAdvance("9") + 4
 
     def update_line_number_area_width(self, new_block_count):
         """Update the width of the line number area."""
@@ -345,7 +370,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.setExtraSelections(filtered_selections)
 
     def lineNumberAreaPaintEvent(self, event):
-        """Paint the line numbers."""
+        """Paint line numbers and fold indicators."""
         painter = QPainter(self.line_number_area)
         painter.fillRect(event.rect(), QColor(AppTheme.LINE_NUMBER_BACKGROUND))
 
@@ -363,6 +388,13 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         font_metrics = painter.fontMetrics()
         single_line_height = font_metrics.height()
 
+        # Layout: [ line_numbers | fold_gutter | spacing(2char) | code ]
+        fold_gutter_w = self._fold_gutter_width()
+        line_area_width = self.line_number_area.width()
+        spacing = self.fontMetrics().horizontalAdvance("  ")
+        line_number_draw_width = line_area_width - spacing - fold_gutter_w
+        fold_gutter_x = line_area_width - spacing  # Start of fold gutter (right of line numbers)
+
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
                 number = str(block_number + 1)
@@ -371,16 +403,94 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
                     painter.setPen(QColor(AppTheme.LINE_NUMBER_ACTIVE))
                 else:
                     painter.setPen(QColor(AppTheme.LINE_NUMBER_INACTIVE))
-                # Leave spacing on the right side (between numbers and code)
-                spacing = self.fontMetrics().horizontalAdvance("  ")  # 2 characters worth
-                draw_width = self.line_number_area.width() - spacing
-                # Draw line number at the top of the block (first visual line for wrapped blocks)
-                painter.drawText(0, int(top), draw_width, single_line_height, Qt.AlignRight, number)
+                # Draw line number (left side)
+                painter.drawText(0, int(top), line_number_draw_width, single_line_height, Qt.AlignRight, number)
+
+                # Draw fold indicator (right of line numbers, before spacing)
+                self._draw_fold_indicator(painter, block_number, fold_gutter_x, int(top), fold_gutter_w, single_line_height)
 
             block = block.next()
             top = bottom
             bottom = top + self.blockBoundingRect(block).height()
             block_number += 1
+
+    def _draw_fold_indicator(self, painter, block_number, x, y, width, height):
+        """Draw VSCode-style chevron fold indicator for a block.
+
+        Args:
+            painter (QPainter): Active painter on the line number area.
+            block_number (int): Current block number.
+            x (int): Left edge of the fold gutter area.
+            y (int): Top of the block.
+            width (int): Width of the fold gutter area.
+            height (int): Single line height.
+        """
+        if not self.fold_manager.is_fold_header(block_number):
+            return
+
+        is_folded = self.fold_manager.is_folded(block_number)
+        opacity = getattr(self.line_number_area, "_indicator_opacity", 0.0)
+
+        # Folded indicators are always fully visible; unfolded ones fade with hover
+        if not is_folded and opacity <= 0.0:
+            return
+
+        # Highlight the specific block under the mouse
+        hover_block = getattr(self.line_number_area, "_hover_fold_block", -1)
+        if block_number == hover_block:
+            color = QColor(AppTheme.FOLD_INDICATOR_HOVER)
+        else:
+            color = QColor(AppTheme.FOLD_INDICATOR_COLOR)
+
+        # Apply fade opacity to unfolded indicators
+        if not is_folded:
+            color.setAlphaF(opacity)
+
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        # Stroke-based chevron (VSCode style) — no fill
+        pen = QPen(color, 1.2)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        # Chevron size: fit within the gutter column width (with small padding)
+        padding = 2
+        half_w = max(3, (width - padding * 2) // 2)
+        cx = x + width // 2
+        cy = y + height // 2
+
+        # Base shape: down-pointing chevron ˅ defined as offsets from center
+        # (-1, -0.35) -> (0, 0.55) -> (1, -0.35)
+        # Rotated -90° (CW) for right-pointing: (x,y) -> (y,-x)
+        s = half_w  # uniform scale
+
+        if is_folded:
+            # Right-pointing chevron › (-90° rotation of ˅)
+            painter.drawPolyline(
+                QPolygonF(
+                    [
+                        QPointF(cx - s * 0.35, cy - s),
+                        QPointF(cx + s * 0.55, cy),
+                        QPointF(cx - s * 0.35, cy + s),
+                    ]
+                )
+            )
+        else:
+            # Down-pointing chevron ˅
+            painter.drawPolyline(
+                QPolygonF(
+                    [
+                        QPointF(cx - s, cy - s * 0.35),
+                        QPointF(cx, cy + s * 0.55),
+                        QPointF(cx + s, cy - s * 0.35),
+                    ]
+                )
+            )
+
+        painter.restore()
 
     def insertFromMimeData(self, source):
         """Override to ensure plain text paste only."""
@@ -578,16 +688,52 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().mouseReleaseEvent(event)
 
     def paintEvent(self, event):
-        """Paint the editor with multi-cursor support and indent guides."""
+        """Paint the editor with multi-cursor support, indent guides, and fold placeholders."""
         # First, let the parent class paint everything normally
         super().paintEvent(event)
 
         # Paint indent guides
         self._paint_indent_guides(event)
 
+        # Paint fold placeholder text on folded headers
+        self._paint_fold_placeholders(event)
+
         # Then paint multi-cursor indicators on top
         painter = QPainter(self.viewport())
         self.paint_multi_cursors(painter)
+        painter.end()
+
+    def _paint_fold_placeholders(self, event):
+        """Paint '...' placeholder text at the end of folded header lines."""
+        if not self.fold_manager._folded_headers:
+            return
+
+        painter = QPainter(self.viewport())
+        painter.setPen(QColor(AppTheme.FOLD_PLACEHOLDER_COLOR))
+        font = self.font()
+        painter.setFont(font)
+
+        block = self.firstVisibleBlock()
+        while block.isValid():
+            geometry = self.blockBoundingGeometry(block).translated(self.contentOffset())
+            if geometry.top() > event.rect().bottom():
+                break
+
+            block_number = block.blockNumber()
+            if block.isVisible() and self.fold_manager.is_folded(block_number):
+                # Get the visual end position of the block text
+                text = block.text()
+                text_width = self.fontMetrics().horizontalAdvance(text)
+                placeholder = self.fold_manager.get_placeholder_text(block_number)
+
+                # Draw placeholder after the line text
+                x = text_width + 4
+                y = int(geometry.top())
+                h = self.fontMetrics().height()
+                painter.drawText(x, y, self.viewport().width() - x, h, Qt.AlignLeft, placeholder)
+
+            block = block.next()
+
         painter.end()
 
     def _paint_indent_guides(self, event):
@@ -622,9 +768,12 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         painter.end()
 
     def _get_next_block_indent_level(self, current_block):
-        """Get the indent level of the next non-empty block."""
+        """Get the indent level of the next non-empty visible block."""
         block = current_block.next()
         while block.isValid():
+            if not block.isVisible():
+                block = block.next()
+                continue
             text = block.text()
             if text.strip():
                 indent = len(text) - len(text.lstrip())
@@ -774,6 +923,11 @@ except Exception as e:
 
     def handle_return_key(self):
         """Handle Return/Enter key press for auto-indentation."""
+        # Unfold if cursor is on a folded header to prevent inserting into hidden blocks
+        block_number = self.textCursor().blockNumber()
+        if self.fold_manager.is_folded(block_number):
+            self.fold_manager.unfold(block_number)
+
         cursor = self.textCursor()
         current_position = cursor.position()
 

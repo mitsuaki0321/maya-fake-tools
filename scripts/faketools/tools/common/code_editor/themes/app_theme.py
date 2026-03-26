@@ -59,6 +59,11 @@ class AppTheme:
     # Editor visual guides
     INDENT_GUIDE_COLOR = "#3e3e42"
 
+    # Code folding colors
+    FOLD_INDICATOR_COLOR = "#858585"
+    FOLD_INDICATOR_HOVER = "#c6c6c6"
+    FOLD_PLACEHOLDER_COLOR = "#6a6a6a"
+
     @classmethod
     def get_main_window_stylesheet(cls):
         """Get main window stylesheet."""

@@ -38,6 +38,9 @@ class EditorShortcuts:
             "Ctrl+Shift+Up": "move_line_up",
             "Ctrl+Shift+Down": "move_line_down",
             "Ctrl+L": "select_current_line",
+            # Code folding
+            "Ctrl+Shift+[": "fold_current",
+            "Ctrl+Shift+]": "unfold_current",
         }
 
     def handle_key_event(self, event, editor):
@@ -129,6 +132,10 @@ class EditorShortcuts:
             key_name = "Left"
         elif key == Qt.Key_Right:
             key_name = "Right"
+        elif key == Qt.Key_BracketLeft:
+            key_name = "["
+        elif key == Qt.Key_BracketRight:
+            key_name = "]"
         elif key >= Qt.Key_A and key <= Qt.Key_Z:
             # Letter keys
             key_name = chr(key)

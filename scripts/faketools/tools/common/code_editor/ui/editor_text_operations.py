@@ -11,6 +11,16 @@ from .....lib_ui.qt_compat import QTextCharFormat, QTextCursor, QTextEdit
 class EditorTextOperationsMixin:
     """Mixin providing text operation methods for the editor."""
 
+    def _unfold_at_cursor(self):
+        """Unfold any fold region at the current cursor position.
+
+        Called before line operations to prevent operating on hidden blocks.
+        """
+        if hasattr(self, "fold_manager"):
+            block_number = self.textCursor().blockNumber()
+            if self.fold_manager.is_folded(block_number):
+                self.fold_manager.unfold(block_number)
+
     def get_first_non_whitespace_position(self, cursor):
         """
         Get the position of the first non-whitespace character in the current line.
@@ -36,6 +46,7 @@ class EditorTextOperationsMixin:
 
     def duplicate_current_line(self):
         """Duplicate the current line (Ctrl+D)."""
+        self._unfold_at_cursor()
         cursor = self.textCursor()
 
         # Save current position
@@ -58,6 +69,7 @@ class EditorTextOperationsMixin:
 
     def delete_current_line(self):
         """Delete the current line (Ctrl+Shift+K)."""
+        self._unfold_at_cursor()
         cursor = self.textCursor()
 
         # Select the entire current line including newline
@@ -75,6 +87,7 @@ class EditorTextOperationsMixin:
 
     def move_line_up(self):
         """Move current line or selection up (Ctrl+Shift+Up)."""
+        self._unfold_at_cursor()
         cursor = self.textCursor()
 
         # Use single undo transaction for atomic operation
@@ -162,6 +175,7 @@ class EditorTextOperationsMixin:
 
     def move_line_down(self):
         """Move current line or selection down (Ctrl+Shift+Down)."""
+        self._unfold_at_cursor()
         cursor = self.textCursor()
 
         # Use single undo transaction for atomic operation
