@@ -269,30 +269,104 @@ class CodeFoldingManager:
     def _detect_fold_regions(self):
         """Walk document blocks to detect Python fold regions.
 
+        Detects three types of foldable regions:
+        1. Colon blocks (def, class, if, for, while, try, with, etc.)
+        2. Multi-line triple-quoted strings (docstrings)
+        3. Consecutive import statements
+
         Returns:
             dict[int, int]: {header_block_number: end_block_number}
         """
         regions = {}
         doc = self.editor.document()
         block = doc.begin()
+        import_start = -1  # Track start of consecutive import block
+        import_end = -1
+        skip_until = -1  # Skip blocks inside a detected triple-quote region
 
         while block.isValid():
             text = block.text()
             stripped = text.rstrip()
+            block_num = block.blockNumber()
+
+            # Skip lines inside an already-detected triple-quote region
+            if block_num <= skip_until:
+                block = block.next()
+                continue
 
             if stripped:
-                # Strip inline comments for colon detection
+                lstripped = stripped.lstrip()
+
+                # --- Triple-quote docstring detection ---
+                triple = None
+                if '"""' in lstripped:
+                    triple = '"""'
+                elif "'''" in lstripped:
+                    triple = "'''"
+
+                if triple:
+                    # Count occurrences of the triple quote in this line
+                    count = lstripped.count(triple)
+                    if count == 1:
+                        # Opening triple quote without close on same line → find closing
+                        end_num = self._find_triple_quote_end(block_num, triple)
+                        if end_num > block_num:
+                            regions[block_num] = end_num
+                            skip_until = end_num  # Skip closing line
+
+                # --- Colon block detection ---
                 code_part = self._strip_comment(stripped)
                 if code_part.endswith(":"):
-                    header_num = block.blockNumber()
                     header_indent = len(text) - len(text.lstrip())
-                    end_num = self._find_fold_end(header_num, header_indent)
-                    if end_num > header_num:
-                        regions[header_num] = end_num
+                    end_num = self._find_fold_end(block_num, header_indent)
+                    if end_num > block_num:
+                        regions[block_num] = end_num
+
+                # --- Consecutive import detection ---
+                if lstripped.startswith("import ") or lstripped.startswith("from "):
+                    if import_start < 0:
+                        import_start = block_num
+                    import_end = block_num
+                else:
+                    # Non-import line: flush any accumulated import block
+                    if import_start >= 0 and import_end > import_start:
+                        regions[import_start] = import_end
+                    import_start = -1
+                    import_end = -1
+            else:
+                # Empty line: flush import block (empty lines break import groups)
+                if import_start >= 0 and import_end > import_start:
+                    regions[import_start] = import_end
+                import_start = -1
+                import_end = -1
 
             block = block.next()
 
+        # Flush any remaining import block at end of document
+        if import_start >= 0 and import_end > import_start:
+            regions[import_start] = import_end
+
         return regions
+
+    def _find_triple_quote_end(self, start_num, triple):
+        """Find the closing line of a multi-line triple-quoted string.
+
+        Args:
+            start_num (int): Block number of the opening triple quote.
+            triple (str): The triple quote style ('\"\"\"' or \"'''\").
+
+        Returns:
+            int: Block number of the closing line, or start_num if not found.
+        """
+        doc = self.editor.document()
+        block = doc.findBlockByNumber(start_num + 1)
+
+        while block.isValid():
+            if triple in block.text():
+                return block.blockNumber()
+            block = block.next()
+
+        return start_num
 
     def _find_fold_end(self, header_num, header_indent):
         """Find the last block belonging to a fold region.
