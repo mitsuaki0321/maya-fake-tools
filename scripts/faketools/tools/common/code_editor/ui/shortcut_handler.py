@@ -108,6 +108,15 @@ class ShortcutHandler:
         self.clear_terminal_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.clear_terminal_shortcut.activated.connect(self._handle_clear_terminal)
 
+        # Fold all / Unfold all shortcuts
+        self.fold_all_shortcut = QShortcut(QKeySequence("Ctrl+Alt+["), self.main_window)
+        self.fold_all_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.fold_all_shortcut.activated.connect(self._handle_fold_all)
+
+        self.unfold_all_shortcut = QShortcut(QKeySequence("Ctrl+Alt+]"), self.main_window)
+        self.unfold_all_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.unfold_all_shortcut.activated.connect(self._handle_unfold_all)
+
     # Editor tab-scoped shortcut handlers (requires focus check)
     def _handle_new_file(self):
         """Handle new file shortcut - only when code editor widget has focus."""
@@ -152,6 +161,14 @@ class ShortcutHandler:
     def _handle_clear_terminal(self):
         """Handle clear terminal shortcut - only when code editor widget has focus."""
         self.main_window.clear_terminal()
+
+    def _handle_fold_all(self):
+        """Handle fold all shortcut."""
+        self.main_window.fold_all()
+
+    def _handle_unfold_all(self):
+        """Handle unfold all shortcut."""
+        self.main_window.unfold_all()
 
     def show_find_dialog(self):
         """Show the find dialog."""

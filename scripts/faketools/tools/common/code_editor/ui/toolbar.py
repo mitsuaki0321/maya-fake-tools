@@ -250,6 +250,8 @@ class ToolBar(QWidget):
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
     echo_all_toggled = Signal(bool)  # Signal for toggling echoAllCommands (True=on, False=off)
     word_wrap_toggled = Signal(bool)  # Signal for toggling word wrap (True=on, False=off)
+    fold_all_clicked = Signal()  # Signal for folding all regions
+    unfold_all_clicked = Signal()  # Signal for unfolding all regions
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -317,6 +319,13 @@ class ToolBar(QWidget):
         self.word_wrap_button = ToggleButton("wordwrap", "Toggle Word Wrap", active_icon_name="wordwrap_active")
         self.word_wrap_button.set_active(True)  # Word wrap ON by default
 
+        # Seventh separator
+        sep7 = ToolBarSeparator()
+
+        # Fold all / Unfold all buttons
+        self.fold_all_button = VSCodeButton("foldall", "Fold All")
+        self.unfold_all_button = VSCodeButton("unfoldall", "Unfold All")
+
         # Add widgets to layout following the specified order
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(sep0)
@@ -335,6 +344,9 @@ class ToolBar(QWidget):
         layout.addWidget(self.swap_layout_button)
         layout.addWidget(sep6)
         layout.addWidget(self.word_wrap_button)
+        layout.addWidget(sep7)
+        layout.addWidget(self.fold_all_button)
+        layout.addWidget(self.unfold_all_button)
         layout.addStretch()
 
         # Calculate dynamic height
@@ -358,6 +370,8 @@ class ToolBar(QWidget):
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)
         self.echo_all_button.clicked.connect(lambda: self.echo_all_toggled.emit(self.echo_all_button.is_active()))
         self.word_wrap_button.clicked.connect(lambda: self.word_wrap_toggled.emit(self.word_wrap_button.is_active()))
+        self.fold_all_button.clicked.connect(self.fold_all_clicked.emit)
+        self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""

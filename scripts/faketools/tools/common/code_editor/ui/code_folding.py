@@ -133,6 +133,40 @@ class CodeFoldingManager:
 
         self._notify_layout_changed()
 
+    def toggle_fold_recursive(self, block_number):
+        """Toggle fold state recursively for a region and all nested regions."""
+        if block_number not in self._fold_regions:
+            return
+        if block_number in self._folded_headers:
+            self.unfold_recursive(block_number)
+        else:
+            self.fold_recursive(block_number)
+
+    def fold_recursive(self, block_number):
+        """Fold a region and all nested regions within it."""
+        if block_number not in self._fold_regions:
+            return
+        end = self._fold_regions[block_number]
+        # Fold nested regions first (deepest first), then the parent
+        for header in sorted(self._fold_regions.keys()):
+            if block_number < header <= end and header not in self._folded_headers:
+                self.fold(header)
+        if block_number not in self._folded_headers:
+            self.fold(block_number)
+
+    def unfold_recursive(self, block_number):
+        """Unfold a region and all nested regions within it."""
+        if block_number not in self._folded_headers:
+            return
+        end = self._fold_regions.get(block_number)
+        if end is None:
+            return
+        # Unfold parent first, then nested
+        self.unfold(block_number)
+        for header in sorted(self._folded_headers.copy()):
+            if block_number < header <= end:
+                self.unfold(header)
+
     def unfold_containing(self, block_number):
         """Unfold any region that contains the given block number.
 

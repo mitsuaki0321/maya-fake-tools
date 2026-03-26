@@ -84,7 +84,11 @@ class LineNumberArea(QWidget):
         # Determine which block was clicked
         block_number = self._block_number_at_y(event.pos().y())
         if block_number >= 0 and hasattr(self.code_editor, "fold_manager") and self.code_editor.fold_manager.is_fold_header(block_number):
-            self.code_editor.fold_manager.toggle_fold(block_number)
+            # Shift+Click: recursive fold/unfold
+            if event.modifiers() & Qt.ShiftModifier:
+                self.code_editor.fold_manager.toggle_fold_recursive(block_number)
+            else:
+                self.code_editor.fold_manager.toggle_fold(block_number)
             event.accept()
             return
 

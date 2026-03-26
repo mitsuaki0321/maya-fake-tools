@@ -382,6 +382,18 @@ class MayaCodeEditor(QWidget):
         except Exception as e:
             CodeEditorMessageBox.critical(self, "Error", f"Failed to create file: {e!s}")
 
+    def fold_all(self):
+        """Fold all foldable regions in the current editor."""
+        editor = self.get_current_editor()
+        if editor and hasattr(editor, "fold_manager"):
+            editor.fold_manager.fold_all()
+
+    def unfold_all(self):
+        """Unfold all folded regions in the current editor."""
+        editor = self.get_current_editor()
+        if editor and hasattr(editor, "fold_manager"):
+            editor.fold_manager.unfold_all()
+
     def toggle_word_wrap(self, enabled):
         """Toggle word wrap on all editor tabs.
 
