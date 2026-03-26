@@ -1,8 +1,11 @@
 """Component Snap command layer.
 
-Snaps source mesh vertices to target mesh positions using various matching methods.
+Snaps source components (mesh vertices, curve/surface CVs, lattice points)
+to target mesh positions using various matching methods.
 Supports soft selection weights for gradual falloff.
 """
+
+from __future__ import annotations
 
 from logging import getLogger
 
@@ -14,48 +17,26 @@ from ....operations import component_selection
 
 logger = getLogger(__name__)
 
+_SUPPORTED_COMP_PATTERNS = (".vtx[", ".cv[", ".pt[")
+
 
 # -- Matching methods --------------------------------------------------------
 
 
-def _match_by_index(
-    source_indices: list[int],
-    target_mesh: str,
-) -> list[int]:
-    """Match source to target by vertex index.
-
-    Args:
-        source_indices: Source vertex indices.
-        target_mesh: Target mesh name.
-
-    Returns:
-        list[int]: Matched target indices (same as source).
-
-    Raises:
-        RuntimeError: If source index exceeds target vertex count.
-    """
-    target_vtx_count = cmds.polyEvaluate(target_mesh, vertex=True)
-    for idx in source_indices:
-        if idx >= target_vtx_count:
-            raise RuntimeError(f"Source vertex index {idx} exceeds target vertex count ({target_vtx_count}).")
-    return list(source_indices)
-
-
-def _match_by_closest_position(
+def _get_closest_positions(
     source_positions: np.ndarray,
     target_mesh: str,
-) -> list[int]:
-    """Match source to target by closest point on surface.
-
-    Uses MFnMesh.getClosestPoint to find the nearest surface point,
-    then returns the closest vertex to that surface point.
+    space: int,
+) -> np.ndarray:
+    """Get closest points on the target mesh surface for each source position.
 
     Args:
-        source_positions: Source positions as (N, 3) array.
+        source_positions: Source positions as (N, 3) array in world space.
         target_mesh: Target mesh name.
+        space: MSpace constant for the returned positions (kWorld or kObject).
 
     Returns:
-        list[int]: Matched target vertex indices.
+        np.ndarray: Closest surface positions as (N, 3) array in the requested space.
     """
     sel = om.MSelectionList()
     sel.add(target_mesh)
@@ -64,21 +45,14 @@ def _match_by_closest_position(
         dag_path.extendToShape()
 
     fn_mesh = om.MFnMesh(dag_path)
-    target_points = fn_mesh.getPoints(om.MSpace.kWorld)
-    target_np = np.array([[p.x, p.y, p.z] for p in target_points])
 
-    matched_indices = []
+    result = []
     for pos in source_positions:
         point = om.MPoint(float(pos[0]), float(pos[1]), float(pos[2]))
-        closest_point, face_id = fn_mesh.getClosestPoint(point, om.MSpace.kWorld)
-        cp = np.array([closest_point.x, closest_point.y, closest_point.z])
+        closest_point, _ = fn_mesh.getClosestPoint(point, space)
+        result.append([closest_point.x, closest_point.y, closest_point.z])
 
-        face_verts = fn_mesh.getPolygonVertices(face_id)
-        face_positions = target_np[face_verts]
-        distances = np.linalg.norm(face_positions - cp, axis=1)
-        matched_indices.append(face_verts[int(np.argmin(distances))])
-
-    return matched_indices
+    return np.array(result)
 
 
 def _match_by_nearest_component(
@@ -88,7 +62,7 @@ def _match_by_nearest_component(
     """Match source to target by nearest vertex (component).
 
     Args:
-        source_positions: Source positions as (N, 3) array.
+        source_positions: Source positions as (N, 3) array in world space.
         target_mesh: Target mesh name.
 
     Returns:
@@ -147,163 +121,145 @@ def _get_mesh_points(mesh_name: str, space: int) -> np.ndarray:
     return np.array([[p.x, p.y, p.z] for p in points])
 
 
-def _set_vertex_positions(mesh_name: str, index_positions: dict[int, np.ndarray], world_space: bool) -> None:
-    """Set vertex positions using cmds.xform (undo-safe).
+def _extract_node_name(component: str) -> str | None:
+    """Extract the node name from a component string.
 
     Args:
-        mesh_name: Maya mesh transform name.
-        index_positions: {vertex_index: (x, y, z)} positions to set.
-        world_space: If True, set in world space; otherwise object space.
-    """
-    for idx, pos in index_positions.items():
-        cmds.xform(
-            f"{mesh_name}.vtx[{idx}]",
-            translation=(float(pos[0]), float(pos[1]), float(pos[2])),
-            worldSpace=world_space,
-            objectSpace=not world_space,
-        )
-
-
-def _parse_vertex_components(components: dict[str, float]) -> dict[str, dict[int, float]]:
-    """Parse component strings into per-mesh vertex index/weight mapping.
-
-    Args:
-        components: Dict of component string to weight (e.g. {"pSphere1.vtx[0]": 0.8}).
+        component: Component string (e.g. "pSphere1.vtx[0]", "curve1.cv[3]").
 
     Returns:
-        dict[str, dict[int, float]]: {mesh_name: {vertex_index: weight}}.
+        str | None: Node name, or None if not a supported component.
     """
-    result = {}
-    for comp, weight in components.items():
-        if ".vtx[" not in comp:
+    for pattern in _SUPPORTED_COMP_PATTERNS:
+        if pattern in component:
+            return component.split(pattern, 1)[0]
+    return None
+
+
+def _extract_index(component: str) -> int:
+    """Extract a single integer index from a component string for index matching.
+
+    Supports single-indexed components (vtx[N], cv[N]).
+    Raises ValueError for multi-indexed components (cv[U][V], pt[S][T][U]).
+
+    Args:
+        component: Component string.
+
+    Returns:
+        int: The component index.
+
+    Raises:
+        ValueError: If multi-indexed or unsupported component type.
+    """
+    for pattern in _SUPPORTED_COMP_PATTERNS:
+        if pattern not in component:
             continue
-        mesh_name, vtx_part = comp.split(".vtx[", 1)
-        idx = int(vtx_part.rstrip("]"))
-        if mesh_name not in result:
-            result[mesh_name] = {}
-        result[mesh_name][idx] = weight
-    return result
+        _, idx_part = component.split(pattern, 1)
+        idx_str = idx_part.rstrip("]")
+        if "[" not in idx_str:
+            return int(idx_str)
+        raise ValueError(f"Index matching is not supported for multi-indexed components: {component}")
+    raise ValueError(f"Unsupported component type: {component}")
 
 
 # -- Public API --------------------------------------------------------------
 
 
-def get_selection_data() -> dict[str, dict[int, float]]:
+def get_selection_data() -> dict[str, dict[str, float]]:
     """Get current selection data for the snap operation.
 
-    When soft selection is enabled, vertex weights reflect the soft selection falloff.
-    When soft selection is disabled, all selected vertices get a weight of 1.0.
+    When soft selection is enabled, component weights reflect the soft selection falloff.
+    When soft selection is disabled, all selected components get a weight of 1.0.
+
+    Supports mesh vertices (.vtx), curve/surface CVs (.cv), and lattice points (.pt).
 
     Returns:
-        dict[str, dict[int, float]]: {mesh_name: {vertex_index: weight}}
+        dict[str, dict[str, float]]: {node_name: {component_string: weight}}
     """
     soft_select_enabled = cmds.softSelect(query=True, softSelectEnabled=True)
 
     if soft_select_enabled:
-        components = component_selection.get_unique_selections()
-        return _parse_vertex_components(components)
+        raw = component_selection.get_unique_selections()
+    else:
+        selection = cmds.ls(selection=True, flatten=True) or []
+        raw = {comp: 1.0 for comp in selection if any(p in comp for p in _SUPPORTED_COMP_PATTERNS)}
 
-    # Normal selection: all weights = 1.0
-    selection = cmds.ls(selection=True, flatten=True) or []
-    result: dict[str, dict[int, float]] = {}
-    for comp in selection:
-        if ".vtx[" not in comp:
-            continue
-        mesh_name, vtx_part = comp.split(".vtx[", 1)
-        idx = int(vtx_part.rstrip("]"))
-        if mesh_name not in result:
-            result[mesh_name] = {}
-        result[mesh_name][idx] = 1.0
+    result: dict[str, dict[str, float]] = {}
+    for comp, weight in raw.items():
+        node = _extract_node_name(comp)
+        if node is not None:
+            result.setdefault(node, {})[comp] = weight
     return result
 
 
 def snap(
-    source_mesh: str,
+    components: dict[str, float],
     target_mesh: str,
-    vertex_weights: dict[int, float],
     method: str = "index",
     space: str = "world",
     blend: float = 1.0,
 ) -> int:
-    """Snap source vertices toward target mesh positions.
+    """Snap source components toward target mesh vertex positions.
 
     Args:
-        source_mesh: Source mesh transform name.
+        components: {component_string: weight} for source components.
         target_mesh: Target mesh transform name.
-        vertex_weights: {vertex_index: soft_selection_weight} for source vertices.
         method: Matching method - "index", "closest_position", or "nearest_component".
         space: Coordinate space - "world" or "local".
         blend: Blend rate (0.0 to 1.0). 1.0 = full snap.
 
     Returns:
-        int: Number of vertices snapped.
+        int: Number of components snapped.
 
     Raises:
         ValueError: If method or space is invalid.
-        RuntimeError: If source mesh equals target mesh.
     """
-    if source_mesh == target_mesh:
-        raise RuntimeError("Source and target must be different meshes.")
-
     if method not in ("index", "closest_position", "nearest_component"):
         raise ValueError(f"Invalid method: {method}")
 
     if space not in ("world", "local"):
         raise ValueError(f"Invalid space: {space}")
 
-    mspace = om.MSpace.kWorld if space == "world" else om.MSpace.kObject
-
-    source_indices = sorted(vertex_weights.keys())
-    if not source_indices:
-        logger.debug("No source indices found.")
+    comp_list = sorted(components.keys())
+    if not comp_list:
         return 0
 
-    logger.debug(f"source_indices ({len(source_indices)}): {source_indices[:10]}...")
+    ws = space == "world"
+    mspace = om.MSpace.kWorld if ws else om.MSpace.kObject
 
-    source_all_points = _get_mesh_points(source_mesh, mspace)
-    source_positions = source_all_points[source_indices]
-    logger.debug(f"source_positions[0]: {source_positions[0] if len(source_positions) > 0 else 'N/A'}")
+    # Get source positions via cmds.xform (works for vtx, cv, pt)
+    source_positions = np.array([cmds.xform(c, query=True, translation=True, worldSpace=ws, objectSpace=not ws) for c in comp_list])
+    logger.debug(f"source components: {len(comp_list)}, first={comp_list[0]}, pos={source_positions[0]}")
 
-    # Match to target
+    # Determine target positions
+    world_positions = source_positions if ws else np.array([cmds.xform(c, query=True, translation=True, worldSpace=True) for c in comp_list])
+
     if method == "index":
-        target_indices = _match_by_index(source_indices, target_mesh)
+        target_indices = [_extract_index(c) for c in comp_list]
+        target_vtx_count = cmds.polyEvaluate(target_mesh, vertex=True)
+        for idx in target_indices:
+            if idx >= target_vtx_count:
+                raise RuntimeError(f"Index {idx} exceeds target vertex count ({target_vtx_count}).")
+        target_all_points = _get_mesh_points(target_mesh, mspace)
+        target_positions = target_all_points[target_indices]
     elif method == "closest_position":
-        # Use world space for matching regardless of snap space
-        if mspace == om.MSpace.kObject:
-            world_positions = _get_mesh_points(source_mesh, om.MSpace.kWorld)[source_indices]
-        else:
-            world_positions = source_positions
-        target_indices = _match_by_closest_position(world_positions, target_mesh)
+        target_positions = _get_closest_positions(world_positions, target_mesh, mspace)
     else:
-        if mspace == om.MSpace.kObject:
-            world_positions = _get_mesh_points(source_mesh, om.MSpace.kWorld)[source_indices]
-        else:
-            world_positions = source_positions
         target_indices = _match_by_nearest_component(world_positions, target_mesh)
-
-    logger.debug(f"target_indices ({len(target_indices)}): {target_indices[:10]}...")
-
-    target_all_points = _get_mesh_points(target_mesh, mspace)
-    target_positions = target_all_points[target_indices]
-    logger.debug(f"target_positions[0]: {target_positions[0] if len(target_positions) > 0 else 'N/A'}")
+        target_all_points = _get_mesh_points(target_mesh, mspace)
+        target_positions = target_all_points[target_indices]
 
     # Apply snap with blend and soft selection weight
-    new_positions = {}
-    for i, src_idx in enumerate(source_indices):
-        weight = vertex_weights[src_idx]
+    for i, comp in enumerate(comp_list):
+        weight = components[comp]
         factor = blend * weight
-        displacement = target_positions[i] - source_positions[i]
-        new_positions[src_idx] = source_positions[i] + displacement * factor
-
-    if new_positions:
-        first_idx = next(iter(new_positions))
-        logger.debug(
-            f"vtx[{first_idx}]: src={source_positions[0]} -> new={new_positions[first_idx]}, "
-            f"target={target_positions[0]}, factor={blend * vertex_weights[first_idx]:.4f}"
+        new_pos = source_positions[i] + (target_positions[i] - source_positions[i]) * factor
+        cmds.xform(
+            comp,
+            translation=(float(new_pos[0]), float(new_pos[1]), float(new_pos[2])),
+            worldSpace=ws,
+            objectSpace=not ws,
         )
 
-    logger.debug(f"Setting {len(new_positions)} vertex positions on {source_mesh}, world_space={space == 'world'}")
-    _set_vertex_positions(source_mesh, new_positions, world_space=(space == "world"))
-
-    logger.info(f"Snapped {len(source_indices)} vertices: method={method}, space={space}, blend={blend:.2f}")
-    return len(source_indices)
+    logger.info(f"Snapped {len(comp_list)} components: method={method}, space={space}, blend={blend:.2f}")
+    return len(comp_list)

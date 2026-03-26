@@ -127,56 +127,49 @@ class MainWindow(BaseMainWindow):
         source_data = command.get_selection_data()
         logger.debug(f"source_data: {source_data}")
         if not source_data:
-            cmds.warning("No source vertices selected.")
+            cmds.warning("No source components selected.")
             return
 
-        # Resolve source mesh long names to exclude from target search
+        # Resolve source node long names to exclude from target search
         source_long_names = set()
-        for mesh_name in source_data:
-            long_names = cmds.ls(mesh_name, long=True)
+        for node_name in source_data:
+            long_names = cmds.ls(node_name, long=True)
             if long_names:
                 source_long_names.add(long_names[0])
-        logger.debug(f"source_long_names: {source_long_names}")
 
-        # Find target: a mesh transform in the selection that is NOT a source mesh
+        # Find target: a mesh transform in the selection that is NOT a source node
         selection = cmds.ls(selection=True, long=True) or []
-        logger.debug(f"selection: {selection}")
         target_mesh = None
         for node in selection:
             # Skip component selections (e.g. "pSphere1.vtx[0]")
             if "." in node.split("|")[-1]:
                 continue
-            node_type = cmds.nodeType(node)
-            logger.debug(f"  node={node}, nodeType={node_type}")
-            if node_type == "transform":
+            if cmds.nodeType(node) == "transform":
                 shapes = cmds.listRelatives(node, shapes=True, type="mesh")
                 if shapes and node not in source_long_names:
                     target_mesh = node
                     break
 
-        logger.debug(f"target_mesh: {target_mesh}")
         if target_mesh is None:
             cmds.warning("No target mesh selected. Select a target mesh as an object.")
             return
 
         space = self._get_space()
         method = self._get_method()
-        logger.debug(f"space={space}, method={method}, blend={blend}")
         total = 0
 
-        for source_mesh, vertex_weights in source_data.items():
-            logger.debug(f"snap: source={source_mesh}, target={target_mesh}, vtx_count={len(vertex_weights)}")
+        for source_node, node_components in source_data.items():
+            logger.debug(f"snap: source={source_node}, target={target_mesh}, count={len(node_components)}")
             count = command.snap(
-                source_mesh=source_mesh,
+                components=node_components,
                 target_mesh=target_mesh,
-                vertex_weights=vertex_weights,
                 method=method,
                 space=space,
                 blend=blend,
             )
             total += count
 
-        logger.info(f"Component Snap: {total} vertices processed.")
+        logger.info(f"Component Snap: {total} components processed.")
 
     @error_handler
     @undo_chunk("Component Snap: Execute")
