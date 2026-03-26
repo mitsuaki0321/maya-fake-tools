@@ -29,6 +29,7 @@ class UserSettings:
             # Editor settings
             "editor": {
                 "font_size": 10,
+                "word_wrap": True,
             },
             # Terminal settings
             "terminal": {

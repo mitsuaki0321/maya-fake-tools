@@ -165,6 +165,7 @@ class UILayoutManager:
             self.main_window.toolbar.workspace_clicked.connect(self.main_window.open_workspace_directory)
             self.main_window.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)
             self.main_window.toolbar.echo_all_toggled.connect(self.main_window.toggle_echo_all)
+            self.main_window.toolbar.word_wrap_toggled.connect(self.main_window.toggle_word_wrap)
 
         if self.main_window.file_explorer:
             self.main_window.file_explorer.file_selected.connect(self.main_window.open_file_permanent)
@@ -226,6 +227,14 @@ class UILayoutManager:
         terminal_font_size = self.main_window.settings_manager.get("terminal.font_size", 9)
         if self.main_window.output_terminal and hasattr(self.main_window.output_terminal, "set_default_font_size"):
             self.main_window.output_terminal.set_default_font_size(terminal_font_size)
+
+        # Restore word wrap setting
+        word_wrap_enabled = self.main_window.settings_manager.get("editor.word_wrap", True)
+        if self.main_window.code_editor:
+            self.main_window.code_editor.set_word_wrap_all(word_wrap_enabled)
+        # Sync toolbar toggle button state
+        if self.main_window.toolbar and hasattr(self.main_window.toolbar, "word_wrap_button"):
+            self.main_window.toolbar.word_wrap_button.set_active(word_wrap_enabled)
 
     def restore_settings(self):
         """Restore window settings from saved preferences."""

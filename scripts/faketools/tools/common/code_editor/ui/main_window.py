@@ -382,6 +382,17 @@ class MayaCodeEditor(QWidget):
         except Exception as e:
             CodeEditorMessageBox.critical(self, "Error", f"Failed to create file: {e!s}")
 
+    def toggle_word_wrap(self, enabled):
+        """Toggle word wrap on all editor tabs.
+
+        Args:
+            enabled (bool): True to enable word wrap, False to disable.
+        """
+        if self.code_editor:
+            self.code_editor.set_word_wrap_all(enabled)
+        self.settings_manager.set("editor.word_wrap", enabled)
+        self.settings_manager.save_settings()
+
     def toggle_echo_all(self, enabled):
         """Toggle echoAllCommands on the output terminal.
 

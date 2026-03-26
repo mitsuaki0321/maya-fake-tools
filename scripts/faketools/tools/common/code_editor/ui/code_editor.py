@@ -38,7 +38,6 @@ logger = getLogger(__name__)
 # Editor constants
 DEFAULT_FONT_FAMILY = "Consolas"
 DEFAULT_TAB_SIZE = 4
-WORD_WRAP_ENABLED = True
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
@@ -96,13 +95,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             # PySide2/Qt5 fallback
             self.setTabStopWidth(tab_stop_distance)
 
-        # Enable word wrap at widget width
-        if WORD_WRAP_ENABLED:
-            self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
-        else:
-            self.setLineWrapMode(QPlainTextEdit.NoWrap)
-
-        # Enable vertical scrollbar (horizontal not needed with word wrap)
+        # Word wrap enabled by default
+        self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
@@ -266,6 +260,19 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         if hasattr(self, "line_number_area"):
             self.update_line_number_area_width(0)
             self.line_number_area.update()
+
+    def set_word_wrap(self, enabled):
+        """Set word wrap mode.
+
+        Args:
+            enabled (bool): True to wrap at widget width, False for no wrap.
+        """
+        if enabled:
+            self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        else:
+            self.setLineWrapMode(QPlainTextEdit.NoWrap)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
     def reset_font_size(self):
         """Reset font size to default."""
@@ -976,6 +983,7 @@ class CodeEditorWidget(QTabWidget):
         self.untitled_counter = 1
         self.preview_tab_index = -1  # Index of current preview tab (-1 if none)
         self.preview_tab_editor = None  # Reference to preview tab editor
+        self._word_wrap_enabled = True  # Word wrap ON by default
 
         # Set custom tab bar for renaming functionality
         self.custom_tab_bar = EditableTabBar()
@@ -1038,6 +1046,9 @@ class CodeEditorWidget(QTabWidget):
 
         # Apply theme to new editor
         self.apply_editor_theme(editor)
+
+        # Apply current word wrap setting
+        editor.set_word_wrap(self._word_wrap_enabled)
 
         # Connect to update tab title when modified
         editor.textChanged.connect(lambda: self.update_tab_title(editor))
@@ -1107,6 +1118,9 @@ class CodeEditorWidget(QTabWidget):
         # Apply theme
         self.apply_editor_theme(editor)
 
+        # Apply current word wrap setting
+        editor.set_word_wrap(self._word_wrap_enabled)
+
         # Connect signals
         editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
         editor.textChanged.connect(self.textChanged.emit)
@@ -1160,6 +1174,18 @@ class CodeEditorWidget(QTabWidget):
             # Now save as regular tab
             QTimer.singleShot(100, self.save_session_if_available)
 
+    def set_word_wrap_all(self, enabled):
+        """Apply word wrap setting to all open editor tabs.
+
+        Args:
+            enabled (bool): True to wrap at widget width, False for no wrap.
+        """
+        self._word_wrap_enabled = enabled
+        for i in range(self.count()):
+            editor = self.widget(i)
+            if isinstance(editor, PythonEditor):
+                editor.set_word_wrap(enabled)
+
     def apply_editor_theme(self, editor):
         """Apply theme styling to a specific editor instance."""
         editor_style = AppTheme.get_editor_stylesheet()
@@ -1204,6 +1230,9 @@ class CodeEditorWidget(QTabWidget):
 
             # Apply theme to new editor
             self.apply_editor_theme(editor)
+
+            # Apply current word wrap setting
+            editor.set_word_wrap(self._word_wrap_enabled)
 
             # Connect signals
             editor.textChanged.connect(lambda: self.update_tab_title(editor))
@@ -1268,6 +1297,9 @@ class CodeEditorWidget(QTabWidget):
 
             # Apply theme to new editor
             self.apply_editor_theme(editor)
+
+            # Apply current word wrap setting
+            editor.set_word_wrap(self._word_wrap_enabled)
 
             # Connect signals like permanent tabs
             editor.textChanged.connect(lambda: self.update_tab_title(editor))

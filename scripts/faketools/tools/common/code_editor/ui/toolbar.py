@@ -249,6 +249,7 @@ class ToolBar(QWidget):
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
     echo_all_toggled = Signal(bool)  # Signal for toggling echoAllCommands (True=on, False=off)
+    word_wrap_toggled = Signal(bool)  # Signal for toggling word wrap (True=on, False=off)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -309,6 +310,13 @@ class ToolBar(QWidget):
         # Swap layout button
         self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 
+        # Sixth separator
+        sep6 = ToolBarSeparator()
+
+        # Word wrap toggle button
+        self.word_wrap_button = ToggleButton("wordwrap", "Toggle Word Wrap", active_icon_name="wordwrap_active")
+        self.word_wrap_button.set_active(True)  # Word wrap ON by default
+
         # Add widgets to layout following the specified order
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(sep0)
@@ -325,6 +333,8 @@ class ToolBar(QWidget):
         layout.addWidget(self.workspace_button)
         layout.addWidget(sep5)
         layout.addWidget(self.swap_layout_button)
+        layout.addWidget(sep6)
+        layout.addWidget(self.word_wrap_button)
         layout.addStretch()
 
         # Calculate dynamic height
@@ -347,6 +357,7 @@ class ToolBar(QWidget):
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)
         self.echo_all_button.clicked.connect(lambda: self.echo_all_toggled.emit(self.echo_all_button.is_active()))
+        self.word_wrap_button.clicked.connect(lambda: self.word_wrap_toggled.emit(self.word_wrap_button.is_active()))
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""
