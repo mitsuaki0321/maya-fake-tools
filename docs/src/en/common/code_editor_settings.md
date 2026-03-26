@@ -29,8 +29,9 @@ Settings for code editor display and behavior.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `font_size` | 10 | Editor font size |
+| `word_wrap` | true | Enable word wrap at editor width |
 
-Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Tab size is 4 spaces. Word wrap and line numbers are always enabled.
+Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Tab size is 4 spaces. Line numbers are always enabled.
 
 ### Terminal Settings (terminal)
 Settings for the terminal that displays execution results.
@@ -94,7 +95,8 @@ Settings for window layout.
     "language": "JPN"
   },
   "editor": {
-    "font_size": 12
+    "font_size": 12,
+    "word_wrap": true
   },
   "terminal": {
     "font_size": 10

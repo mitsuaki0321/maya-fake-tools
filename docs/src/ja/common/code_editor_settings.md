@@ -29,8 +29,9 @@ lang-ref: code_editor_settings
 | 設定名 | デフォルト値 | 説明 |
 |--------|------------|------|
 | `font_size` | 10 | エディタの文字サイズ |
+| `word_wrap` | true | エディタ幅での折り返し表示 |
 
-※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。タブサイズは4スペース。折り返し表示と行番号は常に有効です。
+※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。タブサイズは4スペース。行番号は常に有効です。
 
 ### ターミナル設定 (terminal)
 実行結果を表示するターミナルの設定です。
@@ -94,7 +95,8 @@ MCP Serverなどのツールと連携する場合に使用します。
     "language": "JPN"
   },
   "editor": {
-    "font_size": 12
+    "font_size": 12,
+    "word_wrap": true
   },
   "terminal": {
     "font_size": 10

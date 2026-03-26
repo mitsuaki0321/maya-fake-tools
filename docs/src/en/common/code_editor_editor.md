@@ -100,6 +100,31 @@ Main keyboard shortcuts for multi-cursor mode:
 | Escape                    | Clear cursors                  |
 
 
+## Code Folding
+
+The code editor supports Python indent-based code folding.\
+Foldable blocks (such as `def`, `class`, `if`, `for`, `while`, `try`, `with`) display a chevron indicator in the gutter area next to line numbers.
+
+- Chevron indicators appear when hovering over the fold gutter area, and fade out when the mouse leaves.
+- Folded blocks always display a right-pointing chevron (›) and a placeholder summary (e.g., `... (5 lines)`).
+
+### Fold/Unfold Operations
+
+| Operation | Method |
+|-----------|--------|
+| Fold/Unfold a block | Click the chevron (˅/›) in the gutter |
+| Recursive fold/unfold | Shift+Click the chevron |
+| Fold current block | Ctrl+Shift+[ |
+| Unfold current block | Ctrl+Shift+] |
+| Fold all | Ctrl+Alt+[ or toolbar button |
+| Unfold all | Ctrl+Alt+] or toolbar button |
+
+### Integration with Other Features
+
+- **Find/Replace**: If a search match is inside a folded region, the region is automatically unfolded.
+- **Multi-cursor**: If an added cursor lands inside a folded region, the region is automatically unfolded.
+- **Line operations**: Moving, duplicating, or deleting a folded header line automatically unfolds it first.
+
 ## Special Context Menu Features
 
 The context menu (right-click menu) has several code editor-specific features.
@@ -177,5 +202,9 @@ Main keyboard shortcuts available in the code editor:
 | Ctrl+Enter                | Execute current line or selection        |
 | Numpad Enter              | Execute current script (same as Run button) |
 | Ctrl+Shift+Enter          | Execute entire file                      |
+| Ctrl+Shift+[              | Fold current block                       |
+| Ctrl+Shift+]              | Unfold current block                     |
+| Ctrl+Alt+[                | Fold all                                 |
+| Ctrl+Alt+]                | Unfold all                               |
 | Ctrl+K                    | Clear terminal output                    |
 | Ctrl+MouseWheel           | Adjust font size                         |

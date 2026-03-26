@@ -55,6 +55,20 @@ Clears the console contents.
 
 - Swaps the vertical positions of the code editor and terminal.
 
+**![image](../../images/common/code_editor/wordwrap_normal.svg) Toggle Word Wrap**
+
+- Toggles word wrap ON/OFF for the code editor.
+- When ON, long lines wrap at the editor width. When OFF, a horizontal scrollbar appears.
+- This setting is persisted across sessions.
+
+**![image](../../images/common/code_editor/foldall_normal.svg) Fold All**
+
+- Folds (collapses) all foldable code blocks in the current editor.
+
+**![image](../../images/common/code_editor/unfoldall_normal.svg) Unfold All**
+
+- Unfolds (expands) all folded code blocks in the current editor.
+
 ## Keyboard Shortcuts
 
 The following keyboard shortcuts are assigned to toolbar actions.
@@ -65,3 +79,5 @@ The following keyboard shortcuts are assigned to toolbar actions.
 | Run Code              | Ctrl+Shift+Enter, Numpad Enter|
 | Save Current File     | Ctrl+S                        |
 | Save All Files        | Ctrl+Shift+S                  |
+| Fold All              | Ctrl+Alt+[                    |
+| Unfold All            | Ctrl+Alt+]                    |

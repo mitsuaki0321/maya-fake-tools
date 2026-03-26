@@ -55,13 +55,29 @@ lang-ref: code_editor_toolbar
 
 - コードエディタとターミナルの位置を上下に入れ替えます。
 
+**![image](../../images/common/code_editor/wordwrap_normal.svg) Toggle Word Wrap**
+
+- コードエディターの折り返し表示の ON/OFF を切り替えます。
+- ON の場合、長い行がエディタの幅で折り返されます。OFF の場合、水平スクロールバーが表示されます。
+- この設定はセッション間で保持されます。
+
+**![image](../../images/common/code_editor/foldall_normal.svg) Fold All**
+
+- 現在のエディタの全ての折り畳み可能なコードブロックを折り畳みます。
+
+**![image](../../images/common/code_editor/unfoldall_normal.svg) Unfold All**
+
+- 現在のエディタの全ての折り畳まれたコードブロックを展開します。
+
 ## ショートカットキー
 
 ツールバーの各アクションには、以下のショートカットキーが割り当てられています。
 
-| アクション               | ショートカットキー　　　|
+| アクション               | ショートカットキー      |
 |------------------------|-----------------------|
-| Create New File        | Ctrl+N              |
-| Run Code               | Ctrl+Shift+Enter, Numpad        |
-| Save Current File      | Ctrl + S              |
-| Save All Files         | Ctrl + Shift + S      |
+| Create New File        | Ctrl+N                |
+| Run Code               | Ctrl+Shift+Enter, Numpad Enter |
+| Save Current File      | Ctrl+S                |
+| Save All Files         | Ctrl+Shift+S          |
+| Fold All               | Ctrl+Alt+[            |
+| Unfold All             | Ctrl+Alt+]            |
