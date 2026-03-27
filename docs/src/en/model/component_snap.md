@@ -36,7 +36,7 @@ faketools.tools.model.component_snap.ui.show_ui()
 
 1. Select source components (e.g. vertices) in **component mode**.
 2. **Ctrl + click** the target mesh to add it as an object selection.
-3. Choose a matching method and click the **Snap** or **Blend** button.
+3. Choose a matching method and click the ![snap](../../images/model/component_snap/snap.svg) button or the ![blend](../../images/model/component_snap/blend.svg) button.
 
 ### Matching Methods
 
@@ -48,7 +48,7 @@ faketools.tools.model.component_snap.ui.show_ui()
 
 ### Blend
 
-Set the snap rate using the slider or spinbox, then click the **Blend** button.
+Set the snap rate using the slider or spinbox, then click the ![blend](../../images/model/component_snap/blend.svg) button.
 
 - **100%**: Fully snap to target position (same as the Snap button)
 - **50%**: Move to the midpoint between source and target
@@ -63,14 +63,22 @@ When components are selected with Maya's Soft Selection enabled, each component'
 
 Formula: `final position = current position + (target position - current position) × snap rate × Soft Selection weight`
 
+**Before snap**
+
+![image002](../../images/model/component_snap/image002.png)
+
+**After snap**
+
+![image003](../../images/model/component_snap/image003.png)
+
 ### Space Modes
 
 Toggle using the toolbar button.
 
-| Mode | Description |
-|------|-------------|
-| World | Calculates positions in world space (default) |
-| Local | Calculates positions in object local space |
+| Icon | Mode | Description |
+|------|------|-------------|
+| ![world](../../images/model/component_snap/world.svg) | World | Calculates positions in world space (default) |
+| ![local](../../images/model/component_snap/local.svg) | Local | Calculates positions in object local space |
 
 ### Supported Component Types
 

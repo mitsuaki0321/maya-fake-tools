@@ -36,7 +36,7 @@ faketools.tools.model.component_snap.ui.show_ui()
 
 1. ソースメッシュのコンポーネント（頂点など）を**コンポーネントモード**で選択します。
 2. ターゲットメッシュを **Ctrl + クリック** でオブジェクトとして追加選択します。
-3. マッチング方式を選択し、**Snap** ボタンまたは **Blend** ボタンをクリックします。
+3. マッチング方式を選択し、 ![image001](../../images/model/component_snap/snap.svg) ボタンまたは  ![image001](../../images/model/component_snap/blend.svg) ボタンをクリックします。
 
 ### マッチング方式
 
@@ -48,7 +48,7 @@ faketools.tools.model.component_snap.ui.show_ui()
 
 ### ブレンド
 
-スライダーまたはスピンボックスでスナップ率を設定し、**Blend** ボタンで実行します。
+スライダーまたはスピンボックスでスナップ率を設定し、 ![image001](../../images/model/component_snap/blend.svg)  ボタンで実行します。
 
 - **100%**: ターゲット位置に完全にスナップ（Snap ボタンと同じ）
 - **50%**: ソースとターゲットの中間位置に移動
@@ -63,14 +63,22 @@ Maya の Soft Selection がオンの状態でコンポーネントを選択す�
 
 計算式: `最終位置 = 現在位置 + (ターゲット位置 - 現在位置) × スナップ率 × Soft Selection ウェイト`
 
+**スナップ前**
+
+![image001](../../images/model/component_snap/image002.png)
+
+**スナップ後**
+
+![image001](../../images/model/component_snap/image003.png)
+
 ### 空間モード
 
 ツールバーのトグルボタンで切り替えます。
 
-| モード | 説明 |
-|--------|------|
-| World | ワールド空間で位置を計算します（デフォルト） |
-| Local | オブジェクトのローカル空間で位置を計算します |
+| アイコン | モード | 説明 |
+|--------|--------|------|
+| ![image001](../../images/model/component_snap/world.svg) | World | ワールド空間で位置を計算します（デフォルト） |
+| ![image001](../../images/model/component_snap/local.svg) | Local | オブジェクトのローカル空間で位置を計算します |
 
 ### 対応コンポーネントタイプ
 
