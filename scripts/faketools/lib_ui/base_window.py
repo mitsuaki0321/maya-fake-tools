@@ -264,13 +264,21 @@ class BaseFramelessWindow(QWidget):
             self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             self.setMouseTracking(True)
 
+        # Apply window border style
+        palette = self.palette()
+        base_color = palette.window().color()
+        border_color = base_color.lighter(115).name()
+        title_bg = base_color.darker(120).name()
+        self.setStyleSheet(f"BaseFramelessWindow {{ border: 1px solid {border_color}; }}")
+
         # Main vertical layout (title bar + content)
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(1, 1, 1, 1)
         main_layout.setSpacing(0)
 
         # Create custom title bar
         self.title_bar = self._create_title_bar(window_title)
+        self.title_bar.setStyleSheet(f"background-color: {title_bg};")
         main_layout.addWidget(self.title_bar)
 
         # Create central widget and layout
