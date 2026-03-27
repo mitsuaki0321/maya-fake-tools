@@ -6,7 +6,21 @@ Provides standard window classes with resolution-independent UI setup.
 
 from .icons import get_path
 from .maya_qt import get_maya_main_window
-from .qt_compat import QApplication, QHBoxLayout, QIcon, QLabel, QMainWindow, QPushButton, Qt, QVBoxLayout, QWidget, is_pyside2
+from .qt_compat import (
+    QApplication,
+    QCursor,
+    QEvent,
+    QHBoxLayout,
+    QIcon,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QSizePolicy,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+    is_pyside2,
+)
 
 
 def _get_target_screen_geometry(target="maya"):
@@ -199,6 +213,7 @@ class BaseFramelessWindow(QWidget):
     - Proper cleanup on close (WA_DeleteOnClose)
     - Normal window behavior (can go behind other apps)
     - Automatic centering on first show (can be disabled)
+    - Optional edge-drag resizing (resizable=True)
 
     Attributes:
         central_layout (Union[QVBoxLayout, QHBoxLayout]): The main layout (vertical or horizontal)
@@ -206,7 +221,11 @@ class BaseFramelessWindow(QWidget):
         title_label (QLabel): The title label in the title bar
     """
 
-    def __init__(self, parent=None, object_name="FramelessWindow", window_title="Window", central_layout="vertical", center_on_show=True):
+    _RESIZE_MARGIN = 6
+
+    def __init__(
+        self, parent=None, object_name="FramelessWindow", window_title="Window", central_layout="vertical", center_on_show=True, resizable=False
+    ):
         """
         Initialize the frameless window.
 
@@ -216,6 +235,7 @@ class BaseFramelessWindow(QWidget):
             window_title (str): Title displayed in custom title bar
             central_layout (str): Layout orientation - "vertical" or "horizontal"
             center_on_show (bool): If True, center window on Maya's screen on first show
+            resizable (bool): If True, enable edge-drag resizing
         """
         super().__init__(parent=parent)
 
@@ -225,6 +245,12 @@ class BaseFramelessWindow(QWidget):
         self._center_on_show = center_on_show
         self._first_show = True
 
+        # Resize state
+        self._resizable = resizable
+        self._resize_direction = None
+        self._resize_start_pos = None
+        self._resize_start_geometry = None
+
         # Set attribute for proper cleanup (compatible with PySide2/6)
         delete_on_close = getattr(Qt, "WA_DeleteOnClose", None) or Qt.WidgetAttribute.WA_DeleteOnClose
         self.setAttribute(delete_on_close)
@@ -233,6 +259,10 @@ class BaseFramelessWindow(QWidget):
         window_flag = getattr(Qt, "Window", None) or Qt.WindowType.Window
         frameless_flag = getattr(Qt, "FramelessWindowHint", None) or Qt.WindowType.FramelessWindowHint
         self.setWindowFlags(window_flag | frameless_flag)
+
+        if resizable:
+            self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            self.setMouseTracking(True)
 
         # Main vertical layout (title bar + content)
         main_layout = QVBoxLayout(self)
@@ -320,49 +350,192 @@ class BaseFramelessWindow(QWidget):
         if self._first_show and self._center_on_show:
             self._first_show = False
             center_on_screen(self, target="maya")
+        if self._first_show is False and self._resizable:
+            self._enable_mouse_tracking_for_children()
+
+    # -- Resize helpers ----------------------------------------------------------
+
+    def _enable_mouse_tracking_for_children(self):
+        """Enable mouse tracking for all child widgets for edge-resize cursor."""
+        self.setMouseTracking(True)
+        for widget in self.findChildren(object):
+            if hasattr(widget, "setMouseTracking"):
+                widget.setMouseTracking(True)
+                widget.installEventFilter(self)
+
+    def _get_resize_direction(self, pos):
+        """Get resize direction based on mouse position relative to window edges.
+
+        Args:
+            pos: Mouse position in window coordinates.
+
+        Returns:
+            str | None: Direction string or None if not near an edge.
+        """
+        rect = self.rect()
+        margin = self._RESIZE_MARGIN
+
+        on_left = pos.x() <= margin
+        on_right = pos.x() >= rect.width() - margin
+        on_top = pos.y() <= margin
+        on_bottom = pos.y() >= rect.height() - margin
+
+        if on_top and on_left:
+            return "topleft"
+        if on_top and on_right:
+            return "topright"
+        if on_bottom and on_left:
+            return "bottomleft"
+        if on_bottom and on_right:
+            return "bottomright"
+        if on_left:
+            return "left"
+        if on_right:
+            return "right"
+        if on_top:
+            return "top"
+        if on_bottom:
+            return "bottom"
+        return None
+
+    @staticmethod
+    def _get_cursor_shape(direction):
+        """Get cursor shape for a resize direction.
+
+        Args:
+            direction (str): Resize direction.
+
+        Returns:
+            Qt.CursorShape: Appropriate cursor shape.
+        """
+        if direction in ("left", "right"):
+            return getattr(Qt, "SizeHorCursor", None) or Qt.CursorShape.SizeHorCursor
+        if direction in ("top", "bottom"):
+            return getattr(Qt, "SizeVerCursor", None) or Qt.CursorShape.SizeVerCursor
+        if direction in ("topleft", "bottomright"):
+            return getattr(Qt, "SizeFDiagCursor", None) or Qt.CursorShape.SizeFDiagCursor
+        if direction in ("topright", "bottomleft"):
+            return getattr(Qt, "SizeBDiagCursor", None) or Qt.CursorShape.SizeBDiagCursor
+        return getattr(Qt, "ArrowCursor", None) or Qt.CursorShape.ArrowCursor
+
+    def _apply_resize(self, delta, new_geometry):
+        """Apply geometry change based on resize direction and mouse delta.
+
+        Args:
+            delta: QPoint delta from resize start position.
+            new_geometry: QRect of the window geometry at resize start.
+        """
+        if "left" in self._resize_direction:
+            new_x = new_geometry.x() + delta.x()
+            new_width = new_geometry.width() - delta.x()
+            if new_width >= self.minimumWidth():
+                self.setGeometry(new_x, new_geometry.y(), new_width, new_geometry.height())
+                if "top" not in self._resize_direction and "bottom" not in self._resize_direction:
+                    return
+
+        if "right" in self._resize_direction:
+            new_width = new_geometry.width() + delta.x()
+            self.resize(new_width, self.height())
+            if "top" not in self._resize_direction and "bottom" not in self._resize_direction:
+                return
+
+        if "top" in self._resize_direction:
+            new_y = new_geometry.y() + delta.y()
+            new_height = new_geometry.height() - delta.y()
+            if new_height >= self.minimumHeight():
+                self.setGeometry(self.x(), new_y, self.width(), new_height)
+                return
+
+        if "bottom" in self._resize_direction:
+            new_height = new_geometry.height() + delta.y()
+            self.resize(self.width(), new_height)
+
+    # -- Event handlers ----------------------------------------------------------
+
+    def eventFilter(self, obj, event):
+        """Filter events from child widgets to update resize cursor."""
+        if not self._resizable:
+            return super().eventFilter(obj, event)
+
+        try:
+            mouse_move = QEvent.Type.MouseMove
+        except AttributeError:
+            mouse_move = QEvent.MouseMove
+
+        if event.type() == mouse_move:
+            window_pos = self.mapFromGlobal(obj.mapToGlobal(event.pos()))
+            resize_dir = self._get_resize_direction(window_pos)
+            if resize_dir:
+                self.setCursor(QCursor(self._get_cursor_shape(resize_dir)))
+            else:
+                self.unsetCursor()
+
+        return super().eventFilter(obj, event)
 
     def mousePressEvent(self, event):
-        """Handle mouse press for dragging."""
-        # Get global position (compatible with PySide2/6)
+        """Handle mouse press for dragging and resizing."""
         try:
-            # PySide6
             global_pos = event.globalPosition().toPoint()
         except AttributeError:
-            # PySide2
             global_pos = event.globalPos()
 
-        # Get left button constant (compatible with PySide2/6)
         left_button = getattr(Qt, "LeftButton", None) or Qt.MouseButton.LeftButton
 
-        # Check if click is in title bar
-        if event.button() == left_button and self.title_bar.geometry().contains(event.pos()):
-            self._drag_position = global_pos - self.frameGeometry().topLeft()
-            event.accept()
+        if event.button() == left_button:
+            # Check resize first (when resizable)
+            if self._resizable:
+                resize_dir = self._get_resize_direction(event.pos())
+                if resize_dir:
+                    self._resize_direction = resize_dir
+                    self._resize_start_pos = global_pos
+                    self._resize_start_geometry = self.geometry()
+                    event.accept()
+                    return
+
+            # Title bar drag
+            if self.title_bar.geometry().contains(event.pos()):
+                self._drag_position = global_pos - self.frameGeometry().topLeft()
+                event.accept()
 
     def mouseMoveEvent(self, event):
-        """Handle mouse move for dragging."""
-        # Get global position (compatible with PySide2/6)
+        """Handle mouse move for dragging and resizing."""
         try:
-            # PySide6
             global_pos = event.globalPosition().toPoint()
         except AttributeError:
-            # PySide2
             global_pos = event.globalPos()
 
-        # Get left button constant (compatible with PySide2/6)
         left_button = getattr(Qt, "LeftButton", None) or Qt.MouseButton.LeftButton
 
+        # Handle active resize
+        if self._resizable and event.buttons() == left_button and self._resize_direction and self._resize_start_pos:
+            delta = global_pos - self._resize_start_pos
+            self._apply_resize(delta, self._resize_start_geometry)
+            event.accept()
+            return
+
+        # Handle drag
         if event.buttons() == left_button and self._drag_position is not None:
             self.move(global_pos - self._drag_position)
             event.accept()
+            return
+
+        # Update cursor when not dragging (resizable only)
+        if self._resizable and not event.buttons():
+            resize_dir = self._get_resize_direction(event.pos())
+            if resize_dir:
+                self.setCursor(QCursor(self._get_cursor_shape(resize_dir)))
+            else:
+                self.unsetCursor()
 
     def mouseReleaseEvent(self, event):
-        """Handle mouse release to end dragging."""
+        """Handle mouse release to end dragging or resizing."""
         self._drag_position = None
+        self._resize_direction = None
+        self._resize_start_pos = None
+        self._resize_start_geometry = None
 
     def keyPressEvent(self, event):
         """Handle key press events (Escape to close)."""
-        # Handle both PySide2 and PySide6 key constants
         escape_key = getattr(Qt.Key, "Key_Escape", None) or Qt.Key_Escape
         if event.key() == escape_key:
             self.close()

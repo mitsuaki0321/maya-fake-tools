@@ -1,29 +1,24 @@
 """Component Snap UI layer."""
 
 from logging import getLogger
+from pathlib import Path
 
 import maya.cmds as cmds
 
-from ....lib_ui import BaseMainWindow, ToolSettingsManager, error_handler, undo_chunk
+from ....lib_ui import BaseFramelessWindow, ToolSettingsManager, error_handler, undo_chunk
 from ....lib_ui.maya_qt import get_maya_main_window
-from ....lib_ui.qt_compat import (
-    QButtonGroup,
-    QDoubleSpinBox,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QRadioButton,
-    QVBoxLayout,
-    QWidget,
-)
+from ....lib_ui.qt_compat import QComboBox, QDoubleSpinBox, QSlider, Qt
+from ....lib_ui.widgets import IconButton, IconToggleButton, extra_widgets
 from . import command
+
+_IMAGES_DIR = Path(__file__).parent / "images"
 
 logger = getLogger(__name__)
 
 _instance = None
 
 
-class MainWindow(BaseMainWindow):
+class MainWindow(BaseFramelessWindow):
     """Component Snap Main Window."""
 
     _METHODS = ("index", "closest_position", "nearest_component")
@@ -35,7 +30,8 @@ class MainWindow(BaseMainWindow):
             parent=parent,
             object_name="ComponentSnapMainWindow",
             window_title="Component Snap",
-            central_layout="vertical",
+            central_layout="horizontal",
+            resizable=True,
         )
 
         self.settings = ToolSettingsManager(tool_name="component_snap", category="model")
@@ -44,63 +40,86 @@ class MainWindow(BaseMainWindow):
 
     def _setup_ui(self):
         """Build the UI."""
-        # Space mode
-        space_layout = QHBoxLayout()
-        self.world_button = QPushButton("World")
-        self.local_button = QPushButton("Local")
-        self.world_button.setCheckable(True)
-        self.local_button.setCheckable(True)
-        self.world_button.setChecked(True)
+        # Method dropdown
+        self.method_combo = QComboBox()
+        self.method_combo.addItems(self._METHOD_LABELS)
+        self.central_layout.addWidget(self.method_combo)
 
-        self.space_group = QButtonGroup(self)
-        self.space_group.addButton(self.world_button, 0)
-        self.space_group.addButton(self.local_button, 1)
+        separator = extra_widgets.VerticalSeparator()
+        self.central_layout.addWidget(separator)
 
-        space_layout.addWidget(self.world_button)
-        space_layout.addWidget(self.local_button)
-        self.central_layout.addLayout(space_layout)
+        # World/Local toggle
+        self.space_toggle = IconToggleButton(icon_on="world", icon_off="local", icon_dir=_IMAGES_DIR)
+        self.space_toggle.setChecked(True)
+        self.space_toggle.setToolTip("World Space / Local Space")
+        self.central_layout.addWidget(self.space_toggle)
 
-        # Matching method
-        method_widget = QWidget()
-        method_layout = QVBoxLayout(method_widget)
-        method_layout.setContentsMargins(0, 0, 0, 0)
+        separator = extra_widgets.VerticalSeparator()
+        self.central_layout.addWidget(separator)
 
-        self.method_group = QButtonGroup(self)
-        for i, label in enumerate(self._METHOD_LABELS):
-            radio = QRadioButton(label)
-            if i == 0:
-                radio.setChecked(True)
-            self.method_group.addButton(radio, i)
-            method_layout.addWidget(radio)
+        # Blend spinbox
+        self.blend_spin = QDoubleSpinBox()
+        self.blend_spin.setRange(0.0, 100.0)
+        self.blend_spin.setValue(100.0)
+        self.blend_spin.setSingleStep(1.0)
+        self.blend_spin.setDecimals(2)
+        self.blend_spin.setFixedWidth(int(self.blend_spin.sizeHint().width() * 1.2))
+        self.central_layout.addWidget(self.blend_spin)
 
-        self.central_layout.addWidget(method_widget)
+        # Blend slider
+        self.blend_slider = QSlider(Qt.Horizontal)
+        self.blend_slider.setRange(0, 10000)
+        self.blend_slider.setValue(10000)
+        self.central_layout.addWidget(self.blend_slider, stretch=1)
 
-        # Execute
-        self.execute_button = QPushButton("Execute")
-        self.execute_button.clicked.connect(self._on_execute)
-        self.central_layout.addWidget(self.execute_button)
+        # Sync slider <-> spinbox
+        self.blend_slider.valueChanged.connect(self._on_slider_changed)
+        self.blend_spin.valueChanged.connect(self._on_spin_changed)
 
-        # Blend
-        self.blend_button = QPushButton("Blend")
+        separator = extra_widgets.VerticalSeparator()
+        self.central_layout.addWidget(separator)
+
+        # Blend button
+        self.blend_button = IconButton(icon_name="blend", icon_dir=_IMAGES_DIR)
+        self.blend_button.setToolTip("Blend Snap")
         self.blend_button.clicked.connect(self._on_blend)
         self.central_layout.addWidget(self.blend_button)
 
-        # Blend value
-        blend_layout = QHBoxLayout()
-        self.blend_spin = QDoubleSpinBox()
-        self.blend_spin.setRange(0.0, 100.0)
-        self.blend_spin.setValue(50.0)
-        self.blend_spin.setSingleStep(1.0)
-        self.blend_spin.setDecimals(2)
-        blend_layout.addWidget(self.blend_spin)
-        blend_layout.addWidget(QLabel("%"))
-        self.central_layout.addLayout(blend_layout)
+        # Snap (100%) button
+        self.snap_button = IconButton(icon_name="snap", icon_dir=_IMAGES_DIR)
+        self.snap_button.setToolTip("Snap (100%)")
+        self.snap_button.clicked.connect(self._on_snap)
+        self.central_layout.addWidget(self.snap_button)
+
+        # Rearrange button height to match spinbox
+        spin_height = self.blend_spin.sizeHint().height()
+        self.space_toggle.setMinimumHeight(spin_height)
 
         # Adjust size
         self.adjustSize()
-        width = self.minimumSizeHint().width()
+        width = self.sizeHint().width()
         height = self.minimumSizeHint().height()
         self.resize(width, height)
+
+    def _on_slider_changed(self, value: int):
+        """Sync spinbox from slider value.
+
+        Args:
+            value: Slider value (0-10000).
+        """
+        self.blend_spin.blockSignals(True)
+        self.blend_spin.setValue(value / 100.0)
+        self.blend_spin.blockSignals(False)
+
+    def _on_spin_changed(self, value: float):
+        """Sync slider from spinbox value.
+
+        Args:
+            value: Spinbox value (0.0-100.0).
+        """
+        self.blend_slider.blockSignals(True)
+        self.blend_slider.setValue(int(value * 100))
+        self.blend_slider.blockSignals(False)
 
     def _get_space(self) -> str:
         """Get the current space mode.
@@ -108,7 +127,7 @@ class MainWindow(BaseMainWindow):
         Returns:
             str: "world" or "local".
         """
-        return "world" if self.space_group.checkedId() == 0 else "local"
+        return "world" if self.space_toggle.isChecked() else "local"
 
     def _get_method(self) -> str:
         """Get the current matching method.
@@ -116,7 +135,7 @@ class MainWindow(BaseMainWindow):
         Returns:
             str: Matching method key.
         """
-        return self._METHODS[self.method_group.checkedId()]
+        return self._METHODS[self.method_combo.currentIndex()]
 
     def _run_snap(self, blend: float) -> None:
         """Run the snap operation.
@@ -172,15 +191,15 @@ class MainWindow(BaseMainWindow):
         logger.info(f"Component Snap: {total} components processed.")
 
     @error_handler
-    @undo_chunk("Component Snap: Execute")
-    def _on_execute(self):
+    @undo_chunk("Component Snap")
+    def _on_snap(self):
         """Execute full snap (100%)."""
         self._run_snap(blend=1.0)
 
     @error_handler
     @undo_chunk("Component Snap: Blend")
     def _on_blend(self):
-        """Execute blend snap with the specified percentage."""
+        """Execute blend snap with the current percentage."""
         blend = self.blend_spin.value() / 100.0
         self._run_snap(blend=blend)
 
@@ -202,9 +221,9 @@ class MainWindow(BaseMainWindow):
             dict: Settings data.
         """
         return {
-            "space": self.space_group.checkedId(),
-            "method": self.method_group.checkedId(),
+            "method": self.method_combo.currentIndex(),
             "blend_value": self.blend_spin.value(),
+            "world_space": self.space_toggle.isChecked(),
         }
 
     def _apply_settings(self, settings_data: dict):
@@ -213,16 +232,12 @@ class MainWindow(BaseMainWindow):
         Args:
             settings_data: Settings data to apply.
         """
-        if "space" in settings_data:
-            button = self.space_group.button(settings_data["space"])
-            if button:
-                button.setChecked(True)
         if "method" in settings_data:
-            button = self.method_group.button(settings_data["method"])
-            if button:
-                button.setChecked(True)
+            self.method_combo.setCurrentIndex(settings_data["method"])
         if "blend_value" in settings_data:
             self.blend_spin.setValue(settings_data["blend_value"])
+        if "world_space" in settings_data:
+            self.space_toggle.setChecked(settings_data["world_space"])
 
     def closeEvent(self, event):
         """Handle window close event."""
