@@ -22,7 +22,7 @@ class MainWindow(BaseFramelessWindow):
     """Component Snap Main Window."""
 
     _METHODS = ("index", "closest_position", "nearest_component")
-    _METHOD_LABELS = ("Index", "Closest Position", "Nearest Component")
+    _METHOD_LABELS = ("Index", "Closest Pos", "Nearest Comp")
 
     def __init__(self, parent=None):
         """Constructor."""
