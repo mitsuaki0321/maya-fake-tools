@@ -38,6 +38,8 @@ class CheckResult:
     center_count: int
     failed_count: int
     failed_indices: list[int] = field(default_factory=list)
+    asymmetric_count: int = 0
+    asymmetric_indices: list[int] = field(default_factory=list)
 
 
 # =====================================================================
@@ -141,23 +143,71 @@ def build_dual_table(base_a: str, base_b: str, method: str, threshold: float) ->
     return build_correspondence_table(pos_a, pos_b, faces_a=faces_a, faces_b=faces_b, method=corr_method, threshold=threshold)
 
 
-def get_check_result_single(table: SymmetryResult) -> CheckResult:
-    """Extract check statistics from a symmetry table."""
+def get_check_result_single(target: str, table: SymmetryResult, threshold: float) -> CheckResult:
+    """Check target mesh symmetry using the base mesh's table.
+
+    Args:
+        target: Target mesh transform name.
+        table: Symmetry table built from the base mesh.
+        threshold: Distance threshold for asymmetry detection.
+
+    Returns:
+        Check result with asymmetric vertex information.
+    """
+    shape = validate_mesh(target)
+    positions = _read_positions(shape)
+
+    asymmetric: list[int] = []
+    for neg_idx, pos_idx in table.pair_map.items():
+        mirrored = positions[pos_idx].copy()
+        mirrored[0] = -mirrored[0]
+        dist = np.linalg.norm(positions[neg_idx] - mirrored)
+        if dist > threshold:
+            asymmetric.append(neg_idx)
+            asymmetric.append(pos_idx)
+
     return CheckResult(
         matched_count=len(table.pair_map),
         center_count=len(table.center_indices),
         failed_count=len(table.failed_vertices),
         failed_indices=list(table.failed_vertices),
+        asymmetric_count=len(asymmetric),
+        asymmetric_indices=asymmetric,
     )
 
 
-def get_check_result_dual(table: CorrespondenceResult) -> CheckResult:
-    """Extract check statistics from a correspondence table."""
+def get_check_result_dual(target_a: str, target_b: str, table: CorrespondenceResult, threshold: float) -> CheckResult:
+    """Check dual mesh correspondence using the base pair's table.
+
+    Args:
+        target_a: Target mesh A transform name.
+        target_b: Target mesh B transform name.
+        table: Correspondence table built from the base pair.
+        threshold: Distance threshold for asymmetry detection.
+
+    Returns:
+        Check result with asymmetric vertex information.
+    """
+    shape_a = validate_mesh(target_a)
+    shape_b = validate_mesh(target_b)
+    pos_a = _read_positions(shape_a)
+    pos_b = _read_positions(shape_b)
+
+    asymmetric: list[int] = []
+    for a_idx, b_idx in table.pair_map.items():
+        mirrored_a = pos_a[a_idx].copy()
+        mirrored_a[0] = -mirrored_a[0]
+        dist = np.linalg.norm(pos_b[b_idx] - mirrored_a)
+        if dist > threshold:
+            asymmetric.append(a_idx)
+
     return CheckResult(
         matched_count=len(table.pair_map),
         center_count=0,
         failed_count=len(table.failed_vertices_a) + len(table.failed_vertices_b),
         failed_indices=list(table.failed_vertices_a),
+        asymmetric_count=len(asymmetric),
+        asymmetric_indices=asymmetric,
     )
 
 
@@ -196,12 +246,13 @@ class SingleMeshOperation:
         self._base = base
         self._table = table
 
-    def mirror(self, direction: str) -> None:
+    def mirror(self, direction: str, fallback: str = "closest_point") -> None:
         """Mirror vertex positions from one side to the other.
 
         Args:
             direction: ``"+x"`` copies +X side to -X side.
                 ``"-x"`` copies -X side to +X side.
+            fallback: ``"closest_point"`` or ``"laplacian"`` for failed vertices.
         """
         target_shape = validate_mesh(self._target)
         target_pos = _read_positions(target_shape)
@@ -218,32 +269,61 @@ class SingleMeshOperation:
         # Copy source side to destination side
         for neg_idx, pos_idx in pair_map.items():
             if direction == "+x":
-                # +X is source → overwrite -X
                 new_pos[neg_idx] = new_pos[pos_idx].copy()
                 new_pos[neg_idx, 0] = -new_pos[neg_idx, 0]
             else:
-                # -X is source → overwrite +X
                 new_pos[pos_idx] = new_pos[neg_idx].copy()
                 new_pos[pos_idx, 0] = -new_pos[pos_idx, 0]
 
-        # Delta fallback for failed vertices
+        # Fallback for failed vertices on the destination side
         if self._table.failed_vertices:
-            base_shape = validate_mesh(self._base)
-            base_pos = _read_positions(base_shape)
-            new_pos = _apply_delta_fallback_single(new_pos, target_pos, base_pos, self._table, direction)
+            dest_failed = _get_destination_failed_single(self._table.failed_vertices, target_pos, direction)
+            if dest_failed:
+                if fallback == "laplacian":
+                    new_pos = _fallback_laplacian(target_shape, dest_failed, new_pos)
+                else:
+                    new_pos = _fallback_closest_point(target_shape, dest_failed, new_pos)
 
         _write_positions(self._target, target_pos, new_pos)
-        logger.info("Mirror single: %s (direction=%s, pairs=%d)", self._target, direction, len(pair_map))
+        cmds.select(self._target, r=True)
+        logger.info("Mirror single: %s (direction=%s, pairs=%d, fallback=%s)", self._target, direction, len(pair_map), fallback)
 
-    def flip(self) -> None:
-        """Flip all vertex positions by negating X and reversing normals."""
-        num_vtx = cmds.polyEvaluate(self._target, v=True)
-        if num_vtx == 0:
-            return
+    def flip(self, fallback: str = "closest_point") -> None:
+        """Flip by exchanging L/R pair positions and negating center X.
 
-        cmds.scale(-1.0, 1.0, 1.0, f"{self._target}.vtx[0:{num_vtx - 1}]", pivot=[0, 0, 0], r=True)
-        cmds.polyNormal(self._target, normalMode=0, userNormalMode=0, ch=False)
-        logger.info("Flip single: %s", self._target)
+        Args:
+            fallback: ``"closest_point"`` or ``"laplacian"`` for failed vertices.
+        """
+        target_shape = validate_mesh(self._target)
+        target_pos = _read_positions(target_shape)
+        new_pos = target_pos.copy()
+
+        pair_map = self._table.pair_map
+        center_indices = self._table.center_indices
+
+        # Exchange pair positions with X mirror so vertices stay on their side
+        for neg_idx, pos_idx in pair_map.items():
+            new_pos[neg_idx] = target_pos[pos_idx].copy()
+            new_pos[neg_idx, 0] = -new_pos[neg_idx, 0]
+
+            new_pos[pos_idx] = target_pos[neg_idx].copy()
+            new_pos[pos_idx, 0] = -new_pos[pos_idx, 0]
+
+        # Negate X for center vertices
+        if center_indices:
+            for ci in center_indices:
+                new_pos[ci, 0] = -new_pos[ci, 0]
+
+        # Fallback for failed vertices (both sides need processing in flip)
+        if self._table.failed_vertices:
+            if fallback == "laplacian":
+                new_pos = _fallback_laplacian(target_shape, self._table.failed_vertices, new_pos)
+            else:
+                new_pos = _fallback_closest_point(target_shape, self._table.failed_vertices, new_pos)
+
+        _write_positions(self._target, target_pos, new_pos)
+        cmds.select(self._target, r=True)
+        logger.info("Flip single: %s (pairs=%d, center=%d, fallback=%s)", self._target, len(pair_map), len(center_indices), fallback)
 
 
 # =====================================================================
@@ -277,12 +357,13 @@ class DualMeshOperation:
         self._base_b = base_b
         self._table = table
 
-    def mirror(self, direction: str) -> None:
+    def mirror(self, direction: str, fallback: str = "closest_point") -> None:
         """Mirror vertex positions from one mesh to the other.
 
         Args:
             direction: ``"a_to_b"`` copies A (mirrored) to B.
                 ``"b_to_a"`` copies B (mirrored) to A.
+            fallback: ``"closest_point"`` or ``"laplacian"`` for failed vertices.
         """
         shape_a = validate_mesh(self._target_a)
         shape_b = validate_mesh(self._target_b)
@@ -297,9 +378,11 @@ class DualMeshOperation:
                 new_b[b_idx] = pos_a[a_idx].copy()
                 new_b[b_idx, 0] = -new_b[b_idx, 0]
 
-            # Delta fallback for failed vertices
-            if self._table.failed_vertices_a:
-                new_b = self._apply_delta_fallback(pos_a, pos_b, new_b, direction)
+            if self._table.failed_vertices_b:
+                if fallback == "laplacian":
+                    new_b = _fallback_laplacian(shape_b, self._table.failed_vertices_b, new_b)
+                else:
+                    new_b = _fallback_closest_point(shape_a, self._table.failed_vertices_b, new_b)
 
             _write_positions(self._target_b, pos_b, new_b)
         else:
@@ -309,15 +392,23 @@ class DualMeshOperation:
                 new_a[a_idx] = pos_b[b_idx].copy()
                 new_a[a_idx, 0] = -new_a[a_idx, 0]
 
-            if self._table.failed_vertices_b:
-                new_a = self._apply_delta_fallback(pos_a, pos_b, new_a, direction)
+            if self._table.failed_vertices_a:
+                if fallback == "laplacian":
+                    new_a = _fallback_laplacian(shape_a, self._table.failed_vertices_a, new_a)
+                else:
+                    new_a = _fallback_closest_point(shape_b, self._table.failed_vertices_a, new_a)
 
             _write_positions(self._target_a, pos_a, new_a)
 
-        logger.info("Mirror dual: %s -> %s (pairs=%d)", self._target_a, self._target_b, len(pair_map))
+        cmds.select([self._target_a, self._target_b], r=True)
+        logger.info("Mirror dual: %s -> %s (pairs=%d, fallback=%s)", self._target_a, self._target_b, len(pair_map), fallback)
 
-    def flip(self) -> None:
-        """Exchange vertex positions between two meshes with X negation."""
+    def flip(self, fallback: str = "closest_point") -> None:
+        """Exchange vertex positions between two meshes with X negation.
+
+        Args:
+            fallback: ``"closest_point"`` or ``"laplacian"`` for failed vertices.
+        """
         shape_a = validate_mesh(self._target_a)
         shape_b = validate_mesh(self._target_b)
         pos_a = _read_positions(shape_a)
@@ -335,52 +426,23 @@ class DualMeshOperation:
             new_b[b_idx] = pos_a[a_idx].copy()
             new_b[b_idx, 0] = -new_b[b_idx, 0]
 
-        # Delta fallback for failed vertices
-        if self._table.failed_vertices_a or self._table.failed_vertices_b:
-            base_shape_a = validate_mesh(self._base_a)
-            base_shape_b = validate_mesh(self._base_b)
-            base_a = _read_positions(base_shape_a)
-            base_b = _read_positions(base_shape_b)
+        # Fallback for failed vertices
+        if self._table.failed_vertices_a:
+            if fallback == "laplacian":
+                new_a = _fallback_laplacian(shape_a, self._table.failed_vertices_a, new_a)
+            else:
+                new_a = _fallback_closest_point(shape_b, self._table.failed_vertices_a, new_a)
 
-            for a_idx in self._table.failed_vertices_a:
-                delta = pos_a[a_idx] - base_a[a_idx]
-                delta[0] = -delta[0]
-                new_b[a_idx] = base_b[a_idx] + delta
-
-            for b_idx in self._table.failed_vertices_b:
-                delta = pos_b[b_idx] - base_b[b_idx]
-                delta[0] = -delta[0]
-                new_a[b_idx] = base_a[b_idx] + delta
+        if self._table.failed_vertices_b:
+            if fallback == "laplacian":
+                new_b = _fallback_laplacian(shape_b, self._table.failed_vertices_b, new_b)
+            else:
+                new_b = _fallback_closest_point(shape_a, self._table.failed_vertices_b, new_b)
 
         _write_positions(self._target_a, pos_a, new_a)
         _write_positions(self._target_b, pos_b, new_b)
-        logger.info("Flip dual: %s <-> %s (pairs=%d)", self._target_a, self._target_b, len(pair_map))
-
-    def _apply_delta_fallback(
-        self,
-        pos_a: np.ndarray,
-        pos_b: np.ndarray,
-        new_dest: np.ndarray,
-        direction: str,
-    ) -> np.ndarray:
-        """Apply delta fallback for unmatched vertices in dual mesh mirror."""
-        base_shape_a = validate_mesh(self._base_a)
-        base_shape_b = validate_mesh(self._base_b)
-        base_a = _read_positions(base_shape_a)
-        base_b = _read_positions(base_shape_b)
-
-        if direction == "a_to_b":
-            for a_idx in self._table.failed_vertices_a:
-                delta = pos_a[a_idx] - base_a[a_idx]
-                delta[0] = -delta[0]
-                new_dest[a_idx] = base_b[a_idx] + delta
-        else:
-            for b_idx in self._table.failed_vertices_b:
-                delta = pos_b[b_idx] - base_b[b_idx]
-                delta[0] = -delta[0]
-                new_dest[b_idx] = base_a[b_idx] + delta
-
-        return new_dest
+        cmds.select([self._target_a, self._target_b], r=True)
+        logger.info("Flip dual: %s <-> %s (pairs=%d, fallback=%s)", self._target_a, self._target_b, len(pair_map), fallback)
 
 
 # =====================================================================
@@ -429,7 +491,7 @@ def _read_faces(shape: str) -> np.ndarray:
     faces = []
     for i in range(num_faces):
         faces.append(list(fn.getPolygonVertices(i)))
-    return np.array(faces)
+    return np.array(faces, dtype=object)
 
 
 def _write_positions(mesh: str, old_pos: np.ndarray, new_pos: np.ndarray) -> None:
@@ -451,48 +513,122 @@ def _write_positions(mesh: str, old_pos: np.ndarray, new_pos: np.ndarray) -> Non
 
 
 # =====================================================================
-# Private: Delta fallback
+# Private: Failed vertex fallback
 # =====================================================================
 
 
-def _apply_delta_fallback_single(
-    new_pos: np.ndarray,
-    target_pos: np.ndarray,
-    base_pos: np.ndarray,
-    table: SymmetryResult,
+def _get_destination_failed_single(
+    failed_vertices: list[int],
+    positions: np.ndarray,
     direction: str,
-) -> np.ndarray:
-    """Apply delta fallback for unmatched vertices in single mesh mirror.
+) -> list[int]:
+    """Get failed vertices that are on the destination side.
 
-    For each failed vertex, use the base mesh's pair_map to find the pair,
-    compute delta from base, and apply the mirrored delta to the other side.
+    Args:
+        failed_vertices: All failed vertex indices.
+        positions: Vertex positions ``(N, 3)``.
+        direction: ``"+x"`` or ``"-x"``.
+
+    Returns:
+        Failed vertex indices on the destination side.
     """
-    # The base mesh table should cover all vertices. But for vertices that
-    # failed even in the base, we skip them.
-    pair_map = table.pair_map
+    result = []
+    for vi in failed_vertices:
+        x = positions[vi, 0]
+        if direction == "+x" and x < 0:
+            # +X → -X: destination is -X side
+            result.append(vi)
+        elif direction == "-x" and x > 0:
+            # -X → +X: destination is +X side
+            result.append(vi)
+    return result
 
-    for vi in table.failed_vertices:
-        # Find this vertex's pair from any available mapping
-        paired = None
-        for neg, pos in pair_map.items():
-            if neg == vi:
-                paired = pos
-                break
-            if pos == vi:
-                paired = neg
-                break
 
-        if paired is None:
-            logger.warning("No pair found for failed vertex %d, skipping.", vi)
-            continue
+def _fallback_closest_point(
+    shape: str,
+    failed_indices: list[int],
+    new_positions: np.ndarray,
+) -> np.ndarray:
+    """Fallback using closest point on mesh surface.
 
-        delta = target_pos[vi] - base_pos[vi]
-        delta[0] = -delta[0]
+    For each failed vertex, mirrors its position and finds the closest
+    point on the original mesh surface, then mirrors back.
 
-        if direction == "+x":
-            new_pos[vi] = base_pos[paired] + delta
-        else:
-            new_pos[paired] = base_pos[vi] + delta
-            new_pos[paired, 0] = -new_pos[paired, 0]
+    Args:
+        shape: Mesh shape node full path (original, unmodified in Maya).
+        failed_indices: Vertex indices to process.
+        new_positions: Position array to update in-place.
 
-    return new_pos
+    Returns:
+        Updated position array.
+    """
+    if not failed_indices:
+        return new_positions
+
+    sel = om.MSelectionList()
+    sel.add(shape)
+    dag = sel.getDagPath(0)
+    fn = om.MFnMesh(dag)
+
+    for idx in failed_indices:
+        mirrored = om.MPoint(-new_positions[idx, 0], new_positions[idx, 1], new_positions[idx, 2])
+        closest, _ = fn.getClosestPoint(mirrored, om.MSpace.kWorld)
+        new_positions[idx] = [-closest.x, closest.y, closest.z]
+
+    logger.debug("Closest point fallback: processed %d vertices", len(failed_indices))
+    return new_positions
+
+
+def _fallback_laplacian(
+    shape: str,
+    failed_indices: list[int],
+    new_positions: np.ndarray,
+    max_iterations: int = 20,
+    tolerance: float = 1e-6,
+) -> np.ndarray:
+    """Fallback using Laplacian smoothing from neighbor vertices.
+
+    Iteratively averages failed vertex positions from their connected
+    neighbors. Converges when neighbors are already processed (paired).
+
+    Args:
+        shape: Mesh shape node full path.
+        failed_indices: Vertex indices to process.
+        new_positions: Position array to update in-place.
+        max_iterations: Maximum smoothing iterations.
+        tolerance: Convergence threshold.
+
+    Returns:
+        Updated position array.
+    """
+    if not failed_indices:
+        return new_positions
+
+    sel = om.MSelectionList()
+    sel.add(shape)
+    dag = sel.getDagPath(0)
+    mit = om.MItMeshVertex(dag)
+
+    # Build connectivity map for failed vertices
+    neighbors: dict[int, list[int]] = {}
+    for idx in failed_indices:
+        mit.setIndex(idx)
+        neighbors[idx] = list(mit.getConnectedVertices())
+
+    for iteration in range(max_iterations):
+        prev = new_positions[failed_indices].copy()
+
+        for idx in failed_indices:
+            nbr_indices = neighbors[idx]
+            if not nbr_indices:
+                continue
+            new_positions[idx] = np.mean(new_positions[nbr_indices], axis=0)
+
+        # Check convergence
+        diff = np.max(np.abs(new_positions[failed_indices] - prev))
+        if diff < tolerance:
+            logger.debug("Laplacian fallback converged at iteration %d", iteration + 1)
+            break
+
+    logger.debug("Laplacian fallback: processed %d vertices (%d iterations)", len(failed_indices), iteration + 1)
+    return new_positions

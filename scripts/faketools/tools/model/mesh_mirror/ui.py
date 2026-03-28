@@ -118,6 +118,7 @@ class MainWindow(base_window.BaseMainWindow):
 
         # State
         self._table = None  # SymmetryResult or CorrespondenceResult
+        self._check_result = None  # CheckResult
 
         self._build_ui()
         self._restore_settings()
@@ -213,7 +214,9 @@ class MainWindow(base_window.BaseMainWindow):
         self.check_btn.clicked.connect(self._on_check)
         check_layout.addWidget(self.check_btn)
 
-        self.check_result_label = QLabel("")
+        self.check_result_label = QLabel("\n")
+        self.check_result_label.setMinimumHeight(self.check_result_label.sizeHint().height())
+        self.check_result_label.setText("")
         check_layout.addWidget(self.check_result_label)
 
         self.select_failed_btn = QPushButton("Select Failed Vertices")
@@ -236,6 +239,19 @@ class MainWindow(base_window.BaseMainWindow):
         self.direction_combo = QComboBox()
         dir_layout.addWidget(self.direction_combo, 1)
         apply_layout.addLayout(dir_layout)
+
+        fallback_layout = QHBoxLayout()
+        fallback_layout.setContentsMargins(0, 0, 0, 0)
+        fallback_label = QLabel("Fallback:")
+        fallback_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        fallback_layout.addWidget(fallback_label)
+        self.fallback_combo = QComboBox()
+        self.fallback_combo.addItems(["closest_point", "laplacian"])
+        fallback_layout.addWidget(self.fallback_combo, 1)
+        apply_layout.addLayout(fallback_layout)
+
+        # Align apply labels
+        _align_label_widths([dir_label, fallback_label])
 
         btn_layout = QHBoxLayout()
         self.mirror_btn = QPushButton("Mirror")
@@ -293,36 +309,44 @@ class MainWindow(base_window.BaseMainWindow):
             if not base:
                 raise ValueError("Base mesh is not set.")
             self._table = command.build_single_table(base, method, threshold)
-            result = command.get_check_result_single(self._table)
+            self._check_result = command.get_check_result_single(base, self._table, threshold)
         else:
             base_a = self.base_a_field.get_mesh()
             base_b = self.base_b_field.get_mesh()
             if not base_a or not base_b:
                 raise ValueError("Base meshes are not set.")
             self._table = command.build_dual_table(base_a, base_b, method, threshold)
-            result = command.get_check_result_dual(self._table)
+            self._check_result = command.get_check_result_dual(base_a, base_b, self._table, threshold)
 
-        self.check_result_label.setText(f"Matched: {result.matched_count}  |  Center: {result.center_count}  |  Failed: {result.failed_count}")
+        r = self._check_result
+        self.check_result_label.setText(
+            f"Matched: {r.matched_count}  |  Center: {r.center_count}\nFailed: {r.failed_count}  |  Asymmetric: {r.asymmetric_count}"
+        )
         self._update_table_state()
-        self.select_failed_btn.setEnabled(result.failed_count > 0)
+        self.select_failed_btn.setEnabled(r.failed_count > 0 or r.asymmetric_count > 0)
 
     @maya_decorator.error_handler
     def _on_select_failed(self):
-        if self._table is None:
+        if self._check_result is None:
+            return
+
+        # Combine failed + asymmetric indices
+        indices = list(set(self._check_result.failed_indices + self._check_result.asymmetric_indices))
+        if not indices:
             return
 
         if self._is_single_mode():
-            mesh = self.target_field.get_mesh() or self.base_field.get_mesh()
-            if mesh and hasattr(self._table, "failed_vertices"):
-                command.select_failed_vertices(mesh, self._table.failed_vertices)
+            mesh = self.base_field.get_mesh()
         else:
-            mesh = self.target_a_field.get_mesh() or self.base_a_field.get_mesh()
-            if mesh and hasattr(self._table, "failed_vertices_a"):
-                command.select_failed_vertices(mesh, self._table.failed_vertices_a)
+            mesh = self.base_a_field.get_mesh()
+
+        if mesh:
+            command.select_failed_vertices(mesh, indices)
 
     def _update_table_state(self):
         has_table = self._table is not None
         self.mirror_btn.setEnabled(has_table)
+        self.flip_btn.setEnabled(has_table)
 
     # -----------------------------------------------------------------
     # Apply
@@ -341,8 +365,9 @@ class MainWindow(base_window.BaseMainWindow):
                 raise ValueError("Target and Base meshes are not set.")
 
             direction = "+x" if self.direction_combo.currentIndex() == 0 else "-x"
+            fallback = self.fallback_combo.currentText()
             op = command.SingleMeshOperation(target, base, self._table)
-            op.mirror(direction)
+            op.mirror(direction, fallback=fallback)
         else:
             target_a = self.target_a_field.get_mesh()
             target_b = self.target_b_field.get_mesh()
@@ -352,23 +377,26 @@ class MainWindow(base_window.BaseMainWindow):
                 raise ValueError("All meshes must be set.")
 
             direction = "a_to_b" if self.direction_combo.currentIndex() == 0 else "b_to_a"
+            fallback = self.fallback_combo.currentText()
             op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
-            op.mirror(direction)
+            op.mirror(direction, fallback=fallback)
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Mesh Flip")
     def _on_flip(self):
+        if self._table is None:
+            raise ValueError("Build table first.")
+
         if self._is_single_mode():
             target = self.target_field.get_mesh()
-            if not target:
-                raise ValueError("Target mesh is not set.")
+            base = self.base_field.get_mesh()
+            if not target or not base:
+                raise ValueError("Target and Base meshes are not set.")
 
-            op = command.SingleMeshOperation(target, "", None)
-            op.flip()
+            fallback = self.fallback_combo.currentText()
+            op = command.SingleMeshOperation(target, base, self._table)
+            op.flip(fallback=fallback)
         else:
-            if self._table is None:
-                raise ValueError("Build table first.")
-
             target_a = self.target_a_field.get_mesh()
             target_b = self.target_b_field.get_mesh()
             base_a = self.base_a_field.get_mesh()
@@ -376,8 +404,9 @@ class MainWindow(base_window.BaseMainWindow):
             if not all([target_a, target_b, base_a, base_b]):
                 raise ValueError("All meshes must be set.")
 
+            fallback = self.fallback_combo.currentText()
             op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
-            op.flip()
+            op.flip(fallback=fallback)
 
     # -----------------------------------------------------------------
     # Helpers
@@ -414,6 +443,7 @@ class MainWindow(base_window.BaseMainWindow):
             "method": self.method_combo.currentText(),
             "threshold": self.threshold_spin.value(),
             "direction_index": self.direction_combo.currentIndex(),
+            "fallback": self.fallback_combo.currentText(),
         }
 
     def _apply_settings(self, data: dict):
@@ -425,6 +455,8 @@ class MainWindow(base_window.BaseMainWindow):
             self.threshold_spin.setValue(data["threshold"])
         if "direction_index" in data:
             self.direction_combo.setCurrentIndex(data["direction_index"])
+        if "fallback" in data:
+            self.fallback_combo.setCurrentText(data["fallback"])
 
     def closeEvent(self, event):
         self._save_settings()

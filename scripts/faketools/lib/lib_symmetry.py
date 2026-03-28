@@ -725,7 +725,9 @@ def _build_by_position(
     neg_indices = np.where(verts[:, 0] <= -threshold)[0]
 
     if len(pos_indices) == 0 or len(neg_indices) == 0:
-        return SymmetryResult(center_indices=center_indices, pair_map={})
+        center_set = set(center_indices)
+        failed = [i for i in range(len(verts)) if i not in center_set]
+        return SymmetryResult(center_indices=center_indices, pair_map={}, failed_vertices=failed)
 
     # Build KDTree of +X vertices
     pos_verts = verts[pos_indices]
@@ -773,7 +775,12 @@ def _build_by_position(
         for k in range(min(len(neg_sorted), len(colocated_pos))):
             pair_map[neg_sorted[k]] = colocated_pos[k]
 
-    return SymmetryResult(center_indices=center_indices, pair_map=pair_map)
+    # Collect unmatched vertices
+    center_set = set(center_indices)
+    matched = set(pair_map.keys()) | set(pair_map.values())
+    failed = [i for i in range(len(verts)) if i not in center_set and i not in matched]
+
+    return SymmetryResult(center_indices=center_indices, pair_map=pair_map, failed_vertices=failed)
 
 
 def _build_by_topology(
