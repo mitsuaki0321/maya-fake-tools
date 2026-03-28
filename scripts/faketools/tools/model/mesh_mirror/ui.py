@@ -1,0 +1,454 @@
+"""Mesh Mirror UI layer."""
+
+from logging import getLogger
+
+from ....lib_ui import base_window, maya_decorator
+from ....lib_ui.maya_qt import get_maya_main_window
+from ....lib_ui.qt_compat import (
+    QComboBox,
+    QDoubleSpinBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    Qt,
+    QVBoxLayout,
+    QWidget,
+)
+from ....lib_ui.tool_settings import ToolSettingsManager
+from . import command
+
+logger = getLogger(__name__)
+
+_instance = None
+
+
+# =====================================================================
+# Helpers
+# =====================================================================
+
+
+def _align_label_widths(labels: list[QLabel]) -> None:
+    """Set all labels to the same fixed width based on the widest one."""
+    max_width = 0
+    for label in labels:
+        width = label.fontMetrics().boundingRect(label.text()).width()
+        if width > max_width:
+            max_width = width
+    # Add padding for alignment
+    max_width += label.fontMetrics().averageCharWidth() * 2
+    for label in labels:
+        label.setFixedWidth(max_width)
+
+
+# =====================================================================
+# Mesh Input Widget
+# =====================================================================
+
+
+class _MeshFieldWidget(QWidget):
+    """A single mesh input field with a 'Set' button."""
+
+    def __init__(self, label: str, parent=None):
+        super().__init__(parent=parent)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._label = QLabel(label)
+        self._label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self._line = QLineEdit()
+        self._line.setReadOnly(True)
+        self._btn = QPushButton("Set")
+        self._btn.clicked.connect(self._on_set)
+
+        layout.addWidget(self._label)
+        layout.addWidget(self._line, 1)
+        layout.addWidget(self._btn)
+        self.setLayout(layout)
+
+    @property
+    def label_widget(self) -> QLabel:
+        """Access the label widget for external width alignment."""
+        return self._label
+
+    def _on_set(self):
+        """Set mesh from current selection."""
+        import maya.cmds as cmds
+
+        sel = cmds.ls(sl=True, type="transform") or []
+        if not sel:
+            return
+        try:
+            command.validate_mesh(sel[0])
+            self._line.setText(sel[0])
+        except ValueError as e:
+            logger.warning(str(e))
+
+    def get_mesh(self) -> str:
+        return self._line.text()
+
+    def set_mesh(self, name: str):
+        self._line.setText(name)
+
+
+# =====================================================================
+# Main Window
+# =====================================================================
+
+
+class MainWindow(base_window.BaseMainWindow):
+    """Mesh Mirror Main Window."""
+
+    _MODES = ("Single Mesh", "Dual Mesh")
+    _SINGLE_METHODS = ("position", "topology")
+    _DUAL_METHODS = ("index", "position", "topology")
+    _DIRECTIONS_SINGLE = ("+X → -X", "-X → +X")
+    _DIRECTIONS_DUAL = ("A → B", "B → A")
+
+    def __init__(self, parent=None):
+        super().__init__(
+            parent=parent,
+            object_name="MeshMirrorMainWindow",
+            window_title="Mesh Mirror",
+            central_layout="vertical",
+        )
+
+        self.settings = ToolSettingsManager(tool_name="mesh_mirror", category="model")
+
+        # State
+        self._table = None  # SymmetryResult or CorrespondenceResult
+
+        self._build_ui()
+        self._restore_settings()
+        self._on_mode_changed(self.mode_combo.currentText())
+
+    def _build_ui(self):
+        # ---- Mode ----
+        mode_layout = QHBoxLayout()
+        mode_layout.setContentsMargins(0, 0, 0, 0)
+        mode_label = QLabel("Mode:")
+        mode_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        mode_layout.addWidget(mode_label)
+        self.mode_combo = QComboBox()
+        self.mode_combo.addItems(self._MODES)
+        self.mode_combo.currentTextChanged.connect(self._on_mode_changed)
+        mode_layout.addWidget(self.mode_combo, 1)
+        self.central_layout.addLayout(mode_layout)
+
+        # ---- Mesh Input ----
+        input_group = QGroupBox("Mesh Input")
+        input_layout = QVBoxLayout()
+
+        # Single mesh fields
+        self.single_widget = QWidget()
+        single_layout = QVBoxLayout()
+        single_layout.setContentsMargins(0, 0, 0, 0)
+        self.base_field = _MeshFieldWidget("Base:")
+        self.target_field = _MeshFieldWidget("Target:")
+        single_layout.addWidget(self.base_field)
+        single_layout.addWidget(self.target_field)
+        self.single_widget.setLayout(single_layout)
+        input_layout.addWidget(self.single_widget)
+
+        # Dual mesh fields
+        self.dual_widget = QWidget()
+        dual_layout = QVBoxLayout()
+        dual_layout.setContentsMargins(0, 0, 0, 0)
+        self.base_a_field = _MeshFieldWidget("Base A:")
+        self.base_b_field = _MeshFieldWidget("Base B:")
+        self.target_a_field = _MeshFieldWidget("Target A:")
+        self.target_b_field = _MeshFieldWidget("Target B:")
+        dual_layout.addWidget(self.base_a_field)
+        dual_layout.addWidget(self.base_b_field)
+        dual_layout.addWidget(self.target_a_field)
+        dual_layout.addWidget(self.target_b_field)
+        self.dual_widget.setLayout(dual_layout)
+        input_layout.addWidget(self.dual_widget)
+
+        # Align all mesh input label widths
+        all_mesh_fields = [
+            self.base_field,
+            self.target_field,
+            self.base_a_field,
+            self.base_b_field,
+            self.target_a_field,
+            self.target_b_field,
+        ]
+        _align_label_widths([f.label_widget for f in all_mesh_fields])
+
+        input_group.setLayout(input_layout)
+        self.central_layout.addWidget(input_group)
+
+        # ---- Symmetry Check ----
+        check_group = QGroupBox("Symmetry Check")
+        check_layout = QVBoxLayout()
+
+        method_layout = QHBoxLayout()
+        method_layout.setContentsMargins(0, 0, 0, 0)
+        method_label = QLabel("Method:")
+        method_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        method_layout.addWidget(method_label)
+        self.method_combo = QComboBox()
+        method_layout.addWidget(self.method_combo, 1)
+        check_layout.addLayout(method_layout)
+
+        threshold_layout = QHBoxLayout()
+        threshold_layout.setContentsMargins(0, 0, 0, 0)
+        threshold_label = QLabel("Threshold:")
+        threshold_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        threshold_layout.addWidget(threshold_label)
+        self.threshold_spin = QDoubleSpinBox()
+        self.threshold_spin.setRange(0.0001, 100.0)
+        self.threshold_spin.setDecimals(4)
+        self.threshold_spin.setValue(0.001)
+        self.threshold_spin.setSingleStep(0.001)
+        threshold_layout.addWidget(self.threshold_spin, 1)
+        check_layout.addLayout(threshold_layout)
+
+        # Align check section label widths
+        _align_label_widths([method_label, threshold_label])
+
+        self.check_btn = QPushButton("Build Table && Check")
+        self.check_btn.clicked.connect(self._on_check)
+        check_layout.addWidget(self.check_btn)
+
+        self.check_result_label = QLabel("")
+        check_layout.addWidget(self.check_result_label)
+
+        self.select_failed_btn = QPushButton("Select Failed Vertices")
+        self.select_failed_btn.clicked.connect(self._on_select_failed)
+        self.select_failed_btn.setEnabled(False)
+        check_layout.addWidget(self.select_failed_btn)
+
+        check_group.setLayout(check_layout)
+        self.central_layout.addWidget(check_group)
+
+        # ---- Apply ----
+        apply_group = QGroupBox("Apply")
+        apply_layout = QVBoxLayout()
+
+        dir_layout = QHBoxLayout()
+        dir_layout.setContentsMargins(0, 0, 0, 0)
+        dir_label = QLabel("Direction:")
+        dir_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        dir_layout.addWidget(dir_label)
+        self.direction_combo = QComboBox()
+        dir_layout.addWidget(self.direction_combo, 1)
+        apply_layout.addLayout(dir_layout)
+
+        btn_layout = QHBoxLayout()
+        self.mirror_btn = QPushButton("Mirror")
+        self.mirror_btn.clicked.connect(self._on_mirror)
+        self.mirror_btn.setEnabled(False)
+        btn_layout.addWidget(self.mirror_btn)
+
+        self.flip_btn = QPushButton("Flip")
+        self.flip_btn.clicked.connect(self._on_flip)
+        btn_layout.addWidget(self.flip_btn)
+
+        apply_layout.addLayout(btn_layout)
+
+        apply_group.setLayout(apply_layout)
+        self.central_layout.addWidget(apply_group)
+
+        # Push all content to the top; absorb extra space at the bottom
+        self.central_layout.addStretch(1)
+
+    # -----------------------------------------------------------------
+    # Mode switching
+    # -----------------------------------------------------------------
+
+    def _on_mode_changed(self, mode: str):
+        is_single = mode == "Single Mesh"
+
+        self.single_widget.setVisible(is_single)
+        self.dual_widget.setVisible(not is_single)
+
+        # Update method options
+        self.method_combo.clear()
+        methods = self._SINGLE_METHODS if is_single else self._DUAL_METHODS
+        self.method_combo.addItems(methods)
+
+        # Update direction options
+        self.direction_combo.clear()
+        directions = self._DIRECTIONS_SINGLE if is_single else self._DIRECTIONS_DUAL
+        self.direction_combo.addItems(directions)
+
+        # Reset table
+        self._table = None
+        self._update_table_state()
+
+    # -----------------------------------------------------------------
+    # Symmetry Check
+    # -----------------------------------------------------------------
+
+    @maya_decorator.error_handler
+    def _on_check(self):
+        method = self.method_combo.currentText()
+        threshold = self.threshold_spin.value()
+
+        if self._is_single_mode():
+            base = self.base_field.get_mesh()
+            if not base:
+                raise ValueError("Base mesh is not set.")
+            self._table = command.build_single_table(base, method, threshold)
+            result = command.get_check_result_single(self._table)
+        else:
+            base_a = self.base_a_field.get_mesh()
+            base_b = self.base_b_field.get_mesh()
+            if not base_a or not base_b:
+                raise ValueError("Base meshes are not set.")
+            self._table = command.build_dual_table(base_a, base_b, method, threshold)
+            result = command.get_check_result_dual(self._table)
+
+        self.check_result_label.setText(f"Matched: {result.matched_count}  |  Center: {result.center_count}  |  Failed: {result.failed_count}")
+        self._update_table_state()
+        self.select_failed_btn.setEnabled(result.failed_count > 0)
+
+    @maya_decorator.error_handler
+    def _on_select_failed(self):
+        if self._table is None:
+            return
+
+        if self._is_single_mode():
+            mesh = self.target_field.get_mesh() or self.base_field.get_mesh()
+            if mesh and hasattr(self._table, "failed_vertices"):
+                command.select_failed_vertices(mesh, self._table.failed_vertices)
+        else:
+            mesh = self.target_a_field.get_mesh() or self.base_a_field.get_mesh()
+            if mesh and hasattr(self._table, "failed_vertices_a"):
+                command.select_failed_vertices(mesh, self._table.failed_vertices_a)
+
+    def _update_table_state(self):
+        has_table = self._table is not None
+        self.mirror_btn.setEnabled(has_table)
+
+    # -----------------------------------------------------------------
+    # Apply
+    # -----------------------------------------------------------------
+
+    @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Mesh Mirror")
+    def _on_mirror(self):
+        if self._table is None:
+            raise ValueError("Build table first.")
+
+        if self._is_single_mode():
+            target = self.target_field.get_mesh()
+            base = self.base_field.get_mesh()
+            if not target or not base:
+                raise ValueError("Target and Base meshes are not set.")
+
+            direction = "+x" if self.direction_combo.currentIndex() == 0 else "-x"
+            op = command.SingleMeshOperation(target, base, self._table)
+            op.mirror(direction)
+        else:
+            target_a = self.target_a_field.get_mesh()
+            target_b = self.target_b_field.get_mesh()
+            base_a = self.base_a_field.get_mesh()
+            base_b = self.base_b_field.get_mesh()
+            if not all([target_a, target_b, base_a, base_b]):
+                raise ValueError("All meshes must be set.")
+
+            direction = "a_to_b" if self.direction_combo.currentIndex() == 0 else "b_to_a"
+            op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
+            op.mirror(direction)
+
+    @maya_decorator.error_handler
+    @maya_decorator.undo_chunk("Mesh Flip")
+    def _on_flip(self):
+        if self._is_single_mode():
+            target = self.target_field.get_mesh()
+            if not target:
+                raise ValueError("Target mesh is not set.")
+
+            op = command.SingleMeshOperation(target, "", None)
+            op.flip()
+        else:
+            if self._table is None:
+                raise ValueError("Build table first.")
+
+            target_a = self.target_a_field.get_mesh()
+            target_b = self.target_b_field.get_mesh()
+            base_a = self.base_a_field.get_mesh()
+            base_b = self.base_b_field.get_mesh()
+            if not all([target_a, target_b, base_a, base_b]):
+                raise ValueError("All meshes must be set.")
+
+            op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
+            op.flip()
+
+    # -----------------------------------------------------------------
+    # Helpers
+    # -----------------------------------------------------------------
+
+    def _is_single_mode(self) -> bool:
+        return self.mode_combo.currentText() == "Single Mesh"
+
+    # -----------------------------------------------------------------
+    # Settings
+    # -----------------------------------------------------------------
+
+    def _restore_settings(self):
+        settings_data = self.settings.load_settings("default")
+        if settings_data:
+            self._apply_settings(settings_data)
+
+        # Compute minimum height from Dual Mesh mode (the taller layout),
+        # then allow the user to resize freely above that minimum.
+        self.single_widget.setVisible(False)
+        self.dual_widget.setVisible(True)
+        self.adjustSize()
+        self.setMinimumHeight(self.sizeHint().height())
+
+        # Now apply actual visibility
+        self._on_mode_changed(self.mode_combo.currentText())
+
+    def _save_settings(self):
+        self.settings.save_settings(self._collect_settings(), "default")
+
+    def _collect_settings(self) -> dict:
+        return {
+            "mode": self.mode_combo.currentText(),
+            "method": self.method_combo.currentText(),
+            "threshold": self.threshold_spin.value(),
+            "direction_index": self.direction_combo.currentIndex(),
+        }
+
+    def _apply_settings(self, data: dict):
+        if "mode" in data:
+            self.mode_combo.setCurrentText(data["mode"])
+        if "method" in data:
+            self.method_combo.setCurrentText(data["method"])
+        if "threshold" in data:
+            self.threshold_spin.setValue(data["threshold"])
+        if "direction_index" in data:
+            self.direction_combo.setCurrentIndex(data["direction_index"])
+
+    def closeEvent(self, event):
+        self._save_settings()
+        super().closeEvent(event)
+
+
+# =====================================================================
+# show_ui
+# =====================================================================
+
+
+def show_ui():
+    """Show the Mesh Mirror UI."""
+    global _instance
+    if _instance is not None:
+        try:
+            _instance.close()
+            _instance.deleteLater()
+        except RuntimeError:
+            pass
+
+    _instance = MainWindow(get_maya_main_window())
+    _instance.show()
+    return _instance
+
+
+__all__ = ["MainWindow", "show_ui"]

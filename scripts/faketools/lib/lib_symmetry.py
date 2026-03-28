@@ -1,5 +1,7 @@
 """Symmetry detection and enforcement — position-based and topology-based.
 
+Also provides correspondence table construction for two-mesh mirroring.
+
 Supports:
     - Position-based (KDTree): fast, works with vertices only
     - Topology-based (BFS): robust, uses face connectivity to trace symmetry
@@ -249,7 +251,7 @@ def _find_center_edges(topology: _MeshTopology, center_vertices: set[int]) -> li
     for edge_idx, edge in topology.edges.items():
         v0, v1 = edge.vertices
         if v0 in center_vertices and v1 in center_vertices and len(edge.faces) == 2:
-                result.append(edge_idx)
+            result.append(edge_idx)
     return result
 
 
@@ -953,3 +955,313 @@ def symmetrize_vertices(
             result[pos_idx, 0] = -result[pos_idx, 0]
 
     return result
+
+
+# =============================================================================
+# Correspondence types (two-mesh mode)
+# =============================================================================
+
+
+class CorrespondenceMethod(enum.Enum):
+    """Method for building the correspondence table between two meshes."""
+
+    INDEX = "index"
+    POSITION = "position"
+    TOPOLOGY = "topology"
+
+
+@dataclass
+class CorrespondenceResult:
+    """Result of correspondence table construction between two meshes.
+
+    Attributes:
+        pair_map: ``{mesh_a_index: mesh_b_index}`` mapping.
+        failed_vertices_a: Mesh-A vertices that could not be matched.
+        failed_vertices_b: Mesh-B vertices that could not be matched.
+    """
+
+    pair_map: dict[int, int]
+    failed_vertices_a: list[int] = field(default_factory=list)
+    failed_vertices_b: list[int] = field(default_factory=list)
+
+
+# =============================================================================
+# Correspondence — method implementations
+# =============================================================================
+
+
+def _build_correspondence_by_index(
+    vertices_a: np.ndarray,
+    vertices_b: np.ndarray,
+) -> CorrespondenceResult:
+    """Index-based correspondence: vtx[i] <-> vtx[i]."""
+    n_a = len(vertices_a)
+    n_b = len(vertices_b)
+    if n_a != n_b:
+        raise ValueError(f"Vertex count mismatch: mesh_a={n_a}, mesh_b={n_b}")
+
+    pair_map = {i: i for i in range(n_a)}
+    return CorrespondenceResult(pair_map=pair_map)
+
+
+def _build_correspondence_by_position(
+    vertices_a: np.ndarray,
+    vertices_b: np.ndarray,
+    threshold: float,
+) -> CorrespondenceResult:
+    """Position-based correspondence using mirrored KDTree matching."""
+    mirrored_a = vertices_a.copy()
+    mirrored_a[:, 0] = -mirrored_a[:, 0]
+
+    tree_b = cKDTree(vertices_b)
+    distances, nearest = tree_b.query(mirrored_a)
+
+    pair_map: dict[int, int] = {}
+    for i in range(len(vertices_a)):
+        if distances[i] < threshold:
+            pair_map[i] = int(nearest[i])
+
+    # Resolve many-to-one collisions
+    b_to_a_list: dict[int, list[int]] = defaultdict(list)
+    for a_idx, b_idx in pair_map.items():
+        b_to_a_list[b_idx].append(a_idx)
+
+    for _b_idx, a_group in b_to_a_list.items():
+        if len(a_group) <= 1:
+            continue
+        # Keep only the closest match
+        best_a = min(a_group, key=lambda a: distances[a])
+        for a_idx in a_group:
+            if a_idx != best_a:
+                del pair_map[a_idx]
+
+    matched_b = set(pair_map.values())
+    failed_a = [i for i in range(len(vertices_a)) if i not in pair_map]
+    failed_b = [i for i in range(len(vertices_b)) if i not in matched_b]
+
+    return CorrespondenceResult(pair_map=pair_map, failed_vertices_a=failed_a, failed_vertices_b=failed_b)
+
+
+def _build_correspondence_by_topology(
+    vertices_a: np.ndarray,
+    faces_a: np.ndarray,
+    vertices_b: np.ndarray,
+    faces_b: np.ndarray,
+    threshold: float,
+) -> CorrespondenceResult:
+    """Topology-based correspondence using BFS face traversal between two meshes."""
+    topo_a = _build_topology_from_arrays(vertices_a, faces_a)
+    topo_b = _build_topology_from_arrays(vertices_b, faces_b)
+
+    # --- Find seed face pair by mirrored centroid (KDTree) ---
+    face_indices_a = sorted(topo_a.faces.keys())
+    face_indices_b = sorted(topo_b.faces.keys())
+
+    centroids_a = np.array(
+        [
+            [sum(topo_a.vertex_positions[v][k] for v in topo_a.faces[fi].vertices) / len(topo_a.faces[fi].vertices) for k in range(3)]
+            for fi in face_indices_a
+        ]
+    )
+    centroids_b = np.array(
+        [
+            [sum(topo_b.vertex_positions[v][k] for v in topo_b.faces[fi].vertices) / len(topo_b.faces[fi].vertices) for k in range(3)]
+            for fi in face_indices_b
+        ]
+    )
+
+    mirrored_ca = centroids_a.copy()
+    mirrored_ca[:, 0] = -mirrored_ca[:, 0]
+
+    tree_cb = cKDTree(centroids_b)
+    dists, nearest_cb = tree_cb.query(mirrored_ca)
+    best_local_a = int(np.argmin(dists))
+    best_local_b = int(nearest_cb[best_local_a])
+
+    seed_fa = topo_a.faces[face_indices_a[best_local_a]]
+    seed_fb = topo_b.faces[face_indices_b[best_local_b]]
+
+    if len(seed_fa.vertices) != len(seed_fb.vertices):
+        logger.warning("Seed face vertex count mismatch: a=%d, b=%d", len(seed_fa.vertices), len(seed_fb.vertices))
+        return CorrespondenceResult(
+            pair_map={},
+            failed_vertices_a=list(range(topo_a.num_vertices)),
+            failed_vertices_b=list(range(topo_b.num_vertices)),
+        )
+
+    # --- Align seed face vertices by closest mirrored vertex ---
+    best_va: int | None = None
+    best_vb: int | None = None
+    best_vdist = float("inf")
+
+    for va in seed_fa.vertices:
+        pa = topo_a.vertex_positions[va]
+        mx = -pa[0]
+        for vb in seed_fb.vertices:
+            pb = topo_b.vertex_positions[vb]
+            d = ((pb[0] - mx) ** 2 + (pb[1] - pa[1]) ** 2 + (pb[2] - pa[2]) ** 2) ** 0.5
+            if d < best_vdist:
+                best_vdist = d
+                best_va = va
+                best_vb = vb
+
+    if best_va is None or best_vb is None:
+        return CorrespondenceResult(
+            pair_map={},
+            failed_vertices_a=list(range(topo_a.num_vertices)),
+            failed_vertices_b=list(range(topo_b.num_vertices)),
+        )
+
+    va_idx = seed_fa.vertices.index(best_va)
+    vb_idx = seed_fb.vertices.index(best_vb)
+
+    verts_a = seed_fa.vertices[va_idx:] + seed_fa.vertices[:va_idx]
+    verts_b = seed_fb.vertices[vb_idx:] + seed_fb.vertices[:vb_idx]
+    verts_b = verts_b[::-1]
+    verts_b = [verts_b[-1]] + verts_b[:-1]
+
+    vertex_table: dict[int, int] = {}
+    for a, b in zip(verts_a, verts_b):
+        vertex_table[a] = b
+
+    # --- BFS from seed faces ---
+    for f in topo_a.faces.values():
+        f.is_done = False
+    for f in topo_b.faces.values():
+        f.is_done = False
+
+    seed_fa.is_done = True
+    seed_fb.is_done = True
+
+    # Queue entries: (face_a_idx, face_b_idx, edge_a_idx, edge_b_idx)
+    queue: deque[tuple[int, int, int, int]] = deque()
+
+    def _seed_queue_from_face(face_a: _Face, face_b: _Face) -> None:
+        for ea_idx in face_a.edges:
+            ea = topo_a.edges[ea_idx]
+            if ea.vertices[0] not in vertex_table or ea.vertices[1] not in vertex_table:
+                continue
+
+            exp_vb0 = vertex_table[ea.vertices[0]]
+            exp_vb1 = vertex_table[ea.vertices[1]]
+
+            matching_eb: int | None = None
+            for eb_idx in face_b.edges:
+                eb = topo_b.edges[eb_idx]
+                if {eb.vertices[0], eb.vertices[1]} == {exp_vb0, exp_vb1}:
+                    matching_eb = eb_idx
+                    break
+
+            if matching_eb is None:
+                continue
+
+            for nfa in ea.faces:
+                if nfa == face_a.index or topo_a.faces[nfa].is_done:
+                    continue
+                for nfb in topo_b.edges[matching_eb].faces:
+                    if nfb == face_b.index or topo_b.faces[nfb].is_done:
+                        continue
+                    queue.append((nfa, nfb, ea_idx, matching_eb))
+                    break
+
+    _seed_queue_from_face(seed_fa, seed_fb)
+
+    # --- Main BFS loop ---
+    while queue:
+        fa_idx, fb_idx, ea_idx, eb_idx = queue.popleft()
+
+        face_a = topo_a.faces[fa_idx]
+        face_b = topo_b.faces[fb_idx]
+
+        if face_a.is_done and face_b.is_done:
+            continue
+
+        face_a.is_done = True
+        face_b.is_done = True
+
+        edge_a = topo_a.edges[ea_idx]
+        start_a = edge_a.vertices[0]
+        start_b = vertex_table.get(start_a, topo_b.edges[eb_idx].vertices[0])
+
+        va_list = _rotate_list(face_a.vertices, start_a)
+        vb_list = _rotate_list(face_b.vertices, start_b)
+
+        if len(va_list) != len(vb_list):
+            continue
+
+        vb_list = vb_list[::-1]
+        vb_list = _rotate_list(vb_list, start_b)
+
+        for va, vb in zip(va_list, vb_list):
+            if va not in vertex_table:
+                vertex_table[va] = vb
+
+        _seed_queue_from_face(face_a, face_b)
+
+    # --- Build result ---
+    matched_b = set(vertex_table.values())
+    failed_a = [i for i in range(topo_a.num_vertices) if i not in vertex_table]
+    failed_b = [i for i in range(topo_b.num_vertices) if i not in matched_b]
+
+    # Position-based fallback for unmatched vertices
+    if failed_a:
+        logger.warning("Topology correspondence failed for %d vertices. Attempting position fallback.", len(failed_a))
+        mirrored_failed = vertices_a[failed_a].copy()
+        mirrored_failed[:, 0] = -mirrored_failed[:, 0]
+
+        b_candidates = [i for i in range(len(vertices_b)) if i not in matched_b]
+        if b_candidates:
+            tree_b = cKDTree(vertices_b[b_candidates])
+            fb_dists, fb_nearest = tree_b.query(mirrored_failed)
+
+            still_failed_a: list[int] = []
+            for i, a_idx in enumerate(failed_a):
+                if fb_dists[i] < threshold:
+                    vertex_table[a_idx] = b_candidates[fb_nearest[i]]
+                    matched_b.add(b_candidates[fb_nearest[i]])
+                else:
+                    still_failed_a.append(a_idx)
+            failed_a = still_failed_a
+            failed_b = [i for i in range(topo_b.num_vertices) if i not in matched_b]
+
+    return CorrespondenceResult(pair_map=vertex_table, failed_vertices_a=failed_a, failed_vertices_b=failed_b)
+
+
+# =============================================================================
+# Correspondence — public API
+# =============================================================================
+
+
+def build_correspondence_table(
+    vertices_a: np.ndarray,
+    vertices_b: np.ndarray,
+    faces_a: np.ndarray | None = None,
+    faces_b: np.ndarray | None = None,
+    method: CorrespondenceMethod = CorrespondenceMethod.POSITION,
+    threshold: float = 0.001,
+) -> CorrespondenceResult:
+    """Build a correspondence table mapping mesh-A vertices to mesh-B vertices.
+
+    Vertices are matched by mirrored position (A's X is negated before matching).
+
+    Args:
+        vertices_a: ``(N, 3)`` vertex positions of mesh A.
+        vertices_b: ``(M, 3)`` vertex positions of mesh B.
+        faces_a: ``(F, V)`` face vertex indices of mesh A. Required for ``TOPOLOGY``.
+        faces_b: ``(F, V)`` face vertex indices of mesh B. Required for ``TOPOLOGY``.
+        method: :class:`CorrespondenceMethod` — ``INDEX``, ``POSITION``, or ``TOPOLOGY``.
+        threshold: Distance threshold for position/topology matching.
+
+    Returns:
+        :class:`CorrespondenceResult` with *pair_map*, *failed_vertices_a*, and
+        *failed_vertices_b*.
+    """
+    if method is CorrespondenceMethod.INDEX:
+        return _build_correspondence_by_index(vertices_a, vertices_b)
+
+    if method is CorrespondenceMethod.TOPOLOGY:
+        if faces_a is None or faces_b is None:
+            raise ValueError("faces arrays are required for CorrespondenceMethod.TOPOLOGY")
+        return _build_correspondence_by_topology(vertices_a, faces_a, vertices_b, faces_b, threshold)
+
+    return _build_correspondence_by_position(vertices_a, vertices_b, threshold)

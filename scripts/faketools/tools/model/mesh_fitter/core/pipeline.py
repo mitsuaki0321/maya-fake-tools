@@ -11,12 +11,12 @@ import time
 import numpy as np
 import trimesh
 
+from .....lib.lib_symmetry import SymmetryMethod, build_symmetry_table, symmetrize_vertices
 from ..io.landmark_io import LandmarkData, load_landmarks
 from ..io.mesh_io import load_mesh, mesh_info
 from .algorithms import FittingParams, fit_mesh, generate_schedule, surface_landmarks_to_positions
 from .postprocessing import multi_stage_snap, taubin_smooth
 from .preprocessing import align_centroids, auto_align, decimate_target, normalize_scale
-from .symmetry import SymmetryMethod, build_symmetry_table, symmetrize_vertices
 
 logger = getLogger(__name__)
 
