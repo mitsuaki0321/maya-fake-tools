@@ -464,10 +464,10 @@ def _read_positions(shape: str) -> np.ndarray:
         shape: Mesh shape node full path.
 
     Returns:
-        ``(N, 3)`` vertex positions in world space.
+        ``(N, 3)`` vertex positions in object space.
     """
     fn = _get_mesh_fn(shape)
-    pts = fn.getPoints(om.MSpace.kWorld)
+    pts = fn.getPoints(om.MSpace.kObject)
     n = fn.numVertices
 
     arr = np.empty((n, 3), dtype=np.float64)
@@ -507,7 +507,7 @@ def _write_positions(mesh: str, old_pos: np.ndarray, new_pos: np.ndarray) -> Non
 
     for idx in changed:
         p = new_pos[idx]
-        cmds.xform(f"{mesh}.vtx[{idx}]", ws=True, t=[float(p[0]), float(p[1]), float(p[2])])
+        cmds.xform(f"{mesh}.vtx[{idx}]", os=True, t=[float(p[0]), float(p[1]), float(p[2])])
 
     logger.debug("Updated %d / %d vertices on %s", len(changed), len(old_pos), mesh)
 
@@ -572,7 +572,7 @@ def _fallback_closest_point(
 
     for idx in failed_indices:
         mirrored = om.MPoint(-new_positions[idx, 0], new_positions[idx, 1], new_positions[idx, 2])
-        closest, _ = fn.getClosestPoint(mirrored, om.MSpace.kWorld)
+        closest, _ = fn.getClosestPoint(mirrored, om.MSpace.kObject)
         new_positions[idx] = [-closest.x, closest.y, closest.z]
 
     logger.debug("Closest point fallback: processed %d vertices", len(failed_indices))

@@ -92,6 +92,62 @@ class _MeshFieldWidget(QWidget):
         self._line.setText(name)
 
 
+class _MeshListWidget(QWidget):
+    """A mesh input field that accepts multiple meshes from selection."""
+
+    def __init__(self, label: str, parent=None):
+        super().__init__(parent=parent)
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self._label = QLabel(label)
+        self._label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self._line = QLineEdit()
+        self._line.setReadOnly(True)
+        self._btn = QPushButton("Set")
+        self._btn.clicked.connect(self._on_set)
+        self._meshes: list[str] = []
+
+        layout.addWidget(self._label)
+        layout.addWidget(self._line, 1)
+        layout.addWidget(self._btn)
+        self.setLayout(layout)
+
+    @property
+    def label_widget(self) -> QLabel:
+        """Access the label widget for external width alignment."""
+        return self._label
+
+    def _on_set(self):
+        """Set meshes from current selection."""
+        import maya.cmds as cmds
+
+        sel = cmds.ls(sl=True, type="transform") or []
+        valid: list[str] = []
+        for s in sel:
+            try:
+                command.validate_mesh(s)
+                valid.append(s)
+            except ValueError:
+                pass
+        self._meshes = valid
+        self._update_display()
+
+    def _update_display(self):
+        if not self._meshes:
+            self._line.setText("")
+            self._line.setToolTip("")
+        elif len(self._meshes) == 1:
+            self._line.setText(self._meshes[0])
+            self._line.setToolTip(self._meshes[0])
+        else:
+            self._line.setText(f"{len(self._meshes)} meshes")
+            self._line.setToolTip("\n".join(self._meshes))
+
+    def get_meshes(self) -> list[str]:
+        return list(self._meshes)
+
+
 # =====================================================================
 # Main Window
 # =====================================================================
@@ -146,9 +202,9 @@ class MainWindow(base_window.BaseMainWindow):
         single_layout = QVBoxLayout()
         single_layout.setContentsMargins(0, 0, 0, 0)
         self.base_field = _MeshFieldWidget("Base:")
-        self.target_field = _MeshFieldWidget("Target:")
+        self.target_list = _MeshListWidget("Target:")
         single_layout.addWidget(self.base_field)
-        single_layout.addWidget(self.target_field)
+        single_layout.addWidget(self.target_list)
         self.single_widget.setLayout(single_layout)
         input_layout.addWidget(self.single_widget)
 
@@ -158,25 +214,25 @@ class MainWindow(base_window.BaseMainWindow):
         dual_layout.setContentsMargins(0, 0, 0, 0)
         self.base_a_field = _MeshFieldWidget("Base A:")
         self.base_b_field = _MeshFieldWidget("Base B:")
-        self.target_a_field = _MeshFieldWidget("Target A:")
-        self.target_b_field = _MeshFieldWidget("Target B:")
+        self.target_a_list = _MeshListWidget("Target A:")
+        self.target_b_list = _MeshListWidget("Target B:")
         dual_layout.addWidget(self.base_a_field)
         dual_layout.addWidget(self.base_b_field)
-        dual_layout.addWidget(self.target_a_field)
-        dual_layout.addWidget(self.target_b_field)
+        dual_layout.addWidget(self.target_a_list)
+        dual_layout.addWidget(self.target_b_list)
         self.dual_widget.setLayout(dual_layout)
         input_layout.addWidget(self.dual_widget)
 
         # Align all mesh input label widths
-        all_mesh_fields = [
+        all_input_widgets = [
             self.base_field,
-            self.target_field,
+            self.target_list,
             self.base_a_field,
             self.base_b_field,
-            self.target_a_field,
-            self.target_b_field,
+            self.target_a_list,
+            self.target_b_list,
         ]
-        _align_label_widths([f.label_widget for f in all_mesh_fields])
+        _align_label_widths([w.label_widget for w in all_input_widgets])
 
         input_group.setLayout(input_layout)
         self.central_layout.addWidget(input_group)
@@ -358,28 +414,32 @@ class MainWindow(base_window.BaseMainWindow):
         if self._table is None:
             raise ValueError("Build table first.")
 
+        fallback = self.fallback_combo.currentText()
+
         if self._is_single_mode():
-            target = self.target_field.get_mesh()
+            targets = self.target_list.get_meshes()
             base = self.base_field.get_mesh()
-            if not target or not base:
+            if not targets or not base:
                 raise ValueError("Target and Base meshes are not set.")
 
             direction = "+x" if self.direction_combo.currentIndex() == 0 else "-x"
-            fallback = self.fallback_combo.currentText()
-            op = command.SingleMeshOperation(target, base, self._table)
-            op.mirror(direction, fallback=fallback)
+            for target in targets:
+                op = command.SingleMeshOperation(target, base, self._table)
+                op.mirror(direction, fallback=fallback)
         else:
-            target_a = self.target_a_field.get_mesh()
-            target_b = self.target_b_field.get_mesh()
+            targets_a = self.target_a_list.get_meshes()
+            targets_b = self.target_b_list.get_meshes()
             base_a = self.base_a_field.get_mesh()
             base_b = self.base_b_field.get_mesh()
-            if not all([target_a, target_b, base_a, base_b]):
+            if not targets_a or not targets_b or not base_a or not base_b:
                 raise ValueError("All meshes must be set.")
+            if len(targets_a) != len(targets_b):
+                raise ValueError(f"Target count mismatch: A={len(targets_a)}, B={len(targets_b)}")
 
             direction = "a_to_b" if self.direction_combo.currentIndex() == 0 else "b_to_a"
-            fallback = self.fallback_combo.currentText()
-            op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
-            op.mirror(direction, fallback=fallback)
+            for ta, tb in zip(targets_a, targets_b):
+                op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
+                op.mirror(direction, fallback=fallback)
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Mesh Flip")
@@ -387,26 +447,30 @@ class MainWindow(base_window.BaseMainWindow):
         if self._table is None:
             raise ValueError("Build table first.")
 
+        fallback = self.fallback_combo.currentText()
+
         if self._is_single_mode():
-            target = self.target_field.get_mesh()
+            targets = self.target_list.get_meshes()
             base = self.base_field.get_mesh()
-            if not target or not base:
+            if not targets or not base:
                 raise ValueError("Target and Base meshes are not set.")
 
-            fallback = self.fallback_combo.currentText()
-            op = command.SingleMeshOperation(target, base, self._table)
-            op.flip(fallback=fallback)
+            for target in targets:
+                op = command.SingleMeshOperation(target, base, self._table)
+                op.flip(fallback=fallback)
         else:
-            target_a = self.target_a_field.get_mesh()
-            target_b = self.target_b_field.get_mesh()
+            targets_a = self.target_a_list.get_meshes()
+            targets_b = self.target_b_list.get_meshes()
             base_a = self.base_a_field.get_mesh()
             base_b = self.base_b_field.get_mesh()
-            if not all([target_a, target_b, base_a, base_b]):
+            if not targets_a or not targets_b or not base_a or not base_b:
                 raise ValueError("All meshes must be set.")
+            if len(targets_a) != len(targets_b):
+                raise ValueError(f"Target count mismatch: A={len(targets_a)}, B={len(targets_b)}")
 
-            fallback = self.fallback_combo.currentText()
-            op = command.DualMeshOperation(target_a, target_b, base_a, base_b, self._table)
-            op.flip(fallback=fallback)
+            for ta, tb in zip(targets_a, targets_b):
+                op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
+                op.flip(fallback=fallback)
 
     # -----------------------------------------------------------------
     # Helpers
