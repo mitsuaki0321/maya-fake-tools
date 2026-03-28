@@ -2,6 +2,8 @@
 
 from logging import getLogger
 
+import maya.cmds as cmds
+
 from ....lib_ui import base_window, maya_decorator
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
@@ -421,11 +423,13 @@ class MainWindow(base_window.BaseMainWindow):
             base = self.base_field.get_mesh()
             if not targets or not base:
                 raise ValueError("Target and Base meshes are not set.")
+            self._validate_targets_topology(base, targets)
 
             direction = "+x" if self.direction_combo.currentIndex() == 0 else "-x"
             for target in targets:
                 op = command.SingleMeshOperation(target, base, self._table)
                 op.mirror(direction, fallback=fallback)
+            cmds.select(targets, r=True)
         else:
             targets_a = self.target_a_list.get_meshes()
             targets_b = self.target_b_list.get_meshes()
@@ -435,11 +439,14 @@ class MainWindow(base_window.BaseMainWindow):
                 raise ValueError("All meshes must be set.")
             if len(targets_a) != len(targets_b):
                 raise ValueError(f"Target count mismatch: A={len(targets_a)}, B={len(targets_b)}")
+            self._validate_targets_topology(base_a, targets_a)
+            self._validate_targets_topology(base_b, targets_b)
 
             direction = "a_to_b" if self.direction_combo.currentIndex() == 0 else "b_to_a"
             for ta, tb in zip(targets_a, targets_b):
                 op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
                 op.mirror(direction, fallback=fallback)
+            cmds.select(targets_a + targets_b, r=True)
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Mesh Flip")
@@ -454,10 +461,12 @@ class MainWindow(base_window.BaseMainWindow):
             base = self.base_field.get_mesh()
             if not targets or not base:
                 raise ValueError("Target and Base meshes are not set.")
+            self._validate_targets_topology(base, targets)
 
             for target in targets:
                 op = command.SingleMeshOperation(target, base, self._table)
                 op.flip(fallback=fallback)
+            cmds.select(targets, r=True)
         else:
             targets_a = self.target_a_list.get_meshes()
             targets_b = self.target_b_list.get_meshes()
@@ -467,10 +476,13 @@ class MainWindow(base_window.BaseMainWindow):
                 raise ValueError("All meshes must be set.")
             if len(targets_a) != len(targets_b):
                 raise ValueError(f"Target count mismatch: A={len(targets_a)}, B={len(targets_b)}")
+            self._validate_targets_topology(base_a, targets_a)
+            self._validate_targets_topology(base_b, targets_b)
 
             for ta, tb in zip(targets_a, targets_b):
                 op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
                 op.flip(fallback=fallback)
+            cmds.select(targets_a + targets_b, r=True)
 
     # -----------------------------------------------------------------
     # Helpers
@@ -478,6 +490,17 @@ class MainWindow(base_window.BaseMainWindow):
 
     def _is_single_mode(self) -> bool:
         return self.mode_combo.currentText() == "Single Mesh"
+
+    @staticmethod
+    def _validate_targets_topology(base: str, targets: list[str]) -> None:
+        """Validate that all targets have the same topology as the base mesh.
+
+        Checks all targets and reports all mismatches at once.
+        """
+        mismatched = [t for t in targets if not command.validate_same_topology(base, t)]
+        if mismatched:
+            names = ", ".join(mismatched)
+            raise ValueError(f"Topology mismatch with {base}: {names}")
 
     # -----------------------------------------------------------------
     # Settings

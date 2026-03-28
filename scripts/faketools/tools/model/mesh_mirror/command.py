@@ -285,7 +285,6 @@ class SingleMeshOperation:
                     new_pos = _fallback_closest_point(target_shape, dest_failed, new_pos)
 
         _write_positions(self._target, target_pos, new_pos)
-        cmds.select(self._target, r=True)
         logger.info("Mirror single: %s (direction=%s, pairs=%d, fallback=%s)", self._target, direction, len(pair_map), fallback)
 
     def flip(self, fallback: str = "closest_point") -> None:
@@ -322,7 +321,6 @@ class SingleMeshOperation:
                 new_pos = _fallback_closest_point(target_shape, self._table.failed_vertices, new_pos)
 
         _write_positions(self._target, target_pos, new_pos)
-        cmds.select(self._target, r=True)
         logger.info("Flip single: %s (pairs=%d, center=%d, fallback=%s)", self._target, len(pair_map), len(center_indices), fallback)
 
 
@@ -400,7 +398,6 @@ class DualMeshOperation:
 
             _write_positions(self._target_a, pos_a, new_a)
 
-        cmds.select([self._target_a, self._target_b], r=True)
         logger.info("Mirror dual: %s -> %s (pairs=%d, fallback=%s)", self._target_a, self._target_b, len(pair_map), fallback)
 
     def flip(self, fallback: str = "closest_point") -> None:
@@ -441,7 +438,6 @@ class DualMeshOperation:
 
         _write_positions(self._target_a, pos_a, new_a)
         _write_positions(self._target_b, pos_b, new_b)
-        cmds.select([self._target_a, self._target_b], r=True)
         logger.info("Flip dual: %s <-> %s (pairs=%d, fallback=%s)", self._target_a, self._target_b, len(pair_map), fallback)
 
 
@@ -483,7 +479,7 @@ def _read_faces(shape: str) -> np.ndarray:
         shape: Mesh shape node full path.
 
     Returns:
-        ``(F, V)`` face vertex index array (assumes uniform face size).
+        ``(F,)`` object array of variable-length face vertex index lists.
     """
     fn = _get_mesh_fn(shape)
     num_faces = fn.numPolygons
