@@ -4,7 +4,7 @@ category: rig
 description: 複数のジョイントチェーンからロフトサーフェスを作成するツール
 lang: ja
 lang-ref: loft_surface_creator
-order: 51
+order: 55
 ---
 
 ## 概要

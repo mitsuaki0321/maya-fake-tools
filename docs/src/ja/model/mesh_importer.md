@@ -4,7 +4,7 @@ category: model
 description: Blender経由でglTF/GLBファイルをMayaにインポート
 lang: ja
 lang-ref: mesh_importer
-order: 40
+order: 80
 ---
 
 ## 概要

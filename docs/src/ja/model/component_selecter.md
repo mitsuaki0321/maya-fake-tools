@@ -4,7 +4,7 @@ category: rig
 description: メッシュ/カーブ/サーフェスのコンポーネント選択とフィルタリングツール
 lang: ja
 lang-ref: component_selecter
-order: 60
+order: 50
 ---
 
 ## 概要

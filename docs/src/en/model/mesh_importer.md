@@ -4,7 +4,7 @@ category: model
 description: Import glTF/GLB files into Maya via Blender conversion
 lang: en
 lang-ref: mesh_importer
-order: 40
+order: 80
 ---
 
 ## Overview

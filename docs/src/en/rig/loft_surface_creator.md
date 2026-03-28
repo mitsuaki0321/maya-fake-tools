@@ -4,7 +4,7 @@ category: rig
 description: Tool for creating lofted surfaces from multiple joint chains
 lang: en
 lang-ref: loft_surface_creator
-order: 51
+order: 55
 ---
 
 ## Overview
