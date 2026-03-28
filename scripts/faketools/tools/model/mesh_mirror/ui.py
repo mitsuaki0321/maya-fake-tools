@@ -4,7 +4,8 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
-from ....lib_ui import base_window, maya_decorator
+from ....lib_ui import maya_decorator
+from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
     QComboBox,
@@ -155,7 +156,7 @@ class _MeshListWidget(QWidget):
 # =====================================================================
 
 
-class MainWindow(base_window.BaseMainWindow):
+class MainWindow(BaseMainWindow):
     """Mesh Mirror Main Window."""
 
     _MODES = ("Single Mesh", "Dual Mesh")
@@ -198,11 +199,14 @@ class MainWindow(base_window.BaseMainWindow):
         # ---- Mesh Input ----
         input_group = QGroupBox("Mesh Input")
         input_layout = QVBoxLayout()
+        input_spacing = int(get_spacing(input_group, direction="vertical") * 0.5)
+        input_layout.setSpacing(input_spacing)
 
         # Single mesh fields
         self.single_widget = QWidget()
         single_layout = QVBoxLayout()
         single_layout.setContentsMargins(0, 0, 0, 0)
+        single_layout.setSpacing(input_spacing)
         self.base_field = _MeshFieldWidget("Base:")
         self.target_list = _MeshListWidget("Target:")
         single_layout.addWidget(self.base_field)
@@ -214,6 +218,7 @@ class MainWindow(base_window.BaseMainWindow):
         self.dual_widget = QWidget()
         dual_layout = QVBoxLayout()
         dual_layout.setContentsMargins(0, 0, 0, 0)
+        dual_layout.setSpacing(input_spacing)
         self.base_a_field = _MeshFieldWidget("Base A:")
         self.base_b_field = _MeshFieldWidget("Base B:")
         self.target_a_list = _MeshListWidget("Target A:")
