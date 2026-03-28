@@ -226,6 +226,22 @@ def select_failed_vertices(mesh: str, indices: list[int]) -> None:
     cmds.select(components, replace=True)
 
 
+def duplicate_mesh(source: str, suffix: str) -> str:
+    """Duplicate a mesh and rename with a suffix.
+
+    Uses Maya's ``#`` auto-numbering if the name already exists.
+
+    Args:
+        source: Source mesh transform name.
+        suffix: Name suffix (e.g. ``"_mirror"``, ``"_flip"``).
+
+    Returns:
+        The new mesh transform name.
+    """
+    dup = cmds.duplicate(source)[0]
+    return cmds.rename(dup, f"{source}{suffix}#")
+
+
 # =====================================================================
 # Public: Operations — Single mesh
 # =====================================================================

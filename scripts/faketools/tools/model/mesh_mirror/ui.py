@@ -8,6 +8,7 @@ from ....lib_ui import maya_decorator
 from ....lib_ui.base_window import BaseMainWindow, get_spacing
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import (
+    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QGroupBox,
@@ -15,6 +16,7 @@ from ....lib_ui.qt_compat import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QRadioButton,
     Qt,
     QVBoxLayout,
     QWidget,
@@ -161,7 +163,7 @@ class MainWindow(BaseMainWindow):
 
     _MODES = ("Single Mesh", "Dual Mesh")
     _SINGLE_METHODS = ("position", "topology")
-    _DUAL_METHODS = ("index", "position", "topology")
+    _DUAL_METHODS = ("position", "topology", "index")
     _DIRECTIONS_SINGLE = ("+X → -X", "-X → +X")
     _DIRECTIONS_DUAL = ("A → B", "B → A")
 
@@ -299,8 +301,12 @@ class MainWindow(BaseMainWindow):
         dir_label = QLabel("Direction:")
         dir_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         dir_layout.addWidget(dir_label)
-        self.direction_combo = QComboBox()
-        dir_layout.addWidget(self.direction_combo, 1)
+        self.dir_radio_0 = QRadioButton()
+        self.dir_radio_1 = QRadioButton()
+        self.dir_radio_0.setChecked(True)
+        dir_layout.addWidget(self.dir_radio_0)
+        dir_layout.addWidget(self.dir_radio_1)
+        dir_layout.addStretch(1)
         apply_layout.addLayout(dir_layout)
 
         fallback_layout = QHBoxLayout()
@@ -313,8 +319,17 @@ class MainWindow(BaseMainWindow):
         fallback_layout.addWidget(self.fallback_combo, 1)
         apply_layout.addLayout(fallback_layout)
 
-        # Align apply labels
-        _align_label_widths([dir_label, fallback_label])
+        # Align apply labels (including spacer for checkbox indentation)
+        copy_spacer = QLabel("")
+        _align_label_widths([dir_label, fallback_label, copy_spacer])
+
+        copy_layout = QHBoxLayout()
+        copy_layout.setContentsMargins(0, 0, 0, 0)
+        copy_layout.addWidget(copy_spacer)
+        self.create_copy_check = QCheckBox("Create Copy")
+        copy_layout.addWidget(self.create_copy_check)
+        copy_layout.addStretch(1)
+        apply_layout.addLayout(copy_layout)
 
         btn_layout = QHBoxLayout()
         self.mirror_btn = QPushButton("Mirror")
@@ -349,10 +364,10 @@ class MainWindow(BaseMainWindow):
         methods = self._SINGLE_METHODS if is_single else self._DUAL_METHODS
         self.method_combo.addItems(methods)
 
-        # Update direction options
-        self.direction_combo.clear()
+        # Update direction labels
         directions = self._DIRECTIONS_SINGLE if is_single else self._DIRECTIONS_DUAL
-        self.direction_combo.addItems(directions)
+        self.dir_radio_0.setText(directions[0])
+        self.dir_radio_1.setText(directions[1])
 
         # Reset table
         self._table = None
@@ -422,6 +437,7 @@ class MainWindow(BaseMainWindow):
             raise ValueError("Build table first.")
 
         fallback = self.fallback_combo.currentText()
+        create_copy = self.create_copy_check.isChecked()
 
         if self._is_single_mode():
             targets = self.target_list.get_meshes()
@@ -430,11 +446,14 @@ class MainWindow(BaseMainWindow):
                 raise ValueError("Target and Base meshes are not set.")
             self._validate_targets_topology(base, targets)
 
-            direction = "+x" if self.direction_combo.currentIndex() == 0 else "-x"
+            direction = "+x" if self.dir_radio_0.isChecked() else "-x"
+            result_meshes = []
             for target in targets:
-                op = command.SingleMeshOperation(target, base, self._table)
+                actual = command.duplicate_mesh(target, "_mirror") if create_copy else target
+                op = command.SingleMeshOperation(actual, base, self._table)
                 op.mirror(direction, fallback=fallback)
-            cmds.select(targets, r=True)
+                result_meshes.append(actual)
+            cmds.select(result_meshes, r=True)
         else:
             targets_a = self.target_a_list.get_meshes()
             targets_b = self.target_b_list.get_meshes()
@@ -447,11 +466,15 @@ class MainWindow(BaseMainWindow):
             self._validate_targets_topology(base_a, targets_a)
             self._validate_targets_topology(base_b, targets_b)
 
-            direction = "a_to_b" if self.direction_combo.currentIndex() == 0 else "b_to_a"
+            direction = "a_to_b" if self.dir_radio_0.isChecked() else "b_to_a"
+            result_meshes = []
             for ta, tb in zip(targets_a, targets_b):
-                op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
+                actual_a = command.duplicate_mesh(ta, "_mirror") if create_copy else ta
+                actual_b = command.duplicate_mesh(tb, "_mirror") if create_copy else tb
+                op = command.DualMeshOperation(actual_a, actual_b, base_a, base_b, self._table)
                 op.mirror(direction, fallback=fallback)
-            cmds.select(targets_a + targets_b, r=True)
+                result_meshes.extend([actual_a, actual_b])
+            cmds.select(result_meshes, r=True)
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Mesh Flip")
@@ -460,6 +483,7 @@ class MainWindow(BaseMainWindow):
             raise ValueError("Build table first.")
 
         fallback = self.fallback_combo.currentText()
+        create_copy = self.create_copy_check.isChecked()
 
         if self._is_single_mode():
             targets = self.target_list.get_meshes()
@@ -468,10 +492,13 @@ class MainWindow(BaseMainWindow):
                 raise ValueError("Target and Base meshes are not set.")
             self._validate_targets_topology(base, targets)
 
+            result_meshes = []
             for target in targets:
-                op = command.SingleMeshOperation(target, base, self._table)
+                actual = command.duplicate_mesh(target, "_flip") if create_copy else target
+                op = command.SingleMeshOperation(actual, base, self._table)
                 op.flip(fallback=fallback)
-            cmds.select(targets, r=True)
+                result_meshes.append(actual)
+            cmds.select(result_meshes, r=True)
         else:
             targets_a = self.target_a_list.get_meshes()
             targets_b = self.target_b_list.get_meshes()
@@ -484,10 +511,14 @@ class MainWindow(BaseMainWindow):
             self._validate_targets_topology(base_a, targets_a)
             self._validate_targets_topology(base_b, targets_b)
 
+            result_meshes = []
             for ta, tb in zip(targets_a, targets_b):
-                op = command.DualMeshOperation(ta, tb, base_a, base_b, self._table)
+                actual_a = command.duplicate_mesh(ta, "_flip") if create_copy else ta
+                actual_b = command.duplicate_mesh(tb, "_flip") if create_copy else tb
+                op = command.DualMeshOperation(actual_a, actual_b, base_a, base_b, self._table)
                 op.flip(fallback=fallback)
-            cmds.select(targets_a + targets_b, r=True)
+                result_meshes.extend([actual_a, actual_b])
+            cmds.select(result_meshes, r=True)
 
     # -----------------------------------------------------------------
     # Helpers
@@ -534,8 +565,9 @@ class MainWindow(BaseMainWindow):
             "mode": self.mode_combo.currentText(),
             "method": self.method_combo.currentText(),
             "threshold": self.threshold_spin.value(),
-            "direction_index": self.direction_combo.currentIndex(),
+            "direction_index": 0 if self.dir_radio_0.isChecked() else 1,
             "fallback": self.fallback_combo.currentText(),
+            "create_copy": self.create_copy_check.isChecked(),
         }
 
     def _apply_settings(self, data: dict):
@@ -546,9 +578,14 @@ class MainWindow(BaseMainWindow):
         if "threshold" in data:
             self.threshold_spin.setValue(data["threshold"])
         if "direction_index" in data:
-            self.direction_combo.setCurrentIndex(data["direction_index"])
+            if data["direction_index"] == 0:
+                self.dir_radio_0.setChecked(True)
+            else:
+                self.dir_radio_1.setChecked(True)
         if "fallback" in data:
             self.fallback_combo.setCurrentText(data["fallback"])
+        if "create_copy" in data:
+            self.create_copy_check.setChecked(data["create_copy"])
 
     def closeEvent(self, event):
         self._save_settings()
