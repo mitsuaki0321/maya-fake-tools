@@ -170,7 +170,7 @@ class NameReplaceField(QWidget):
         self.search_field = QLineEdit()
         layout.addWidget(self.search_field)
 
-        self.switch_button = IconToggleButton(icon_on="switch-on", icon_off="switch-off", icon_dir=_IMAGES_DIR)
+        self.switch_button = IconToggleButton(icon_on="arrow-left", icon_off="arrow-right", icon_dir=_IMAGES_DIR)
         layout.addWidget(self.switch_button)
 
         self.replace_field = QLineEdit()
