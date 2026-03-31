@@ -39,7 +39,7 @@ class LineNumberArea(QWidget):
 
     def _fold_gutter_x(self):
         """Return the X coordinate where the fold gutter column starts."""
-        spacing = self.code_editor.fontMetrics().horizontalAdvance("  ")
+        spacing = self.code_editor.fontMetrics().horizontalAdvance(" ")
         return self.width() - spacing - self.code_editor._fold_gutter_width()
 
     def _start_fade(self, target):

@@ -312,8 +312,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             digits += 1
 
         char_width = self.fontMetrics().horizontalAdvance("9")
-        # Add extra spacing between line numbers and code (2 characters worth)
-        extra_spacing = self.fontMetrics().horizontalAdvance("  ")  # 2 spaces
+        # Add extra spacing between line numbers and code (1 character worth)
+        extra_spacing = self.fontMetrics().horizontalAdvance(" ")
         # Add fold gutter width (indicator triangle area)
         fold_gutter_width = char_width + 4
         space = 3 + char_width * digits + extra_spacing + fold_gutter_width
@@ -388,12 +388,12 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         font_metrics = painter.fontMetrics()
         single_line_height = font_metrics.height()
 
-        # Layout: [ line_numbers | fold_gutter | spacing(2char) | code ]
+        # Layout: [ line_numbers | fold_gutter | spacing(1char) | code ]
         fold_gutter_w = self._fold_gutter_width()
         line_area_width = self.line_number_area.width()
-        spacing = self.fontMetrics().horizontalAdvance("  ")
+        spacing = self.fontMetrics().horizontalAdvance(" ")
         line_number_draw_width = line_area_width - spacing - fold_gutter_w
-        fold_gutter_x = line_area_width - spacing  # Start of fold gutter (right of line numbers)
+        fold_gutter_x = line_number_draw_width  # Start of fold gutter (right of line numbers)
 
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
@@ -406,8 +406,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
                 # Draw line number (left side)
                 painter.drawText(0, int(top), line_number_draw_width, single_line_height, Qt.AlignRight, number)
 
-                # Draw fold indicator (right of line numbers, before spacing)
-                self._draw_fold_indicator(painter, block_number, fold_gutter_x, int(top), fold_gutter_w, single_line_height)
+                # Draw fold indicator centered in the space between line numbers and code
+                self._draw_fold_indicator(painter, block_number, fold_gutter_x, int(top), fold_gutter_w + spacing, single_line_height)
 
             block = block.next()
             top = bottom
@@ -465,7 +465,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         # Base shape: down-pointing chevron ˅ defined as offsets from center
         # (-1, -0.35) -> (0, 0.55) -> (1, -0.35)
         # Rotated -90° (CW) for right-pointing: (x,y) -> (y,-x)
-        s = half_w  # uniform scale
+        s = half_w * 0.5
 
         if is_folded:
             # Right-pointing chevron › (-90° rotation of ˅)
