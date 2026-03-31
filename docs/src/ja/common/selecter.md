@@ -120,6 +120,14 @@ faketools.tools.common.selecter.ui.show_ui()
 
 ![image0011](../../images/common/selecter/image011.png)
 
+検索フィールドが空の場合、置換フィールドで `*` をノード名のプレースホルダーとして使用できます。これにより、正規表現を記述することなく接頭辞や接尾辞の追加が可能です。
+
+| 検索 | 置換 | 入力ノード | 結果 |
+|:---|:---|:---|:---|
+| (空) | `*_original` | `hairE_geo` | `hairE_geo_original` |
+| (空) | `original_*` | `hairE_geo` | `original_hairE_geo` |
+| `_L` | `_R` | `arm_L_ctrl` | `arm_R_ctrl` |
+
 - **SEL**
   - 選択したノードの名前を置換して選択します。
 - **REN**

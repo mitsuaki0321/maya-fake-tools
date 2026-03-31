@@ -120,6 +120,14 @@ Commands are executed by replacing names with strings entered in each text box. 
 
 ![image0011](../../images/common/selecter/image011.png)
 
+When the search field is empty, you can use `*` in the replace field as a placeholder for the node name. This allows adding prefixes or suffixes without writing regular expressions.
+
+| Search | Replace | Input Node | Result |
+|:---|:---|:---|:---|
+| (empty) | `*_original` | `hairE_geo` | `hairE_geo_original` |
+| (empty) | `original_*` | `hairE_geo` | `original_hairE_geo` |
+| `_L` | `_R` | `arm_L_ctrl` | `arm_R_ctrl` |
+
 - **SEL**
   - Selects with replaced names of selected nodes.
 - **REN**
