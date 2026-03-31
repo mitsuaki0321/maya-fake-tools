@@ -22,9 +22,12 @@ from ....lib_ui.qt_compat import (
     QPushButton,
     QSizePolicy,
     QSortFilterProxyModel,
+    QSplitter,
     QStandardItem,
     QStandardItemModel,
     Qt,
+    QVBoxLayout,
+    QWidget,
 )
 from ....lib_ui.ui_utils import get_relative_size
 from ....lib_ui.widgets import IconToggleButton
@@ -111,21 +114,34 @@ class MainWindow(BaseMainWindow):
         self.node_filter_inherited_btn.setFixedWidth(unified_width)
         self.match_filter_ignorecase_btn.setFixedWidth(unified_width)
 
-        # --- Node list ---
+        # --- Splitter: Node list | Attribute section ---
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
+
+        # Top pane: Node list
         self.node_list = QListView()
         self.node_model = QStandardItemModel()
         self.node_list.setModel(self.node_model)
         self.node_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.node_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.node_list.viewport().installEventFilter(self)
-        self.central_layout.addWidget(self.node_list, 1)
         self._node_list_viewport = self.node_list.viewport()
+        self.splitter.addWidget(self.node_list)
 
-        # --- Attribute list ---
+        # Bottom pane: Attribute filter + Attribute list
+        attr_container = QWidget()
+        attr_layout = QVBoxLayout(attr_container)
+        attr_layout.setContentsMargins(0, 0, 0, 0)
+        attr_layout.setSpacing(int(spacing * 0.5))
+
         self.attr_source_model = QStandardItemModel()
         self.attr_proxy_model = QSortFilterProxyModel()
         self.attr_proxy_model.setFilterCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self.attr_proxy_model.setSourceModel(self.attr_source_model)
+
+        self.attr_filter_edit = QLineEdit()
+        self.attr_filter_edit.setPlaceholderText("Filter attributes...")
+        self.attr_filter_edit.setClearButtonEnabled(True)
+        attr_layout.addWidget(self.attr_filter_edit)
 
         self.attr_list = QListView()
         self.attr_list.setModel(self.attr_proxy_model)
@@ -133,13 +149,12 @@ class MainWindow(BaseMainWindow):
         self.attr_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.attr_list.viewport().installEventFilter(self)
         self._attr_list_viewport = self.attr_list.viewport()
-        self.central_layout.addWidget(self.attr_list, 1)
+        attr_layout.addWidget(self.attr_list, 1)
 
-        # --- Attribute filter ---
-        self.attr_filter_edit = QLineEdit()
-        self.attr_filter_edit.setPlaceholderText("Filter attributes...")
-        self.attr_filter_edit.setClearButtonEnabled(True)
-        self.central_layout.addWidget(self.attr_filter_edit)
+        self.splitter.addWidget(attr_container)
+        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(1, 1)
+        self.central_layout.addWidget(self.splitter, 1)
 
         # --- Value field ---
         self.value_field = QLineEdit()
