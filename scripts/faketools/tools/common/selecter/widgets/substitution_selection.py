@@ -1,6 +1,7 @@
 """Substitution selection widget for selecter tool."""
 
 from pathlib import Path
+import re
 
 import maya.cmds as cmds
 
@@ -345,10 +346,17 @@ class SubstitutionSelectionWidget(QWidget):
         cmds.select(result_nodes, r=True)
 
     def _get_substitution_option(self):
-        """Get the substitution option.
+        """Get the substitution option as regex pattern and replacement.
+
+        Converts user input to regex for ``lib_name.substitute_names``:
+
+        - **Search empty, replace contains** ``*``: ``*`` = full node name.
+          e.g. replace ``*_original`` → appends ``_original``.
+        - **Search not empty**: literal string replacement
+          (special regex characters are escaped automatically).
 
         Returns:
-            tuple: The search and replace text.
+            tuple: The (search_regex, replace_text) pair.
         """
         search_text = self.search_text_field.text()
         replace_text = self.replace_text_field.text()
@@ -357,7 +365,12 @@ class SubstitutionSelectionWidget(QWidget):
             search_text, replace_text = replace_text, search_text
 
         if not search_text:
-            cmds.error("No search text specified.")
+            if "*" not in replace_text:
+                cmds.error("Search text is empty. Use * in the replace field as a placeholder (e.g. *_original).")
+            search_text = "(.+)"
+            replace_text = replace_text.replace("*", r"\1")
+        else:
+            search_text = re.escape(search_text)
 
         return search_text, replace_text
 
