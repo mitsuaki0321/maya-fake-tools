@@ -34,6 +34,111 @@ logger = getLogger(__name__)
 
 _instance = None
 
+# Transform attributes to display at the top of the attribute list
+_TRANSFORM_ATTRS = [
+    "translate",
+    "rotate",
+    "scale",
+    "shear",
+    "translateX",
+    "translateY",
+    "translateZ",
+    "rotateX",
+    "rotateY",
+    "rotateZ",
+    "scaleX",
+    "scaleY",
+    "scaleZ",
+    "shearXY",
+    "shearXZ",
+    "shearYZ",
+    "visibility",
+]
+
+_EXCEPT_ATTR_TYPES = {"TdataCompound"}
+
+
+def _list_type_attributes(node: str) -> tuple[list[str], list[str]]:
+    """List type-level attributes of a node.
+
+    Queries attribute information (compound check, type check) for a
+    representative node. Results are the same for all nodes of the same type.
+
+    Args:
+        node: A representative node name.
+
+    Returns:
+        Pair of (transform_attrs, write_attrs) excluding user-defined attributes.
+    """
+    transform_attrs: list[str] = []
+    if "transform" in cmds.nodeType(node, inherited=True):
+        transform_attrs = list(_TRANSFORM_ATTRS)
+
+    user_attrs_set = set(cmds.listAttr(node, userDefined=True) or [])
+    skip_set = set(transform_attrs) | user_attrs_set
+
+    write_attrs: list[str] = []
+    for attr in cmds.listAttr(node, write=True) or []:
+        if attr in skip_set:
+            continue
+        try:
+            if cmds.attributeQuery(attr, node=node, listChildren=True):
+                continue
+            if cmds.getAttr(f"{node}.{attr}", type=True) in _EXCEPT_ATTR_TYPES:
+                continue
+            write_attrs.append(attr)
+            skip_set.add(attr)
+        except (RuntimeError, ValueError, TypeError):
+            logger.debug(f"Failed to list attribute: {node}.{attr}")
+
+    return transform_attrs, write_attrs
+
+
+def _get_common_attributes(nodes: list[str]) -> list[str]:
+    """Get attributes common to all given nodes.
+
+    Groups nodes by type and queries type-level attributes only once
+    per unique node type. User-defined attributes are queried per node.
+
+    Args:
+        nodes: List of node names.
+
+    Returns:
+        Common attribute names, ordered by the first node.
+    """
+    if not nodes:
+        return []
+
+    node_type_map: dict[str, str] = {}
+    type_groups: dict[str, list[str]] = {}
+    for node in nodes:
+        ntype = cmds.nodeType(node)
+        node_type_map[node] = ntype
+        type_groups.setdefault(ntype, []).append(node)
+
+    type_cache: dict[str, tuple[list[str], list[str]]] = {}
+    for ntype, group in type_groups.items():
+        type_cache[ntype] = _list_type_attributes(group[0])
+
+    user_attrs_map: dict[str, list[str]] = {}
+    for node in nodes:
+        user_attrs_map[node] = cmds.listAttr(node, userDefined=True) or []
+
+    def build_attrs(node: str) -> list[str]:
+        transform_attrs, write_attrs = type_cache[node_type_map[node]]
+        return transform_attrs + user_attrs_map[node] + write_attrs
+
+    first_attrs = build_attrs(nodes[0])
+
+    if len(nodes) == 1:
+        return first_attrs
+
+    common_set = set(first_attrs)
+    for node in nodes[1:]:
+        common_set &= set(build_attrs(node))
+
+    return [attr for attr in first_attrs if attr in common_set]
+
 
 class MainWindow(base_window.BaseMainWindow):
     """Attribute Connection Lister Main Window."""
@@ -241,24 +346,22 @@ class MainWindow(base_window.BaseMainWindow):
 
     def _source_display_attributes(self) -> None:
         """Display the attributes of the selected source nodes."""
-        self._display_attributes(self.source_node_list, self.source_attr_list, self._source_list_attributes)
+        self._display_attributes(self.source_node_list, self.source_attr_list)
 
     def _dest_display_attributes(self) -> None:
         """Display the attributes of the selected destination nodes."""
-        self._display_attributes(self.dest_node_list, self.dest_attr_list, self.__dest_list_attributes)
+        self._display_attributes(self.dest_node_list, self.dest_attr_list)
 
     def _display_attributes(
         self,
         node_list_widget: nodeAttr_widgets.NodeListView,
         attr_list_widget: nodeAttr_widgets.AttributeListView,
-        list_attributes_callback: callable,
     ) -> None:
-        """Display the attributes of the selected nodes
+        """Display the common attributes of the selected nodes.
 
         Args:
-            node_list_widget (NodeList): The node list widget.
-            attr_list_widget (AttributeList): The attribute list widget.
-            list_attributes_callback (callable): The function to list the attributes of the node.
+            node_list_widget: The node list widget.
+            attr_list_widget: The attribute list widget.
         """
         source_model = attr_list_widget.model().sourceModel()
         selected_indexes = node_list_widget.selectionModel().selectedIndexes()
@@ -269,111 +372,14 @@ class MainWindow(base_window.BaseMainWindow):
             return
 
         selected_nodes = [index.data() for index in selected_indexes]
-        first_node_attrs = list_attributes_callback(selected_nodes[0])
+        common_attributes = _get_common_attributes(selected_nodes)
 
-        # Use set for O(1) lookup when computing common attributes
-        if len(selected_nodes) > 1:
-            common_attrs_set = set(first_node_attrs)
-            for node in selected_nodes[1:]:
-                node_attrs_set = set(list_attributes_callback(node))
-                common_attrs_set &= node_attrs_set
-            # Preserve order from the first node's attributes
-            common_attributes = [attr for attr in first_node_attrs if attr in common_attrs_set]
-        else:
-            common_attributes = first_node_attrs
-
-        # Batch update using beginResetModel/endResetModel
         source_model.beginResetModel()
         source_model.clear()
         for attr in common_attributes:
             item = QStandardItem(attr)
             source_model.appendRow(item)
         source_model.endResetModel()
-
-    def _source_list_attributes(self, node: str) -> list[str]:
-        """List the attributes of the node.
-
-        Args:
-            node (str): The node name.
-
-        Returns:
-            list[str]: The attributes of the node.
-        """
-        return self._list_attributes(node)
-
-    def __dest_list_attributes(self, node: str) -> list[str]:
-        """List the attributes of the node.
-
-        Args:
-            node (str): The node name.
-
-        Returns:
-            list[str]: The attributes of the node.
-        """
-        return self._list_attributes(node)
-
-    def _list_attributes(self, node: str) -> list[str]:
-        """List the attributes of the node.
-
-        Args:
-            node (str): The node name.
-
-        Returns:
-            list[str]: The attributes of the node.
-        """
-        result_attrs = []
-        result_attrs_set = set()  # For O(1) duplicate check
-
-        if "transform" in cmds.nodeType(node, inherited=True):
-            transform_attrs = [
-                "translate",
-                "rotate",
-                "scale",
-                "shear",
-                "translateX",
-                "translateY",
-                "translateZ",
-                "rotateX",
-                "rotateY",
-                "rotateZ",
-                "scaleX",
-                "scaleY",
-                "scaleZ",
-                "shearXY",
-                "shearXZ",
-                "shearYZ",
-                "visibility",
-            ]
-            result_attrs.extend(transform_attrs)
-            result_attrs_set.update(transform_attrs)
-
-        user_attrs = cmds.listAttr(node, userDefined=True)
-        if user_attrs:
-            for attr in user_attrs:
-                if attr not in result_attrs_set:
-                    result_attrs.append(attr)
-                    result_attrs_set.add(attr)
-
-        # Use write=True to get only writable attributes (reduces getAttr calls)
-        write_attrs = cmds.listAttr(node, write=True) or []
-        except_attr_types = {"TdataCompound"}  # Use set for O(1) lookup
-
-        for attr in write_attrs:
-            if attr in result_attrs_set:
-                continue
-            try:
-                # Skip compound attributes (children check)
-                if cmds.attributeQuery(attr, node=node, listChildren=True):
-                    continue
-                attr_type = cmds.getAttr(f"{node}.{attr}", type=True)
-                if attr_type in except_attr_types:
-                    continue
-                result_attrs.append(attr)
-                result_attrs_set.add(attr)
-            except (RuntimeError, ValueError, TypeError):
-                logger.debug(f"Failed to list attribute: {node}.{attr}")
-
-        return result_attrs
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Copy Attribute Value")

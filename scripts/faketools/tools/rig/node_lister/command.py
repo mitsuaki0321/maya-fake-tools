@@ -174,16 +174,11 @@ def filter_by_node_type(nodes: list[str], type_str: str, inherited: bool = False
     """
     if not type_str:
         return nodes
-    result = []
-    for node in nodes:
-        if inherited:
-            types = cmds.nodeType(node, inherited=True) or []
-            if type_str in types:
-                result.append(node)
-        else:
-            if cmds.nodeType(node) == type_str:
-                result.append(node)
-    return result
+    if inherited:
+        matched = set(cmds.ls(nodes, type=type_str) or [])
+    else:
+        matched = set(cmds.ls(nodes, exactType=type_str) or [])
+    return [node for node in nodes if node in matched]
 
 
 def filter_by_name(nodes: list[str], pattern: str, ignorecase: bool = False) -> list[str]:
@@ -212,51 +207,50 @@ def filter_by_name(nodes: list[str], pattern: str, ignorecase: bool = False) -> 
 # ---------------------------------------------------------------------------
 
 
-def list_attributes(node: str, except_attr_types: list[str] | None = None) -> list[str]:
-    """List writable attributes of a node.
+_EXCEPT_ATTR_TYPES = {"message", "TdataCompound"}
 
-    Includes default transform attributes (for transform nodes), user-defined
-    attributes, and other writable attributes excluding compound attributes
-    and specified types.
+
+def _list_type_attributes(node: str) -> tuple[list[str], list[str]]:
+    """List type-level attributes of a node.
+
+    Queries attribute information (compound check, type check) for a
+    representative node. Results are the same for all nodes of the same type.
 
     Args:
-        node: The node name.
-        except_attr_types: Attribute types to exclude.
-            Defaults to ["message", "TdataCompound"].
+        node: A representative node name.
 
     Returns:
-        list[str]: List of attribute names.
+        Pair of (transform_attrs, write_attrs) excluding user-defined attributes.
     """
-    if except_attr_types is None:
-        except_attr_types = ["message", "TdataCompound"]
-
-    result_attrs: list[str] = []
-
+    transform_attrs: list[str] = []
     if "transform" in (cmds.nodeType(node, inherited=True) or []):
-        result_attrs.extend(DEFAULT_TRANSFORM_ATTRS)
+        transform_attrs = list(DEFAULT_TRANSFORM_ATTRS)
 
-    user_attrs = cmds.listAttr(node, userDefined=True)
-    if user_attrs:
-        result_attrs.extend(user_attrs)
+    user_attrs_set = set(cmds.listAttr(node, userDefined=True) or [])
+    skip_set = set(transform_attrs) | user_attrs_set
 
-    write_attrs = cmds.listAttr(node, write=True) or []
-    for attr in write_attrs:
-        if attr in result_attrs:
+    write_attrs: list[str] = []
+    for attr in cmds.listAttr(node, write=True) or []:
+        if attr in skip_set:
             continue
         try:
             if cmds.attributeQuery(attr, node=node, listChildren=True):
                 continue
-            if cmds.getAttr(f"{node}.{attr}", type=True) in except_attr_types:
+            if cmds.getAttr(f"{node}.{attr}", type=True) in _EXCEPT_ATTR_TYPES:
                 continue
-            result_attrs.append(attr)
+            write_attrs.append(attr)
+            skip_set.add(attr)
         except (RuntimeError, ValueError, TypeError) as e:
             logger.debug("Failed to query attribute: %s.%s: %s", node, attr, e)
 
-    return result_attrs
+    return transform_attrs, write_attrs
 
 
 def get_common_attributes(nodes: list[str]) -> list[str]:
     """Get attributes common to all given nodes.
+
+    Groups nodes by type and queries type-level attributes only once
+    per unique node type. User-defined attributes are queried per node.
 
     Args:
         nodes: List of node names.
@@ -267,13 +261,35 @@ def get_common_attributes(nodes: list[str]) -> list[str]:
     if not nodes:
         return []
 
-    first_attrs = list_attributes(nodes[0])
+    # Group nodes by type
+    node_type_map: dict[str, str] = {}
+    type_groups: dict[str, list[str]] = {}
+    for node in nodes:
+        ntype = cmds.nodeType(node)
+        node_type_map[node] = ntype
+        type_groups.setdefault(ntype, []).append(node)
+
+    # Cache type-level attributes (one expensive query per unique type)
+    type_cache: dict[str, tuple[list[str], list[str]]] = {}
+    for ntype, group in type_groups.items():
+        type_cache[ntype] = _list_type_attributes(group[0])
+
+    # User-defined attributes per node (cheap, no attributeQuery/getAttr)
+    user_attrs_map: dict[str, list[str]] = {}
+    for node in nodes:
+        user_attrs_map[node] = cmds.listAttr(node, userDefined=True) or []
+
+    def build_attrs(node: str) -> list[str]:
+        transform_attrs, write_attrs = type_cache[node_type_map[node]]
+        return transform_attrs + user_attrs_map[node] + write_attrs
+
+    first_attrs = build_attrs(nodes[0])
 
     if len(nodes) == 1:
         return first_attrs
 
     common_set = set(first_attrs)
     for node in nodes[1:]:
-        common_set &= set(list_attributes(node))
+        common_set &= set(build_attrs(node))
 
     return [attr for attr in first_attrs if attr in common_set]
