@@ -185,7 +185,58 @@ def freeze_mesh_vertices(node: str) -> None:
     logger.debug(f"Froze mesh vertices for node: {node}")
 
 
+def reset_mesh_tweaks(node: str) -> None:
+    """Reset all vertex tweaks (pnts) on the mesh to zero.
+
+    Vertices will move back to their pre-tweak positions. Uses removeMultiInstance
+    to reliably clear sparse pnts entries, which is more reliable than setAttr.
+
+    Args:
+        node (str): The target mesh transform node.
+
+    Raises:
+        ValueError: If node doesn't exist, is not unique, or is not a transform.
+
+    Notes:
+        - For meshes with deformers, the tweakLocation connection is temporarily
+          disconnected and reconnected after clearing.
+        - This removes the tweak offsets (vertices move back), unlike freeze_mesh_vertices
+          which bakes tweaks into vertex positions (vertices stay in place).
+    """
+    node = _validate_and_get_transform(node)
+
+    shapes = cmds.listRelatives(node, shapes=True, pa=True, type="mesh", ni=True) or []
+    if not shapes:
+        logger.warning(f"No mesh shapes found under: {node}, skipping.")
+        return
+
+    mesh = shapes[0]
+
+    indices = cmds.getAttr(f"{mesh}.pnts", multiIndices=True)
+    if not indices:
+        logger.debug(f"No tweaks found on: {mesh}")
+        return
+
+    # Check if tweakLocation is connected (deformer chain)
+    tweak_src = None
+    if cmds.attributeQuery("tweakLocation", node=mesh, exists=True):
+        conns = cmds.listConnections(f"{mesh}.tweakLocation", source=True, destination=False, plugs=True)
+        if conns:
+            tweak_src = conns[0]
+            cmds.disconnectAttr(tweak_src, f"{mesh}.tweakLocation")
+
+    try:
+        for i in indices:
+            cmds.removeMultiInstance(f"{mesh}.pnts[{i}]", b=True)
+    finally:
+        if tweak_src:
+            cmds.connectAttr(tweak_src, f"{mesh}.tweakLocation")
+
+    logger.debug(f"Reset mesh tweaks for node: {node}")
+
+
 __all__ = [
     "freeze_transform",
     "freeze_transform_pivot",
+    "reset_mesh_tweaks",
 ]

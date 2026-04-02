@@ -6,7 +6,6 @@ Automatically creates Maya menu based on registered tools.
 
 import logging
 import os
-from pathlib import Path
 import subprocess
 import sys
 import webbrowser
@@ -55,6 +54,9 @@ def add_menu():
     # Add single commands menu first
     single_commands_menu.show_menu(parent_menu=menu)
     cmds.menuItem(divider=True, parent=menu)
+
+    # Register runtime command for popup menu (hotkey assignable via Hotkey Editor)
+    single_commands_menu.register_runtime_command()
 
     # Discover tools
     registry = get_registry()

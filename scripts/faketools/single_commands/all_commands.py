@@ -227,6 +227,24 @@ class FreezeMeshVerticesCommand(AllCommand):
             lib_transform.freeze_mesh_vertices(target_node)
 
 
+class ResetMeshTweaksCommand(AllCommand):
+    """Command to reset mesh tweaks (pnts) of selected nodes."""
+
+    _name = "Reset Mesh Tweaks"
+    _description = "Command to reset mesh tweaks (pnts) of selected nodes"
+
+    def execute(self, target_nodes: list[str]):
+        """Execute the command.
+
+        Args:
+            target_nodes (list[str]): The target nodes to reset mesh tweaks.
+        """
+        super().execute(target_nodes)
+
+        for target_node in target_nodes:
+            lib_transform.reset_mesh_tweaks(target_node)
+
+
 class DeleteConstraintsCommand(AllCommand):
     """Command to delete constraints of selected nodes."""
 
@@ -431,6 +449,7 @@ __all__ = [
     "BreakConnectionsCommand",
     "FreezeTransformsCommand",
     "FreezeMeshVerticesCommand",
+    "ResetMeshTweaksCommand",
     "DeleteConstraintsCommand",
     "JointsToChainCommand",
     "MirrorJointsCommand",
