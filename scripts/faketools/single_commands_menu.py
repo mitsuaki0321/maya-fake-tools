@@ -161,14 +161,54 @@ def execute_single_command(command_name: str) -> None:
 # --- Public API: Hotkey registration ------------------------------------------
 
 
-def register_runtime_command() -> None:
-    """Register Maya runtime commands and default hotkey for the popup menu.
+def _parse_hotkey_string(hotkey_str: str) -> tuple[str, bool, bool, bool] | None:
+    """Parse a hotkey string like 'Ctrl+Shift+Z' into components.
 
-    Creates press/release runtime commands and binds them to Ctrl+Shift+Z.
-    Press shows the menu, release closes it (marking-menu style).
-    Users can reassign via Maya's Hotkey Editor (Custom Scripts.FakeTools category).
+    Args:
+        hotkey_str (str): Hotkey string (e.g. 'Ctrl+Shift+Z', 'Alt+F', 'Ctrl+Alt+Shift+Q').
+
+    Returns:
+        Tuple of (key, ctrl, shift, alt) or None if the string is empty or invalid.
+    """
+    if not hotkey_str or not hotkey_str.strip():
+        return None
+
+    parts = [p.strip() for p in hotkey_str.split("+")]
+    if not parts:
+        return None
+
+    ctrl = False
+    shift = False
+    alt = False
+    key = None
+
+    for part in parts:
+        lower = part.lower()
+        if lower == "ctrl":
+            ctrl = True
+        elif lower == "shift":
+            shift = True
+        elif lower == "alt":
+            alt = True
+        else:
+            key = part
+
+    if not key:
+        return None
+
+    return key, ctrl, shift, alt
+
+
+def register_runtime_command() -> None:
+    """Register Maya runtime commands and hotkey for the popup menu.
+
+    The hotkey is read from the shared config (hotkeys.single_commands_popup).
+    If the configured key is already assigned to another command, registration is
+    skipped and a warning is shown. Set the value to empty string to disable.
     """
     import maya.mel as mel
+
+    from .lib_ui.shared_config import get_shared_config
 
     for name in (RUNTIME_COMMAND_NAME, _RUNTIME_RELEASE_NAME):
         if cmds.runTimeCommand(name, exists=True):
@@ -189,15 +229,42 @@ def register_runtime_command() -> None:
         command="import faketools.single_commands_menu; faketools.single_commands_menu.close_popup_menu()",
     )
 
-    # Bind default hotkey: Ctrl+Shift+Z (press to show, release to close)
+    # Read hotkey from shared config
+    config = get_shared_config()
+    hotkey_str = config.get("hotkeys", {}).get("single_commands_popup", "")
+    parsed = _parse_hotkey_string(hotkey_str)
+    if parsed is None:
+        logger.debug("Single Commands popup hotkey is disabled (empty or invalid config).")
+        return
+
+    key, ctrl, shift, alt = parsed
+
+    # Check for conflicts
     press_nc = RUNTIME_COMMAND_NAME + "NameCommand"
     release_nc = _RUNTIME_RELEASE_NAME + "NameCommand"
 
+    existing = cmds.hotkey(key, query=True, ctrlModifier=ctrl, shiftModifier=shift, altModifier=alt, name=True)
+    if existing and existing != press_nc:
+        cmds.warning(
+            f"FakeTools: {hotkey_str} is already assigned to '{existing}'. "
+            "Single Commands popup hotkey was not registered. "
+            "You can change the hotkey in the shared config or assign manually via Hotkey Editor."
+        )
+        return
+
     mel.eval(f'nameCommand -ann "FakeTools Single Commands" -command {RUNTIME_COMMAND_NAME} -sourceType mel {press_nc}')
     mel.eval(f'nameCommand -ann "FakeTools Single Commands Release" -command {_RUNTIME_RELEASE_NAME} -sourceType mel {release_nc}')
-    mel.eval(f'hotkey -k "Z" -ctl -sht -n "{press_nc}" -rn "{release_nc}"')
 
-    logger.debug(f"Registered runtime command: {RUNTIME_COMMAND_NAME} (Ctrl+Shift+Z)")
+    mel_flags = f'-k "{key}"'
+    if ctrl:
+        mel_flags += " -ctl"
+    if shift:
+        mel_flags += " -sht"
+    if alt:
+        mel_flags += " -alt"
+    mel.eval(f'hotkey {mel_flags} -n "{press_nc}" -rn "{release_nc}"')
+
+    logger.debug(f"Registered Single Commands popup hotkey: {hotkey_str}")
 
 
 # --- Module exports -----------------------------------------------------------

@@ -15,6 +15,9 @@ _DEFAULTS = {
         "right_to_left": ["(.*)(R)", r"\g<1>L"],
         "adjust_center_weight": ["(.*)(L$)", r"\g<1>R"],
     },
+    "hotkeys": {
+        "single_commands_popup": "Ctrl+Shift+Z",
+    },
 }
 
 _settings = ToolSettingsManager("config", "shared")
