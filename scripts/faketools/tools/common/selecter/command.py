@@ -263,7 +263,7 @@ def substitute_duplicate(nodes: list[str], regex_name: str, replace_name: str) -
         for transform_node in transform_nodes:
             dup_nodes = cmds.duplicate(transform_node, rc=True)
 
-            hierarchy_nodes = get_hierarchy([transform_node], include_shape=True)
+            hierarchy_nodes = get_hierarchy([transform_node], include_shape=False)
             local_names = [lib_name.get_local_name(node) for node in hierarchy_nodes]
             new_names = lib_name.substitute_names(local_names, regex_name, replace_name)
 
