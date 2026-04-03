@@ -24,12 +24,31 @@ faketools.tools.model.mesh_retargeter.ui.show_ui()
 To use the tool, follow these steps:
 
 1. Select the source geometry for deformation and press `Set Source Mesh` button.
-2. Select the destination geometry for deformation and press `Set Destination Mesh` button (multiple selection allowed).
+2. Select the destination geometry for deformation and press `Set Destination Mesh` button (multiple selection allowed). Only meshes with the same topology as the Source Mesh can be set.
 3. Select the target geometry to deform and press `Set Target Mesh` button.
-4. If creating new geometry, check the `Create New Mesh` checkbox.
-5. Press `Retarget Mesh` button.
+4. Select a mapping mode from `Mapping`.
+5. If creating new geometry, check the `Create New Mesh` checkbox.
+6. Press `Retarget Mesh` button.
 
 ![image001](../../images/model/mesh_retargeter/image001.gif)
+
+
+## Mapping
+
+Select how Destination Meshes and Target Meshes are paired.
+
+### One to Many (default)
+
+All Target Meshes are deformed for each Destination Mesh (M x N combinations).
+
+- **Create New Mesh on**: A new mesh is created for each combination.
+- **Create New Mesh off**: Only one Destination Mesh can be specified.
+
+### One to One
+
+Pairs Destination Meshes and Target Meshes one-to-one. Destination[0] maps to Target[0], Destination[1] maps to Target[1], and so on.
+
+- The number of Destination Meshes and Target Meshes must be equal.
 
 
 ## Advanced Parameters
@@ -80,6 +99,8 @@ You can obtain more accurate transfer results by adjusting advanced setting para
 
 ## Notes
 
-- Source mesh and destination mesh must have the same topology.
-- When `Create New Mesh` is off and there are multiple destination meshes, nothing is created.
-- Processing may take time when target mesh has many vertices.
+- Source Mesh and Destination Mesh must have the same topology. Topology is automatically validated when setting Destination Meshes.
+- In `One to Many` mode with `Create New Mesh` off, only one Destination Mesh can be specified.
+- In `One to One` mode, the number of Destination Meshes and Target Meshes must be equal.
+- Processing may take time when Target Mesh has many vertices.
+- Retarget operations support Undo/Redo.

@@ -24,12 +24,31 @@ faketools.tools.model.mesh_retargeter.ui.show_ui()
 ツールを使用するには、以下の手順を行います。
 
 1. 変形に使用する元のジオメトリを選択し、`Set Source Mesh` ボタンを押します。
-2. 変形に使用する先のジオメトリを選択し、`Set Destination Mesh` ボタンを押します ( 複数選択可能 )。
+2. 変形に使用する先のジオメトリを選択し、`Set Destination Mesh` ボタンを押します（複数選択可能）。Source Mesh と同一トポロジーのメッシュのみセットできます。
 3. 変形するジオメトリを選択し、`Set Target Mesh` ボタンを押します。
-4. 新しいジオメトリを作成する場合は、`Create New Mesh` チェックボックスをオンにします。
-5. `Retarget Mesh` ボタンを押します。
+4. `Mapping` でマッピングモードを選択します。
+5. 新しいジオメトリを作成する場合は、`Create New Mesh` チェックボックスをオンにします。
+6. `Retarget Mesh` ボタンを押します。
 
 ![image001](../../images/model/mesh_retargeter/image001.gif) 
+
+
+## Mapping（マッピングモード）
+
+Destination Mesh と Target Mesh の対応方法を選択します。
+
+### One to Many（デフォルト）
+
+すべての Destination Mesh に対して、すべての Target Mesh を変形します（M × N の組み合わせ）。
+
+- **Create New Mesh オン**: 各組み合わせに対して新しいメッシュが作成されます。
+- **Create New Mesh オフ**: Destination Mesh は 1 つのみ指定可能です。
+
+### One to One
+
+Destination Mesh と Target Mesh を 1 対 1 で対応させます。Destination[0] → Target[0]、Destination[1] → Target[1] のように順番にペアリングされます。
+
+- Destination Mesh と Target Mesh の数が一致している必要があります。
 
 
 ## Advanced Parameters
@@ -80,6 +99,8 @@ faketools.tools.model.mesh_retargeter.ui.show_ui()
 
 ## 注意事項
 
-- ソースメッシュ と デスティネーションメッシュ のトポロジーは同じである必要があります。
-- `Create New Mesh` がオフで デスティネーションメッシュ が複数の場合は、作成されません。
-- ターゲットメッシュの頂点数が多い場合の処理は、時間がかかる可能性があります。
+- Source Mesh と Destination Mesh のトポロジーは同じである必要があります。Destination Mesh セット時に自動でトポロジーが検証されます。
+- `One to Many` モードで `Create New Mesh` がオフの場合、Destination Mesh は 1 つのみ指定可能です。
+- `One to One` モードでは、Destination Mesh と Target Mesh の数が一致している必要があります。
+- Target Mesh の頂点数が多い場合の処理は、時間がかかる可能性があります。
+- Retarget 操作は Undo/Redo に対応しています。
