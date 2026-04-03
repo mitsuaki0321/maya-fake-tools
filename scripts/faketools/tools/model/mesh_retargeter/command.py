@@ -8,7 +8,7 @@ from scipy.spatial import KDTree
 
 from ....lib import lib_cluster, lib_retarget, lib_selection
 from ....lib.lib_mesh import is_same_topology
-from ....lib.lib_mesh_vertex import MeshVertex
+from ....lib.lib_mesh_vertex import MeshVertex, get_mesh_points, set_mesh_points
 from ....operations import component_selection
 
 logger = logging.getLogger(__name__)
@@ -40,18 +40,18 @@ def _get_points_from_soft_selection(src_objs: list[str], trg_mesh: str, *, radiu
     return list(sel_components.keys())
 
 
-def _get_positions(mesh: MeshVertex) -> np.ndarray:
+def _get_positions(mesh_name: str, *, objectSpace: bool = True) -> np.ndarray:
     """Get the vertex positions of the mesh.
 
     Args:
-        mesh (MeshVertex): The MeshVertex object.
+        mesh_name (str): The mesh shape name.
+        objectSpace (bool): If True, return in object space. If False, return in world space.
 
     Returns:
         np.ndarray: The vertex positions as (N, 3) array.
     """
-    # Get positions as float lists directly for better performance
-    points = mesh.get_vertex_positions(as_float=True)
-    return np.array(points, dtype=np.float32)
+    points = get_mesh_points(mesh_name, worldSpace=not objectSpace, objectSpace=objectSpace, as_flat=True)
+    return np.array(points, dtype=np.float32).reshape(-1, 3)
 
 
 def _compute_src_indices(
@@ -195,8 +195,11 @@ def retarget_mesh(
             )
 
     src_mesh_vtx = MeshVertex(src_mesh)
-    src_points = _get_positions(src_mesh_vtx)
-    src_kd_tree = KDTree(src_points)
+    src_points = _get_positions(src_mesh)
+
+    # World space KDTree for soft selection radius calculation
+    src_points_ws = _get_positions(src_mesh, objectSpace=False)
+    src_kd_tree_ws = KDTree(src_points_ws)
 
     if src_mesh_vtx.num_vertices() < 4:
         raise ValueError(f"The source mesh must have at least 4 vertices: {src_mesh}.")
@@ -205,7 +208,8 @@ def retarget_mesh(
     trg_mesh_data = {}
     for trg_mesh in trg_meshes:
         trg_mesh_vtx = MeshVertex(trg_mesh)
-        trg_points = _get_positions(trg_mesh_vtx)
+        trg_points = _get_positions(trg_mesh)
+        trg_points_ws = _get_positions(trg_mesh, objectSpace=False)
 
         data = {}
         data["trg_positions"] = trg_points
@@ -213,9 +217,9 @@ def retarget_mesh(
             data["target_indices"] = lib_cluster.KMeansClustering(trg_mesh).get_clusters(int(trg_mesh_vtx.num_vertices() / max_vertices))
             data["src_indices"] = [
                 _compute_src_indices(
-                    src_kd_tree,
+                    src_kd_tree_ws,
                     indices,
-                    trg_points[indices],
+                    trg_points_ws[indices],
                     trg_mesh_vtx,
                     src_mesh_vtx,
                     radius_multiplier,
@@ -228,9 +232,9 @@ def retarget_mesh(
             data["target_indices"] = [range(trg_mesh_vtx.num_vertices())]
             data["src_indices"] = [
                 _compute_src_indices(
-                    src_kd_tree,
+                    src_kd_tree_ws,
                     range(trg_mesh_vtx.num_vertices()),
-                    trg_points,
+                    trg_points_ws,
                     trg_mesh_vtx,
                     src_mesh_vtx,
                     radius_multiplier,
@@ -253,10 +257,9 @@ def retarget_mesh(
         if not is_same_topology(src_mesh, dst_mesh):
             raise ValueError(f"The topology of the source and destination meshes must be the same: {src_mesh} -> {dst_mesh}.")
 
-        dst_mesh_vtx = MeshVertex(dst_mesh)
-        dst_points = _get_positions(dst_mesh_vtx)
+        dst_points = _get_positions(dst_mesh)
 
-        dst_transform = cmds.listRelatives(dst_mesh_vtx.get_mesh_name(), parent=True)[0]
+        dst_transform = cmds.listRelatives(dst_mesh, parent=True)[0]
         dst_position = cmds.xform(dst_transform, q=True, ws=True, t=True)
 
         trg_positions = trg_mesh_data[trg_mesh]["trg_positions"]
@@ -271,16 +274,12 @@ def retarget_mesh(
         deform_transform = cmds.listRelatives(deform_mesh, parent=True)[0]
         cmds.xform(deform_transform, ws=True, t=dst_position)
 
-        # Create MeshVertex instance for batch vertex position updates
-        deform_mesh_vtx = MeshVertex(deform_mesh)
-
         for trg_indices, src_indices in zip(trg_index_list, src_index_list):
             rbf_deform = lib_retarget.RBFDeform(src_points[src_indices])
             weight_x, weight_y, weight_z = rbf_deform.compute_weights(dst_points[src_indices])
             computed_points = rbf_deform.compute_points(trg_positions[trg_indices], weight_x, weight_y, weight_z)
 
-            # Batch update vertex positions for better performance
-            deform_mesh_vtx.set_vertex_positions(computed_points, list(trg_indices))
+            set_mesh_points(deform_mesh, computed_points, indices=list(trg_indices), worldSpace=False, objectSpace=True)
 
         deform_mesh_transforms.append(deform_transform)
 
