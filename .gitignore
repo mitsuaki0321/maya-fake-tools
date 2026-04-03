@@ -230,6 +230,7 @@ uv.lock
 # Development/experimental files
 scripts/faketools/tools/common/snapshot_capture/sample_ui.py
 annotation-refactoring-plan.md
+REFACTORING_MEMO.md
 
 # Documentation output files
 docs/output/

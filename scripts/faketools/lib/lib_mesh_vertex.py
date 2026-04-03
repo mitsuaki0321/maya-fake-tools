@@ -2,20 +2,146 @@
 Mesh vertex operations.
 """
 
+from __future__ import annotations
+
 from logging import getLogger
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 
 import maya.api.OpenMaya as om
+import maya.cmds as cmds
 
 from .lib_mesh import MeshComponent
 
+if TYPE_CHECKING:
+    import numpy as np
+
 logger = getLogger(__name__)
+
+_PLUGIN_NAME = "meshPoints"
+
+
+def _ensure_plugin() -> None:
+    """Load the meshPoints plugin if not already loaded."""
+    if not cmds.pluginInfo(f"{_PLUGIN_NAME}.py", query=True, loaded=True):
+        cmds.loadPlugin(f"{_PLUGIN_NAME}.py")
+
+
+def _flatten_positions(positions) -> list[float]:
+    """Flatten positions to a flat list of floats.
+
+    Accepts:
+        - Flat list: [x0, y0, z0, x1, y1, z1, ...]
+        - Nested list: [[x0, y0, z0], [x1, y1, z1], ...]
+        - numpy ndarray: shape (N, 3) or (N*3,)
+
+    Args:
+        positions: Vertex positions in any supported format.
+
+    Returns:
+        list[float]: Flat list of floats.
+    """
+    try:
+        import numpy as np
+
+        if isinstance(positions, np.ndarray):
+            return positions.flatten().tolist()
+    except ImportError:
+        pass
+
+    if not positions:
+        return []
+
+    first = positions[0]
+    if isinstance(first, (int, float)):
+        return list(positions)
+
+    return [v for xyz in positions for v in xyz]
+
+
+def set_mesh_points(
+    mesh: str,
+    positions: list | np.ndarray,
+    indices: list[int] | None = None,
+    worldSpace: bool = True,
+    objectSpace: bool = False,
+) -> None:
+    """Set mesh vertex positions with undo/redo support.
+
+    Args:
+        mesh (str): Mesh shape name.
+        positions: Vertex positions. Accepts:
+            - Flat list: [x0, y0, z0, x1, y1, z1, ...]
+            - Nested list: [[x0, y0, z0], [x1, y1, z1], ...]
+            - numpy ndarray: shape (N, 3) or (N*3,)
+        indices (list[int] | None): Vertex indices to set. If None, sets all vertices.
+        worldSpace (bool): Use world space. Default is True.
+        objectSpace (bool): Use object space.
+
+    Raises:
+        ValueError: If both worldSpace and objectSpace are True.
+    """
+    if worldSpace and objectSpace:
+        raise ValueError("Cannot specify both worldSpace and objectSpace.")
+
+    _ensure_plugin()
+
+    flat = _flatten_positions(positions)
+
+    kwargs = {"positions": flat}
+    if indices is not None:
+        kwargs["indices"] = indices
+    if objectSpace:
+        kwargs["objectSpace"] = True
+
+    cmds.setMeshPoints(mesh, **kwargs)
+
+
+def get_mesh_points(
+    mesh: str,
+    indices: list[int] | None = None,
+    worldSpace: bool = True,
+    objectSpace: bool = False,
+    as_flat: bool = False,
+) -> list[list[float]] | list[float]:
+    """Get mesh vertex positions.
+
+    Args:
+        mesh (str): Mesh shape name.
+        indices (list[int] | None): Vertex indices to get. If None, gets all vertices.
+        worldSpace (bool): Use world space. Default is True.
+        objectSpace (bool): Use object space.
+        as_flat (bool): If True, return flat list [x0, y0, z0, ...].
+            If False (default), return nested list [[x0, y0, z0], ...].
+
+    Returns:
+        list[list[float]] | list[float]: Vertex positions.
+
+    Raises:
+        ValueError: If both worldSpace and objectSpace are True.
+    """
+    if worldSpace and objectSpace:
+        raise ValueError("Cannot specify both worldSpace and objectSpace.")
+
+    _ensure_plugin()
+
+    kwargs = {}
+    if indices is not None:
+        kwargs["indices"] = indices
+    if objectSpace:
+        kwargs["objectSpace"] = True
+
+    flat = cmds.getMeshPoints(mesh, **kwargs)
+
+    if as_flat:
+        return flat
+
+    return [flat[i : i + 3] for i in range(0, len(flat), 3)]
 
 
 class MeshVertex(MeshComponent):
     """Mesh vertex class."""
 
-    def get_vertex_positions(self, vtx_indices: Optional[list[int]] = None, as_float: bool = False) -> Union[list[om.MPoint], list[list[float]]]:
+    def get_vertex_positions(self, vtx_indices: list[int] | None = None, as_float: bool = False) -> list[om.MPoint] | list[list[float]]:
         """Get the vertex positions.
 
         Args:
@@ -41,7 +167,7 @@ class MeshVertex(MeshComponent):
 
         return [[p.x, p.y, p.z] for p in positions]
 
-    def get_vertex_normals(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
+    def get_vertex_normals(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
         """Get the vertex normals.
 
         Args:
@@ -62,7 +188,7 @@ class MeshVertex(MeshComponent):
 
         return normals
 
-    def get_vertex_tangents(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
+    def get_vertex_tangents(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
         """Get the vertex tangents from the connected faces average.
 
         Args:
@@ -100,7 +226,7 @@ class MeshVertex(MeshComponent):
 
         return result_tangents
 
-    def get_vertex_binormals(self, vtx_indices: Optional[list[int]] = None) -> list[om.MVector]:
+    def get_vertex_binormals(self, vtx_indices: list[int] | None = None) -> list[om.MVector]:
         """Get the vertex binormals from the connected faces average.
 
         Args:
@@ -196,9 +322,7 @@ class MeshVertex(MeshComponent):
         """
         return self.get_components_from_indices(indices, "vertex")
 
-    def set_vertex_positions(
-        self, positions: Union[list[tuple[float, float, float]], list[om.MPoint]], vtx_indices: Optional[list[int]] = None
-    ) -> None:
+    def set_vertex_positions(self, positions: list[tuple[float, float, float]] | list[om.MPoint], vtx_indices: list[int] | None = None) -> None:
         """Set the vertex positions.
 
         Args:

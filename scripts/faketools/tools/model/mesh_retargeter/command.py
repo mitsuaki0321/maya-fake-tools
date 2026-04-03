@@ -133,6 +133,7 @@ def retarget_mesh(
     trg_meshes: list[str],
     *,
     is_create: bool = True,
+    one_to_one: bool = False,
     max_vertices: int = 1000,
     radius_multiplier: float = 1.0,
     min_src_vertices: int = 10,
@@ -150,6 +151,8 @@ def retarget_mesh(
         dst_meshes (list[str]): The target meshes for deformation. They must have the same topology as src_mesh.
         trg_meshes (list[str]): The meshes to be deformed.
         is_create (bool): If True, create new meshes by duplicating trg_meshes. If False, modify trg_meshes directly.
+        one_to_one (bool): If True, pair dst_meshes[i] with trg_meshes[i] in 1:1 mapping.
+            If False (default), apply all destinations to all targets (M x N).
         max_vertices (int): The maximum number of vertices to use when referencing trg_mesh.
                             If less than this, vertices are split and referenced.
         radius_multiplier (float): The radius multiplier when selecting vertices from trg_mesh to src_mesh.
@@ -179,8 +182,17 @@ def retarget_mesh(
     if not_exists_trg_meshes:
         raise ValueError(f"Target meshes do not exist: {not_exists_trg_meshes}.")
 
-    if not is_create and len(dst_meshes) > 1:
-        raise ValueError("When not creating, only one destination mesh can be specified.")
+    if one_to_one:
+        if len(dst_meshes) != len(trg_meshes):
+            raise ValueError(
+                f"One to One mode requires equal Destination and Target counts: got {len(dst_meshes)} destination(s) and {len(trg_meshes)} target(s)."
+            )
+    else:
+        if not is_create and len(dst_meshes) > 1:
+            raise ValueError(
+                "In One to Many mode without Create New Mesh, only one Destination mesh is allowed. "
+                "Enable Create New Mesh or switch to One to One mode."
+            )
 
     src_mesh_vtx = MeshVertex(src_mesh)
     src_points = _get_positions(src_mesh_vtx)
@@ -229,9 +241,15 @@ def retarget_mesh(
 
         trg_mesh_data[trg_mesh] = data
 
-    # Process each destination mesh and apply deformations
+    # Build iteration pairs based on mapping mode
+    if one_to_one:
+        pairs = list(zip(dst_meshes, trg_meshes))
+    else:
+        pairs = [(dst, trg) for dst in dst_meshes for trg in trg_meshes]
+
+    # Process each destination-target pair and apply deformations
     deform_mesh_transforms = []
-    for dst_mesh in dst_meshes:
+    for dst_mesh, trg_mesh in pairs:
         if not is_same_topology(src_mesh, dst_mesh):
             raise ValueError(f"The topology of the source and destination meshes must be the same: {src_mesh} -> {dst_mesh}.")
 
@@ -241,32 +259,31 @@ def retarget_mesh(
         dst_transform = cmds.listRelatives(dst_mesh_vtx.get_mesh_name(), parent=True)[0]
         dst_position = cmds.xform(dst_transform, q=True, ws=True, t=True)
 
-        for trg_mesh in trg_mesh_data:
-            trg_positions = trg_mesh_data[trg_mesh]["trg_positions"]
-            trg_index_list = trg_mesh_data[trg_mesh]["target_indices"]
-            src_index_list = trg_mesh_data[trg_mesh]["src_indices"]
+        trg_positions = trg_mesh_data[trg_mesh]["trg_positions"]
+        trg_index_list = trg_mesh_data[trg_mesh]["target_indices"]
+        src_index_list = trg_mesh_data[trg_mesh]["src_indices"]
 
-            if is_create:
-                deform_mesh = cmds.listRelatives(cmds.duplicate(trg_mesh)[0], shapes=True, noIntermediate=True)[0]
-            else:
-                deform_mesh = trg_mesh
+        if is_create:
+            deform_mesh = cmds.listRelatives(cmds.duplicate(trg_mesh)[0], shapes=True, noIntermediate=True)[0]
+        else:
+            deform_mesh = trg_mesh
 
-            deform_transform = cmds.listRelatives(deform_mesh, parent=True)[0]
-            cmds.xform(deform_transform, ws=True, t=dst_position)
+        deform_transform = cmds.listRelatives(deform_mesh, parent=True)[0]
+        cmds.xform(deform_transform, ws=True, t=dst_position)
 
-            # Create MeshVertex instance for batch vertex position updates
-            deform_mesh_vtx = MeshVertex(deform_mesh)
+        # Create MeshVertex instance for batch vertex position updates
+        deform_mesh_vtx = MeshVertex(deform_mesh)
 
-            for trg_indices, src_indices in zip(trg_index_list, src_index_list):
-                rbf_deform = lib_retarget.RBFDeform(src_points[src_indices])
-                weight_x, weight_y, weight_z = rbf_deform.compute_weights(dst_points[src_indices])
-                computed_points = rbf_deform.compute_points(trg_positions[trg_indices], weight_x, weight_y, weight_z)
+        for trg_indices, src_indices in zip(trg_index_list, src_index_list):
+            rbf_deform = lib_retarget.RBFDeform(src_points[src_indices])
+            weight_x, weight_y, weight_z = rbf_deform.compute_weights(dst_points[src_indices])
+            computed_points = rbf_deform.compute_points(trg_positions[trg_indices], weight_x, weight_y, weight_z)
 
-                # Batch update vertex positions for better performance
-                deform_mesh_vtx.set_vertex_positions(computed_points, list(trg_indices))
+            # Batch update vertex positions for better performance
+            deform_mesh_vtx.set_vertex_positions(computed_points, list(trg_indices))
 
-            deform_mesh_transforms.append(deform_transform)
+        deform_mesh_transforms.append(deform_transform)
 
-            logger.debug(f"Re targeted mesh: {deform_transform}.")
+        logger.debug(f"Re targeted mesh: {deform_transform}.")
 
     return deform_mesh_transforms

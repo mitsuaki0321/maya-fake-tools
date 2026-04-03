@@ -4,17 +4,21 @@ from logging import getLogger
 
 import maya.cmds as cmds
 
+from ....lib.lib_mesh import is_same_topology
 from ....lib_ui import maya_decorator
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.preset_menu_manager import PresetMenuManager
 from ....lib_ui.qt_compat import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPainter,
+    QPalette,
     QPushButton,
     QSpinBox,
     QStringListModel,
@@ -29,6 +33,37 @@ from . import command
 logger = getLogger(__name__)
 
 _instance = None
+
+
+def _align_label_widths(labels: list[QLabel]) -> None:
+    """Set all labels to the same fixed width based on the widest one."""
+    max_width = 0
+    for label in labels:
+        width = label.fontMetrics().boundingRect(label.text()).width()
+        if width > max_width:
+            max_width = width
+    max_width += label.fontMetrics().averageCharWidth() * 2
+    for label in labels:
+        label.setFixedWidth(max_width)
+
+
+class _PlaceholderNodeListView(nodeAttr_widgets.NodeListView):
+    """NodeListView with placeholder text when empty."""
+
+    def __init__(self, placeholder_text="", parent=None):
+        """Constructor."""
+        super().__init__(parent)
+        self._placeholder_text = placeholder_text
+
+    def paintEvent(self, event):
+        """Draw placeholder text when the model is empty."""
+        super().paintEvent(event)
+        if self.model() is not None and self.model().rowCount() > 0:
+            return
+        painter = QPainter(self.viewport())
+        painter.setPen(self.palette().color(QPalette.PlaceholderText))
+        painter.drawText(self.viewport().rect(), Qt.AlignCenter, self._placeholder_text)
+        painter.end()
 
 
 class MainWindow(BaseMainWindow):
@@ -60,18 +95,42 @@ class MainWindow(BaseMainWindow):
     def setup_ui(self):
         """Setup the user interface."""
         # Mesh selection widgets
-        self.src_node_widgets = SetNodeWidgets("Set Source Mesh")
+        self.src_node_widgets = SetNodeWidgets("Set Source Mesh", placeholder_text="Select a mesh and click Set")
         self.central_layout.addWidget(self.src_node_widgets)
 
-        self.dst_node_widgets = SetNodesWidgets("Set Destination Mesh")
+        self.dst_node_widgets = SetNodesWidgets("Set Destination Mesh", placeholder_text="Same topology as Source")
         self.central_layout.addWidget(self.dst_node_widgets)
+        # Replace default handler with topology validation
+        self.dst_node_widgets.button.clicked.disconnect(self.dst_node_widgets._set_nodes)
+        self.dst_node_widgets.button.clicked.connect(self._set_destination_meshes)
 
-        self.trg_node_widgets = SetNodesWidgets("Set Target Mesh")
+        self.trg_node_widgets = SetNodesWidgets("Set Target Mesh", placeholder_text="Meshes to deform")
         self.central_layout.addWidget(self.trg_node_widgets)
 
-        # Basic options
-        self.is_create_checkbox = QCheckBox("Create New Mesh")
-        self.central_layout.addWidget(self.is_create_checkbox)
+        # Mapping mode
+        mapping_layout = QHBoxLayout()
+        mapping_layout.setContentsMargins(0, 0, 0, 0)
+        mapping_label = QLabel("Mapping:")
+        mapping_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        mapping_layout.addWidget(mapping_label)
+        self.mapping_combo = QComboBox()
+        self.mapping_combo.addItems(["One to Many", "One to One"])
+        mapping_layout.addWidget(self.mapping_combo, 1)
+        self.central_layout.addLayout(mapping_layout)
+
+        # Create New Mesh (label on left, checkbox on right)
+        create_layout = QHBoxLayout()
+        create_layout.setContentsMargins(0, 0, 0, 0)
+        create_label = QLabel("Create New Mesh:")
+        create_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        create_layout.addWidget(create_label)
+        self.is_create_checkbox = QCheckBox()
+        create_layout.addWidget(self.is_create_checkbox)
+        create_layout.addStretch(1)
+        self.central_layout.addLayout(create_layout)
+
+        # Align label widths
+        _align_label_widths([mapping_label, create_label])
 
         separator1 = extra_widgets.HorizontalSeparator()
         self.central_layout.addWidget(separator1)
@@ -130,6 +189,26 @@ class MainWindow(BaseMainWindow):
         # Signal & Slot
         button.clicked.connect(self._retarget_mesh)
 
+    def _set_destination_meshes(self):
+        """Set destination meshes with topology validation against source."""
+        src_mesh = self.src_node_widgets.get_node()
+        if not src_mesh:
+            cmds.warning("Please set the Source Mesh first.")
+            return
+
+        sel_nodes = [mesh for mesh in cmds.ls(sl=True, dag=True, type="mesh") or [] if cmds.getAttr(f"{mesh}.intermediateObject") == 0]
+        if not sel_nodes:
+            cmds.warning("Please select transform nodes.")
+            return
+
+        mismatched = [mesh for mesh in sel_nodes if not is_same_topology(src_mesh, mesh)]
+        if mismatched:
+            names = ", ".join(mismatched)
+            cmds.warning(f"Topology mismatch: {names} (must match Source)")
+            return
+
+        self.dst_node_widgets.model.setStringList(sel_nodes)
+
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Retarget Mesh")
     def _retarget_mesh(self):
@@ -138,6 +217,7 @@ class MainWindow(BaseMainWindow):
         dst_meshes = self.dst_node_widgets.get_nodes()
         trg_meshes = self.trg_node_widgets.get_nodes()
         is_create = self.is_create_checkbox.isChecked()
+        one_to_one = self.mapping_combo.currentText() == "One to One"
 
         # Get parameter values
         radius_multiplier = self.radius_multiplier_widget.get_value()
@@ -150,6 +230,7 @@ class MainWindow(BaseMainWindow):
             dst_meshes,
             trg_meshes,
             is_create=is_create,
+            one_to_one=one_to_one,
             radius_multiplier=radius_multiplier,
             max_vertices=max_vertices,
             min_src_vertices=min_src_vertices,
@@ -184,6 +265,7 @@ class MainWindow(BaseMainWindow):
             dict: Settings data
         """
         return {
+            "mapping_mode": self.mapping_combo.currentText(),
             "is_create": self.is_create_checkbox.isChecked(),
             "radius_multiplier": self.radius_multiplier_widget.get_value(),
             "max_vertices": self.max_vertices_widget.get_value(),
@@ -202,6 +284,8 @@ class MainWindow(BaseMainWindow):
             settings_data (dict): Settings data to apply
         """
         # Apply settings with defaults
+        mapping_mode = settings_data.get("mapping_mode", "One to Many")
+        self.mapping_combo.setCurrentText(mapping_mode)
         self.is_create_checkbox.setChecked(settings_data.get("is_create", False))
         self.radius_multiplier_widget.set_value(settings_data.get("radius_multiplier", 1.0))
         self.max_vertices_widget.set_value(settings_data.get("max_vertices", 1000))
@@ -323,7 +407,7 @@ class IntSpinBoxWidget(QWidget):
 class SetNodeWidgets(QWidget):
     """Set Node Widgets."""
 
-    def __init__(self, label: str, parent=None):
+    def __init__(self, label: str, placeholder_text: str = "", parent=None):
         """Constructor."""
         super().__init__(parent)
 
@@ -336,6 +420,8 @@ class SetNodeWidgets(QWidget):
 
         self.node_field = QLineEdit()
         self.node_field.setReadOnly(True)
+        if placeholder_text:
+            self.node_field.setPlaceholderText(placeholder_text)
         layout.addWidget(self.node_field)
 
         self.setLayout(layout)
@@ -359,7 +445,7 @@ class SetNodeWidgets(QWidget):
 class SetNodesWidgets(QWidget):
     """Set Nodes Widgets."""
 
-    def __init__(self, label: str, parent=None):
+    def __init__(self, label: str, placeholder_text: str = "", parent=None):
         """Constructor."""
         super().__init__(parent)
 
@@ -367,17 +453,17 @@ class SetNodesWidgets(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        button = QPushButton(label)
-        layout.addWidget(button)
+        self.button = QPushButton(label)
+        layout.addWidget(self.button)
 
-        self.node_list_view = nodeAttr_widgets.NodeListView()
+        self.node_list_view = _PlaceholderNodeListView(placeholder_text)
         self.model = QStringListModel()
         self.node_list_view.setModel(self.model)
         layout.addWidget(self.node_list_view)
 
         self.setLayout(layout)
 
-        button.clicked.connect(self._set_nodes)
+        self.button.clicked.connect(self._set_nodes)
 
     def _set_nodes(self):
         """Set the nodes."""
