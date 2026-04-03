@@ -8,6 +8,7 @@ class BaseCommand(ABC):
 
     _name = "BaseCommand"
     _description = "Base command description"
+    _visible = True
 
     @classmethod
     def get_name(cls) -> str:
@@ -26,6 +27,15 @@ class BaseCommand(ABC):
             str: The description of the command.
         """
         return cls._description
+
+    @classmethod
+    def is_visible(cls) -> bool:
+        """Get whether the command is visible in menus.
+
+        Returns:
+            bool: True if the command should be shown in menus.
+        """
+        return cls._visible
 
     @abstractmethod
     def execute(self, *args, **kwargs):

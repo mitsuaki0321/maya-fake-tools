@@ -6,6 +6,7 @@ import maya.cmds as cmds
 
 from ..lib import lib_shape, lib_transform
 from ..lib_ui import maya_ui
+from ..operations import create_transforms
 from .base_commands import AllCommand
 
 logger = getLogger(__name__)
@@ -144,6 +145,7 @@ class BreakConnectionsCommand(AllCommand):
 
     _name = "Break Connections"
     _description = "Command to break all connections of selected nodes"
+    _visible = False
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -381,6 +383,7 @@ class DeleteExtraAttributesCommand(AllCommand):
 
     _name = "Delete Extra Attributes"
     _description = "Command to delete extra attributes of selected nodes"
+    _visible = False
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -412,6 +415,7 @@ class DuplicateOriginalShapeCommand(AllCommand):
 
     _name = "Duplicate Original Shape"
     _description = "Command to duplicate or connect original shape from source to destination"
+    _visible = False
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -442,6 +446,58 @@ class DuplicateOriginalShapeCommand(AllCommand):
             logger.warning("No nodes were processed.")
 
 
+class CreateLocatorAtBoundingBoxCenterCommand(AllCommand):
+    """Command to create a locator at the bounding box center of selected objects."""
+
+    _name = "Create Locator at Center"
+    _description = "Command to create a locator at the bounding box center of selected objects"
+
+    def execute(self, target_nodes: list[str]):
+        """Execute the command.
+
+        Args:
+            target_nodes (list[str]): The target nodes to process.
+        """
+        super().execute(target_nodes)
+
+        make_transform = create_transforms.CreateTransforms(
+            func=create_transforms.bounding_box_center,
+            size=0.5,
+            shape_type="locator",
+        )
+        result_nodes = make_transform.create()
+
+        if result_nodes:
+            cmds.select(result_nodes, r=True)
+            logger.debug(f"Created locator at bounding box center: {result_nodes}")
+
+
+class CreateLocatorAtEachPositionCommand(AllCommand):
+    """Command to create locators at each selected object's position."""
+
+    _name = "Create Locator at Position"
+    _description = "Command to create locators at each selected object's position"
+
+    def execute(self, target_nodes: list[str]):
+        """Execute the command.
+
+        Args:
+            target_nodes (list[str]): The target nodes to process.
+        """
+        super().execute(target_nodes)
+
+        make_transform = create_transforms.CreateTransforms(
+            func=create_transforms.each_positions,
+            size=0.5,
+            shape_type="locator",
+        )
+        result_nodes = make_transform.create(include_rotation=False, tangent_from_component=False)
+
+        if result_nodes:
+            cmds.select(result_nodes, r=True)
+            logger.debug(f"Created locators at each position: {result_nodes}")
+
+
 __all__ = [
     "LockAndHideCommand",
     "UnlockAndShowCommand",
@@ -455,4 +511,6 @@ __all__ = [
     "MirrorJointsCommand",
     "DeleteExtraAttributesCommand",
     "DuplicateOriginalShapeCommand",
+    "CreateLocatorAtBoundingBoxCenterCommand",
+    "CreateLocatorAtEachPositionCommand",
 ]

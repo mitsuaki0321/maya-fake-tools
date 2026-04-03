@@ -60,6 +60,7 @@ class SnapScaleCommand(PairCommand):
 
     _name = "Snap Scales"
     _description = "Command to snap the scale from source node to target node"
+    _visible = False
 
     def execute_pair(self, source_node: str, target_node: str):
         """Execute the command for a pair of nodes.

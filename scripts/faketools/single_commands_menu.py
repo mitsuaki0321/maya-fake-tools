@@ -46,6 +46,8 @@ def _add_menu_items(parent_menu: str) -> None:
         cmd_names = getattr(module, "__all__", [])
         for cmd_name in cmd_names:
             cmd_cls = getattr(module, cmd_name)
+            if not cmd_cls.is_visible():
+                continue
             label = cmd_cls.get_name()
             cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
             cmds.menuItem(label=label, command=cmd, parent=parent_menu)
