@@ -323,7 +323,12 @@ def _get_selected_curves() -> list[str]:
 
 
 def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], Optional[list[str]], Optional[list[str]]]:
-    """Get the selected nurbsCurve or nurbsSurface.
+    """Get the selected nurbsCurve, nurbsSurface, or surface isoparm.
+
+    Supports three selection types (checked in this priority order):
+    1. Surface isoparms (e.g. ``surface1.u[0.5]``) - duplicated as curves
+    2. nurbsCurve shapes - used directly
+    3. nurbsSurface shapes - converted to isoparm curves at center (0.5)
 
     Keyword Args:
         surface_direction (str): The direction of the isoparm curve. Default is 'u'. 'u', 'v'
@@ -331,6 +336,29 @@ def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], Optional[list
     Returns:
         tuple[list[str], list[str] | None, list[str] | None]: The selected curves, original surfaces (if any), and temporary curves (if any).
     """
+    # Check for isoparm selection first (most specific)
+    isoparms = cmds.filterExpand(sm=45) or []
+    if isoparms:
+        temp_curves = []
+        isoparm_surfaces = []
+        for isoparm in isoparms:
+            try:
+                temp_transform = cmds.duplicateCurve(isoparm, ch=False, rn=False, local=False)[0]
+                temp_shape = cmds.listRelatives(temp_transform, shapes=True, path=True)[0]
+                temp_curves.append(temp_shape)
+
+                # Get corresponding surface for SurfaceNormal support
+                transform_name = isoparm.split(".")[0]
+                surface_shapes = cmds.listRelatives(transform_name, shapes=True, path=True, type="nurbsSurface", ni=True)
+                isoparm_surfaces.append(surface_shapes[0] if surface_shapes else None)
+
+                logger.debug(f"Created temp isoparm curve: {temp_shape} from {isoparm}")
+            except Exception as e:
+                logger.warning(f"Failed to duplicate isoparm: {e}")
+
+        if temp_curves:
+            return temp_curves, isoparm_surfaces, temp_curves
+
     curves = cmds.ls(sl=True, dag=True, type="nurbsCurve", ni=True)
     surfaces = cmds.ls(sl=True, dag=True, type="nurbsSurface", ni=True)
 
@@ -341,7 +369,7 @@ def _get_selected_curves_or_surfaces(**kwargs) -> tuple[list[str], Optional[list
     if curves and not surfaces:
         return curves, None, None
 
-    # If surfaces selected, convert to isoparm curves
+    # If surfaces selected, convert to isoparm curves at center
     surface_direction = kwargs.get("surface_direction", "u")
     temp_curves = []
     for surface in surfaces:

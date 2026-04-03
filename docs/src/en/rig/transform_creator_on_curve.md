@@ -21,7 +21,7 @@ faketools.tools.rig.transform_creator_on_curve_ui.show_ui()
 ## Usage
 
 1. Select transform creation method from dropdown menu at top.
-2. Select NURBS surfaces and curves in scene. Select the nodes themselves or transform nodes.
+2. Select NURBS curves, surfaces, or surface isoparms in the scene.
 3. Set other options. Options that are not grayed out can be set.
 4. Press **[ Create ]** button to create transform nodes.
 
@@ -50,7 +50,11 @@ faketools.tools.rig.transform_creator_on_curve_ui.show_ui()
     - **CurveNormal**
       - Obtains curve normal vector.
     - **SurfaceNormal**
-      - Obtains normal vector of surface curve belongs to. At this time, curve must be created by duplicateCurve command. Otherwise, CurveNormal is forcibly applied.
+      - Obtains the normal vector of the surface the curve belongs to. Available when:
+        - A surface isoparm is selected
+        - A surface is directly selected
+        - A curve created by the duplicateCurve command is selected
+      - Falls back to CurveNormal if none of the above apply.
 - **SurfaceDir**
     - When NURBS surface is selected, sets which direction of surface to use as curve normal vector.
       - **U Direction**
