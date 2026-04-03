@@ -5,6 +5,7 @@ from logging import getLogger
 import maya.cmds as cmds
 
 from ..lib.lib_shape import connect_shapes
+from ..lib.lib_transform import reset_mesh_tweaks
 from ..operations.copy_weights import copy_skin_weights_with_bind
 from .base_commands import PairCommand
 
@@ -239,6 +240,9 @@ class CopyShapeCommand(PairCommand):
             return
 
         connect_shapes(shape[0], target_shape[0], only_copy=True)
+
+        if cmds.nodeType(target_shape[0]) == "mesh":
+            reset_mesh_tweaks(target_node)
 
 
 class ParentTransformCommand(PairCommand):

@@ -87,11 +87,11 @@ A command that uses the first selected node as the source and applies to the sub
 - **Duplicate Original Shape**
   - Duplicates the original shape of the selected shape(s).
 
-- **Create Locator at Center**
-  - Creates a locator at the bounding box center of the selected objects.
+- **Create Transform at Center**
+  - Creates a transform node at the bounding box center of the selected objects.
 
-- **Create Locator at Position**
-  - Creates a locator at each selected object's position.
+- **Create Transform at Position**
+  - Creates a transform node at each selected object's position.
 
 
 ### Pair Command

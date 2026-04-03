@@ -28,7 +28,7 @@ faketools.tools.rig.transform_creator_on_curve_ui.show_ui()
 ### オプション
 
 - **ノードタイプ**
-  - locator か transform のどちらかを選択します。
+  - locator、joint、transform のいずれかを選択します。
 - **Divisions**
   - 作成方法が innerDivide の時のみ有効です。選択したノード間を何分割するかを設定します。
 - **IncludeRotation**

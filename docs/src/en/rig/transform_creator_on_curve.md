@@ -28,7 +28,7 @@ faketools.tools.rig.transform_creator_on_curve_ui.show_ui()
 ### Options
 
 - **Node Type**
-  - Select either locator or transform.
+  - Select locator, joint, or transform.
 - **Divisions**
   - Only valid when creation method is innerDivide. Sets how many divisions between selected nodes.
 - **IncludeRotation**

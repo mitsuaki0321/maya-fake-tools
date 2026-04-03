@@ -87,11 +87,11 @@ order: 0
 - **Duplicate Original Shape**
   - 選択したシェイプのオリジナルシェイプを複製します。
 
-- **Create Locator at Center**
-  - 選択されたオブジェクトのバウンディングボックス中心にロケーターを作成します。
+- **Create Transform at Center**
+  - 選択されたオブジェクトのバウンディングボックス中心にトランスフォームノードを作成します。
 
-- **Create Locator at Position**
-  - 選択された各オブジェクトの位置にロケーターを作成します。
+- **Create Transform at Position**
+  - 選択された各オブジェクトの位置にトランスフォームノードを作成します。
 
 
 ### Pair Command

@@ -29,7 +29,7 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addWidget(self.method_box)
 
         self.node_type_box = QComboBox()
-        self.node_type_box.addItems(["locator", "joint"])
+        self.node_type_box.addItems(["locator", "joint", "transform"])
         self.central_layout.addWidget(self.node_type_box)
 
         layout = QHBoxLayout()

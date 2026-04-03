@@ -12,7 +12,7 @@ logger = getLogger(__name__)
 class CreateTransforms:
     """Create transform nodes at positions."""
 
-    _shape_types = ["locator", "joint"]
+    _shape_types = ["locator", "joint", "transform"]
 
     def __init__(
         self,
@@ -81,6 +81,10 @@ class CreateTransforms:
                 elif self.shape_type == "joint":
                     node = cmds.createNode(self.shape_type, ss=True)
                     cmds.setAttr(f"{node}.radius", self.size)
+
+                elif self.shape_type == "transform":
+                    node = cmds.createNode(self.shape_type, ss=True)
+                    cmds.setAttr(f"{node}.displayHandle", True)
 
                 # Set position and rotation
                 cmds.xform(node, ws=True, t=positions[i])

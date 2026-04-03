@@ -431,11 +431,11 @@ class DuplicateOriginalShapeCommand(AllCommand):
             logger.warning("No nodes were processed.")
 
 
-class CreateLocatorAtBoundingBoxCenterCommand(AllCommand):
-    """Command to create a locator at the bounding box center of selected objects."""
+class CreateTransformAtCenterCommand(AllCommand):
+    """Command to create a transform at the bounding box center of selected objects."""
 
-    _name = "Create Locator at Center"
-    _description = "Command to create a locator at the bounding box center of selected objects"
+    _name = "Create Transform at Center"
+    _description = "Command to create a transform at the bounding box center of selected objects"
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -447,21 +447,20 @@ class CreateLocatorAtBoundingBoxCenterCommand(AllCommand):
 
         make_transform = create_transforms.CreateTransforms(
             func=create_transforms.bounding_box_center,
-            size=0.5,
-            shape_type="locator",
+            shape_type="transform",
         )
         result_nodes = make_transform.create()
 
         if result_nodes:
             cmds.select(result_nodes, r=True)
-            logger.debug(f"Created locator at bounding box center: {result_nodes}")
+            logger.debug(f"Created transform at bounding box center: {result_nodes}")
 
 
-class CreateLocatorAtEachPositionCommand(AllCommand):
-    """Command to create locators at each selected object's position."""
+class CreateTransformAtEachPositionCommand(AllCommand):
+    """Command to create transforms at each selected object's position."""
 
-    _name = "Create Locator at Position"
-    _description = "Command to create locators at each selected object's position"
+    _name = "Create Transform at Position"
+    _description = "Command to create transforms at each selected object's position"
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -473,14 +472,13 @@ class CreateLocatorAtEachPositionCommand(AllCommand):
 
         make_transform = create_transforms.CreateTransforms(
             func=create_transforms.each_positions,
-            size=0.5,
-            shape_type="locator",
+            shape_type="transform",
         )
         result_nodes = make_transform.create(include_rotation=False, tangent_from_component=False)
 
         if result_nodes:
             cmds.select(result_nodes, r=True)
-            logger.debug(f"Created locators at each position: {result_nodes}")
+            logger.debug(f"Created transforms at each position: {result_nodes}")
 
 
 __all__ = [
@@ -495,6 +493,6 @@ __all__ = [
     "MirrorJointsCommand",
     "DeleteExtraAttributesCommand",
     "DuplicateOriginalShapeCommand",
-    "CreateLocatorAtBoundingBoxCenterCommand",
-    "CreateLocatorAtEachPositionCommand",
+    "CreateTransformAtCenterCommand",
+    "CreateTransformAtEachPositionCommand",
 ]
