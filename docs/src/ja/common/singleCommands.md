@@ -9,7 +9,23 @@ order: 0
 
 ### 使用方法
 
-メニューからコマンドを選択して実行します。  
+メニューからコマンドを選択して実行します。
+
+### ポップアップメニュー
+
+ホットキー（デフォルト: `Ctrl+Shift+Z`）を押している間、ポップアップメニューが表示されます。キーを離すとメニューが閉じます。
+
+ホットキーを変更するには、共有設定ファイル（`faketools_workspace/shared/config/settings/default.json`）の `hotkeys.single_commands_popup` の値を変更してください。空文字列にすると無効になります。
+
+```json
+{
+    "hotkeys": {
+        "single_commands_popup": "Ctrl+Shift+Z"
+    }
+}
+```
+
+### コマンドタイプ
 
 コマンドにより、ノードの選択方法が異なります。以下の三つのタイプのコマンドがあります。
 
@@ -53,9 +69,7 @@ order: 0
 
 - **Freeze Transform**
   - 選択されたノードのトランスフォームをフリーズし、ピボットをリセットします。
-
-- **Freeze Mesh Vertices**
-  - 選択されたメッシュの頂点をフリーズします。
+  - メッシュの頂点もフリーズします。
 
 - **DeleteConstraint**
   - 選択されたノードの Constraint を削除します。
@@ -72,6 +86,12 @@ order: 0
 
 - **Duplicate Original Shape**
   - 選択したシェイプのオリジナルシェイプを複製します。
+
+- **Create Locator at Center**
+  - 選択されたオブジェクトのバウンディングボックス中心にロケーターを作成します。
+
+- **Create Locator at Position**
+  - 選択された各オブジェクトの位置にロケーターを作成します。
 
 
 ### Pair Command

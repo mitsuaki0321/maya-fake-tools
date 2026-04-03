@@ -108,6 +108,7 @@ class ZeroOutTransformsCommand(AllCommand):
 
     _name = "Zero Out"
     _description = "Command to zero out transforms of selected nodes"
+    _visible = False
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -187,16 +188,16 @@ class BreakConnectionsCommand(AllCommand):
 
 
 class FreezeTransformsCommand(AllCommand):
-    """Command to freeze transforms of selected nodes."""
+    """Command to freeze transforms and mesh vertices of selected nodes."""
 
     _name = "Freeze Transforms"
-    _description = "Command to freeze transforms of selected nodes"
+    _description = "Command to freeze transforms and mesh vertices of selected nodes"
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
 
         Args:
-            target_nodes (list[str]): The target nodes to freeze transforms.
+            target_nodes (list[str]): The target nodes to freeze.
         """
         super().execute(target_nodes)
 
@@ -207,26 +208,9 @@ class FreezeTransformsCommand(AllCommand):
 
             lib_transform.freeze_transform(target_node)
             lib_transform.freeze_transform_pivot(target_node)
-
-            logger.debug(f"Froze transforms and pivot for node: {target_node}")
-
-
-class FreezeMeshVerticesCommand(AllCommand):
-    """Command to freeze mesh vertices of selected nodes."""
-
-    _name = "Freeze Mesh Vertices"
-    _description = "Command to freeze mesh vertices of selected nodes"
-
-    def execute(self, target_nodes: list[str]):
-        """Execute the command.
-
-        Args:
-            target_nodes (list[str]): The target nodes to freeze mesh vertices.
-        """
-        super().execute(target_nodes)
-
-        for target_node in target_nodes:
             lib_transform.freeze_mesh_vertices(target_node)
+
+            logger.debug(f"Froze transforms, pivot and mesh vertices for node: {target_node}")
 
 
 class ResetMeshTweaksCommand(AllCommand):
@@ -252,6 +236,7 @@ class DeleteConstraintsCommand(AllCommand):
 
     _name = "Delete Constraints"
     _description = "Command to delete constraints of selected nodes"
+    _visible = False
 
     def execute(self, target_nodes: list[str]):
         """Execute the command.
@@ -504,7 +489,6 @@ __all__ = [
     "ZeroOutTransformsCommand",
     "BreakConnectionsCommand",
     "FreezeTransformsCommand",
-    "FreezeMeshVerticesCommand",
     "ResetMeshTweaksCommand",
     "DeleteConstraintsCommand",
     "JointsToChainCommand",

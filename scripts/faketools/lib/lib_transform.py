@@ -168,7 +168,7 @@ def freeze_mesh_vertices(node: str) -> None:
 
     shapes = cmds.listRelatives(node, shapes=True, pa=True, type="mesh", ni=True) or []
     if not shapes:
-        logger.warning(f"No mesh shapes found under: {node}, skipping.")
+        logger.debug(f"No mesh shapes found under: {node}, skipping.")
         return
     else:
         mesh = shapes[0]
@@ -207,7 +207,7 @@ def reset_mesh_tweaks(node: str) -> None:
 
     shapes = cmds.listRelatives(node, shapes=True, pa=True, type="mesh", ni=True) or []
     if not shapes:
-        logger.warning(f"No mesh shapes found under: {node}, skipping.")
+        logger.debug(f"No mesh shapes found under: {node}, skipping.")
         return
 
     mesh = shapes[0]

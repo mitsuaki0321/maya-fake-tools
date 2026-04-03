@@ -246,6 +246,7 @@ class ParentTransformCommand(PairCommand):
 
     _name = "Parent Transform"
     _description = "Command to parent the target node under the source node"
+    _visible = False
 
     def execute_pair(self, source_node: str, target_node: str):
         """Execute the command for a pair of nodes.

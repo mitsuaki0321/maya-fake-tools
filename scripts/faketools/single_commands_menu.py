@@ -24,38 +24,6 @@ _RUNTIME_RELEASE_NAME = RUNTIME_COMMAND_NAME + "Release"
 
 _popup_menu_instance = None
 
-# --- Menu building (shared) ---------------------------------------------------
-
-
-def _add_menu_items(parent_menu: str) -> None:
-    """Add single command menu items to the given parent menu.
-
-    Adds Scene, All, and Pair commands in order with dividers between groups.
-    Used by both the main submenu and the popup menu.
-
-    Args:
-        parent_menu (str): Parent menu to add items to.
-    """
-    modules = [
-        single_commands.scene_commands,
-        single_commands.all_commands,
-        single_commands.pair_commands,
-    ]
-
-    for i, module in enumerate(modules):
-        cmd_names = getattr(module, "__all__", [])
-        for cmd_name in cmd_names:
-            cmd_cls = getattr(module, cmd_name)
-            if not cmd_cls.is_visible():
-                continue
-            label = cmd_cls.get_name()
-            cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
-            cmds.menuItem(label=label, command=cmd, parent=parent_menu)
-
-        if cmd_names and i < len(modules) - 1:
-            cmds.menuItem(divider=True, parent=parent_menu)
-
-
 # --- Public API: Menu bar submenu ---------------------------------------------
 
 
@@ -97,7 +65,7 @@ def show_popup_menu() -> None:
 
     # Build popup menu using Maya commands
     popup = cmds.popupMenu(POPUP_MENU_NAME, parent="MayaWindow")
-    _add_menu_items(popup)
+    _add_menu_items(popup, popup_only=True)
 
     # Convert to Qt QMenu and show at cursor position
     ptr = omui.MQtUtil.findControl(popup)
@@ -121,6 +89,39 @@ def close_popup_menu() -> None:
 
     if cmds.popupMenu(POPUP_MENU_NAME, exists=True):
         cmds.deleteUI(POPUP_MENU_NAME)
+
+
+# --- Menu building (shared) ---------------------------------------------------
+
+
+def _add_menu_items(parent_menu: str, popup_only: bool = False) -> None:
+    """Add single command menu items to the given parent menu.
+
+    Adds Scene, All, and Pair commands in order with dividers between groups.
+    Used by both the main submenu and the popup menu.
+
+    Args:
+        parent_menu (str): Parent menu to add items to.
+        popup_only (bool): If True, only show commands with is_visible() == True.
+    """
+    modules = [
+        single_commands.scene_commands,
+        single_commands.all_commands,
+        single_commands.pair_commands,
+    ]
+
+    for i, module in enumerate(modules):
+        cmd_names = getattr(module, "__all__", [])
+        for cmd_name in cmd_names:
+            cmd_cls = getattr(module, cmd_name)
+            if popup_only and not cmd_cls.is_visible():
+                continue
+            label = cmd_cls.get_name()
+            cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
+            cmds.menuItem(label=label, command=cmd, parent=parent_menu)
+
+        if cmd_names and i < len(modules) - 1:
+            cmds.menuItem(divider=True, parent=parent_menu)
 
 
 # --- Public API: Command execution --------------------------------------------
@@ -221,14 +222,14 @@ def register_runtime_command() -> None:
         annotation="Show FakeTools Single Commands popup menu",
         category="Custom Scripts.FakeTools",
         commandLanguage="python",
-        command="import faketools.single_commands_menu; faketools.single_commands_menu.show_popup_menu()",
+        command=f"import {__name__}; {__name__}.show_popup_menu()",
     )
     cmds.runTimeCommand(
         _RUNTIME_RELEASE_NAME,
         annotation="Close FakeTools Single Commands popup menu",
         category="Custom Scripts.FakeTools",
         commandLanguage="python",
-        command="import faketools.single_commands_menu; faketools.single_commands_menu.close_popup_menu()",
+        command=f"import {__name__}; {__name__}.close_popup_menu()",
     )
 
     # Read hotkey from shared config

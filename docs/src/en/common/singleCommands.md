@@ -11,6 +11,22 @@ order: 0
 
 Select a command from the menu to execute it.
 
+### Popup Menu
+
+A popup menu appears while the hotkey (default: `Ctrl+Shift+Z`) is held down. The menu closes when the key is released.
+
+To change the hotkey, edit the `hotkeys.single_commands_popup` value in the shared config file (`faketools_workspace/shared/config/settings/default.json`). Set it to an empty string to disable.
+
+```json
+{
+    "hotkeys": {
+        "single_commands_popup": "Ctrl+Shift+Z"
+    }
+}
+```
+
+### Command Types
+
 Commands differ in how they handle selection. There are three types of commands below.
 
 **Scene Command**  
@@ -53,9 +69,7 @@ A command that uses the first selected node as the source and applies to the sub
 
 - **Freeze Transform**
   - Freezes transforms and resets the pivot for the selected nodes.
-
-- **Freeze Mesh Vertices**
-  - Freezes the vertices of the selected mesh(es).
+  - Also freezes mesh vertices.
 
 - **DeleteConstraint**
   - Deletes constraints from the selected nodes.
@@ -72,6 +86,12 @@ A command that uses the first selected node as the source and applies to the sub
 
 - **Duplicate Original Shape**
   - Duplicates the original shape of the selected shape(s).
+
+- **Create Locator at Center**
+  - Creates a locator at the bounding box center of the selected objects.
+
+- **Create Locator at Position**
+  - Creates a locator at each selected object's position.
 
 
 ### Pair Command
