@@ -94,25 +94,22 @@ def add_menu():
         # Close category submenu
         cmds.setParent("..", menu=True)
 
-    # Add separator and settings items
+    # Add separator and utility items
     cmds.menuItem(divider=True, parent=menu)
 
     # Settings
     cmds.menuItem(label="Settings...", command=lambda *args: _open_settings(), parent=menu)
 
-    # Log level submenu
-    _add_log_level_menu(menu)
-
-    # Separator before utility items
-    cmds.menuItem(divider=True, parent=menu)
-
     # Open Workspace
-    cmds.menuItem(label="Open Workspace Folder", command=lambda *args: open_workspace(), parent=menu)
+    cmds.menuItem(label="Open Workspace", command=lambda *args: open_workspace(), parent=menu)
 
     # Help/Documentation
+    cmds.menuItem(divider=True, parent=menu)
     cmds.menuItem(label="Help", command=lambda *args: open_documentation(), parent=menu)
 
-    # Reload menu item
+    # Developer items
+    cmds.menuItem(divider=True, parent=menu)
+    _add_log_level_menu(menu)
     cmds.menuItem(label="Reload Menu", command=lambda *args: reload_menu(), parent=menu)
 
     logger.info(f"FakeTools menu created with {len(menu_structure)} categories")
