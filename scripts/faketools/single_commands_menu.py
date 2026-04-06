@@ -110,18 +110,21 @@ def _add_menu_items(parent_menu: str, popup_only: bool = False) -> None:
         single_commands.pair_commands,
     ]
 
+    added_any = False
     for i, module in enumerate(modules):
         cmd_names = getattr(module, "__all__", [])
+        group_added = False
         for cmd_name in cmd_names:
             cmd_cls = getattr(module, cmd_name)
             if popup_only and not cmd_cls.is_visible():
                 continue
+            if added_any and not group_added:
+                cmds.menuItem(divider=True, parent=parent_menu)
             label = cmd_cls.get_name()
             cmd = f"import faketools.single_commands_menu; faketools.single_commands_menu.execute_single_command('{cmd_name}')"
             cmds.menuItem(label=label, command=cmd, parent=parent_menu)
-
-        if cmd_names and i < len(modules) - 1:
-            cmds.menuItem(divider=True, parent=parent_menu)
+            group_added = True
+            added_any = True
 
 
 # --- Public API: Command execution --------------------------------------------

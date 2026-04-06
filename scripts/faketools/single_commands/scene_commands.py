@@ -9,6 +9,7 @@ class OptimizeSceneCommand(SceneCommand):
 
     _name = "Optimize Scene"
     _description = "Command to optimize the entire scene"
+    _visible = False
 
     def execute(self):
         """Execute the command."""

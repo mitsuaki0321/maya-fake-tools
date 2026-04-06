@@ -12,6 +12,28 @@ from .base_commands import AllCommand
 logger = getLogger(__name__)
 
 
+class LastToFirstSelectionCommand(AllCommand):
+    """Command to move the last selected item to first position."""
+
+    _name = "Last to First Selection"
+    _description = "Command to move the last selected item to first position"
+
+    def execute(self, target_nodes: list[str]):
+        """Execute the command.
+
+        Args:
+            target_nodes (list[str]): The target nodes to reorder.
+        """
+        super().execute(target_nodes)
+
+        if len(target_nodes) < 2:
+            logger.warning("Select at least 2 nodes.")
+            return
+
+        cmds.select(target_nodes[-1], r=True)
+        cmds.select(target_nodes[:-1], add=True)
+
+
 class LockAndHideCommand(AllCommand):
     """Command to lock and hide selected nodes."""
 
@@ -482,6 +504,7 @@ class CreateTransformAtEachPositionCommand(AllCommand):
 
 
 __all__ = [
+    "LastToFirstSelectionCommand",
     "LockAndHideCommand",
     "UnlockAndShowCommand",
     "ZeroOutTransformsCommand",
