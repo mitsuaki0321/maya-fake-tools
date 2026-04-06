@@ -11,6 +11,11 @@ languages:
     name: English
 
 categories:
+  - id: settings
+    name_ja: 設定
+    name_en: Settings
+    description_ja: FakeTools の設定
+    description_en: FakeTools settings
   - id: common
     name_ja: 共通
     name_en: Common
