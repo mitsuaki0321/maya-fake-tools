@@ -94,7 +94,16 @@ def add_menu():
         # Close category submenu
         cmds.setParent("..", menu=True)
 
-    # Add separator and utility items
+    # Add separator and settings items
+    cmds.menuItem(divider=True, parent=menu)
+
+    # Settings
+    cmds.menuItem(label="Settings...", command=lambda *args: _open_settings(), parent=menu)
+
+    # Log level submenu
+    _add_log_level_menu(menu)
+
+    # Separator before utility items
     cmds.menuItem(divider=True, parent=menu)
 
     # Open Workspace
@@ -103,14 +112,8 @@ def add_menu():
     # Help/Documentation
     cmds.menuItem(label="Help", command=lambda *args: open_documentation(), parent=menu)
 
-    # Separator before Reload Menu
-    cmds.menuItem(divider=True, parent=menu)
-
     # Reload menu item
     cmds.menuItem(label="Reload Menu", command=lambda *args: reload_menu(), parent=menu)
-
-    # Log level submenu
-    _add_log_level_menu(menu)
 
     logger.info(f"FakeTools menu created with {len(menu_structure)} categories")
 
@@ -205,6 +208,13 @@ def _set_log_level_with_feedback(level: int, level_name: str):
     set_log_level(level)
     logger.info(f"Log level changed to {level_name}")
     cmds.inViewMessage(amg=f"Log level changed to <hl>{level_name}</hl>", pos="topCenter", fade=True, fst=1000, ft=0.5)
+
+
+def _open_settings():
+    """Open the FakeTools shared settings dialog."""
+    from .lib_ui.shared_config_dialog import show_shared_config_dialog
+
+    show_shared_config_dialog()
 
 
 __all__ = ["add_menu", "remove_menu", "reload_menu"]

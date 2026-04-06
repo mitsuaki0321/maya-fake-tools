@@ -4,8 +4,10 @@ Provides project-wide settings that are shared across multiple tools.
 Settings are stored at:
     {MAYA_APP_DIR}/faketools_workspace/shared/config/settings/default.json
 
-Users can customize settings by editing the JSON file directly.
+Users can customize settings by editing the JSON file directly or via the Settings dialog.
 """
+
+import copy
 
 from .tool_settings import ToolSettingsManager
 
@@ -45,3 +47,25 @@ def get_shared_config() -> dict:
         else:
             result[section] = data.get(section, defaults)
     return result
+
+
+def get_defaults() -> dict:
+    """Return default shared configuration values.
+
+    Returns:
+        dict: Deep copy of the default configuration.
+    """
+    return copy.deepcopy(_DEFAULTS)
+
+
+def save_shared_config(data: dict) -> str:
+    """Save shared configuration to settings file.
+
+    Args:
+        data (dict): Configuration data matching the default structure.
+
+    Returns:
+        str: The file path where the settings were saved.
+    """
+    _settings.save_settings(data)
+    return str(_settings._get_preset_path(_settings.DEFAULT_PRESET_NAME))
