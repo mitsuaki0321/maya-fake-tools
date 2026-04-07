@@ -4,6 +4,8 @@ Provides the FakeTools single commands as both a standard submenu and a
 keyboard-triggered popup menu (Ctrl+Shift+Z).
 """
 
+from __future__ import annotations
+
 import contextlib
 from logging import getLogger
 
@@ -257,6 +259,19 @@ def register_runtime_command() -> None:
             "You can change the hotkey in the shared config or assign manually via Hotkey Editor."
         )
         return
+
+    # Ensure the current hotkey set is writable (Maya_Default is read-only)
+    current_set = cmds.hotkeySet(query=True, current=True)
+    if current_set == "Maya_Default":
+        all_sets = cmds.hotkeySet(query=True, hotkeySetArray=True) or []
+        custom_sets = [s for s in all_sets if s != "Maya_Default"]
+        if custom_sets:
+            target_set = custom_sets[0]
+            cmds.hotkeySet(target_set, edit=True, current=True)
+        else:
+            target_set = "Maya_Default_Duplicate"
+            cmds.hotkeySet(target_set, current=True, source="Maya_Default")
+        logger.info(f"Switched hotkey set to '{target_set}' (Maya_Default is read-only).")
 
     mel.eval(f'nameCommand -ann "FakeTools Single Commands" -command {RUNTIME_COMMAND_NAME} -sourceType mel {press_nc}')
     mel.eval(f'nameCommand -ann "FakeTools Single Commands Release" -command {_RUNTIME_RELEASE_NAME} -sourceType mel {release_nc}')
