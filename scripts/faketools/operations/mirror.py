@@ -65,23 +65,30 @@ def mirror_transforms(node: str, axis: str = "x", mirror_position: bool = True, 
     if not mirror_position and not mirror_rotation:
         raise ValueError("At least one of mirror_position or mirror_rotation must be True.")
 
+    # Build attribute lists (include jointOrient for joints)
+    is_joint = cmds.nodeType(node) == "joint"
+    connection_attrs = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
+    transform_attributes = ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]
+    if is_joint:
+        connection_attrs.extend(["jox", "joy", "joz"])
+        transform_attributes.extend(["jointOrientX", "jointOrientY", "jointOrientZ"])
+
     # Check if transform attributes are connected
-    for attr in ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]:
+    for attr in connection_attrs:
         if cmds.connectionInfo(f"{node}.{attr}", isDestination=True):
             logger.debug(f"Connected attribute: {node}.{attr}")
             raise RuntimeError(f"Failed to mirror transform because connections exist: {node}")
 
-    # Check if transform attributes are modifiable
-    transform_attributes = ["translateX", "translateY", "translateZ", "rotateX", "rotateY", "rotateZ", "scaleX", "scaleY", "scaleZ"]
-    not_modifiable_attrs = [attr for attr in transform_attributes if not is_modifiable(node, attr)]
-    if not_modifiable_attrs:
-        raise ValueError(f"Node attributes are not modifiable: {node} -> {not_modifiable_attrs}")
-
-    # Store and unlock locked attributes
+    # Store and unlock locked attributes (before modifiability check)
     lock_handler = AttributeLockHandler()
     lock_handler.stock_lock_attrs(node, transform_attributes, include_parent=True)
 
     try:
+        # Check if transform attributes are modifiable
+        not_modifiable_attrs = [attr for attr in transform_attributes if not is_modifiable(node, attr)]
+        if not_modifiable_attrs:
+            raise ValueError(f"Node attributes are not modifiable: {node} -> {not_modifiable_attrs}")
+
         # Create mirror matrix based on axis
         if axis == "x":
             mirror_matrix = om.MMatrix([[-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
