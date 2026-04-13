@@ -20,6 +20,12 @@ lang-ref: code_editor_toolbar
 
 - ファイルエクスプローラーの表示/非表示を切り替えます。
 
+**![image](../../images/common/code_editor/refresh_normal.svg) Refresh File Explorer**
+
+- ファイルエクスプローラーのツリーを手動で更新します。
+- 別の Maya インスタンスや外部アプリケーションで作成・変更されたファイルを反映させたい場合に使用します。
+- ファイルエクスプローラーが非表示の場合、このボタンは無効化されます。
+
 **![image](../../images/common/code_editor/run_normal.svg) Run Code**
 
 - 現在アクティブなエディタのコードを実行します。\

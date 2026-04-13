@@ -20,6 +20,12 @@ The toolbar provides quick access to main actions like creating files, saving, a
 
 - Toggles the file explorer visibility.
 
+**![image](../../images/common/code_editor/refresh_normal.svg) Refresh File Explorer**
+
+- Manually refreshes the file explorer tree.
+- Use this to pick up files created or modified by another Maya instance or external application.
+- This button is disabled when the file explorer is hidden.
+
 **![image](../../images/common/code_editor/run_normal.svg) Run Code**
 
 - Runs the code in the currently active editor.\
