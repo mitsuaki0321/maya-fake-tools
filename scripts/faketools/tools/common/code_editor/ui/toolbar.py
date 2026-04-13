@@ -274,88 +274,49 @@ class ToolBar(QWidget):
             }
         """)
 
-        # Toggle explorer button (leftmost)
+        # Create all buttons
         self.toggle_explorer_button = VSCodeButton("toggle", "Toggle File Explorer")
-
-        # First separator (after toggle explorer)
-        sep0 = ToolBarSeparator()
-
-        # Create buttons with proper icons and tooltips
-        self.new_button = VSCodeButton("new", "New File (Ctrl+N)")
-
-        # First separator
-        sep1 = ToolBarSeparator()
-
         self.run_button = RunButton("run", "Run Code (Numpad Enter / Ctrl+Enter)")
-
-        # Second separator
-        sep2 = ToolBarSeparator()
-
+        self.new_button = VSCodeButton("new", "New File (Ctrl+N)")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
         self.save_all_button = VSCodeButton("saveall", "Save All Files (Ctrl+Shift+S)")
-
-        # Third separator
-        sep3 = ToolBarSeparator()
-
-        self.clear_button = VSCodeButton("clear", "Clear Terminal")
-
-        # Echo All toggle button
-        self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands", active_icon_name="echo_active")
-
-        # Fourth separator
-        sep4 = ToolBarSeparator()
-
         self.workspace_button = VSCodeButton("folder", "Open Root Directory")
-
-        # Fifth separator
-        sep5 = ToolBarSeparator()
-
-        # Swap layout button
-        self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
-
-        # Sixth separator
-        sep6 = ToolBarSeparator()
-
-        # Word wrap toggle button
+        self.clear_button = VSCodeButton("clear", "Clear Terminal")
+        self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands", active_icon_name="echo_active")
+        self.add_to_shelf_button = VSCodeButton("shelf", "Add Selected Code to Shelf")
         self.word_wrap_button = ToggleButton("wordwrap", "Toggle Word Wrap", active_icon_name="wordwrap_active")
         self.word_wrap_button.set_active(True)  # Word wrap ON by default
-
-        # Seventh separator
-        sep7 = ToolBarSeparator()
-
-        # Fold all / Unfold all buttons
         self.fold_all_button = VSCodeButton("foldall", "Fold All")
         self.unfold_all_button = VSCodeButton("unfoldall", "Unfold All")
+        self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 
-        # Eighth separator
-        sep8 = ToolBarSeparator()
-
-        # Add to shelf button
-        self.add_to_shelf_button = VSCodeButton("shelf", "Add Selected Code to Shelf")
+        # Create separators
+        sep0 = ToolBarSeparator()
+        sep1 = ToolBarSeparator()
+        sep2 = ToolBarSeparator()
+        sep3 = ToolBarSeparator()
+        sep4 = ToolBarSeparator()
 
         # Add widgets to layout following the specified order
+        # [Explorer] | [Run] | [New][Save][SaveAll][Folder] | [Clear][Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll] | [Swap] | →stretch
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(sep0)
-        layout.addWidget(self.new_button)
-        layout.addWidget(sep1)
         layout.addWidget(self.run_button)
-        layout.addWidget(sep2)
+        layout.addWidget(sep1)
+        layout.addWidget(self.new_button)
         layout.addWidget(self.save_button)
         layout.addWidget(self.save_all_button)
-        layout.addWidget(sep3)
+        layout.addWidget(self.workspace_button)
+        layout.addWidget(sep2)
         layout.addWidget(self.clear_button)
         layout.addWidget(self.echo_all_button)
-        layout.addWidget(sep4)
-        layout.addWidget(self.workspace_button)
-        layout.addWidget(sep5)
-        layout.addWidget(self.swap_layout_button)
-        layout.addWidget(sep6)
+        layout.addWidget(self.add_to_shelf_button)
+        layout.addWidget(sep3)
         layout.addWidget(self.word_wrap_button)
-        layout.addWidget(sep7)
         layout.addWidget(self.fold_all_button)
         layout.addWidget(self.unfold_all_button)
-        layout.addWidget(sep8)
-        layout.addWidget(self.add_to_shelf_button)
+        layout.addWidget(sep4)
+        layout.addWidget(self.swap_layout_button)
         layout.addStretch()
 
         # Calculate dynamic height
