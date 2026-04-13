@@ -496,7 +496,7 @@ class CreateTransformAtEachPositionCommand(AllCommand):
             func=create_transforms.each_positions,
             shape_type="transform",
         )
-        result_nodes = make_transform.create(include_rotation=False, tangent_from_component=False)
+        result_nodes = make_transform.create(include_rotation=True, tangent_from_component=False)
 
         if result_nodes:
             cmds.select(result_nodes, r=True)
