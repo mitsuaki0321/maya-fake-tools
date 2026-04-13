@@ -20,6 +20,11 @@ lang-ref: code_editor_toolbar
 
 - ファイルエクスプローラーの表示/非表示を切り替えます。
 
+**![image](../../images/common/code_editor/run_normal.svg) Run Code**
+
+- 現在アクティブなエディタのコードを実行します。\
+コードを選択している場合は、選択部分のみが実行されます。
+
 **![image](../../images/common/code_editor/new_normal.svg) Create New File**
 
 - 新しいファイルを作成します。\
@@ -28,11 +33,6 @@ lang-ref: code_editor_toolbar
 ![image](../../images/common/code_editor/new-file.png)
 
 - ファイル名を入力して「OK」をクリックすると、新しいファイルが作成され、タブが開きます。
-
-**![image](../../images/common/code_editor/run_normal.svg) Run Code**
-
-- 現在アクティブなエディタのコードを実行します。\
-コードを選択している場合は、選択部分のみが実行されます。
 
 **![image](../../images/common/code_editor/save_normal.svg) Save Current File**
 
@@ -43,17 +43,24 @@ lang-ref: code_editor_toolbar
 
 - すべての開いているエディタの内容を保存します。
 
-**![image](../../images/common/code_editor/clear_normal.svg) Clear Console**
-
-コンソールの内容をクリアします。
-
 **![image](../../images/common/code_editor/folder_normal.svg) Open Root Directory**
 
 - ワークスペースのルートディレクトリを OS 標準のファイルエクスプローラーで開きます。
 
-**![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
+**![image](../../images/common/code_editor/clear_normal.svg) Clear Console**
 
-- コードエディタとターミナルの位置を上下に入れ替えます。
+- コンソールの内容をクリアします。
+
+**![image](../../images/common/code_editor/echo_normal.svg) Toggle Echo All Commands**
+
+- ターミナルのエコーモードの ON/OFF を切り替えます。
+
+**![image](../../images/common/code_editor/shelf_normal.svg) Add to Shelf**
+
+- 現在選択中のコードを、アクティブな Maya シェルフにシェルフボタンとして追加します。
+- コードが選択されていない場合、選択を促すダイアログが表示されます。
+- シェルフボタンは `pythonFamily.png` アイコンと "Python" ラベルで作成され、Maya の Script Editor と同じ動作になります。
+- この機能はコードを選択した状態でコンテキストメニュー（右クリック）からも利用できます。
 
 **![image](../../images/common/code_editor/wordwrap_normal.svg) Toggle Word Wrap**
 
@@ -68,6 +75,10 @@ lang-ref: code_editor_toolbar
 **![image](../../images/common/code_editor/unfoldall_normal.svg) Unfold All**
 
 - 現在のエディタの全ての折り畳まれたコードブロックを展開します。
+
+**![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
+
+- コードエディタとターミナルの位置を上下に入れ替えます。
 
 ## ショートカットキー
 

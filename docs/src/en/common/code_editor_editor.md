@@ -172,6 +172,14 @@ You can reload the selected module from the context menu.
 Select a module string and execute **Reload Module: <module_name>**.\
 The module will be reloaded.
 
+### Add to Shelf
+
+You can add the selected code to the active Maya shelf from the context menu.
+
+Select the code you want to register, then choose **Add to Shelf** from the context menu.\
+A shelf button will be created on the currently active shelf tab.\
+This is the same feature as the toolbar's Add to Shelf button.
+
 ## Keyboard Shortcuts
 
 Main keyboard shortcuts available in the code editor:
