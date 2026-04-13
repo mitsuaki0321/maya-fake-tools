@@ -168,6 +168,7 @@ class UILayoutManager:
             self.main_window.toolbar.word_wrap_toggled.connect(self.main_window.toggle_word_wrap)
             self.main_window.toolbar.fold_all_clicked.connect(self.main_window.fold_all)
             self.main_window.toolbar.unfold_all_clicked.connect(self.main_window.unfold_all)
+            self.main_window.toolbar.add_to_shelf_clicked.connect(self.main_window.add_to_shelf)
 
         if self.main_window.file_explorer:
             self.main_window.file_explorer.file_selected.connect(self.main_window.open_file_permanent)

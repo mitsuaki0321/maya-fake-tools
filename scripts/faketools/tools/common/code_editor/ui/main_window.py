@@ -442,6 +442,43 @@ class MayaCodeEditor(QWidget):
         except Exception as e:
             self.output_terminal.append_output(f"Error executing file: {e!s}")
 
+    def add_to_shelf(self):
+        """Add currently selected code to the active Maya shelf."""
+        # Get selected text from current editor
+        editor = self.get_current_editor()
+        if not editor:
+            return
+
+        selected_text = editor.textCursor().selectedText()
+        if not selected_text:
+            CodeEditorMessageBox.information(self, "Add to Shelf", "Please select the code you want to add to the shelf.")
+            return
+
+        # QTextCursor uses Unicode paragraph separator (U+2029) for line breaks
+        code = selected_text.replace("\u2029", "\n")
+
+        try:
+            import maya.cmds as cmds
+            import maya.mel as mel
+
+            # Get the active shelf tab
+            shelf_top_level = mel.eval("$tmp = $gShelfTopLevel")
+            active_shelf = cmds.tabLayout(shelf_top_level, query=True, selectTab=True)
+
+            # Escape the code for MEL string
+            mel_code = code.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t")
+
+            # Create shelf button via MEL (matches Script Editor behavior)
+            mel.eval(f'shelfButton -rpt true -i1 "pythonFamily.png" -l "Python" -ann "{mel_code}" -stp "python" -c "{mel_code}" -p "{active_shelf}"')
+
+            # Apply shelf style
+            mel.eval("setShelfStyle `optionVar -query shelfItemStyle` `optionVar -query shelfItemSize`")
+
+            logger.info(f"Added code to shelf: {active_shelf}")
+
+        except Exception as e:
+            CodeEditorMessageBox.warning(self, "Add to Shelf", f"Failed to add code to shelf:\n{e!s}")
+
     def manual_save_session(self):
         """Manually save session state for testing."""
         self.session_manager.save_session_state()

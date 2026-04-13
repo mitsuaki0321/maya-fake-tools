@@ -846,8 +846,24 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
                 reload_action.triggered.connect(lambda: self.reload_module(selected_text))
                 context_menu.addAction(reload_action)
 
+        # Add "Add to Shelf" action if text is selected
+        if self.textCursor().hasSelection():
+            context_menu.addSeparator()
+            shelf_action = QAction("Add to Shelf", self)
+            shelf_action.triggered.connect(self._add_selection_to_shelf)
+            context_menu.addAction(shelf_action)
+
         # Show the context menu
         context_menu.exec_(event.globalPos())
+
+    def _add_selection_to_shelf(self):
+        """Trigger add_to_shelf on the main window."""
+        parent_widget = self.parent()
+        while parent_widget:
+            if hasattr(parent_widget, "add_to_shelf"):
+                parent_widget.add_to_shelf()
+                return
+            parent_widget = parent_widget.parent()
 
     def is_valid_identifier(self, text):
         """Check if the text is a valid Python identifier."""

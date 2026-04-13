@@ -252,6 +252,7 @@ class ToolBar(QWidget):
     word_wrap_toggled = Signal(bool)  # Signal for toggling word wrap (True=on, False=off)
     fold_all_clicked = Signal()  # Signal for folding all regions
     unfold_all_clicked = Signal()  # Signal for unfolding all regions
+    add_to_shelf_clicked = Signal()  # Signal for adding selected code to Maya shelf
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -326,6 +327,12 @@ class ToolBar(QWidget):
         self.fold_all_button = VSCodeButton("foldall", "Fold All")
         self.unfold_all_button = VSCodeButton("unfoldall", "Unfold All")
 
+        # Eighth separator
+        sep8 = ToolBarSeparator()
+
+        # Add to shelf button
+        self.add_to_shelf_button = VSCodeButton("shelf", "Add Selected Code to Shelf")
+
         # Add widgets to layout following the specified order
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(sep0)
@@ -347,6 +354,8 @@ class ToolBar(QWidget):
         layout.addWidget(sep7)
         layout.addWidget(self.fold_all_button)
         layout.addWidget(self.unfold_all_button)
+        layout.addWidget(sep8)
+        layout.addWidget(self.add_to_shelf_button)
         layout.addStretch()
 
         # Calculate dynamic height
@@ -372,6 +381,7 @@ class ToolBar(QWidget):
         self.word_wrap_button.clicked.connect(lambda: self.word_wrap_toggled.emit(self.word_wrap_button.is_active()))
         self.fold_all_button.clicked.connect(self.fold_all_clicked.emit)
         self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
+        self.add_to_shelf_button.clicked.connect(self.add_to_shelf_clicked.emit)
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""
