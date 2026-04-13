@@ -157,6 +157,7 @@ class UILayoutManager:
         """Connect signals between components."""
         if self.main_window.toolbar:
             self.main_window.toolbar.toggle_explorer_clicked.connect(self.main_window.toggle_file_explorer)
+            self.main_window.toolbar.refresh_explorer_clicked.connect(self._refresh_file_explorer)
             self.main_window.toolbar.run_clicked.connect(self.main_window.execution_manager.run_current_script)
             self.main_window.toolbar.save_clicked.connect(self.main_window.save_current_file)
             self.main_window.toolbar.save_all_clicked.connect(self.main_window.save_all_files)
@@ -262,6 +263,9 @@ class UILayoutManager:
             explorer_visible = self.main_window.settings_manager.get("layout.explorer_visible", True)
             if not explorer_visible:
                 self.main_window.file_explorer.hide()
+            # Sync refresh button enabled state
+            if self.main_window.toolbar and hasattr(self.main_window.toolbar, "refresh_explorer_button"):
+                self.main_window.toolbar.refresh_explorer_button.setEnabled(explorer_visible)
 
         if hasattr(self.main_window, "v_splitter"):
             v_sizes = self.main_window.settings_manager.get_splitter_sizes("vertical")
@@ -307,6 +311,11 @@ class UILayoutManager:
 
         # Save to file
         self.main_window.settings_manager.save_settings()
+
+    def _refresh_file_explorer(self):
+        """Refresh the file explorer tree."""
+        if self.main_window.file_explorer and self.main_window.file_explorer.isVisible():
+            self.main_window.file_explorer.refresh()
 
     def on_splitter_moved(self):
         """Handle splitter movement - save settings with delay."""

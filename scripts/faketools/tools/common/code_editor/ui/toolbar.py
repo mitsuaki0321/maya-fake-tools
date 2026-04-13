@@ -241,6 +241,7 @@ class ToolBar(QWidget):
 
     # Signals
     toggle_explorer_clicked = Signal()  # Signal for toggling file explorer visibility
+    refresh_explorer_clicked = Signal()  # Signal for refreshing file explorer
     run_clicked = Signal()
     save_clicked = Signal()
     save_all_clicked = Signal()
@@ -276,6 +277,7 @@ class ToolBar(QWidget):
 
         # Create all buttons
         self.toggle_explorer_button = VSCodeButton("toggle", "Toggle File Explorer")
+        self.refresh_explorer_button = VSCodeButton("refresh", "Refresh File Explorer")
         self.run_button = RunButton("run", "Run Code (Numpad Enter / Ctrl+Enter)")
         self.new_button = VSCodeButton("new", "New File (Ctrl+N)")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
@@ -298,8 +300,9 @@ class ToolBar(QWidget):
         sep4 = ToolBarSeparator()
 
         # Add widgets to layout following the specified order
-        # [Explorer] | [Run] | [New][Save][SaveAll][Folder] | [Clear][Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll] | [Swap] | →stretch
+        # [Explorer][Refresh] | [Run] | [New][Save][SaveAll][Folder] | [Clear][Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll] | [Swap] | →stretch
         layout.addWidget(self.toggle_explorer_button)
+        layout.addWidget(self.refresh_explorer_button)
         layout.addWidget(sep0)
         layout.addWidget(self.run_button)
         layout.addWidget(sep1)
@@ -331,6 +334,7 @@ class ToolBar(QWidget):
     def connect_signals(self):
         """Connect button signals."""
         self.toggle_explorer_button.clicked.connect(self.toggle_explorer_clicked.emit)
+        self.refresh_explorer_button.clicked.connect(self.refresh_explorer_clicked.emit)
         self.run_button.clicked.connect(self.run_clicked.emit)
         self.save_button.clicked.connect(self.save_clicked.emit)
         self.save_all_button.clicked.connect(self.save_all_clicked.emit)

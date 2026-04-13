@@ -604,6 +604,11 @@ class MayaCodeEditor(QWidget):
             if len(sizes) >= 2:
                 total = sum(sizes)
                 self.main_splitter.setSizes([saved_width, total - saved_width])
+
+        # Sync refresh button enabled state with explorer visibility
+        if self.toolbar and hasattr(self.toolbar, "refresh_explorer_button"):
+            self.toolbar.refresh_explorer_button.setEnabled(self.file_explorer.isVisible())
+
         # Save settings
         self.settings_manager.save_settings()
 
