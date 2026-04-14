@@ -422,6 +422,11 @@ def combine_meshes_per_shader(meshes: list[str]) -> dict[str, str]:
 def shape_parent(sources: list[str], target: str, delete_source_transform: bool = True) -> list[str]:
     """Move shape nodes from source transforms to a target transform.
 
+    Source is re-parented under target and its transform is frozen so that
+    each shape keeps its visual world-space position after the shape-level
+    reparent. Locked translate/rotate/scale channels on source are
+    temporarily unlocked and restored (unless the source is deleted).
+
     Args:
         sources (list[str]): Source transform nodes containing shapes to move.
         target (str): Target transform node to receive the shapes.
@@ -437,6 +442,7 @@ def shape_parent(sources: list[str], target: str, delete_source_transform: bool 
     if not cmds.objExists(target):
         raise ValueError(f"Target does not exist: {target}")
 
+    transform_attrs = ("tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz")
     moved: list[str] = []
     for source in sources:
         if not cmds.objExists(source):
@@ -447,9 +453,23 @@ def shape_parent(sources: list[str], target: str, delete_source_transform: bool 
             logger.warning("Source '%s' has no shapes to move", source)
             continue
 
-        for shape in shapes:
-            result = cmds.parent(shape, target, shape=True, relative=True)
-            moved.extend(result)
+        locked_attrs = [attr for attr in transform_attrs if cmds.getAttr(f"{source}.{attr}", lock=True)]
+        for attr in locked_attrs:
+            cmds.setAttr(f"{source}.{attr}", lock=False)
+
+        try:
+            current_parent = cmds.listRelatives(source, parent=True, fullPath=True)
+            if not current_parent or current_parent[0] != target:
+                source = cmds.parent(source, target)[0]
+            cmds.makeIdentity(source, apply=True, translate=True, rotate=True, scale=True)
+
+            for shape in cmds.listRelatives(source, shapes=True, fullPath=True) or []:
+                result = cmds.parent(shape, target, shape=True, relative=True)
+                moved.extend(result)
+        finally:
+            if cmds.objExists(source):
+                for attr in locked_attrs:
+                    cmds.setAttr(f"{source}.{attr}", lock=True)
 
         if delete_source_transform:
             remaining_children = cmds.listRelatives(source, children=True)
