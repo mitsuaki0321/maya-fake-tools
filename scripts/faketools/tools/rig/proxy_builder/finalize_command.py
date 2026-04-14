@@ -57,6 +57,8 @@ def _cleanup_empty_transforms(group: str) -> None:
     Args:
         group (str): 対象グループ名。
     """
+    if not cmds.objExists(group):
+        return
     children = cmds.listRelatives(group, children=True) or []
     for child in children:
         if cmds.nodeType(child) == "parentConstraint":
@@ -101,9 +103,10 @@ def _finalize_single(meshes: list[str], proxy_name: str, group: str) -> str:
         return cmds.rename(meshes[0], proxy_name)
 
     combined = combine_meshes(meshes, name=proxy_name)
-    current_parent = cmds.listRelatives(combined, parent=True)
-    if not current_parent or current_parent[0] != group:
-        cmds.parent(combined, group)
+    if cmds.objExists(group):
+        current_parent = cmds.listRelatives(combined, parent=True)
+        if not current_parent or current_parent[0] != group:
+            cmds.parent(combined, group)
     return combined
 
 
@@ -123,18 +126,20 @@ def _finalize_per_shader(meshes: list[str], proxy_name: str, group: str) -> str:
 
     if len(combined_list) == 1:
         result = cmds.rename(combined_list[0], proxy_name)
-        current_parent = cmds.listRelatives(result, parent=True)
-        if not current_parent or current_parent[0] != group:
-            cmds.parent(result, group)
+        if cmds.objExists(group):
+            current_parent = cmds.listRelatives(result, parent=True)
+            if not current_parent or current_parent[0] != group:
+                cmds.parent(result, group)
         return result
 
     target = combined_list[0]
     sources = combined_list[1:]
     shape_parent(sources, target)
     result = cmds.rename(target, proxy_name)
-    current_parent = cmds.listRelatives(result, parent=True)
-    if not current_parent or current_parent[0] != group:
-        cmds.parent(result, group)
+    if cmds.objExists(group):
+        current_parent = cmds.listRelatives(result, parent=True)
+        if not current_parent or current_parent[0] != group:
+            cmds.parent(result, group)
     return result
 
 
@@ -150,9 +155,10 @@ def finalize_proxy_groups(
 ) -> list[str]:
     """各プロキシグループ内のピースをコンバインし最終命名する。
 
-    parent_group の子グループ（*_proxy_grp）を走査し、各グループの
-    parentConstraint からジョイント名を取得。ジョイント短縮名を使って
-    ``{joint_short}_proxy`` に命名する。
+    parent_group の子グループを走査し、各グループの parentConstraint
+    からジョイント名を取得。ジョイント短縮名を使って ``{joint_short}_proxy``
+    に命名する。parentConstraint が存在しない場合はグループ名を短縮名として
+    フォールバックし、警告を出した上で ``{group_short}_proxy`` に命名する。
 
     コンバイン後、空のトランスフォームを削除し、最終メッシュを
     output_group にフラットにペアレントする。
@@ -184,11 +190,13 @@ def finalize_proxy_groups(
 
     for child in children:
         joint_name = _get_joint_from_group(child)
-        if not joint_name:
-            msg = f"Group '{child}' has no parentConstraint, skipping"
+        if joint_name:
+            proxy_name = f"{_joint_short_name(joint_name)}_proxy"
+        else:
+            proxy_name = f"{_joint_short_name(child)}_proxy"
+            msg = f"Group '{child}' has no parentConstraint, using group name fallback: '{proxy_name}'"
             logger.warning(msg)
             cmds.warning(msg)
-            continue
 
         meshes = _get_meshes_in_group(child)
         if not meshes:
@@ -196,9 +204,6 @@ def finalize_proxy_groups(
             logger.warning(msg)
             cmds.warning(msg)
             continue
-
-        joint_short = _joint_short_name(joint_name)
-        proxy_name = f"{joint_short}_proxy"
 
         if combine_mode == "single":
             result = _finalize_single(meshes, proxy_name, child)
