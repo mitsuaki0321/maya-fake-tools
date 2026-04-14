@@ -51,8 +51,19 @@ class FinalizeTab(QWidget):
         row_src.addWidget(QLabel("Source Group:"))
         self._line_finalize_group = QLineEdit("proxy_grp")
         row_src.addWidget(self._line_finalize_group, 1)
+        self._btn_set_finalize_group = QPushButton("Set")
+        row_src.addWidget(self._btn_set_finalize_group)
         self._btn_load_finalize_groups = QPushButton("Load")
         row_src.addWidget(self._btn_load_finalize_groups)
+
+        # Match Set / Load button widths to each other
+        src_btn_width = max(
+            self._btn_set_finalize_group.sizeHint().width(),
+            self._btn_load_finalize_groups.sizeHint().width(),
+        )
+        self._btn_set_finalize_group.setFixedWidth(src_btn_width)
+        self._btn_load_finalize_groups.setFixedWidth(src_btn_width)
+
         layout.addLayout(row_src)
 
         # --- Combine Mode ---
@@ -93,12 +104,21 @@ class FinalizeTab(QWidget):
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
+        self._btn_set_finalize_group.clicked.connect(self._on_set_finalize_group)
         self._btn_load_finalize_groups.clicked.connect(self._on_load_finalize_groups)
         self._btn_finalize.clicked.connect(self._on_finalize)
 
     # ------------------------------------------------------------------
     # Slots
     # ------------------------------------------------------------------
+
+    def _on_set_finalize_group(self) -> None:
+        """Set the source group from Maya selection."""
+        sel = cmds.ls(selection=True, type="transform")
+        if not sel:
+            cmds.warning("Proxy Builder: Select a group transform")
+            return
+        self._line_finalize_group.setText(sel[0])
 
     def _on_load_finalize_groups(self) -> None:
         """Load proxy groups from the source group into the groups list."""

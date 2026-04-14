@@ -50,6 +50,8 @@ class AssignTab(QWidget):
         row_piece_grp.addWidget(QLabel("Piece Group:"))
         self._line_piece_group = QLineEdit("piece_grp")
         row_piece_grp.addWidget(self._line_piece_group, 1)
+        self._btn_set_piece_group = QPushButton("Set")
+        row_piece_grp.addWidget(self._btn_set_piece_group)
         self._btn_load_pieces = QPushButton("Load")
         row_piece_grp.addWidget(self._btn_load_pieces)
         layout.addLayout(row_piece_grp)
@@ -65,9 +67,16 @@ class AssignTab(QWidget):
         self._btn_remove_pieces = QPushButton("Remove")
         self._btn_select_all_pieces = QPushButton("Select All")
 
-        # Match Load button width with Add/Remove column
+        # Match Set / Load button widths to each other
+        piece_grp_btn_width = max(
+            self._btn_set_piece_group.sizeHint().width(),
+            self._btn_load_pieces.sizeHint().width(),
+        )
+        self._btn_set_piece_group.setFixedWidth(piece_grp_btn_width)
+        self._btn_load_pieces.setFixedWidth(piece_grp_btn_width)
+
+        # Match Add/Remove/Select All column widths
         btn_width = self._btn_select_all_pieces.sizeHint().width()
-        self._btn_load_pieces.setFixedWidth(btn_width)
         self._btn_add_pieces.setFixedWidth(btn_width)
         self._btn_remove_pieces.setFixedWidth(btn_width)
         self._btn_select_all_pieces.setFixedWidth(btn_width)
@@ -187,6 +196,7 @@ class AssignTab(QWidget):
     # ------------------------------------------------------------------
 
     def _connect_signals(self) -> None:
+        self._btn_set_piece_group.clicked.connect(self._on_set_piece_group)
         self._btn_load_pieces.clicked.connect(self._on_load_pieces)
         self._btn_add_pieces.clicked.connect(self._on_add_pieces)
         self._btn_remove_pieces.clicked.connect(self._on_remove_pieces)
@@ -204,6 +214,14 @@ class AssignTab(QWidget):
     # ------------------------------------------------------------------
     # Slots — Pieces
     # ------------------------------------------------------------------
+
+    def _on_set_piece_group(self) -> None:
+        """Set the piece group from Maya selection."""
+        sel = cmds.ls(selection=True, type="transform")
+        if not sel:
+            cmds.warning("Proxy Builder: Select a group transform")
+            return
+        self._line_piece_group.setText(sel[0])
 
     def _on_load_pieces(self) -> None:
         """Load child meshes from the piece group into the pieces list."""
