@@ -209,9 +209,29 @@ class PlaneTab(QWidget):
         row_scale.addWidget(lbl_size_scale)
         self._line_size_scale = QLineEdit("1.0")
         self._line_size_scale.setValidator(QDoubleValidator(0.01, 100.0, 2, self))
+        self._line_size_scale.setToolTip(
+            "With Target Mesh ON: multiplier on the auto-raycasted size.\nWith Target Mesh OFF: used directly as the plane edge length."
+        )
         row_scale.addWidget(self._line_size_scale)
         row_scale.addStretch()
         lay_create.addLayout(row_scale)
+
+        # Size Ratio Limit (outlier rejection for raycast auto-size)
+        row_ratio = QHBoxLayout()
+        self._lbl_size_ratio = QLabel("Size Ratio Limit:")
+        self._lbl_size_ratio.setFixedWidth(stacked_label_width)
+        self._lbl_size_ratio.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_ratio.addWidget(self._lbl_size_ratio)
+        self._line_size_ratio = QLineEdit("3.0")
+        self._line_size_ratio.setValidator(QDoubleValidator(1.0, 100.0, 2, self))
+        self._line_size_ratio.setToolTip(
+            "When opposite raycasts along an axis have a length ratio above this value,\n"
+            "the longer one is treated as an internal-penetration outlier and the shorter\n"
+            "distance is used symmetrically instead."
+        )
+        row_ratio.addWidget(self._line_size_ratio)
+        row_ratio.addStretch()
+        lay_create.addLayout(row_ratio)
 
         lay_create.addWidget(HorizontalSeparator())
 
@@ -278,6 +298,8 @@ class PlaneTab(QWidget):
         self._line_plane_target_mesh.setEnabled(checked)
         self._btn_set_plane_target_mesh.setEnabled(checked)
         self._btn_toggle_target_mesh.setText("ON" if checked else "OFF")
+        self._lbl_size_ratio.setEnabled(checked)
+        self._line_size_ratio.setEnabled(checked)
 
     def _on_set_plane_target_mesh(self) -> None:
         """Set the target mesh from Maya selection, or clear if nothing is selected."""
@@ -346,6 +368,7 @@ class PlaneTab(QWidget):
             )
 
         size_scale = float(self._line_size_scale.text() or 1.0)
+        size_ratio_threshold = float(self._line_size_ratio.text() or 3.0)
 
         axis_map = {0: (1, 0, 0), 1: (0, 1, 0), 2: (0, 0, 1)}
         axis = axis_map[self._btn_group_axis.checkedId()]
@@ -361,6 +384,7 @@ class PlaneTab(QWidget):
                 aim_target=aim_target,
                 rotation=rotation,
                 size_scale=size_scale,
+                size_ratio_threshold=size_ratio_threshold,
                 axis=axis,
             )
             results.append(result)
@@ -403,6 +427,7 @@ class PlaneTab(QWidget):
             "manual_rotation_y": self._line_rot_y.text(),
             "manual_rotation_z": self._line_rot_z.text(),
             "size_scale": self._line_size_scale.text(),
+            "size_ratio_threshold": self._line_size_ratio.text(),
             "plane_axis": self._btn_group_axis.checkedId(),
             "mirror_axis": self._btn_group_mirror_axis.checkedId(),
         }
@@ -428,6 +453,7 @@ class PlaneTab(QWidget):
         self._line_rot_y.setText(str(data.get("manual_rotation_y", "0.0")))
         self._line_rot_z.setText(str(data.get("manual_rotation_z", "0.0")))
         self._line_size_scale.setText(str(data.get("size_scale", "1.0")))
+        self._line_size_ratio.setText(str(data.get("size_ratio_threshold", "3.0")))
 
         plane_axis = data.get("plane_axis", 1)
         axis_radios = {0: self._radio_axis_x, 1: self._radio_axis_y, 2: self._radio_axis_z}

@@ -446,18 +446,35 @@ def _get_plane_surface_axes(
 # ---------------------------------------------------------------------------
 
 
-def _resolve_axis_size(pos_dist: float | None, neg_dist: float | None) -> float | None:
-    """Resolve a single axis half-size from positive/negative ray distances.
+def _resolve_axis_size(
+    pos_dist: float | None,
+    neg_dist: float | None,
+    ratio_threshold: float = 3.0,
+) -> float | None:
+    """Resolve a single axis size from positive/negative ray distances.
+
+    When both rays hit, the longer distance is used unless the ratio of the
+    longer to the shorter exceeds *ratio_threshold*. In that case the longer
+    distance is assumed to be an internal-penetration artifact (e.g. a ray
+    that passed through the character's torso) and the shorter distance is
+    used instead.
 
     Args:
         pos_dist (float | None): Distance in the positive direction.
         neg_dist (float | None): Distance in the negative direction.
+        ratio_threshold (float): If ``max / min`` exceeds this value, the
+            longer ray is discarded as an outlier. Must be >= 1.0. Defaults
+            to 3.0.
 
     Returns:
         float | None: Full axis size, or ``None`` if both are missing.
     """
     if pos_dist is not None and neg_dist is not None:
-        return max(pos_dist, neg_dist) * 2.0
+        longer = max(pos_dist, neg_dist)
+        shorter = min(pos_dist, neg_dist)
+        if shorter > 0.0 and longer / shorter > ratio_threshold:
+            return shorter * 2.0
+        return longer * 2.0
     if pos_dist is not None:
         return pos_dist * 2.0
     if neg_dist is not None:
@@ -470,6 +487,7 @@ def _raycast_auto_size(
     axis_a: om.MVector,
     axis_b: om.MVector,
     mesh_shape: str,
+    ratio_threshold: float = 3.0,
 ) -> tuple[float, float] | None:
     """Estimate plane size by raycasting from *origin* along two surface axes.
 
@@ -481,6 +499,8 @@ def _raycast_auto_size(
         axis_a (om.MVector): First in-plane axis.
         axis_b (om.MVector): Second in-plane axis.
         mesh_shape (str): Mesh shape node name.
+        ratio_threshold (float): Outlier-rejection ratio passed through to
+            :func:`_resolve_axis_size`. Defaults to 3.0.
 
     Returns:
         tuple[float, float] | None: (width, height) or ``None`` if all rays miss.
@@ -506,8 +526,8 @@ def _raycast_auto_size(
     pos_b = _cast(axis_b)
     neg_b = _cast(-axis_b)
 
-    width = _resolve_axis_size(pos_a, neg_a)
-    height = _resolve_axis_size(pos_b, neg_b)
+    width = _resolve_axis_size(pos_a, neg_a, ratio_threshold=ratio_threshold)
+    height = _resolve_axis_size(pos_b, neg_b, ratio_threshold=ratio_threshold)
 
     if width is None and height is None:
         return None
@@ -598,6 +618,7 @@ def create_plane_at_joint(
     size: tuple[float, float] | None = None,
     spans: tuple[int, int] = (1, 1),
     size_scale: float = 1.0,
+    size_ratio_threshold: float = 3.0,
 ) -> str:
     """Create a cutting plane at a joint's position.
 
@@ -620,7 +641,15 @@ def create_plane_at_joint(
         rotation (tuple[float, float, float] | None): Euler rotation (degrees) for ``rotation_mode="manual"``.
         size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
         spans (tuple[int, int]): Patch/subdivision counts.
-        size_scale (float): Multiplier applied to auto-sized dimensions (>= 1.0).
+        size_scale (float): When *target_mesh* is provided, used as a
+            multiplier on the auto-sized dimensions. When *target_mesh* is
+            ``None`` and *size* is also ``None``, used directly as the plane
+            edge length in world units.
+        size_ratio_threshold (float): When auto-sizing with *target_mesh*,
+            opposite-direction raycast distances whose ratio exceeds this
+            value are treated as internal-penetration outliers; the shorter
+            distance is then used symmetrically instead of the longer one.
+            Defaults to 3.0.
 
     Returns:
         str: Transform name of the created plane.
@@ -667,7 +696,7 @@ def create_plane_at_joint(
     elif target_mesh is not None:
         mesh_shape = _validate_target_mesh(target_mesh)
         axis_a, axis_b = _get_plane_surface_axes(resolved_rotation, axis)
-        auto = _raycast_auto_size(position, axis_a, axis_b, mesh_shape)
+        auto = _raycast_auto_size(position, axis_a, axis_b, mesh_shape, ratio_threshold=size_ratio_threshold)
         if auto is not None:
             resolved_size = (auto[0] * size_scale, auto[1] * size_scale)
         else:
@@ -675,7 +704,7 @@ def create_plane_at_joint(
             fallback = _bounding_box_fallback_size(target_mesh)
             resolved_size = (fallback[0] * size_scale, fallback[1] * size_scale)
     else:
-        resolved_size = (1.0, 1.0)
+        resolved_size = (size_scale, size_scale)
 
     short_name = joint.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
     name = f"{short_name}_{_DEFAULT_PLANE_PREFIX}"
