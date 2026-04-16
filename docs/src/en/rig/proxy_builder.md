@@ -179,6 +179,141 @@ Mirrors the selected plane(s) along the specified axis. The mirrored name is aut
 - **Mirror Axis**: Axis to mirror along (X / Y / Z)
 - Select the plane(s) and click `Mirror`
 
+## Command API Reference
+
+Each step can be executed directly from a script without the UI. Below are code examples in workflow order.
+
+### Plane --- Creating Cutter Planes
+
+```python
+from faketools.tools.rig.proxy_builder import plane_command
+
+# Create a plane at a joint (auto-sized via Target Mesh raycast)
+plane = plane_command.create_plane_at_joint(
+    joint="LeftArm",
+    target_mesh="body_geo",           # raycast-based auto-sizing
+    plane_type="nurbs",               # "nurbs" or "poly"
+    axis=(0, 1, 0),                   # normal axis
+    rotation_mode="aim",              # "joint", "aim", or "manual"
+    aim_target="auto",                # "auto", "parent", or "chain"
+    size_scale=1.2,                   # multiplier on auto-sized result
+    size_ratio_threshold=3.0,         # outlier-rejection ratio threshold
+)
+
+# Create a fixed-size plane without Target Mesh
+plane = plane_command.create_plane_at_joint(
+    joint="Spine",
+    plane_type="nurbs",
+    rotation_mode="joint",
+    size_scale=15.0,                  # edge length of 15 (no Target Mesh)
+)
+
+# Create directly with explicit parameters
+plane = plane_command.create_plane(
+    position=(0, 100, 0),
+    rotation=(0, 45, 0),
+    size=(20.0, 10.0),
+    plane_type="nurbs",
+)
+
+# Mirror a plane
+mirrored = plane_command.mirror_plane(source=plane, axis="x")
+```
+
+### Cut --- Splitting the Mesh
+
+```python
+from faketools.tools.rig.proxy_builder import cut_command
+
+# Cut by weight boundaries (single mesh)
+pieces = cut_command.separate_by_weights(
+    mesh="body_geo",
+    joints=["Hips", "Spine", "LeftArm", "RightArm"],  # None for all influences
+    duplicate=True,             # keep the original mesh
+    merge_end_joints=False,     # merge end-joint weights into parent
+)
+
+# Cut by weight boundaries (multiple meshes)
+pieces = cut_command.separate_meshes_by_weights(
+    meshes=["body_geo", "cloth_geo"],
+    joints=None,
+    duplicate=True,
+    group="piece_grp",          # parent group for results
+)
+
+# Cut by cutter planes (single mesh)
+pieces = cut_command.separate_by_planes(
+    mesh="body_geo",
+    cutters=["LeftArm_cut_plane", "RightArm_cut_plane"],
+    duplicate=True,
+)
+
+# Cut by cutter planes (multiple meshes)
+pieces = cut_command.separate_meshes_by_planes(
+    meshes=["body_geo", "cloth_geo"],
+    cutters=["LeftArm_cut_plane", "Spine_cut_plane"],
+    duplicate=True,
+    group="piece_grp",
+)
+```
+
+### Assign --- Assigning Pieces to Bones
+
+```python
+from faketools.tools.rig.proxy_builder import assign_command
+
+# Auto-assign by weights
+assignment = assign_command.auto_assign_pieces(
+    pieces=pieces,                      # result from the Cut step
+    reference_mesh="body_geo",          # skinned reference mesh
+    joints=None,                        # None for all influences
+)
+# assignment = {"Hips": ["piece1", "piece2"], "Spine": ["piece3"], ...}
+
+# Auto-assign by bone distance (reference_mesh=None)
+assignment = assign_command.auto_assign_pieces(
+    pieces=pieces,
+    reference_mesh=None,
+    joints=["Hips", "Spine", "LeftArm", "RightArm"],  # required
+)
+
+# Create proxy groups with parentConstraints
+groups = assign_command.create_proxy_groups(
+    assignment=assignment,
+    parent_group="proxy_grp",
+)
+
+# Manually reassign a piece to a different joint
+assign_command.reassign_piece(
+    piece="piece3",
+    target_joint="Chest",
+    parent_group="proxy_grp",
+)
+
+# Read the current assignment state from the scene hierarchy
+current = assign_command.get_proxy_group_assignment(parent_group="proxy_grp")
+```
+
+### Finalize --- Generating the Final Meshes
+
+```python
+from faketools.tools.rig.proxy_builder import finalize_command
+
+# Combine into a single mesh per joint
+results = finalize_command.finalize_proxy_groups(
+    parent_group="proxy_grp",
+    combine_mode="single",              # "single" or "per_shader"
+    output_group="proxy_final_grp",
+)
+
+# Combine per shader with shape parenting
+results = finalize_command.finalize_proxy_groups(
+    parent_group="proxy_grp",
+    combine_mode="per_shader",
+    output_group="proxy_final_grp",
+)
+```
+
 ## Design Principles
 
 - **Framework-independent**: Uses only standard Maya operations. Does not depend on any specific rig framework's API or naming conventions
