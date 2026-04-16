@@ -157,7 +157,20 @@ Select how the plane's rotation (normal direction) is determined.
 
 #### Size Scale
 
-When Target Mesh is set, automatic size calculation via raycasting is performed. Size Scale is a multiplier applied to the result.
+Controls the plane size. Its meaning depends on the Target Mesh state.
+
+- **When Target Mesh is ON**: Acts as a multiplier applied to the raycast-based auto-sized result.
+- **When Target Mesh is OFF or unset**: Used directly as the plane edge length (in world units). For example, `10.0` creates a 10×10 plane.
+
+#### Size Ratio Limit
+
+Only effective when Target Mesh is ON.\
+During raycast auto-sizing, rays are fired from the joint position along the positive and negative directions of each axis to measure the distance to the mesh. If one ray penetrates the mesh interior and exits on the far side, the resulting plane becomes excessively large.
+
+Size Ratio Limit rejects the longer distance as an outlier when the ratio of the longer to the shorter distance exceeds this value; the shorter distance is then used symmetrically instead. The default value is `3.0`.
+
+- Smaller values: stricter rejection (favors smaller, safer planes)
+- Larger values: looser rejection (closer to the original behavior)
 
 ### Mirror Plane
 
