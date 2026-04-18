@@ -240,13 +240,16 @@ from faketools.tools.rig.proxy_builder import plane_io
 plane_io.export_planes_to_file("C:/path/to/cut_planes.json")
 
 # 別シーンで再生成（同じ骨構造であることが前提）
-plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
+created = plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
 
 # すべてのプレーンの target_mesh を差し替える場合
 plane_io.import_planes_from_file(
     "C:/path/to/cut_planes.json",
     target_mesh_override="char_B_body_geo",
 )
+
+# シーン内にある Proxy Builder プレーンを列挙
+managed = plane_io.get_managed_planes()
 ```
 
 ### Cut — メッシュの切断

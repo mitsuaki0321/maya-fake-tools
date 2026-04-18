@@ -185,7 +185,7 @@ def export_planes_to_file(
             file. Planes without valid metadata are silently skipped.
     """
     if planes is None:
-        planes = _find_managed_planes()
+        planes = get_managed_planes()
 
     entries: list[dict] = []
     exported: list[str] = []
@@ -269,12 +269,21 @@ def import_planes_from_file(
 
 
 # ---------------------------------------------------------------------------
-# Internals
+# Scene queries
 # ---------------------------------------------------------------------------
 
 
-def _find_managed_planes() -> list[str]:
-    """Return every transform in the scene that carries the metadata attr."""
+def get_managed_planes() -> list[str]:
+    """Return every transform in the scene carrying ``proxyBuilderMetadata``.
+
+    Useful after :func:`import_planes_from_file` if the returned list from
+    that call is no longer at hand, or for any workflow that needs to
+    enumerate Proxy Builder planes already in the scene.
+
+    Returns:
+        list[str]: Transform names, sorted and de-duplicated. Empty when
+            the scene has no managed planes.
+    """
     matches = cmds.ls(f"*.{METADATA_ATTR}", objectsOnly=True) or []
     return sorted(set(matches))
 
@@ -287,6 +296,7 @@ __all__ = [
     "RotationMode",
     "embed_metadata",
     "export_planes_to_file",
+    "get_managed_planes",
     "import_planes_from_file",
     "read_metadata",
 ]

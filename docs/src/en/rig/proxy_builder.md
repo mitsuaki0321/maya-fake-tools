@@ -239,13 +239,16 @@ from faketools.tools.rig.proxy_builder import plane_io
 plane_io.export_planes_to_file("C:/path/to/cut_planes.json")
 
 # Recreate them in another scene (assumes the same skeleton structure)
-plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
+created = plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
 
 # Override target_mesh for every imported plane
 plane_io.import_planes_from_file(
     "C:/path/to/cut_planes.json",
     target_mesh_override="char_B_body_geo",
 )
+
+# Enumerate Proxy Builder planes already in the scene
+managed = plane_io.get_managed_planes()
 ```
 
 ### Cut --- Splitting the Mesh
