@@ -57,10 +57,9 @@ class PlaneTab(QWidget):
         lbl_target_mesh = QLabel("Target Mesh:")
         lbl_target_mesh.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        lbl_plane_type = QLabel("Plane Type:")
         lbl_rotation_mode = QLabel("Rotation Mode:")
         lbl_axis = QLabel("Axis:")
-        for lbl in (lbl_plane_type, lbl_rotation_mode, lbl_axis):
+        for lbl in (lbl_rotation_mode, lbl_axis):
             lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         # Target Mesh
@@ -82,16 +81,9 @@ class PlaneTab(QWidget):
 
         lay_create.addWidget(HorizontalSeparator())
 
-        # Plane Type / Rotation Mode (grid for vertical alignment)
+        # Axis / Rotation Mode (grid for vertical alignment)
         grid_radios = QGridLayout()
         grid_radios.setContentsMargins(0, 0, 0, 0)
-
-        self._radio_plane_nurbs = QRadioButton("NURBS")
-        self._radio_plane_poly = QRadioButton("Poly")
-        self._radio_plane_nurbs.setChecked(True)
-        self._btn_group_plane_type = QButtonGroup(self)
-        self._btn_group_plane_type.addButton(self._radio_plane_nurbs, 0)
-        self._btn_group_plane_type.addButton(self._radio_plane_poly, 1)
 
         self._radio_rot_joint = QRadioButton("Joint")
         self._radio_rot_aim = QRadioButton("Aim")
@@ -111,19 +103,15 @@ class PlaneTab(QWidget):
         self._btn_group_axis.addButton(self._radio_axis_y, 1)
         self._btn_group_axis.addButton(self._radio_axis_z, 2)
 
-        grid_radios.addWidget(lbl_plane_type, 0, 0)
-        grid_radios.addWidget(self._radio_plane_nurbs, 0, 1)
-        grid_radios.addWidget(self._radio_plane_poly, 0, 2)
+        grid_radios.addWidget(lbl_axis, 0, 0)
+        grid_radios.addWidget(self._radio_axis_x, 0, 1)
+        grid_radios.addWidget(self._radio_axis_y, 0, 2)
+        grid_radios.addWidget(self._radio_axis_z, 0, 3)
 
-        grid_radios.addWidget(lbl_axis, 1, 0)
-        grid_radios.addWidget(self._radio_axis_x, 1, 1)
-        grid_radios.addWidget(self._radio_axis_y, 1, 2)
-        grid_radios.addWidget(self._radio_axis_z, 1, 3)
-
-        grid_radios.addWidget(lbl_rotation_mode, 2, 0)
-        grid_radios.addWidget(self._radio_rot_joint, 2, 1)
-        grid_radios.addWidget(self._radio_rot_aim, 2, 2)
-        grid_radios.addWidget(self._radio_rot_manual, 2, 3)
+        grid_radios.addWidget(lbl_rotation_mode, 1, 0)
+        grid_radios.addWidget(self._radio_rot_joint, 1, 1)
+        grid_radios.addWidget(self._radio_rot_aim, 1, 2)
+        grid_radios.addWidget(self._radio_rot_manual, 1, 3)
 
         grid_radios.setColumnStretch(4, 1)
         lay_create.addLayout(grid_radios)
@@ -345,7 +333,6 @@ class PlaneTab(QWidget):
         target_mesh = self._line_plane_target_mesh.text().strip() or None
         if not self._btn_toggle_target_mesh.isChecked():
             target_mesh = None
-        plane_type = "nurbs" if self._btn_group_plane_type.checkedId() == 0 else "poly"
 
         rotation_mode_id = self._btn_group_rotation_mode.checkedId()
         rotation_mode_map = {0: "joint", 1: "aim", 2: "manual"}
@@ -378,7 +365,6 @@ class PlaneTab(QWidget):
             result = plane_command.create_plane_at_joint(
                 joint=joint,
                 target_mesh=target_mesh,
-                plane_type=plane_type,
                 rotation_mode=rotation_mode,
                 aim_joint=aim_joint,
                 aim_target=aim_target,
@@ -420,7 +406,6 @@ class PlaneTab(QWidget):
     def _collect_settings(self) -> dict:
         return {
             "use_target_mesh": self._btn_toggle_target_mesh.isChecked(),
-            "plane_type": self._btn_group_plane_type.checkedId(),
             "rotation_mode": self._btn_group_rotation_mode.checkedId(),
             "aim_target": self._combo_aim_target.currentIndex(),
             "manual_rotation_x": self._line_rot_x.text(),
@@ -435,12 +420,6 @@ class PlaneTab(QWidget):
     def _apply_settings(self, data: dict) -> None:
         use_target_mesh = data.get("use_target_mesh", True)
         self._btn_toggle_target_mesh.setChecked(use_target_mesh)
-
-        plane_type = data.get("plane_type", 0)
-        if plane_type == 1:
-            self._radio_plane_poly.setChecked(True)
-        else:
-            self._radio_plane_nurbs.setChecked(True)
 
         rotation_mode = data.get("rotation_mode", 0)
         rot_radios = {0: self._radio_rot_joint, 1: self._radio_rot_aim, 2: self._radio_rot_manual}

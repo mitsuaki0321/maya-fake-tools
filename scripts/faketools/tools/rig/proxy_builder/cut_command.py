@@ -220,13 +220,11 @@ def separate_by_planes(
     cutters: list[str],
     duplicate: bool = True,
 ) -> list[str]:
-    """Separate a mesh by cutting it with surface objects.
-
-    Supports both NURBS surfaces and polygon meshes as cutters.
+    """Separate a mesh by cutting it with polygon cutter meshes.
 
     Args:
         mesh (str): Source mesh transform name.
-        cutters (list[str]): Cutter surface node names.
+        cutters (list[str]): Polygon cutter node names.
         duplicate (bool): If True, keep the original mesh intact.
 
     Returns:
@@ -379,26 +377,24 @@ def _validate_mesh(mesh: str) -> None:
 
 
 def _validate_cutter_face_count(cutter: str) -> None:
-    """Check that a mesh cutter does not exceed the face count limit.
-
-    NURBS surface cutters are skipped (no limit).
+    """Check that a polygon cutter does not exceed the face count limit.
 
     Args:
         cutter (str): Cutter node name.
 
     Raises:
-        ValueError: If the cutter is a mesh with more faces than MAX_CUTTER_MESH_FACES.
+        ValueError: If the cutter is not a polygon mesh, or has more faces
+            than ``MAX_CUTTER_MESH_FACES``.
     """
     shapes = cmds.listRelatives(cutter, shapes=True) or []
     if not shapes:
-        return
+        raise ValueError(f"Cutter '{cutter}' has no shape.")
     if cmds.nodeType(shapes[0]) != "mesh":
-        return
+        raise ValueError(f"Cutter '{cutter}' is not a polygon mesh (got {cmds.nodeType(shapes[0])}).")
     face_count = cmds.polyEvaluate(cutter, face=True)
     if face_count > MAX_CUTTER_MESH_FACES:
         raise ValueError(
-            f"Cutter mesh '{cutter}' has {face_count} faces, exceeding the limit of {MAX_CUTTER_MESH_FACES}. "
-            f"Use a lower-poly mesh or a NURBS surface instead."
+            f"Cutter mesh '{cutter}' has {face_count} faces, exceeding the limit of {MAX_CUTTER_MESH_FACES}. Use a lower-poly cutter instead."
         )
 
 

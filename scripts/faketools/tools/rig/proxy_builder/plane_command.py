@@ -20,7 +20,6 @@ logger = getLogger(__name__)
 
 _DEFAULT_PLANE_PREFIX = "cut_plane"
 
-PlaneType = Literal["nurbs", "poly"]
 RotationMode = Literal["joint", "aim", "manual"]
 AimTarget = Literal["auto", "parent", "chain"]
 MirrorAxis = Literal["x", "y", "z"]
@@ -160,19 +159,6 @@ def _resolve_aim_direction(
     raise ValueError(f"Invalid aim_target: '{aim_target}'. Must be 'auto', 'parent', or 'chain'.")
 
 
-def _validate_plane_type(plane_type: PlaneType) -> None:
-    """Validate plane_type parameter.
-
-    Args:
-        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
-
-    Raises:
-        ValueError: If *plane_type* is unsupported.
-    """
-    if plane_type not in ("nurbs", "poly"):
-        raise ValueError(f"Invalid plane_type: '{plane_type}'. Must be 'nurbs' or 'poly'.")
-
-
 def _validate_target_mesh(target_mesh: str) -> str:
     """Validate that *target_mesh* exists and return its mesh shape name.
 
@@ -249,37 +235,6 @@ def _generate_mirror_name(source_name: str) -> str:
 # ---------------------------------------------------------------------------
 # Geometry creation
 # ---------------------------------------------------------------------------
-
-
-def _create_nurbs_plane(
-    size: tuple[float, float],
-    axis: tuple[float, float, float],
-    spans: tuple[int, int],
-    name: str,
-) -> str:
-    """Create a NURBS plane.
-
-    Args:
-        size (tuple[float, float]): (width, height).
-        axis (tuple[float, float, float]): Normal axis.
-        spans (tuple[int, int]): (patchesU, patchesV).
-        name (str): Node name.
-
-    Returns:
-        str: Transform name.
-    """
-    width, height = size
-    length_ratio = height / width if width != 0 else 1.0
-
-    result = cmds.nurbsPlane(
-        width=width,
-        lengthRatio=length_ratio,
-        patchesU=spans[0],
-        patchesV=spans[1],
-        axis=axis,
-        name=name,
-    )
-    return result[0]
 
 
 def _create_poly_plane(
@@ -414,7 +369,7 @@ def _get_plane_surface_axes(
     the plane surface after that rotation.
 
     The returned axes are derived via cross-product from the normal and a
-    reference-up vector, matching Maya's polyPlane/nurbsPlane UV convention.
+    reference-up vector, matching Maya's ``polyPlane`` UV convention.
 
     Args:
         rotation (tuple[float, float, float]): Euler rotation in degrees.
@@ -423,7 +378,7 @@ def _get_plane_surface_axes(
     Returns:
         tuple[om.MVector, om.MVector]: (width_axis, height_axis) matching Maya's plane UV layout.
     """
-    # Derive UV directions via cross-product, matching Maya's nurbsPlane / polyPlane convention
+    # Derive UV directions via cross-product, matching Maya's polyPlane convention
     normal = om.MVector(*axis).normal()
     ref_up = om.MVector(0, 1, 0)
     if abs(normal * ref_up) > 0.9999:
@@ -569,47 +524,36 @@ def create_plane(
     position: tuple[float, float, float] = (0.0, 0.0, 0.0),
     rotation: tuple[float, float, float] = (0.0, 0.0, 0.0),
     size: tuple[float, float] = (1.0, 1.0),
-    plane_type: PlaneType = "nurbs",
     axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
     spans: tuple[int, int] = (1, 1),
     name: str | None = None,
 ) -> str:
-    """Create a cutting plane with explicit parameters.
+    """Create a polygon cutting plane with explicit parameters.
 
     Args:
         position (tuple[float, float, float]): World-space position.
         rotation (tuple[float, float, float]): World-space Euler rotation (degrees).
         size (tuple[float, float]): (width, height) of the plane.
-        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
-        axis (tuple[float, float, float]): Primitive normal axis (passed to cmds ``ax`` flag).
-        spans (tuple[int, int]): Patch/subdivision counts (U, V).
+        axis (tuple[float, float, float]): Primitive normal axis (passed to ``cmds.polyPlane`` ``ax`` flag).
+        spans (tuple[int, int]): Subdivision counts (U, V).
         name (str | None): Explicit name, or ``None`` for auto-generated.
 
     Returns:
         str: Transform name of the created plane.
-
-    Raises:
-        ValueError: If *plane_type* is invalid.
     """
-    _validate_plane_type(plane_type)
     resolved_name = _generate_plane_name(name)
-
-    if plane_type == "nurbs":
-        transform = _create_nurbs_plane(size, axis, spans, resolved_name)
-    else:
-        transform = _create_poly_plane(size, axis, spans, resolved_name)
+    transform = _create_poly_plane(size, axis, spans, resolved_name)
 
     cmds.xform(transform, translation=position, worldSpace=True)
     cmds.xform(transform, rotation=rotation, worldSpace=True)
 
-    logger.info("Created cut plane: %s (type=%s, size=%s)", transform, plane_type, size)
+    logger.info("Created cut plane: %s (size=%s)", transform, size)
     return transform
 
 
 def create_plane_at_joint(
     joint: str,
     target_mesh: str | None = None,
-    plane_type: PlaneType = "nurbs",
     axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
     rotation_mode: RotationMode = "joint",
     aim_joint: str | None = None,
@@ -620,12 +564,11 @@ def create_plane_at_joint(
     size_scale: float = 1.0,
     size_ratio_threshold: float = 3.0,
 ) -> str:
-    """Create a cutting plane at a joint's position.
+    """Create a polygon cutting plane at a joint's position.
 
     Args:
         joint (str): Joint to place the plane at.
         target_mesh (str | None): Mesh for auto-size raycasting.
-        plane_type (PlaneType): ``"nurbs"`` or ``"poly"``.
         axis (tuple[float, float, float]): Primitive normal axis.
         rotation_mode (RotationMode): How to determine the plane rotation:
             - ``"aim"``: Auto-compute from joint→aim direction. See *aim_target*.
@@ -640,7 +583,7 @@ def create_plane_at_joint(
             - ``"chain"``: Use the parent→child vector (requires exactly 1 child).
         rotation (tuple[float, float, float] | None): Euler rotation (degrees) for ``rotation_mode="manual"``.
         size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
-        spans (tuple[int, int]): Patch/subdivision counts.
+        spans (tuple[int, int]): Subdivision counts.
         size_scale (float): When *target_mesh* is provided, used as a
             multiplier on the auto-sized dimensions. When *target_mesh* is
             ``None`` and *size* is also ``None``, used directly as the plane
@@ -655,11 +598,10 @@ def create_plane_at_joint(
         str: Transform name of the created plane.
 
     Raises:
-        ValueError: If *joint* is invalid, *plane_type* is unsupported,
-            *rotation_mode* is invalid, or *aim_target* is invalid.
+        ValueError: If *joint* is invalid, *rotation_mode* is invalid, or
+            *aim_target* is invalid.
     """
     joint = _validate_joint(joint)
-    _validate_plane_type(plane_type)
 
     if rotation_mode not in ("aim", "manual", "joint"):
         raise ValueError(f"Invalid rotation_mode: '{rotation_mode}'. Must be 'aim', 'manual', or 'joint'.")
@@ -713,7 +655,6 @@ def create_plane_at_joint(
         position=position,
         rotation=resolved_rotation,
         size=resolved_size,
-        plane_type=plane_type,
         axis=axis,
         spans=spans,
         name=name,
@@ -746,4 +687,4 @@ def mirror_plane(source: str, axis: MirrorAxis = "x") -> str:
     return duplicated
 
 
-__all__ = ["AimTarget", "MirrorAxis", "PlaneType", "RotationMode", "create_plane", "create_plane_at_joint", "mirror_plane"]
+__all__ = ["AimTarget", "MirrorAxis", "RotationMode", "create_plane", "create_plane_at_joint", "mirror_plane"]

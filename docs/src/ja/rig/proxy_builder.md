@@ -46,7 +46,7 @@ faketools.tools.rig.proxy_builder.ui.show_ui()
 
 3. `Cut Method` で ウエイト境界でカットするか ( `By Weights` )、カットプレーンでカットするか ( `By Planes` ) を選択します。
     - `By Weights`: `Source Meshes` に登録しているメッシュに スキンウエイトが設定されている場合のみそのウエイトの境界でメッシュをカットします。
-    - `By Planes`: モデルをカットプレーン ( メッシュか NURBSサーフェース ) で切断します。カットプレーンは `Plane` タブからも生成できます。
+    - `By Planes`: モデルをポリゴンカットプレーンで切断します。カットプレーンは `Plane` タブからも生成できます。
 
 4. `Cut` ボタンをクリックしてモデルをカットします。 **piece_grp** の下にカットされたモデルが生成されます。\
     ※ 複製したモデルで処理を行いたい場合は、`Keep Original Mesh` のチェックボックスをオンにして `Cut` を実行してください。
@@ -120,14 +120,7 @@ faketools.tools.rig.proxy_builder.ui.show_ui()
 - **Target Mesh**: サイズ自動計算の参照メッシュを選択して `Set`（任意）します。 設定した後は、 `ON/OFF` で参照するかどうかを決定します。
 
 
-#### Plane Type
-
-| タイプ | 説明 |
-|--------|------|
-| **NURBS** | NURBS プレーンを作成 |
-| **Poly** | ポリゴンプレーンを作成 |
-
-※ ポリゴンの場合、一つのフェース単位で切断が発生するためできるだけ低解像度のポリゴンを採用してください。フェースが 5 より多いポリゴンはエラーとしています。
+※ カッターはポリゴンプレーンとして作成されます。フェース単位で切断が発生するため、できるだけ低解像度のポリゴンを採用してください。フェースが 5 より多い場合はエラーになります。
 
 
 #### Axis
@@ -193,7 +186,6 @@ from faketools.tools.rig.proxy_builder import plane_command
 plane = plane_command.create_plane_at_joint(
     joint="LeftArm",
     target_mesh="body_geo",           # レイキャストでサイズ自動計算
-    plane_type="nurbs",               # "nurbs" or "poly"
     axis=(0, 1, 0),                   # 法線軸
     rotation_mode="aim",              # "joint", "aim", or "manual"
     aim_target="auto",                # "auto", "parent", or "chain"
@@ -204,7 +196,6 @@ plane = plane_command.create_plane_at_joint(
 # Target Mesh なしで固定サイズのプレーンを作成
 plane = plane_command.create_plane_at_joint(
     joint="Spine",
-    plane_type="nurbs",
     rotation_mode="joint",
     size_scale=15.0,                  # 辺長15のプレーン (Target Mesh 無し時)
 )
@@ -214,7 +205,6 @@ plane = plane_command.create_plane(
     position=(0, 100, 0),
     rotation=(0, 45, 0),
     size=(20.0, 10.0),
-    plane_type="nurbs",
 )
 
 # ミラーコピー

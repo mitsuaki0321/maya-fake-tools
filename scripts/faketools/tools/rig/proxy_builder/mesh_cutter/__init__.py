@@ -1,4 +1,4 @@
-"""Mesh Cutter - Cut polygon meshes along NURBS surface intersections."""
+"""Mesh Cutter - Cut polygon meshes along polygon plane cutters."""
 
 from .core import run
 

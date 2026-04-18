@@ -45,7 +45,7 @@ Split the mesh into per-bone pieces using weight boundaries or cutter planes.
 
 3. In `Cut Method`, choose whether to cut by weight boundaries (`By Weights`) or by cutter planes (`By Planes`).
     - `By Weights`: Cuts the mesh at skin weight boundaries. Only works when the meshes registered in `Source Meshes` have skin weights assigned.
-    - `By Planes`: Cuts the model using cutter planes (mesh or NURBS surface). Cutter planes can also be created from the `Plane` tab.
+    - `By Planes`: Cuts the model using polygon cutter planes. Cutter planes can also be created from the `Plane` tab.
 
 4. Click the `Cut` button to cut the model. The cut pieces are generated under **piece_grp**.\
     *To work on a duplicate of the model, enable the `Keep Original Mesh` checkbox before clicking `Cut`.*
@@ -119,14 +119,7 @@ Configure the options, select the joint(s) where you want to create cut planes (
 - **Target Mesh**: Select a reference mesh for automatic size calculation and click `Set` (optional). After setting, use `ON/OFF` to toggle whether to reference it.
 
 
-#### Plane Type
-
-| Type | Description |
-|------|-------------|
-| **NURBS** | Creates a NURBS plane |
-| **Poly** | Creates a polygon plane |
-
-*For polygons, cutting occurs per face, so use the lowest resolution polygon possible. Polygons with more than 5 faces will produce an error.*
+*Cutters are created as polygon planes. Cutting occurs per face, so keep the polygon count low — cutters with more than 5 faces are rejected.*
 
 
 #### Axis
@@ -192,7 +185,6 @@ from faketools.tools.rig.proxy_builder import plane_command
 plane = plane_command.create_plane_at_joint(
     joint="LeftArm",
     target_mesh="body_geo",           # raycast-based auto-sizing
-    plane_type="nurbs",               # "nurbs" or "poly"
     axis=(0, 1, 0),                   # normal axis
     rotation_mode="aim",              # "joint", "aim", or "manual"
     aim_target="auto",                # "auto", "parent", or "chain"
@@ -203,7 +195,6 @@ plane = plane_command.create_plane_at_joint(
 # Create a fixed-size plane without Target Mesh
 plane = plane_command.create_plane_at_joint(
     joint="Spine",
-    plane_type="nurbs",
     rotation_mode="joint",
     size_scale=15.0,                  # edge length of 15 (no Target Mesh)
 )
@@ -213,7 +204,6 @@ plane = plane_command.create_plane(
     position=(0, 100, 0),
     rotation=(0, 45, 0),
     size=(20.0, 10.0),
-    plane_type="nurbs",
 )
 
 # Mirror a plane

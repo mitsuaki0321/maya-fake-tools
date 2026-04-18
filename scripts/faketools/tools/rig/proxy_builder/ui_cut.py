@@ -233,15 +233,15 @@ class CutTab(QWidget):
     # ------------------------------------------------------------------
 
     def _on_add_cutters(self) -> None:
-        """Add selected surfaces/meshes to the cutters list (skip duplicates)."""
+        """Add selected polygon meshes to the cutters list (skip duplicates)."""
         sel = cmds.ls(selection=True, type="transform")
         if not sel:
-            cmds.warning("Proxy Builder: Select one or more surfaces or meshes")
+            cmds.warning("Proxy Builder: Select one or more polygon meshes")
             return
         existing = {self._list_cutters.item(i).text() for i in range(self._list_cutters.count())}
         for node in sel:
             shapes = cmds.listRelatives(node, shapes=True) or []
-            valid = any(cmds.nodeType(s) in ("mesh", "nurbsSurface") for s in shapes)
+            valid = any(cmds.nodeType(s) == "mesh" for s in shapes)
             if valid and node not in existing:
                 self._list_cutters.addItem(node)
 

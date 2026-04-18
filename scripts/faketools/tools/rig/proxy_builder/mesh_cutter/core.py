@@ -1,37 +1,17 @@
-"""Mesh Cutter main orchestration."""
+"""Mesh Cutter main orchestration.
 
-from collections.abc import Callable
+Every cutter is a polygon mesh; :func:`.mesh.cut` is called for each, the
+resulting intersection edges are detached with ``polySplitEdge``, and the
+target is finally separated into pieces via ``polySeparate``.
+"""
+
 from logging import getLogger
 
 import maya.cmds as cmds
 
+from .mesh import cut as mesh_cut
+
 logger = getLogger(__name__)
-
-
-def _get_cut_fn(cutter_name: str) -> Callable[[str, str], list[int]]:
-    """Return the appropriate cut function for a cutter node.
-
-    Args:
-        cutter_name (str): Node name of the cutter (polygon mesh or NURBS surface).
-
-    Returns:
-        Callable: The ``cut(cutter, target)`` callable from mesh or nurbs module.
-
-    Raises:
-        ValueError: If the cutter shape type is not supported.
-    """
-    shape = cmds.listRelatives(cutter_name, shapes=True)[0]
-    node_type = cmds.nodeType(shape)
-
-    if node_type == "nurbsSurface":
-        from .nurbs import cut
-
-        return cut
-    if node_type == "mesh":
-        from .mesh import cut
-
-        return cut
-    raise ValueError(f"Unsupported cutter type: {node_type}")
 
 
 def run(
@@ -41,21 +21,20 @@ def run(
     extract_faces: bool = True,
     duplicate: bool = False,
 ) -> list[str]:
-    """Cut a target mesh using one or more cutters, then separate the pieces.
-
-    For each cutter the appropriate cut module is selected automatically.
-    After all cuts are applied the resulting edges are detached and the mesh
-    is separated into individual pieces via ``polySeparate``.
+    """Cut a target mesh with one or more polygon cutters, then separate the pieces.
 
     Args:
-        cutters (list[str]): Mixed mesh / NURBS cutter node names.
+        cutters (list[str]): Polygon cutter node names.
         target (str): Node name of the target polygon mesh.
         separate_edges (bool): If True, detach cut edges before separating.
-        extract_faces (bool): If True, allow polySeparate to extract faces into new pieces.
+        extract_faces (bool): If True, allow ``polySeparate`` to extract
+            faces into new pieces.
         duplicate (bool): If True, duplicate the target before cutting.
 
     Returns:
-        list[str]: Separated piece transform names.
+        list[str]: Separated piece transform names. When no cuts were
+            applied, a one-element list containing the (possibly
+            duplicated) target is returned.
     """
     if not cutters:
         return [target]
@@ -75,33 +54,18 @@ def run(
 
     any_detach = False
     for cutter in cutters:
-        cut_fn = _get_cut_fn(cutter)
-        new_edges = cut_fn(cutter, target)
-        if new_edges:
-            first = new_edges[0]
-            last = new_edges[-1]
-            if separate_edges:
-                logger.debug(
-                    "detaching edges e[%d:%d] from cutter %s",
-                    first,
-                    last,
-                    cutter,
-                )
-                cmds.polySplitEdge(
-                    f"{target}.e[{first}:{last}]",
-                    operation=1,
-                    ch=False,
-                )
-                any_detach = True
-            else:
-                logger.debug(
-                    "cutter %s produced edges e[%d:%d] but separate_edges=False",
-                    cutter,
-                    first,
-                    last,
-                )
-        else:
+        new_edges = mesh_cut(cutter, target)
+        if not new_edges:
             logger.debug("cutter %s produced no new edges", cutter)
+            continue
+        first = new_edges[0]
+        last = new_edges[-1]
+        if separate_edges:
+            logger.debug("detaching edges e[%d:%d] from cutter %s", first, last, cutter)
+            cmds.polySplitEdge(f"{target}.e[{first}:{last}]", operation=1, ch=False)
+            any_detach = True
+        else:
+            logger.debug("cutter %s produced edges e[%d:%d] but separate_edges=False", cutter, first, last)
 
     if not any_detach:
         logger.debug("no edges detached, skipping polySeparate")
@@ -116,7 +80,6 @@ def run(
         logger.debug("polySeparate returned nothing")
         return [target]
 
-    # polySeparate may return shapes; resolve to parent transforms
     transforms: list[str] = []
     for node in pieces:
         if cmds.nodeType(node) == "transform":

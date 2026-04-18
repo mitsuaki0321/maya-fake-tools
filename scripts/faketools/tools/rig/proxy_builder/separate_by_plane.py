@@ -14,13 +14,11 @@ def cut_and_separate(
     cutters: list[str],
     duplicate: bool = True,
 ) -> list[str]:
-    """Cut a mesh using cutter surfaces and separate the pieces.
-
-    Supports both NURBS surfaces and polygon meshes as cutters.
+    """Cut a mesh using polygon cutter meshes and separate the pieces.
 
     Args:
         mesh (str): Target polygon mesh transform name.
-        cutters (list[str]): NURBS surface or polygon mesh cutter names.
+        cutters (list[str]): Polygon cutter mesh names.
         duplicate (bool): If True, duplicate the target before cutting.
 
     Returns:
