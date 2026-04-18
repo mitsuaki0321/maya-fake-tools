@@ -8,10 +8,12 @@ import maya.cmds as cmds  # type: ignore[import]
 
 from ....lib_ui.base_window import get_spacing
 from ....lib_ui.maya_decorator import error_handler, undo_chunk
+from ....lib_ui.maya_dialog import show_info_dialog, show_warning_dialog
 from ....lib_ui.qt_compat import (
     QButtonGroup,
     QComboBox,
     QDoubleValidator,
+    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -26,7 +28,8 @@ from ....lib_ui.qt_compat import (
 )
 from ....lib_ui.ui_utils import get_relative_size
 from ....lib_ui.widgets.extra_widgets import HorizontalSeparator
-from . import plane_command
+from . import plane_command, plane_io
+from .plane_io import PlaneSpec
 
 logger = getLogger(__name__)
 
@@ -259,6 +262,43 @@ class PlaneTab(QWidget):
         lay_mirror.addWidget(self._btn_mirror_plane)
 
         layout.addWidget(grp_mirror)
+
+        # === Export / Import ===
+        grp_io = QGroupBox("Export / Import")
+        lay_io = QVBoxLayout(grp_io)
+        lay_io.setSpacing(int(spacing * 0.5))
+
+        row_io_buttons = QHBoxLayout()
+        self._btn_export_planes = QPushButton("Export Planes...")
+        self._btn_export_planes.setToolTip("Export every plane carrying proxyBuilderMetadata to a JSON file.")
+        self._btn_export_planes.setMinimumHeight(int(height * 0.08))
+        self._btn_import_planes = QPushButton("Import Planes...")
+        self._btn_import_planes.setToolTip("Recreate planes from a previously exported JSON file.\nUses the Target Mesh field below.")
+        self._btn_import_planes.setMinimumHeight(int(height * 0.08))
+        row_io_buttons.addWidget(self._btn_export_planes)
+        row_io_buttons.addWidget(self._btn_import_planes)
+        lay_io.addLayout(row_io_buttons)
+
+        # Optional target_mesh override for import
+        row_tm = QHBoxLayout()
+        lbl_import_tm = QLabel("Target Mesh:")
+        lbl_import_tm.setFixedWidth(stacked_label_width)
+        lbl_import_tm.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        row_tm.addWidget(lbl_import_tm)
+        self._line_import_target_mesh = QLineEdit()
+        self._line_import_target_mesh.setReadOnly(True)
+        self._line_import_target_mesh.setPlaceholderText("(optional, overrides the stored target mesh)")
+        self._line_import_target_mesh.setToolTip(
+            "When set, every imported plane uses this mesh as Target Mesh,\n"
+            "replacing whatever was stored in the JSON. Useful when the target\n"
+            "scene's body mesh has a different name than the source scene's."
+        )
+        row_tm.addWidget(self._line_import_target_mesh, 1)
+        self._btn_set_import_target_mesh = QPushButton("Set")
+        row_tm.addWidget(self._btn_set_import_target_mesh)
+        lay_io.addLayout(row_tm)
+
+        layout.addWidget(grp_io)
         layout.addStretch()
 
     # ------------------------------------------------------------------
@@ -275,6 +315,9 @@ class PlaneTab(QWidget):
         )
         self._btn_create_plane.clicked.connect(self._on_create_plane)
         self._btn_mirror_plane.clicked.connect(self._on_mirror_plane)
+        self._btn_export_planes.clicked.connect(self._on_export_planes)
+        self._btn_import_planes.clicked.connect(self._on_import_planes)
+        self._btn_set_import_target_mesh.clicked.connect(self._on_set_import_target_mesh)
 
     # ------------------------------------------------------------------
     # Slots
@@ -362,7 +405,7 @@ class PlaneTab(QWidget):
 
         results = []
         for joint in joints:
-            result = plane_command.create_plane_at_joint(
+            spec = PlaneSpec(
                 joint=joint,
                 target_mesh=target_mesh,
                 rotation_mode=rotation_mode,
@@ -373,10 +416,69 @@ class PlaneTab(QWidget):
                 size_ratio_threshold=size_ratio_threshold,
                 axis=axis,
             )
+            result = plane_command.create_plane_at_joint(spec)
             results.append(result)
 
         cmds.select(results, replace=True)
         logger.info("Created %d plane(s): %s", len(results), results)
+
+    def _on_set_import_target_mesh(self) -> None:
+        """Set the import target mesh override from Maya selection, or clear if nothing is selected."""
+        sel = cmds.ls(selection=True, type="transform")
+        if not sel:
+            self._line_import_target_mesh.clear()
+            return
+        mesh = sel[0]
+        if not cmds.listRelatives(mesh, shapes=True, type="mesh"):
+            cmds.warning(f"Proxy Builder: '{mesh}' is not a mesh transform")
+            return
+        self._line_import_target_mesh.setText(mesh)
+
+    @error_handler
+    def _on_export_planes(self) -> None:
+        """Export every managed plane in the scene to a user-chosen JSON file."""
+        file_dialog = QFileDialog(self)
+        file_dialog.setAcceptMode(QFileDialog.AcceptSave)
+        file_dialog.setNameFilter("JSON Files (*.json)")
+        file_dialog.setDefaultSuffix("json")
+        if file_dialog.exec_() != QFileDialog.Accepted:
+            return
+
+        path = file_dialog.selectedFiles()[0]
+        exported = plane_io.export_planes_to_file(path)
+        if not exported:
+            show_warning_dialog(
+                "Export Planes",
+                "No planes with Proxy Builder metadata were found in the scene.\nNothing was written.",
+            )
+            return
+
+        logger.info("Exported %d plane(s) to %s", len(exported), path)
+        show_info_dialog("Export Planes", f"Exported {len(exported)} plane(s) to:\n{path}")
+
+    @error_handler
+    @undo_chunk("Proxy Builder: Import Planes")
+    def _on_import_planes(self) -> None:
+        """Recreate planes from a JSON file produced by Export Planes."""
+        file_dialog = QFileDialog(self)
+        file_dialog.setAcceptMode(QFileDialog.AcceptOpen)
+        file_dialog.setNameFilter("JSON Files (*.json)")
+        if file_dialog.exec_() != QFileDialog.Accepted:
+            return
+
+        path = file_dialog.selectedFiles()[0]
+        target_mesh_override = self._line_import_target_mesh.text().strip() or None
+
+        created = plane_io.import_planes_from_file(path, target_mesh_override=target_mesh_override)
+        if not created:
+            show_warning_dialog(
+                "Import Planes",
+                "No planes were created.\nAll entries were skipped (missing joints or duplicate planes).",
+            )
+            return
+
+        cmds.select(created, replace=True)
+        logger.info("Imported %d plane(s) from %s", len(created), path)
 
     @error_handler
     @undo_chunk("Proxy Builder: Mirror Plane")
@@ -415,6 +517,7 @@ class PlaneTab(QWidget):
             "size_ratio_threshold": self._line_size_ratio.text(),
             "plane_axis": self._btn_group_axis.checkedId(),
             "mirror_axis": self._btn_group_mirror_axis.checkedId(),
+            "import_target_mesh": self._line_import_target_mesh.text(),
         }
 
     def _apply_settings(self, data: dict) -> None:
@@ -441,3 +544,5 @@ class PlaneTab(QWidget):
         mirror_axis = data.get("mirror_axis", 0)
         mirror_radios = {0: self._radio_mirror_x, 1: self._radio_mirror_y, 2: self._radio_mirror_z}
         mirror_radios.get(mirror_axis, self._radio_mirror_x).setChecked(True)
+
+        self._line_import_target_mesh.setText(str(data.get("import_target_mesh", "")))

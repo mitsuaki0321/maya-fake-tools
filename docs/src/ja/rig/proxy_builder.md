@@ -173,17 +173,32 @@ Size Ratio Limit は、正負方向のレイ距離の比率（長い側 ÷ 短�
 - **Mirror Axis**: ミラーする軸（X / Y / Z）
 - 対象のプレーンを選択して `Mirror` をクリック
 
+### Export / Import
+
+`Create Plane at Joint` で作成したプレーンを JSON ファイルへエクスポートし、別シーンで再生成します。腕や胴体など単純な部位を対象とした機能で、対象シーンに同じジョイント名が存在することが前提です。
+
+`Create Plane at Joint` で作成したプレーンにはその作成パラメータのメタデータが埋め込まれます。ミラーなど別の経路で作成されたプレーンはメタデータを持たないため、エクスポート対象になりません。
+
+- **Export Planes**: Proxy Builder メタデータを持つシーン内のプレーンをすべて、指定した JSON ファイルへ書き出します。
+- **Import Planes**: 既存の JSON ファイルを読み込み、プレーンを再生成します。ジョイントが存在しないエントリはワーニングを出しスキップ、同名のプレーンが既にシーンに存在するエントリもスキップされます。
+- **Target Mesh**: Import 時にすべてのプレーンの Target Mesh を差し替えるメッシュ（任意）。メッシュを選択して `Set` で登録します。読み込み先のシーンでボディメッシュ名が異なる場合に便利です。空欄の場合は各プレーンの保存された Target Mesh がそのまま使用されます。
+
+*肩、股関節、指などの複雑な部位はこのシステムでのラウンドトリップを想定していません --- リグごとに専用のレシピスクリプトを用意してください。*
+
 ## コマンド API リファレンス
 
 UI を介さずスクリプトから直接各ステップを実行できます。以下はワークフロー順のコード例です。
 
 ### Plane — カッタープレーンの作成
 
+`create_plane_at_joint` は作成パラメータを `PlaneSpec` データクラスで受け取ります。作成後、同じ仕様がプレーンの `proxyBuilderMetadata` アトリビュートに JSON として埋め込まれ、`plane_io.export_planes_to_file` でファイルへエクスポートできます。
+
 ```python
 from faketools.tools.rig.proxy_builder import plane_command
+from faketools.tools.rig.proxy_builder.plane_io import PlaneSpec
 
 # ジョイントの位置にプレーンを作成（Target Mesh で自動サイズ計算）
-plane = plane_command.create_plane_at_joint(
+spec = PlaneSpec(
     joint="LeftArm",
     target_mesh="body_geo",           # レイキャストでサイズ自動計算
     axis=(0, 1, 0),                   # 法線軸
@@ -192,15 +207,18 @@ plane = plane_command.create_plane_at_joint(
     size_scale=1.2,                   # 自動サイズへの倍率
     size_ratio_threshold=3.0,         # レイ距離の異常値検出閾値
 )
+plane = plane_command.create_plane_at_joint(spec)
 
 # Target Mesh なしで固定サイズのプレーンを作成
 plane = plane_command.create_plane_at_joint(
-    joint="Spine",
-    rotation_mode="joint",
-    size_scale=15.0,                  # 辺長15のプレーン (Target Mesh 無し時)
+    PlaneSpec(
+        joint="Spine",
+        rotation_mode="joint",
+        size_scale=15.0,              # 辺長15のプレーン (Target Mesh 無し時)
+    )
 )
 
-# 明示的パラメータで直接作成
+# 明示的パラメータで直接作成（メタデータは埋め込まれません）
 plane = plane_command.create_plane(
     position=(0, 100, 0),
     rotation=(0, 45, 0),
@@ -209,6 +227,26 @@ plane = plane_command.create_plane(
 
 # ミラーコピー
 mirrored = plane_command.mirror_plane(source=plane, axis="x")
+```
+
+#### Plane 仕様のエクスポート / インポート
+
+`PlaneSpec` を介して作成されたプレーンは、シーンをまたいで再生成できます。
+
+```python
+from faketools.tools.rig.proxy_builder import plane_io
+
+# シーン内のマネージドプレーンをすべて JSON ファイルへ出力
+plane_io.export_planes_to_file("C:/path/to/cut_planes.json")
+
+# 別シーンで再生成（同じ骨構造であることが前提）
+plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
+
+# すべてのプレーンの target_mesh を差し替える場合
+plane_io.import_planes_from_file(
+    "C:/path/to/cut_planes.json",
+    target_mesh_override="char_B_body_geo",
+)
 ```
 
 ### Cut — メッシュの切断

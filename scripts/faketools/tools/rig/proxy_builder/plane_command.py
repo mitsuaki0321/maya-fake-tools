@@ -15,13 +15,12 @@ from ....lib.lib_mesh import MeshPoint
 from ....lib.lib_selection import get_shapes
 from ....lib_ui.shared_config import get_shared_config
 from ....operations.mirror import mirror_transforms
+from .plane_io import AimTarget, PlaneSpec, embed_metadata
 
 logger = getLogger(__name__)
 
 _DEFAULT_PLANE_PREFIX = "cut_plane"
 
-RotationMode = Literal["joint", "aim", "manual"]
-AimTarget = Literal["auto", "parent", "chain"]
 MirrorAxis = Literal["x", "y", "z"]
 
 
@@ -198,6 +197,24 @@ def _generate_plane_name(base_name: str | None) -> str:
     if base_name:
         return base_name
     return _DEFAULT_PLANE_PREFIX
+
+
+def plane_name_for_joint(joint: str) -> str:
+    """Return the auto-generated plane name for *joint* without creating it.
+
+    Strips DAG path separators and namespaces so the result matches what
+    :func:`create_plane_at_joint` would produce. Callers can use this to
+    detect pre-existing planes before deciding whether to create a new one
+    (e.g. on import).
+
+    Args:
+        joint (str): Joint name. May include DAG path or namespace.
+
+    Returns:
+        str: Auto-generated plane transform name.
+    """
+    short_name = joint.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+    return f"{short_name}_{_DEFAULT_PLANE_PREFIX}"
 
 
 def _generate_mirror_name(source_name: str) -> str:
@@ -551,114 +568,86 @@ def create_plane(
     return transform
 
 
-def create_plane_at_joint(
-    joint: str,
-    target_mesh: str | None = None,
-    axis: tuple[float, float, float] = (0.0, 1.0, 0.0),
-    rotation_mode: RotationMode = "joint",
-    aim_joint: str | None = None,
-    aim_target: AimTarget = "auto",
-    rotation: tuple[float, float, float] | None = None,
-    size: tuple[float, float] | None = None,
-    spans: tuple[int, int] = (1, 1),
-    size_scale: float = 1.0,
-    size_ratio_threshold: float = 3.0,
-) -> str:
-    """Create a polygon cutting plane at a joint's position.
+def create_plane_at_joint(spec: PlaneSpec) -> str:
+    """Create a polygon cutting plane at a joint's position from a spec.
+
+    All creation parameters are supplied via a :class:`.plane_io.PlaneSpec`.
+    After the plane is created, the same spec is re-embedded on the plane
+    transform as ``proxyBuilderMetadata`` so the plane can be
+    round-tripped through :func:`.plane_io.export_planes_to_file`.
 
     Args:
-        joint (str): Joint to place the plane at.
-        target_mesh (str | None): Mesh for auto-size raycasting.
-        axis (tuple[float, float, float]): Primitive normal axis.
-        rotation_mode (RotationMode): How to determine the plane rotation:
-            - ``"aim"``: Auto-compute from joint→aim direction. See *aim_target*.
-            - ``"manual"``: Use the explicit *rotation* value. Requires *rotation*.
-            - ``"joint"``: Use the joint's world rotation (default). No extra args needed.
-        aim_joint (str | None): Target joint for ``rotation_mode="aim"``.
-            If provided, *aim_target* is ignored and the direction is computed
-            from joint → aim_joint.  If ``None``, resolution depends on *aim_target*.
-        aim_target (AimTarget): How to resolve the aim direction when *aim_joint* is ``None``:
-            - ``"auto"``: Child joint preferred, parent fallback (default).
-            - ``"parent"``: Always aim toward the parent joint.
-            - ``"chain"``: Use the parent→child vector (requires exactly 1 child).
-        rotation (tuple[float, float, float] | None): Euler rotation (degrees) for ``rotation_mode="manual"``.
-        size (tuple[float, float] | None): Explicit (width, height), or ``None`` for auto.
-        spans (tuple[int, int]): Subdivision counts.
-        size_scale (float): When *target_mesh* is provided, used as a
-            multiplier on the auto-sized dimensions. When *target_mesh* is
-            ``None`` and *size* is also ``None``, used directly as the plane
-            edge length in world units.
-        size_ratio_threshold (float): When auto-sizing with *target_mesh*,
-            opposite-direction raycast distances whose ratio exceeds this
-            value are treated as internal-penetration outliers; the shorter
-            distance is then used symmetrically instead of the longer one.
-            Defaults to 3.0.
+        spec (PlaneSpec): Specification describing joint, orientation,
+            sizing, and subdivisions. See :class:`.plane_io.PlaneSpec` for
+            per-field semantics.
 
     Returns:
         str: Transform name of the created plane.
 
     Raises:
-        ValueError: If *joint* is invalid, *rotation_mode* is invalid, or
-            *aim_target* is invalid.
+        ValueError: If ``spec.joint`` is invalid, ``spec.rotation_mode`` is
+            invalid, or ``spec.aim_target`` is invalid.
     """
-    joint = _validate_joint(joint)
+    joint = _validate_joint(spec.joint)
 
-    if rotation_mode not in ("aim", "manual", "joint"):
-        raise ValueError(f"Invalid rotation_mode: '{rotation_mode}'. Must be 'aim', 'manual', or 'joint'.")
+    if spec.rotation_mode not in ("aim", "manual", "joint"):
+        raise ValueError(f"Invalid rotation_mode: '{spec.rotation_mode}'. Must be 'aim', 'manual', or 'joint'.")
 
     # Position
     position = tuple(cmds.xform(joint, query=True, translation=True, worldSpace=True))
 
     # Rotation
-    if rotation_mode == "aim":
-        if aim_target not in ("auto", "parent", "chain"):
-            raise ValueError(f"Invalid aim_target: '{aim_target}'. Must be 'auto', 'parent', or 'chain'.")
-        if rotation is not None:
+    if spec.rotation_mode == "aim":
+        if spec.aim_target not in ("auto", "parent", "chain"):
+            raise ValueError(f"Invalid aim_target: '{spec.aim_target}'. Must be 'auto', 'parent', or 'chain'.")
+        if spec.rotation is not None:
             logger.warning("rotation_mode='aim': rotation parameter is ignored.")
-        aim_dir = _resolve_aim_direction(joint, aim_target, aim_joint)
-        resolved_rotation = _find_aim_axis_and_up(joint, aim_dir, axis)
-    elif rotation_mode == "manual":
-        if rotation is None:
+        aim_dir = _resolve_aim_direction(joint, spec.aim_target, spec.aim_joint)
+        resolved_rotation = _find_aim_axis_and_up(joint, aim_dir, spec.axis)
+    elif spec.rotation_mode == "manual":
+        if spec.rotation is None:
             logger.warning("rotation_mode='manual' but rotation is not specified. Falling back to joint rotation.")
             resolved_rotation = _get_joint_world_rotation(joint)
         else:
-            if aim_joint is not None:
+            if spec.aim_joint is not None:
                 logger.warning("rotation_mode='manual': aim_joint parameter is ignored.")
-            resolved_rotation = rotation
+            resolved_rotation = spec.rotation
     else:  # "joint"
-        if aim_joint is not None:
+        if spec.aim_joint is not None:
             logger.warning("rotation_mode='joint': aim_joint parameter is ignored.")
-        if rotation is not None:
+        if spec.rotation is not None:
             logger.warning("rotation_mode='joint': rotation parameter is ignored.")
         resolved_rotation = _get_joint_world_rotation(joint)
 
     # Size
-    if size is not None:
-        resolved_size = size
-    elif target_mesh is not None:
-        mesh_shape = _validate_target_mesh(target_mesh)
-        axis_a, axis_b = _get_plane_surface_axes(resolved_rotation, axis)
-        auto = _raycast_auto_size(position, axis_a, axis_b, mesh_shape, ratio_threshold=size_ratio_threshold)
+    if spec.size is not None:
+        resolved_size = spec.size
+    elif spec.target_mesh is not None:
+        mesh_shape = _validate_target_mesh(spec.target_mesh)
+        axis_a, axis_b = _get_plane_surface_axes(resolved_rotation, spec.axis)
+        auto = _raycast_auto_size(position, axis_a, axis_b, mesh_shape, ratio_threshold=spec.size_ratio_threshold)
         if auto is not None:
-            resolved_size = (auto[0] * size_scale, auto[1] * size_scale)
+            resolved_size = (auto[0] * spec.size_scale, auto[1] * spec.size_scale)
         else:
             logger.warning("Raycast failed, falling back to bounding box size.")
-            fallback = _bounding_box_fallback_size(target_mesh)
-            resolved_size = (fallback[0] * size_scale, fallback[1] * size_scale)
+            fallback = _bounding_box_fallback_size(spec.target_mesh)
+            resolved_size = (fallback[0] * spec.size_scale, fallback[1] * spec.size_scale)
     else:
-        resolved_size = (size_scale, size_scale)
+        resolved_size = (spec.size_scale, spec.size_scale)
 
-    short_name = joint.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
-    name = f"{short_name}_{_DEFAULT_PLANE_PREFIX}"
+    name = plane_name_for_joint(joint)
 
-    return create_plane(
+    plane = create_plane(
         position=position,
         rotation=resolved_rotation,
         size=resolved_size,
-        axis=axis,
-        spans=spans,
+        axis=spec.axis,
+        spans=spec.spans,
         name=name,
     )
+
+    embed_metadata(plane, spec)
+    return plane
 
 
 def mirror_plane(source: str, axis: MirrorAxis = "x") -> str:
@@ -687,4 +676,10 @@ def mirror_plane(source: str, axis: MirrorAxis = "x") -> str:
     return duplicated
 
 
-__all__ = ["AimTarget", "MirrorAxis", "RotationMode", "create_plane", "create_plane_at_joint", "mirror_plane"]
+__all__ = [
+    "MirrorAxis",
+    "create_plane",
+    "create_plane_at_joint",
+    "mirror_plane",
+    "plane_name_for_joint",
+]

@@ -172,17 +172,32 @@ Mirrors the selected plane(s) along the specified axis. The mirrored name is aut
 - **Mirror Axis**: Axis to mirror along (X / Y / Z)
 - Select the plane(s) and click `Mirror`
 
+### Export / Import
+
+Exports every plane created via `Create Plane at Joint` to a JSON file and re-creates them in another scene. Intended for simple body parts such as arms and torso; the same joint names must exist in the target scene.
+
+Planes created through `Create Plane at Joint` carry metadata describing how they were built. Planes created via mirroring or other means do not carry metadata and are excluded from export.
+
+- **Export Planes**: Writes every plane carrying Proxy Builder metadata to a JSON file of your choice.
+- **Import Planes**: Reads a previously exported JSON file and re-creates the planes. Entries whose joint is missing are warned and skipped; entries whose plane name already exists in the scene are also skipped.
+- **Target Mesh**: Optional mesh that overrides the stored target mesh on every imported plane. Select a mesh and click `Set`. Useful when the destination scene's body mesh has a different name than the source's. Leave empty to keep each plane's original target mesh.
+
+*Complex joints like shoulders, hips, and fingers are not intended to round-trip through this system --- use a dedicated recipe script per rig.*
+
 ## Command API Reference
 
 Each step can be executed directly from a script without the UI. Below are code examples in workflow order.
 
 ### Plane --- Creating Cutter Planes
 
+`create_plane_at_joint` takes its creation parameters as a `PlaneSpec` dataclass. After the plane is created, the same spec is embedded onto the plane as a JSON string attribute named `proxyBuilderMetadata`, which makes it exportable via `plane_io.export_planes_to_file`.
+
 ```python
 from faketools.tools.rig.proxy_builder import plane_command
+from faketools.tools.rig.proxy_builder.plane_io import PlaneSpec
 
 # Create a plane at a joint (auto-sized via Target Mesh raycast)
-plane = plane_command.create_plane_at_joint(
+spec = PlaneSpec(
     joint="LeftArm",
     target_mesh="body_geo",           # raycast-based auto-sizing
     axis=(0, 1, 0),                   # normal axis
@@ -191,15 +206,18 @@ plane = plane_command.create_plane_at_joint(
     size_scale=1.2,                   # multiplier on auto-sized result
     size_ratio_threshold=3.0,         # outlier-rejection ratio threshold
 )
+plane = plane_command.create_plane_at_joint(spec)
 
 # Create a fixed-size plane without Target Mesh
 plane = plane_command.create_plane_at_joint(
-    joint="Spine",
-    rotation_mode="joint",
-    size_scale=15.0,                  # edge length of 15 (no Target Mesh)
+    PlaneSpec(
+        joint="Spine",
+        rotation_mode="joint",
+        size_scale=15.0,              # edge length of 15 (no Target Mesh)
+    )
 )
 
-# Create directly with explicit parameters
+# Create directly with explicit parameters (no metadata embedded)
 plane = plane_command.create_plane(
     position=(0, 100, 0),
     rotation=(0, 45, 0),
@@ -208,6 +226,26 @@ plane = plane_command.create_plane(
 
 # Mirror a plane
 mirrored = plane_command.mirror_plane(source=plane, axis="x")
+```
+
+#### Exporting / Importing Plane Specs
+
+Planes created through a `PlaneSpec` can be re-created across scenes.
+
+```python
+from faketools.tools.rig.proxy_builder import plane_io
+
+# Export every managed plane in the scene to a JSON file
+plane_io.export_planes_to_file("C:/path/to/cut_planes.json")
+
+# Recreate them in another scene (assumes the same skeleton structure)
+plane_io.import_planes_from_file("C:/path/to/cut_planes.json")
+
+# Override target_mesh for every imported plane
+plane_io.import_planes_from_file(
+    "C:/path/to/cut_planes.json",
+    target_mesh_override="char_B_body_geo",
+)
 ```
 
 ### Cut --- Splitting the Mesh
