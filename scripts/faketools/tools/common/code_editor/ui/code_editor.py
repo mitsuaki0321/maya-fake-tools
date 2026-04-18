@@ -553,13 +553,16 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             self._clear_multi_selections()
 
         # Handle Home key with smart home behavior (single-cursor mode)
+        # Toggles between first non-whitespace position and line start on repeated presses
         if event.key() == Qt.Key_Home and not (event.modifiers() & Qt.ControlModifier):
             cursor = self.textCursor()
             smart_home_pos = self.get_first_non_whitespace_position(cursor)
+            line_start_pos = cursor.block().position()
+            target_pos = line_start_pos if cursor.position() == smart_home_pos else smart_home_pos
             if event.modifiers() & Qt.ShiftModifier:
-                cursor.setPosition(smart_home_pos, QTextCursor.KeepAnchor)
+                cursor.setPosition(target_pos, QTextCursor.KeepAnchor)
             else:
-                cursor.setPosition(smart_home_pos)
+                cursor.setPosition(target_pos)
             self.setTextCursor(cursor)
             return
 
@@ -967,17 +970,147 @@ except Exception as e:
         stripped_before = text_before_cursor.strip()
         needs_extra_indent = stripped_before.endswith(":") and not stripped_before.startswith("#")
 
+        # Look for an unclosed opening bracket on the current line (hanging indent)
+        bracket_column = self._find_hanging_indent_column(text_before_cursor)
+
+        # If the line starts with a closing bracket, align with the matching opener's line
+        closing_dedent = None
+        if bracket_column < 0:
+            closing_dedent = self._find_closing_bracket_alignment(block_number, current_line)
+
         # Restore cursor to original position
         cursor.setPosition(current_position)
         self.setTextCursor(cursor)
 
         # Insert newline with indentation
-        new_indent = current_indent
-        if needs_extra_indent:
-            new_indent += "    "  # Add 4 spaces for Python
+        if bracket_column >= 0:
+            new_indent = " " * bracket_column
+        elif closing_dedent is not None:
+            new_indent = closing_dedent
+        elif needs_extra_indent:
+            new_indent = current_indent + "    "  # Add 4 spaces for Python
+        else:
+            new_indent = current_indent
 
         newline_text = "\n" + new_indent
         self.insertPlainText(newline_text)
+
+    @staticmethod
+    def _iter_code_brackets(text: str):
+        """Yield ``(index, char)`` for bracket characters in ``text``.
+
+        Skips Python single-line / triple-quoted string literals and
+        ``#`` comments so that brackets inside them are not reported.
+
+        Args:
+            text (str): Source text to scan.
+
+        Yields:
+            tuple[int, str]: ``(index, char)`` pairs where ``char`` is one
+                of ``()[]{}``.
+        """
+        i = 0
+        n = len(text)
+        while i < n:
+            ch = text[i]
+            if ch == "#":
+                return
+            if ch in ('"', "'"):
+                quote = ch
+                if text[i : i + 3] == quote * 3:
+                    i += 3
+                    while i < n:
+                        if text[i : i + 3] == quote * 3:
+                            i += 3
+                            break
+                        if text[i] == "\\" and i + 1 < n:
+                            i += 2
+                            continue
+                        i += 1
+                    continue
+                i += 1
+                while i < n:
+                    if text[i] == "\\" and i + 1 < n:
+                        i += 2
+                        continue
+                    if text[i] == quote:
+                        i += 1
+                        break
+                    i += 1
+                continue
+            if ch in "([{)]}":
+                yield i, ch
+            i += 1
+
+    @staticmethod
+    def _find_hanging_indent_column(text_before_cursor: str) -> int:
+        """Find the column right after the last unclosed opening bracket.
+
+        Scans the given text left-to-right, skipping Python string literals
+        and comments, and returns the 0-based column position immediately
+        after the last unclosed ``(``, ``[`` or ``{``.
+
+        Args:
+            text_before_cursor (str): Text from the start of the current line
+                up to the cursor position.
+
+        Returns:
+            int: Column index to align the next line to. ``-1`` when there is
+                no unclosed bracket on the current line.
+        """
+        stack: list[int] = []
+        for idx, ch in PythonEditor._iter_code_brackets(text_before_cursor):
+            if ch in "([{":
+                stack.append(idx)
+            elif stack:
+                stack.pop()
+
+        if not stack:
+            return -1
+        return stack[-1] + 1
+
+    def _find_closing_bracket_alignment(self, current_block_number: int, current_line: str) -> "str | None":
+        """Return the indent of the line containing the matching opener.
+
+        Applies when the current line begins (after leading whitespace) with
+        a closing bracket ``)`` / ``]`` / ``}``. Scans preceding blocks to
+        locate the matching opening bracket and returns the leading
+        whitespace of that block.
+
+        Args:
+            current_block_number (int): Block index of the current line.
+            current_line (str): Full text of the current line.
+
+        Returns:
+            str | None: Indent string to use, or ``None`` when the current
+                line does not start with a closing bracket or when no
+                matching opener can be found.
+        """
+        stripped = current_line.lstrip()
+        if not stripped or stripped[0] not in ")]}":
+            return None
+
+        doc = self.document()
+        stack: list[int] = []
+        for block_num in range(current_block_number):
+            block = doc.findBlockByNumber(block_num)
+            if not block.isValid():
+                continue
+            for _idx, ch in self._iter_code_brackets(block.text()):
+                if ch in "([{":
+                    stack.append(block_num)
+                elif stack:
+                    stack.pop()
+
+        if not stack:
+            return None
+
+        opener_block = doc.findBlockByNumber(stack[-1])
+        if not opener_block.isValid():
+            return None
+
+        match = re.match(r"^(\s*)", opener_block.text())
+        return match.group(1) if match else ""
 
     def handle_tab_key(self):
         """Handle Tab key press."""

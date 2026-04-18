@@ -518,14 +518,16 @@ class MultiCursorMixin:
                             cursor.setPosition(cursor.position())
                         cursor.movePosition(QTextCursor.Start)
                 else:
-                    # Smart Home: move to first non-whitespace character
+                    # Smart Home: toggle between first non-whitespace and line start
                     smart_home_pos = self.get_first_non_whitespace_position(cursor)
+                    line_start_pos = cursor.block().position()
+                    target_pos = line_start_pos if cursor.position() == smart_home_pos else smart_home_pos
                     if event.modifiers() & Qt.ShiftModifier:
-                        cursor.setPosition(smart_home_pos, QTextCursor.KeepAnchor)
+                        cursor.setPosition(target_pos, QTextCursor.KeepAnchor)
                     else:
                         if cursor.hasSelection():
                             cursor.clearSelection()
-                        cursor.setPosition(smart_home_pos)
+                        cursor.setPosition(target_pos)
                 handled = True
 
             elif event.key() == Qt.Key_End:
