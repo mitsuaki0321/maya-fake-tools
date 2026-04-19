@@ -309,9 +309,13 @@ def generate_all(
     maya_pkg = stubs_root / "maya"
     api_pkg = maya_pkg / "api"
 
-    # Package markers so jedi treats these as importable packages.
-    _write(maya_pkg / "__init__.pyi", "")
-    _write(api_pkg / "__init__.pyi", "")
+    # Explicit submodule re-exports. An empty ``__init__.pyi`` technically
+    # marks the directory as a package, but jedi's stub-only import
+    # resolution is flaky about auto-discovering submodules from an empty
+    # init — the popup ends up showing only the module dunders. The
+    # ``from . import X as X`` pattern is how typeshed declares submodules.
+    _write(maya_pkg / "__init__.pyi", "from . import api as api\nfrom . import cmds as cmds\n")
+    _write(api_pkg / "__init__.pyi", "from . import OpenMaya as OpenMaya\n")
 
     if progress is not None:
         progress(0, 2, "cmds")

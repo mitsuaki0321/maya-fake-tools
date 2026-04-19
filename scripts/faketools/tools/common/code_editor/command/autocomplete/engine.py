@@ -131,6 +131,8 @@ class JediEngine:
         _log_jedi_resolution(script, line, column, self._extra_paths)
 
         items = [CompletionItem.from_jedi(c) for c in completions]
+        if items:
+            logger.debug(f"jedi raw items (first 10): {[(i.type, i.name) for i in items[:10]]}")
         items.sort(key=_completion_sort_key)
         if len(items) > max_items:
             items = items[:max_items]
@@ -278,13 +280,27 @@ def _log_jedi_resolution(script, line: int, column: int, expected_paths: list[st
     - What jedi thinks its ``sys_path`` is, so we can tell if our stub dir
       actually landed at the top of the list.
     """
+    # Probe at column-1 as well: when the caret is right after a ``.`` the
+    # dot itself isn't an identifier, and ``infer`` returns nothing. Backing
+    # up one column lands on the symbol we care about (``cmds``).
+    for probe_col in {column, max(column - 1, 0)}:
+        try:
+            inferred = script.infer(line, probe_col)
+            for result in inferred:
+                mod_path = getattr(result, "module_path", None)
+                logger.debug(f"jedi infer @col{probe_col}: {result.name!r} type={result.type} module_path={mod_path}")
+        except Exception as exc:
+            logger.debug(f"jedi infer @col{probe_col} failed: {exc}")
+
+    # Goto for the symbol just before the dot — tells us which file jedi
+    # actually loaded for ``maya.cmds`` even when infer is empty.
     try:
-        inferred = script.infer(line, column)
-        for result in inferred:
+        goto_results = script.goto(line, max(column - 1, 0), follow_imports=True)
+        for result in goto_results:
             mod_path = getattr(result, "module_path", None)
-            logger.debug(f"jedi infer: {result.name!r} type={result.type} module_path={mod_path}")
+            logger.debug(f"jedi goto: {result.name!r} module_path={mod_path}")
     except Exception as exc:
-        logger.debug(f"jedi infer failed: {exc}")
+        logger.debug(f"jedi goto failed: {exc}")
 
     try:
         project = script._inference_state.project
