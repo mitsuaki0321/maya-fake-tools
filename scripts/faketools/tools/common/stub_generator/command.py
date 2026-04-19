@@ -306,14 +306,21 @@ def generate_all(
     imported as ``maya.cmds`` / ``maya.api.OpenMaya``.
     """
     stubs_root = get_stubs_root(maya_version, data_root)
-    maya_pkg = stubs_root / "maya"
+    # PEP 561 "stub-only package" layout: ``maya-stubs`` mirrors the real
+    # ``maya`` package and declares it's the type information source for it.
+    # Plain ``maya/`` wouldn't be enough — when Maya is running, jedi
+    # resolves ``import maya.cmds`` against the live C-extension package at
+    # ``C:/Program Files/Autodesk/.../site-packages/maya/cmds/__init__.py``
+    # even with our stub path first on sys_path, because the live package
+    # has a real ``.py`` init and jedi keeps that resolution. The
+    # ``-stubs`` suffix is the signal that lets jedi know *these* are the
+    # authoritative stubs for the ``maya`` package regardless of where the
+    # live implementation lives.
+    maya_pkg = stubs_root / "maya-stubs"
     api_pkg = maya_pkg / "api"
 
-    # Explicit submodule re-exports. An empty ``__init__.pyi`` technically
-    # marks the directory as a package, but jedi's stub-only import
-    # resolution is flaky about auto-discovering submodules from an empty
-    # init — the popup ends up showing only the module dunders. The
-    # ``from . import X as X`` pattern is how typeshed declares submodules.
+    # Explicit submodule re-exports — without them jedi's stub-only import
+    # resolution leaves the popup with only module dunders on ``maya.``.
     _write(maya_pkg / "__init__.pyi", "from . import api as api\nfrom . import cmds as cmds\n")
     _write(api_pkg / "__init__.pyi", "from . import OpenMaya as OpenMaya\n")
 
@@ -335,7 +342,7 @@ def generate_all(
 def stubs_exist(maya_version: str, data_root: Optional[Path] = None) -> bool:
     """Quick probe used by the autocomplete engine: do we have stubs yet?"""
     root = get_stubs_root(maya_version, data_root)
-    return (root / "maya" / "cmds.pyi").exists()
+    return (root / "maya-stubs" / "cmds.pyi").exists()
 
 
 def generate_bundled(progress: Optional[Callable[[int, int, str], None]] = None) -> Path:

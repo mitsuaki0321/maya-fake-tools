@@ -84,7 +84,7 @@ def _configure_engine_stub_paths():
     logger.debug(f"stub paths: bundled root = {bundled_root}")
     logger.debug(f"stub paths: expected version root = {stubs_root}")
     logger.debug(f"stub paths: stubs_exist = {stub_command.stubs_exist(maya_version)}")
-    logger.debug(f"stub paths: cmds.pyi present = {(stubs_root / 'maya' / 'cmds.pyi').exists()}")
+    logger.debug(f"stub paths: cmds.pyi present = {(stubs_root / 'maya-stubs' / 'cmds.pyi').exists()}")
 
     if not stub_command.stubs_exist(maya_version):
         logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
