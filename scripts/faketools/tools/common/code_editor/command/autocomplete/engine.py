@@ -82,7 +82,6 @@ class JediEngine:
         (a fresh Interpreter/Script is built per ``complete()`` call).
         """
         self._extra_paths = [str(p) for p in paths if p]
-        logger.debug(f"JediEngine.set_extra_paths -> {self._extra_paths}")
 
     @property
     def available(self) -> bool:
@@ -128,11 +127,7 @@ class JediEngine:
             logger.debug(f"jedi.complete failed at {line}:{column}: {exc}")
             return []
 
-        _log_jedi_resolution(script, line, column, self._extra_paths)
-
         items = [CompletionItem.from_jedi(c) for c in completions]
-        if items:
-            logger.debug(f"jedi raw items (first 10): {[(i.type, i.name) for i in items[:10]]}")
         items.sort(key=_completion_sort_key)
         if len(items) > max_items:
             items = items[:max_items]
@@ -192,18 +187,10 @@ class JediEngine:
         3. **No namespaces**: plain :class:`jedi.Script` (non-Maya case).
         """
         project = self._build_project()
-        use_stubs = bool(self._extra_paths)
-        effective_namespaces = self._namespaces_for_jedi(namespaces)
-        mode = "Script" if use_stubs or not effective_namespaces else "Interpreter"
-        logger.debug(
-            f"jedi._make_script mode={mode} stubs={use_stubs} "
-            f"project_paths={self._extra_paths} "
-            f"ns_keys_before={_ns_keys(namespaces)} "
-            f"ns_keys_after={_ns_keys(effective_namespaces)}"
-        )
-
-        if use_stubs:
+        if self._extra_paths:
             return jedi.Script(code=code, path=path, project=project)
+
+        effective_namespaces = self._namespaces_for_jedi(namespaces)
         if effective_namespaces:
             return jedi.Interpreter(code, namespaces=list(effective_namespaces), path=path, project=project)
         return jedi.Script(code=code, path=path, project=project)
@@ -217,19 +204,7 @@ class JediEngine:
         """
         if not namespaces or not self._extra_paths:
             return namespaces
-        cleaned = []
-        removed: list[str] = []
-        for ns in namespaces:
-            filtered = {}
-            for k, v in ns.items():
-                if k in _STUB_BACKED_NAMES:
-                    removed.append(k)
-                else:
-                    filtered[k] = v
-            cleaned.append(filtered)
-        if removed:
-            logger.debug(f"jedi namespaces: stripped stub-backed names {removed}")
-        return cleaned
+        return [{k: v for k, v in ns.items() if k not in _STUB_BACKED_NAMES} for ns in namespaces]
 
     def _build_project(self):
         """Construct a ``jedi.Project`` that puts our stub paths at ``sys_path[0]``.
@@ -246,70 +221,14 @@ class JediEngine:
             import sys
 
             forced_sys_path = list(self._extra_paths) + list(sys.path)
-            project = jedi.Project(
+            return jedi.Project(
                 path=".",
                 sys_path=forced_sys_path,
                 smart_sys_path=False,
             )
-            logger.debug(
-                f"jedi.Project built (forced) sys_path_head={forced_sys_path[:3]} "
-                f"total={len(forced_sys_path)}"
-            )
-            return project
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
             return None
-
-
-def _ns_keys(namespaces) -> list[str]:
-    """Diagnostic helper: flatten namespace dict keys for a single log line."""
-    if not namespaces:
-        return []
-    keys: list[str] = []
-    for ns in namespaces:
-        keys.extend(sorted(ns.keys()))
-    return keys
-
-
-def _log_jedi_resolution(script, line: int, column: int, expected_paths: list[str]) -> None:
-    """Log how jedi resolved the symbol at the caret and its effective sys_path.
-
-    We want to confirm:
-    - Which ``.pyi`` / ``.py`` file jedi picked for ``maya.cmds`` (the "infer"
-      result points at the module).
-    - What jedi thinks its ``sys_path`` is, so we can tell if our stub dir
-      actually landed at the top of the list.
-    """
-    # Probe at column-1 as well: when the caret is right after a ``.`` the
-    # dot itself isn't an identifier, and ``infer`` returns nothing. Backing
-    # up one column lands on the symbol we care about (``cmds``).
-    for probe_col in {column, max(column - 1, 0)}:
-        try:
-            inferred = script.infer(line, probe_col)
-            for result in inferred:
-                mod_path = getattr(result, "module_path", None)
-                logger.debug(f"jedi infer @col{probe_col}: {result.name!r} type={result.type} module_path={mod_path}")
-        except Exception as exc:
-            logger.debug(f"jedi infer @col{probe_col} failed: {exc}")
-
-    # Goto for the symbol just before the dot — tells us which file jedi
-    # actually loaded for ``maya.cmds`` even when infer is empty.
-    try:
-        goto_results = script.goto(line, max(column - 1, 0), follow_imports=True)
-        for result in goto_results:
-            mod_path = getattr(result, "module_path", None)
-            logger.debug(f"jedi goto: {result.name!r} module_path={mod_path}")
-    except Exception as exc:
-        logger.debug(f"jedi goto failed: {exc}")
-
-    try:
-        project = script._inference_state.project
-        resolved_sys_path = project._get_sys_path(script._inference_state)
-        matches = [p for p in resolved_sys_path if p in expected_paths]
-        logger.debug(f"jedi sys_path head (first 5): {resolved_sys_path[:5]}")
-        logger.debug(f"jedi sys_path contains stubs? {bool(matches)} — {matches}")
-    except Exception as exc:
-        logger.debug(f"jedi sys_path probe failed: {exc}")
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:

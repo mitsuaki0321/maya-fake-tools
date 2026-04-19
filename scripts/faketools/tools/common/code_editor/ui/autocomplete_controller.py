@@ -97,12 +97,6 @@ class AutocompleteController:
         # PySide builds where the signal emission raced with the popup hide.
         self._completer.activated.connect(self._on_activated)
 
-        # Surface any popup current-row changes in the log so we can tell
-        # whether the popup is being reset by our own code or by QCompleter.
-        selection_model = popup.selectionModel()
-        if selection_model is not None:
-            selection_model.currentChanged.connect(self._on_popup_current_changed)
-
         # Short-term cache of the items backing the current popup so we can
         # still know what was selected if the model gets cleared mid-accept.
         self._current_items: list = []
@@ -143,9 +137,6 @@ class AutocompleteController:
             return
 
         trigger = self._classify_trigger()
-        popup_visible = self._completer.popup().isVisible()
-        logger.debug(f"autocomplete.on_text_changed trigger={trigger!r} popup_visible={popup_visible}")
-
         if trigger is None:
             self._hide_popup()
             return
@@ -157,7 +148,7 @@ class AutocompleteController:
         # trigger == "word": only refresh an already-open popup. Typing a bare
         # identifier without a preceding dot should not auto-open — that's
         # what Ctrl+Space is for.
-        if popup_visible:
+        if self._completer.popup().isVisible():
             self._timer.start(self._debounce_ms)
 
     def handle_key_press(self, event) -> bool:
@@ -174,30 +165,19 @@ class AutocompleteController:
 
         # Ctrl+Space always forces a completion, regardless of popup state.
         if key == Qt.Key_Space and mods == Qt.ControlModifier and self._enabled:
-            logger.debug("autocomplete: Ctrl+Space — forcing dispatch")
             self._timer.stop()
             self._dispatch_completion()
             return True
 
         popup = self._completer.popup()
-        visible = popup.isVisible()
-        # ``mods`` is a Qt.KeyboardModifier enum on PySide6 — ``int()`` raises
-        # there, so reach for ``.value`` when available and fall back otherwise.
-        mods_repr = getattr(mods, "value", None)
-        if mods_repr is None:
-            mods_repr = repr(mods)
-        logger.debug(f"autocomplete.handle_key_press key={key} mods={mods_repr} popup_visible={visible}")
-
-        if not visible:
+        if not popup.isVisible():
             return False
 
         row_count = popup.model().rowCount()
         current_row = popup.currentIndex().row()
-        logger.debug(f"autocomplete: popup rows={row_count} current_row={current_row}")
 
         if key in (Qt.Key_Enter, Qt.Key_Return, Qt.Key_Tab):
             completion = self._selected_completion()
-            logger.debug(f"autocomplete: accept -> {completion!r}")
             # Hide before inserting: the insertion fires contentsChange, and
             # if the popup were still flagged as visible at that moment the
             # word-trigger branch in on_text_changed would re-open it with
@@ -211,7 +191,6 @@ class AutocompleteController:
             return True
 
         if key == Qt.Key_Escape:
-            logger.debug("autocomplete: escape — hide popup")
             popup.hide()
             return True
 
@@ -222,32 +201,26 @@ class AutocompleteController:
         if key == Qt.Key_Down:
             new_row = 0 if current_row < 0 else min(current_row + 1, row_count - 1)
             self._set_popup_row(new_row)
-            logger.debug(f"autocomplete: Down -> row {new_row}")
             return True
         if key == Qt.Key_Up:
             new_row = row_count - 1 if current_row < 0 else max(current_row - 1, 0)
             self._set_popup_row(new_row)
-            logger.debug(f"autocomplete: Up -> row {new_row}")
             return True
         if key == Qt.Key_PageDown:
             step = max(1, popup.height() // max(1, popup.sizeHintForRow(0)))
             new_row = min((current_row if current_row >= 0 else 0) + step, row_count - 1)
             self._set_popup_row(new_row)
-            logger.debug(f"autocomplete: PageDown -> row {new_row}")
             return True
         if key == Qt.Key_PageUp:
             step = max(1, popup.height() // max(1, popup.sizeHintForRow(0)))
             new_row = max((current_row if current_row >= 0 else 0) - step, 0)
             self._set_popup_row(new_row)
-            logger.debug(f"autocomplete: PageUp -> row {new_row}")
             return True
         if key == Qt.Key_Home and not (mods & Qt.ControlModifier):
             self._set_popup_row(0)
-            logger.debug("autocomplete: Home -> row 0")
             return True
         if key == Qt.Key_End and not (mods & Qt.ControlModifier):
             self._set_popup_row(row_count - 1)
-            logger.debug(f"autocomplete: End -> row {row_count - 1}")
             return True
 
         # Any other key: let it go to the editor. If it changes text, on_text_changed
@@ -264,15 +237,6 @@ class AutocompleteController:
         index = model.index(row, 0)
         popup.setCurrentIndex(index)
         popup.scrollTo(index, QAbstractItemView.EnsureVisible)
-
-    def _on_popup_current_changed(self, current, previous):
-        """Diagnostic: log every popup currentIndex change with a short stack."""
-        try:
-            cur_row = current.row() if current.isValid() else -1
-            prev_row = previous.row() if previous.isValid() else -1
-        except RuntimeError:
-            return
-        logger.debug(f"autocomplete.popup currentChanged prev={prev_row} -> cur={cur_row}")
 
     def _selected_completion(self) -> str:
         """Return the text of the currently-highlighted popup row (empty if none)."""
@@ -354,7 +318,6 @@ class AutocompleteController:
             self._pending_runnable.cancel()
 
         self._request_id += 1
-        logger.debug(f"autocomplete.dispatch id={self._request_id} line={line} col={column} len={len(code)}")
         runnable = CompletionRunnable(
             engine=self.engine,
             request_id=self._request_id,
@@ -370,20 +333,14 @@ class AutocompleteController:
 
     def _on_completion(self, request_id: int, items: list):
         """Receive jedi results on the UI thread; show popup if still relevant."""
-        if request_id != self._request_id:
-            logger.debug(f"autocomplete._on_completion id={request_id} stale (current={self._request_id})")
+        # Stale / disabled / empty — all silent. A previous verbose log here
+        # was useful while chasing feedback loops but fires several times per
+        # keystroke in steady state.
+        if request_id != self._request_id or not self._enabled:
             return
-
-        if not self._enabled:
-            logger.debug(f"autocomplete._on_completion id={request_id} disabled")
-            return
-
         if not items:
-            logger.debug(f"autocomplete._on_completion id={request_id} empty")
             self._hide_popup()
             return
-
-        logger.debug(f"autocomplete._on_completion id={request_id} items={len(items)}")
 
         try:
             # The editor may have moved past the word that triggered this request.

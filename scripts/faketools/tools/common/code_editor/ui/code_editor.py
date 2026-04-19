@@ -60,7 +60,6 @@ def _configure_engine_stub_paths():
     """
     global _STUB_PATHS_CONFIGURED
     if _STUB_PATHS_CONFIGURED:
-        logger.debug("stub paths: already configured, skipping")
         return
     _STUB_PATHS_CONFIGURED = True
 
@@ -68,41 +67,29 @@ def _configure_engine_stub_paths():
         import maya.cmds as _cmds  # type: ignore
 
         maya_version = str(_cmds.about(version=True))
-        logger.debug(f"stub paths: maya version = {maya_version!r}")
-    except Exception as exc:
-        logger.debug(f"stub paths: not running in Maya ({exc})")
+    except Exception:
         return
 
     try:
         from ....common.stub_generator import command as stub_command
     except Exception as exc:
-        logger.debug(f"stub paths: stub_generator import failed: {exc}")
+        logger.debug(f"stub_generator unavailable: {exc}")
         return
-
-    stubs_root = stub_command.get_package_root(maya_version)
-    bundled_root = stub_command.get_bundled_stubs_root()
-    logger.debug(f"stub paths: bundled root = {bundled_root}")
-    logger.debug(f"stub paths: expected version root = {stubs_root}")
-    logger.debug(f"stub paths: stubs_exist = {stub_command.stubs_exist(maya_version)}")
-    logger.debug(f"stub paths: cmds.pyi present = {(stubs_root / 'maya-stubs' / 'cmds.pyi').exists()}")
 
     if not stub_command.stubs_exist(maya_version):
         logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
         return
 
-    # Double injection: jedi.Project.added_sys_path for the analyzer AND
-    # sys.path[0] for the running interpreter. The project-level entry alone
-    # wasn't reliable in-Maya — jedi's import resolver still found Maya's
-    # real ``maya`` package (``C:\Program Files\Autodesk\...``) before the
-    # stub because the environment sys_path ordering put it first. Pinning
-    # the stub at sys.path[0] ensures ``maya`` / ``maya.cmds`` resolve to
-    # the stub first, regardless of jedi version quirks.
+    # Pin the stub dir at ``sys.path[0]`` *and* on the jedi ``Project`` so
+    # ``import maya`` resolves to the bundled ``maya-stubs`` package before
+    # Maya's real install (which otherwise wins because its path is
+    # auto-discovered by jedi's environment detection).
     import sys
 
+    stubs_root = stub_command.get_package_root(maya_version)
     stubs_root_str = str(stubs_root)
     if stubs_root_str not in sys.path:
         sys.path.insert(0, stubs_root_str)
-        logger.debug(f"sys.path prepended with stubs root: {stubs_root_str}")
 
     _SHARED_JEDI_ENGINE.set_extra_paths([stubs_root_str])
     logger.info(f"Autocomplete stubs active: {stubs_root}")
