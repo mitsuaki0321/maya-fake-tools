@@ -33,6 +33,14 @@ except Exception as _exc:  # pragma: no cover — diagnostic path
 _MAX_FILE_BYTES = 500 * 1024
 
 
+# Names that live in the bundled Maya stubs. When stubs are registered we
+# filter these out of the ``namespaces`` dict handed to ``jedi.Interpreter``
+# so jedi resolves them statically via ``added_sys_path`` instead — the
+# live ``maya.cmds`` module is lazy-loaded and its ``dir()`` output is
+# largely empty until a command has been called at least once.
+_STUB_BACKED_NAMES = frozenset({"cmds", "maya", "om", "om2", "OpenMaya"})
+
+
 # A "category priority" for sort order when the popup mixes types. Lower is
 # higher on-screen. Tunable without touching the UI.
 _TYPE_RANK = {
@@ -168,14 +176,31 @@ class JediEngine:
         keeps things working for static-only completion in non-Maya contexts.
 
         When stubs are registered (via :meth:`set_extra_paths`), we build a
-        :class:`jedi.Project` that surfaces them on ``sys.path``. jedi
-        prefers static stubs over live introspection for type info, which
-        is what gives us flag-name completion inside ``cmds.polyCube(|)``.
+        :class:`jedi.Project` that surfaces them on ``sys.path`` and strip
+        the Maya module aliases out of the namespaces so jedi resolves
+        ``cmds.`` against the rich stub instead of the lazy-loaded live
+        object (whose ``dir()`` returns little before commands are called).
         """
         project = self._build_project()
-        if namespaces:
-            return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project)
+        effective_namespaces = self._namespaces_for_jedi(namespaces)
+        if effective_namespaces:
+            return jedi.Interpreter(code, namespaces=list(effective_namespaces), path=path, project=project)
         return jedi.Script(code=code, path=path, project=project)
+
+    def _namespaces_for_jedi(self, namespaces: Optional[Sequence[dict]]) -> Optional[Sequence[dict]]:
+        """Strip stub-backed module aliases from the live namespaces.
+
+        Only runs when stubs are actually registered; otherwise the caller
+        gets ``exec_globals`` back untouched so in-Maya introspection of
+        user variables keeps working.
+        """
+        if not namespaces or not self._extra_paths:
+            return namespaces
+        cleaned = []
+        for ns in namespaces:
+            filtered = {k: v for k, v in ns.items() if k not in _STUB_BACKED_NAMES}
+            cleaned.append(filtered)
+        return cleaned
 
     def _build_project(self):
         """Construct a ``jedi.Project`` that includes our stub paths (or ``None``)."""
