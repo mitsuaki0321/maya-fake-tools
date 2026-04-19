@@ -390,6 +390,17 @@ class MayaCodeEditor(QWidget):
         if self.output_terminal:
             self.output_terminal.set_echo_all(enabled)
 
+    def toggle_autocomplete(self, enabled: bool):
+        """Enable or disable jedi-backed autocomplete across all editor tabs.
+
+        Persists to settings so the choice sticks between sessions. New tabs
+        created after this point pick up the flag via ``CodeEditorWidget``.
+        """
+        if self.code_editor and hasattr(self.code_editor, "set_autocomplete_enabled"):
+            self.code_editor.set_autocomplete_enabled(enabled)
+        self.settings_manager.set("autocomplete.enabled", enabled)
+        self.settings_manager.save_settings()
+
     def clear_terminal(self):
         """Clear the output terminal."""
         if self.output_terminal:

@@ -254,6 +254,7 @@ class ToolBar(QWidget):
     fold_all_clicked = Signal()  # Signal for folding all regions
     unfold_all_clicked = Signal()  # Signal for unfolding all regions
     add_to_shelf_clicked = Signal()  # Signal for adding selected code to Maya shelf
+    autocomplete_toggled = Signal(bool)  # Signal for toggling autocomplete (True=on, False=off)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -290,6 +291,11 @@ class ToolBar(QWidget):
         self.word_wrap_button.set_active(True)  # Word wrap ON by default
         self.fold_all_button = VSCodeButton("foldall", "Fold All")
         self.unfold_all_button = VSCodeButton("unfoldall", "Unfold All")
+        self.autocomplete_button = ToggleButton(
+            "autocomplete",
+            "Toggle Autocomplete (Ctrl+Space)",
+            active_icon_name="autocomplete_active",
+        )
         self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 
         # Create separators
@@ -318,6 +324,7 @@ class ToolBar(QWidget):
         layout.addWidget(self.word_wrap_button)
         layout.addWidget(self.fold_all_button)
         layout.addWidget(self.unfold_all_button)
+        layout.addWidget(self.autocomplete_button)
         layout.addWidget(sep4)
         layout.addWidget(self.swap_layout_button)
         layout.addStretch()
@@ -347,6 +354,7 @@ class ToolBar(QWidget):
         self.fold_all_button.clicked.connect(self.fold_all_clicked.emit)
         self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
         self.add_to_shelf_button.clicked.connect(self.add_to_shelf_clicked.emit)
+        self.autocomplete_button.clicked.connect(lambda: self.autocomplete_toggled.emit(self.autocomplete_button.is_active()))
 
     def set_run_enabled(self, enabled: bool):
         """Enable or disable the run button."""

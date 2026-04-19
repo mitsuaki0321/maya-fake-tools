@@ -52,6 +52,11 @@ class UserSettings:
             "layout": {
                 "terminal_at_bottom": True,  # True: editor top/terminal bottom, False: terminal top/editor bottom
             },
+            # Autocomplete settings
+            "autocomplete": {
+                "enabled": True,  # Only honoured when jedi is importable
+                "debounce_ms": 100,
+            },
         }
 
     def load_settings(self) -> dict[str, Any]:

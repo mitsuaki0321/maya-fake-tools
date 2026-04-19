@@ -24,8 +24,10 @@ from .....lib_ui.qt_compat import (
     Signal,
 )
 from ..command import file_io
+from ..command.autocomplete import JediEngine
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
+from .autocomplete_controller import AutocompleteController
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
@@ -38,6 +40,10 @@ logger = getLogger(__name__)
 # Editor constants
 DEFAULT_FONT_FAMILY = "Consolas"
 DEFAULT_TAB_SIZE = 4
+
+# Shared across all PythonEditor instances — jedi has internal caches keyed by
+# source hash that we want to reuse across tabs. Stateless, so safe to share.
+_SHARED_JEDI_ENGINE = JediEngine()
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
@@ -75,8 +81,30 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         # Initialize code folding
         self.fold_manager = CodeFoldingManager(self)
 
+        # Autocomplete controller (jedi-backed). Silently inert if jedi is missing.
+        self.autocomplete = AutocompleteController(
+            self,
+            _SHARED_JEDI_ENGINE,
+            namespace_provider=self._get_exec_namespaces,
+        )
+
         self.setup_line_numbers()
         self.connect_signals()
+
+    def _get_exec_namespaces(self) -> list[dict]:
+        """Walk up to ``MayaCodeEditor`` and return its ``exec_globals`` (if any).
+
+        This is what gives jedi access to live ``cmds`` / ``om2`` / user-loaded
+        modules without having to reimport them statically — the same trick
+        the session saver uses in ``editor_tab_widget``.
+        """
+        node = self.parent()
+        while node is not None:
+            exec_globals = getattr(node, "exec_globals", None)
+            if isinstance(exec_globals, dict):
+                return [exec_globals]
+            node = node.parent() if hasattr(node, "parent") else None
+        return []
 
     def init_editor(self):
         """Initialize editor settings."""
@@ -124,6 +152,10 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         """Handle text changes."""
         if not self.is_modified:
             self.is_modified = True
+        # Notify autocomplete after the dirty flag so completion runs against
+        # the just-committed text. Safe no-op if the controller is disabled.
+        if getattr(self, "autocomplete", None) is not None:
+            self.autocomplete.on_text_changed()
 
     def focusOutEvent(self, event):
         """Handle focus out - trigger backup flush for network HDD performance."""
@@ -489,6 +521,12 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     def keyPressEvent(self, event):
         """Handle key press events using the shortcut manager."""
+        # Give autocomplete first dibs: Ctrl+Space forces a request, and when
+        # the popup is visible it claims Enter / Tab / Escape before anything
+        # else looks at them.
+        if getattr(self, "autocomplete", None) is not None and self.autocomplete.handle_key_press(event):
+            return
+
         # Handle numpad Enter key (Key_Enter) for running script
         # Note: Qt.Key_Enter is numpad Enter with KeypadModifier, Qt.Key_Return is main keyboard Enter
         if event.key() == Qt.Key_Enter and event.modifiers() == Qt.KeypadModifier:

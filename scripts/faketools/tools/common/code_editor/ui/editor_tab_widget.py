@@ -44,6 +44,7 @@ class CodeEditorWidget(QTabWidget):
         self.preview_tab_index = -1  # Index of current preview tab (-1 if none)
         self.preview_tab_editor = None
         self._word_wrap_enabled = True  # Word wrap ON by default
+        self._autocomplete_enabled = True  # Matches settings default; MainWindow overrides at startup
 
         self.custom_tab_bar = EditableTabBar()
         self.setTabBar(self.custom_tab_bar)
@@ -96,6 +97,7 @@ class CodeEditorWidget(QTabWidget):
 
         self.apply_editor_theme(editor)
         editor.set_word_wrap(self._word_wrap_enabled)
+        self._apply_autocomplete(editor)
 
         editor.textChanged.connect(lambda: self.update_tab_title(editor))
         editor.textChanged.connect(self.textChanged.emit)
@@ -146,6 +148,7 @@ class CodeEditorWidget(QTabWidget):
 
         self.apply_editor_theme(editor)
         editor.set_word_wrap(self._word_wrap_enabled)
+        self._apply_autocomplete(editor)
 
         editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
         editor.textChanged.connect(self.textChanged.emit)
@@ -199,6 +202,23 @@ class CodeEditorWidget(QTabWidget):
             if isinstance(editor, PythonEditor):
                 editor.set_word_wrap(enabled)
 
+    def set_autocomplete_enabled(self, enabled: bool):
+        """Broadcast the autocomplete toggle to every open editor tab.
+
+        Stored on the widget so tabs created later (preview / permanent / new)
+        inherit the current choice without the caller having to re-apply.
+        """
+        self._autocomplete_enabled = enabled
+        for i in range(self.count()):
+            editor = self.widget(i)
+            if isinstance(editor, PythonEditor) and getattr(editor, "autocomplete", None) is not None:
+                editor.autocomplete.set_enabled(enabled)
+
+    def _apply_autocomplete(self, editor):
+        """Apply the current autocomplete flag to a freshly-created tab."""
+        if getattr(editor, "autocomplete", None) is not None:
+            editor.autocomplete.set_enabled(self._autocomplete_enabled)
+
     def apply_editor_theme(self, editor):
         """Apply theme styling + current-line highlight to ``editor``."""
         editor.setStyleSheet(AppTheme.get_editor_stylesheet())
@@ -238,6 +258,7 @@ class CodeEditorWidget(QTabWidget):
 
         self.apply_editor_theme(editor)
         editor.set_word_wrap(self._word_wrap_enabled)
+        self._apply_autocomplete(editor)
 
         editor.textChanged.connect(lambda: self.update_tab_title(editor))
         editor.textChanged.connect(self.textChanged.emit)
@@ -290,6 +311,7 @@ class CodeEditorWidget(QTabWidget):
 
         self.apply_editor_theme(editor)
         editor.set_word_wrap(self._word_wrap_enabled)
+        self._apply_autocomplete(editor)
 
         editor.textChanged.connect(lambda: self.update_tab_title(editor))
         editor.textChanged.connect(self.textChanged.emit)

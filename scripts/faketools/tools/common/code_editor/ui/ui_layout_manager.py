@@ -170,6 +170,7 @@ class UILayoutManager:
             self.main_window.toolbar.fold_all_clicked.connect(self.main_window.fold_all)
             self.main_window.toolbar.unfold_all_clicked.connect(self.main_window.unfold_all)
             self.main_window.toolbar.add_to_shelf_clicked.connect(self.main_window.add_to_shelf)
+            self.main_window.toolbar.autocomplete_toggled.connect(self.main_window.toggle_autocomplete)
 
         if self.main_window.file_explorer:
             self.main_window.file_explorer.file_selected.connect(self.main_window.open_file_permanent)
@@ -239,6 +240,21 @@ class UILayoutManager:
         # Sync toolbar toggle button state
         if self.main_window.toolbar and hasattr(self.main_window.toolbar, "word_wrap_button"):
             self.main_window.toolbar.word_wrap_button.set_active(word_wrap_enabled)
+
+        # Restore autocomplete setting. Auto-disable + gray out the toolbar
+        # button when jedi isn't importable so the user can see why toggling
+        # does nothing.
+        from ..command.autocomplete import JEDI_AVAILABLE
+
+        autocomplete_enabled = self.main_window.settings_manager.get("autocomplete.enabled", True) and JEDI_AVAILABLE
+        if self.main_window.code_editor and hasattr(self.main_window.code_editor, "set_autocomplete_enabled"):
+            self.main_window.code_editor.set_autocomplete_enabled(autocomplete_enabled)
+        if self.main_window.toolbar and hasattr(self.main_window.toolbar, "autocomplete_button"):
+            button = self.main_window.toolbar.autocomplete_button
+            button.set_active(autocomplete_enabled)
+            if not JEDI_AVAILABLE:
+                button.setEnabled(False)
+                button.setToolTip("Autocomplete unavailable (install jedi to enable)")
 
     def restore_settings(self):
         """Restore window settings from saved preferences."""
