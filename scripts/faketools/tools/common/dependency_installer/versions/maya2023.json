@@ -53,5 +53,11 @@
         "import_name": "robust_laplacian",
         "required_by": ["Robust Weight Transfer"],
         "optional": true
+    },
+    {
+        "pip_name": "jedi",
+        "import_name": "jedi",
+        "required_by": ["Code Editor (Autocomplete)"],
+        "optional": true
     }
 ]
