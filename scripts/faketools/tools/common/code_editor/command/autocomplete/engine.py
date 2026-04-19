@@ -82,6 +82,7 @@ class JediEngine:
         (a fresh Interpreter/Script is built per ``complete()`` call).
         """
         self._extra_paths = [str(p) for p in paths if p]
+        logger.debug(f"JediEngine.set_extra_paths -> {self._extra_paths}")
 
     @property
     def available(self) -> bool:
@@ -169,20 +170,36 @@ class JediEngine:
         namespaces: Optional[Sequence[dict]],
         path: Optional[str],
     ) -> Any:
-        """Return a ``jedi.Interpreter`` when we have live namespaces, else a ``Script``.
+        """Return the right jedi driver for the current configuration.
 
-        ``Interpreter`` is strictly more capable (it can introspect live
-        objects), but requires a namespace list. Falling back to ``Script``
-        keeps things working for static-only completion in non-Maya contexts.
+        Three modes, in precedence order:
 
-        When stubs are registered (via :meth:`set_extra_paths`), we build a
-        :class:`jedi.Project` that surfaces them on ``sys.path`` and strip
-        the Maya module aliases out of the namespaces so jedi resolves
-        ``cmds.`` against the rich stub instead of the lazy-loaded live
-        object (whose ``dir()`` returns little before commands are called).
+        1. **Stubs registered** (Maya + bundled stubs exist): use
+           :class:`jedi.Script`. ``Script`` resolves imports purely through
+           ``sys.path`` / ``Project.added_sys_path`` and ignores
+           ``sys.modules``, so our stub for ``maya.cmds`` wins. Using
+           ``Interpreter`` here regresses: Maya's live ``maya.cmds`` module
+           is in ``sys.modules`` but its ``dir()`` is almost empty (lazy
+           command loading), and the ``MixedObject`` layer jedi builds for
+           imported modules ends up favouring the live side → 4 dunders
+           and nothing else.
+        2. **Live namespaces, no stubs**: :class:`jedi.Interpreter` so user
+           variables in ``exec_globals`` keep contributing completions.
+        3. **No namespaces**: plain :class:`jedi.Script` (non-Maya case).
         """
         project = self._build_project()
+        use_stubs = bool(self._extra_paths)
         effective_namespaces = self._namespaces_for_jedi(namespaces)
+        mode = "Script" if use_stubs or not effective_namespaces else "Interpreter"
+        logger.debug(
+            f"jedi._make_script mode={mode} stubs={use_stubs} "
+            f"project_paths={self._extra_paths} "
+            f"ns_keys_before={_ns_keys(namespaces)} "
+            f"ns_keys_after={_ns_keys(effective_namespaces)}"
+        )
+
+        if use_stubs:
+            return jedi.Script(code=code, path=path, project=project)
         if effective_namespaces:
             return jedi.Interpreter(code, namespaces=list(effective_namespaces), path=path, project=project)
         return jedi.Script(code=code, path=path, project=project)
@@ -197,9 +214,17 @@ class JediEngine:
         if not namespaces or not self._extra_paths:
             return namespaces
         cleaned = []
+        removed: list[str] = []
         for ns in namespaces:
-            filtered = {k: v for k, v in ns.items() if k not in _STUB_BACKED_NAMES}
+            filtered = {}
+            for k, v in ns.items():
+                if k in _STUB_BACKED_NAMES:
+                    removed.append(k)
+                else:
+                    filtered[k] = v
             cleaned.append(filtered)
+        if removed:
+            logger.debug(f"jedi namespaces: stripped stub-backed names {removed}")
         return cleaned
 
     def _build_project(self):
@@ -209,10 +234,22 @@ class JediEngine:
         # ``path`` must point somewhere; "." is jedi's convention for "use CWD"
         # when the caller doesn't have a meaningful project root.
         try:
-            return jedi.Project(path=".", added_sys_path=list(self._extra_paths))
+            project = jedi.Project(path=".", added_sys_path=list(self._extra_paths))
+            logger.debug(f"jedi.Project built added_sys_path={self._extra_paths}")
+            return project
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
             return None
+
+
+def _ns_keys(namespaces) -> list[str]:
+    """Diagnostic helper: flatten namespace dict keys for a single log line."""
+    if not namespaces:
+        return []
+    keys: list[str] = []
+    for ns in namespaces:
+        keys.extend(sorted(ns.keys()))
+    return keys
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:
