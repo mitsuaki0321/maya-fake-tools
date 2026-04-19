@@ -11,7 +11,6 @@ import re
 from .....lib_ui.qt_compat import (
     QAction,
     QColor,
-    QFileDialog,
     QFont,
     QPainter,
     QPen,
@@ -19,13 +18,12 @@ from .....lib_ui.qt_compat import (
     QPointF,
     QPolygonF,
     Qt,
-    QTabWidget,
     QTextCharFormat,
     QTextCursor,
     QTextEdit,
-    QTimer,
     Signal,
 )
+from ..command import file_io
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
 from .code_folding import CodeFoldingManager
@@ -34,7 +32,6 @@ from .editor_shortcuts import EditorShortcuts
 from .editor_text_operations import EditorTextOperationsMixin
 from .line_number_area import LineNumberArea
 from .multi_cursor_handler import MultiCursorMixin
-from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
 
@@ -68,9 +65,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         # Initialize shortcut manager
         self.shortcuts = EditorShortcuts()
-
-        # Initialize multi-selection for legacy Ctrl+D
-        self._multi_selections = []
 
         self.init_editor()
         self.setup_syntax_highlighting()
@@ -137,41 +131,32 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.focus_lost.emit()
 
     def load_file(self, file_path: str) -> bool:
-        """Load file content into the editor."""
-        try:
-            with open(file_path, encoding="utf-8") as f:
-                content = f.read()
-                self.setPlainText(content)
-
-            self.file_path = file_path
-            self.is_modified = False
-
-            return True
-
-        except Exception as e:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {e!s}")
+        """Load ``file_path`` into the editor via the command-layer reader."""
+        content, error = file_io.read_text(file_path)
+        if content is None:
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {error}")
             return False
+        self.setPlainText(content)
+        self.file_path = file_path
+        self.is_modified = False
+        return True
 
     def save_file(self, file_path: str = None) -> bool:
-        """Save editor content to file."""
+        """Save the editor contents via the command-layer writer."""
         if file_path is None:
             file_path = self.file_path
-
         if file_path is None:
             return False
 
-        try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(self.toPlainText())
-
-            self.file_path = file_path
-            self.is_modified = False
-            self.document().setModified(False)  # Also set QTextDocument modified state
-            return True
-
-        except Exception as e:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to save file: {e!s}")
+        error = file_io.write_text(file_path, self.toPlainText())
+        if error:
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to save file: {error}")
             return False
+
+        self.file_path = file_path
+        self.is_modified = False
+        self.document().setModified(False)
+        return True
 
     def get_display_name(self) -> str:
         """Get display name for tab."""
@@ -522,35 +507,14 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
                     return
                 parent_widget = parent_widget.parent()
 
-        # Handle Escape key
-        if event.key() == Qt.Key_Escape:
-            # First priority: clear multi-cursors
-            if self.all_cursors:
-                self.clear_multi_cursors()
-                return
-            # Third priority: clear old multi-selections
-            if hasattr(self, "_multi_selections") and self._multi_selections:
-                self._clear_multi_selections()
-                return
+        # Handle Escape key: exit multi-cursor mode
+        if event.key() == Qt.Key_Escape and self.all_cursors:
+            self.clear_multi_cursors()
+            return
 
         # Try to handle multi-cursor keyboard events first
         if self.handle_multi_cursor_keys(event):
             return
-
-        # Clear old multi-selections on certain keys (if not in new multi-cursor mode)
-        if (
-            not self.all_cursors
-            and hasattr(self, "_multi_selections")
-            and self._multi_selections
-            and (
-                event.key() in [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down, Qt.Key_Home, Qt.Key_End]
-                or (
-                    event.key() not in [Qt.Key_Shift, Qt.Key_Control, Qt.Key_Alt, Qt.Key_Meta, Qt.Key_F2]
-                    and not (event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_D)
-                )
-            )
-        ):
-            self._clear_multi_selections()
 
         # Handle Home key with smart home behavior (single-cursor mode)
         # Toggles between first non-whitespace position and line start on repeated presses
@@ -585,10 +549,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         if self.handle_multi_cursor_mouse(event):
             event.accept()
             return
-
-        # Clear multi-selections on mouse click (old system)
-        if hasattr(self, "_multi_selections") and self._multi_selections:
-            self._clear_multi_selections()
 
         # Delegate to parent
         super().mousePressEvent(event)
@@ -1273,613 +1233,5 @@ except Exception as e:
     # Removed mouseMoveEvent - no longer needed for tooltips
 
 
-class CodeEditorWidget(QTabWidget):
-    """Tabbed code editor widget."""
-
-    # Signals
-    inspect_object = Signal(str, str)  # (object_name, inspection_type)
-    textChanged = Signal()  # Emitted when any tab's text changes
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.untitled_counter = 1
-        self.preview_tab_index = -1  # Index of current preview tab (-1 if none)
-        self.preview_tab_editor = None  # Reference to preview tab editor
-        self._word_wrap_enabled = True  # Word wrap ON by default
-
-        # Set custom tab bar for renaming functionality
-        self.custom_tab_bar = EditableTabBar()
-        self.setTabBar(self.custom_tab_bar)
-
-        self.init_ui()
-        self.connect_signals()
-        self.apply_close_button_styles()
-
-        # Connect tab changed signal to update active tab styling
-        self.currentChanged.connect(self.update_active_tab_styling)
-
-        # Enable middle-click to close tabs
-        self.setup_middle_click_close()
-
-        # Create initial Draft tab
-        self.new_file(is_draft=True)
-
-    def wheelEvent(self, event):
-        """Forward wheel events to current editor for font size changes."""
-        # Forward wheel events to current editor
-        current_editor = self.currentWidget()
-        if current_editor and hasattr(current_editor, "wheelEvent"):
-            # Forwarding wheel event to current editor
-            current_editor.wheelEvent(event)
-        else:
-            # No current editor available
-            super().wheelEvent(event)
-
-    def init_ui(self):
-        """Initialize the user interface."""
-        self.setTabsClosable(False)  # Disable default close buttons
-        self.setMovable(True)
-        self.setDocumentMode(True)
-
-    def connect_signals(self):
-        """Connect widget signals."""
-        self.tabCloseRequested.connect(self.close_tab)
-
-    def new_file(self, is_draft=False) -> PythonEditor:
-        """Create a new file tab."""
-        editor = PythonEditor(self)
-
-        if is_draft:
-            tab_name = "Draft"
-            editor.is_draft = True
-            # Draft tab starts unmodified (no asterisk)
-            editor.is_modified = False
-        else:
-            tab_name = f"Untitled{self.untitled_counter}.py"
-            self.untitled_counter += 1
-            editor.is_draft = False
-            # Set as modified for new files (unsaved state)
-            editor.is_modified = True
-
-        editor.is_preview = False  # Regular tab by default
-
-        index = self.addTab(editor, tab_name)
-        self.setCurrentIndex(index)
-
-        # Apply theme to new editor
-        self.apply_editor_theme(editor)
-
-        # Apply current word wrap setting
-        editor.set_word_wrap(self._word_wrap_enabled)
-
-        # Connect to update tab title when modified
-        editor.textChanged.connect(lambda: self.update_tab_title(editor))
-
-        # Visual state is handled by tab title asterisk
-
-        # Connect text changed signal to widget's signal
-        editor.textChanged.connect(self.textChanged.emit)
-
-        # Connect inspection signal
-        editor.inspect_object.connect(self.inspect_object.emit)
-
-        # Update active tab styling after adding new tab
-        QTimer.singleShot(0, self.update_active_tab_styling)
-
-        # Initial state handled by tab title
-
-        # Save session state after adding new tab
-        QTimer.singleShot(100, self.save_session_if_available)
-
-        return editor
-
-    def open_preview(self, content: str, title: str = "Preview") -> PythonEditor:
-        """Open content in a preview tab."""
-        # If a preview tab exists, reuse it
-        if self.preview_tab_index >= 0 and self.preview_tab_index < self.count():
-            editor = self.widget(self.preview_tab_index)
-            if editor and hasattr(editor, "is_preview") and editor.is_preview:
-                # Temporarily disconnect text change signal to avoid conversion
-                with contextlib.suppress(Exception):
-                    editor.textChanged.disconnect()
-
-                # Reuse existing preview tab
-                editor.setPlainText(content)
-                editor.is_modified = False
-                editor.document().setModified(False)  # Also clear document modified state
-                editor.preview_title = title
-                self.setTabText(self.preview_tab_index, f"[Preview] {title}")
-                self.setCurrentIndex(self.preview_tab_index)
-
-                # Reconnect signals
-                editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
-                editor.textChanged.connect(self.textChanged.emit)
-
-                return editor
-
-        # Create new preview tab
-        editor = PythonEditor(self)
-        editor.is_preview = True
-        editor.is_modified = False
-        editor.preview_title = title
-
-        # First add the tab, then set content
-        tab_title = f"[Preview] {title}"
-        index = self.addTab(editor, tab_title)
-
-        # Now set the content without triggering modified state
-        editor.setPlainText(content)
-        editor.is_modified = False
-        editor.document().setModified(False)
-
-        # Track preview tab
-        self.preview_tab_index = index
-        self.preview_tab_editor = editor
-        self.setCurrentIndex(index)
-
-        # Apply theme
-        self.apply_editor_theme(editor)
-
-        # Apply current word wrap setting
-        editor.set_word_wrap(self._word_wrap_enabled)
-
-        # Connect signals
-        editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
-        editor.textChanged.connect(self.textChanged.emit)
-        editor.inspect_object.connect(self.inspect_object.emit)
-
-        # Apply preview tab styling
-        self.style_preview_tab(index)
-
-        # DON'T save preview tabs in session
-        # No QTimer.singleShot for session save
-
-        return editor
-
-    def style_preview_tab(self, index):
-        """Apply italic styling to preview tab."""
-        # Disabled due to Maya crash issues with custom painting
-
-    def on_preview_text_changed(self, editor):
-        """Handle text changes in preview tab."""
-        if hasattr(editor, "is_preview") and editor.is_preview and editor.is_modified:
-            # Convert preview to regular tab on edit
-            self.convert_preview_to_regular(editor)
-
-    def convert_preview_to_regular(self, editor):
-        """Convert a preview tab to a regular tab."""
-        if not hasattr(editor, "is_preview") or not editor.is_preview:
-            return
-
-        editor.is_preview = False
-        index = self.indexOf(editor)
-        if index >= 0:
-            # Update tab title (remove angle brackets)
-            title = editor.preview_title if hasattr(editor, "preview_title") else "Untitled"
-            if not title.endswith(".py"):
-                title = f"{title}.py"
-            # Check if tab is currently active
-            if index == self.currentIndex():
-                self.setTabText(index, f"● {title}")
-            else:
-                self.setTabText(index, title)
-
-            # Clear preview tracking
-            if index == self.preview_tab_index:
-                self.preview_tab_index = -1
-                self.preview_tab_editor = None
-
-            # Remove preview styling
-            if hasattr(self.custom_tab_bar, "set_preview_tab"):
-                self.custom_tab_bar.set_preview_tab(index, False)
-
-            # Now save as regular tab
-            QTimer.singleShot(100, self.save_session_if_available)
-
-    def set_word_wrap_all(self, enabled):
-        """Apply word wrap setting to all open editor tabs.
-
-        Args:
-            enabled (bool): True to wrap at widget width, False for no wrap.
-        """
-        self._word_wrap_enabled = enabled
-        for i in range(self.count()):
-            editor = self.widget(i)
-            if isinstance(editor, PythonEditor):
-                editor.set_word_wrap(enabled)
-
-    def apply_editor_theme(self, editor):
-        """Apply theme styling to a specific editor instance."""
-        editor_style = AppTheme.get_editor_stylesheet()
-        editor.setStyleSheet(editor_style)
-
-        # Update current line highlight color
-        selection = QTextEdit.ExtraSelection()
-        line_color = QColor(AppTheme.CURRENT_LINE)
-        selection.format.setBackground(line_color)
-        selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
-        selection.cursor = editor.textCursor()
-        selection.cursor.clearSelection()
-        editor.setExtraSelections([selection])
-
-    def open_file_permanent(self, file_path: str):
-        """Open a file in a new tab or switch to existing tab."""
-        # Normalize the file path for comparison (handle Windows paths)
-        file_path = os.path.normpath(os.path.abspath(file_path)).replace("\\", "/")
-
-        # Check if file is already open (including preview tabs)
-        for i in range(self.count()):
-            editor = self.widget(i)
-            if isinstance(editor, PythonEditor) and editor.file_path:
-                # Compare normalized paths
-                existing_path = os.path.normpath(os.path.abspath(editor.file_path)).replace("\\", "/")
-                if existing_path == file_path:
-                    # If it's a preview tab, convert to permanent
-                    if i == self.preview_tab_index:
-                        tab_text = self.tabText(i)
-                        if tab_text.endswith(" (Preview)"):
-                            self.setTabText(i, tab_text.replace(" (Preview)", ""))
-                            self.preview_tab_index = -1
-                    self.setCurrentIndex(i)
-                    return True
-
-        # Create new tab for file
-        editor = PythonEditor(self)
-        if editor.load_file(file_path):
-            file_name = os.path.basename(file_path)
-            index = self.addTab(editor, file_name)
-            self.setCurrentIndex(index)
-
-            # Apply theme to new editor
-            self.apply_editor_theme(editor)
-
-            # Apply current word wrap setting
-            editor.set_word_wrap(self._word_wrap_enabled)
-
-            # Connect signals
-            editor.textChanged.connect(lambda: self.update_tab_title(editor))
-            editor.textChanged.connect(self.textChanged.emit)
-            editor.inspect_object.connect(self.inspect_object.emit)
-
-            # Update active tab styling after adding new tab
-            QTimer.singleShot(0, self.update_active_tab_styling)
-
-            # Save session state after opening file
-            QTimer.singleShot(100, self.save_session_if_available)
-
-            return True
-        return False
-
-    def open_file_preview(self, file_path: str):
-        """Open a file in preview mode (replace existing preview tab)."""
-        # Normalize the file path for comparison (handle Windows paths)
-        file_path = os.path.normpath(os.path.abspath(file_path)).replace("\\", "/")
-
-        # Check if file is already open as permanent tab (including preview tabs)
-        for i in range(self.count()):
-            editor = self.widget(i)
-            if isinstance(editor, PythonEditor) and editor.file_path:
-                # Compare normalized paths
-                existing_path = os.path.normpath(os.path.abspath(editor.file_path)).replace("\\", "/")
-                if existing_path == file_path:
-                    # File already open - just switch to it (don't create duplicate)
-                    self.setCurrentIndex(i)
-                    return True
-
-        # Find ANY existing preview tab (not just by index, which might be stale)
-        existing_preview_index = -1
-        for i in range(self.count()):
-            tab_text = self.tabText(i)
-            if " (Preview)" in tab_text or tab_text.startswith("[Preview]"):
-                existing_preview_index = i
-                break
-
-        # If we found a preview tab, replace it
-        if existing_preview_index >= 0:
-            preview_editor = self.widget(existing_preview_index)
-            # Load new file into existing preview tab
-            if preview_editor and preview_editor.load_file(file_path):
-                file_name = os.path.basename(file_path)
-                self.setTabText(existing_preview_index, file_name + " (Preview)")
-                self.setCurrentIndex(existing_preview_index)
-                # Update the tracked index
-                self.preview_tab_index = existing_preview_index
-
-                # Save session state after preview change
-                QTimer.singleShot(100, self.save_session_if_available)
-                return True
-
-        # Create new preview tab
-        editor = PythonEditor(self)
-        if editor.load_file(file_path):
-            file_name = os.path.basename(file_path)
-            index = self.addTab(editor, file_name + " (Preview)")
-            self.preview_tab_index = index
-            self.setCurrentIndex(index)
-
-            # Apply theme to new editor
-            self.apply_editor_theme(editor)
-
-            # Apply current word wrap setting
-            editor.set_word_wrap(self._word_wrap_enabled)
-
-            # Connect signals like permanent tabs
-            editor.textChanged.connect(lambda: self.update_tab_title(editor))
-            editor.textChanged.connect(self.textChanged.emit)
-            editor.inspect_object.connect(self.inspect_object.emit)
-
-            # Update active tab styling
-            QTimer.singleShot(0, self.update_active_tab_styling)
-
-            # Save session state after adding preview tab
-            QTimer.singleShot(100, self.save_session_if_available)
-
-            return True
-        return False
-
-    def make_preview_permanent(self, file_path: str = None):
-        """Convert current preview tab to permanent tab."""
-        if self.preview_tab_index >= 0 and self.preview_tab_index < self.count():
-            editor = self.widget(self.preview_tab_index)
-            if editor and isinstance(editor, PythonEditor):
-                # Remove (Preview) from tab title
-                current_text = self.tabText(self.preview_tab_index)
-                if current_text.endswith(" (Preview)"):
-                    permanent_title = current_text.replace(" (Preview)", "")
-                    self.setTabText(self.preview_tab_index, permanent_title)
-
-                # Clear preview tab index
-                self.preview_tab_index = -1
-
-                # Save session state after making permanent
-                QTimer.singleShot(100, self.save_session_if_available)
-
-                return True
-        return False
-
-    def apply_close_button_styles(self):
-        """Apply basic tab styling (Maya-safe)."""
-        try:
-            # Simple, Maya-compatible stylesheet with improved design
-            tab_style = """
-                QTabWidget::pane {
-                    border: 1px solid #3c3c3c;
-                    background-color: #242424;
-                }
-                
-                QTabBar {
-                    background-color: #242424;
-                    padding-top: 4px;
-                    border-bottom: 1px solid #0a0a0a;
-                }
-                
-                QTabWidget::tab-bar {
-                    background-color: #242424;
-                }
-                
-                QTabBar::tab {
-                    background-color: #242424;
-                    color: #cccccc;
-                    border: 1px solid #3c3c3c;
-                    border-bottom: none;
-                    padding: 8px 16px 8px 16px;
-                    margin-right: 2px;
-                    margin-top: 0px;
-                }
-                
-                QTabBar::tab:selected {
-                    background-color: #1e1e1e;
-                    color: #ffffff;
-                    border-top: 2px solid #0078d4;
-                }
-                
-                QTabBar::tab:hover:!selected {
-                    background-color: #2a2a2a;
-                }
-                
-            """
-
-            self.setStyleSheet(tab_style)
-
-        except Exception as e:
-            logger.error(f"Error applying tab styles - {e}")
-
-    def update_active_tab_styling(self):
-        """Simple active tab indication using text prefix and preview styling."""
-        try:
-            current_index = self.currentIndex()
-
-            # Only proceed if we have tabs
-            if self.count() == 0:
-                return
-
-            # Add visual indicator to active tab text
-            for i in range(self.count()):
-                text = self.tabText(i)
-                editor = self.widget(i)
-                is_preview = hasattr(editor, "is_preview") and editor.is_preview
-
-                # Skip preview tabs - they manage their own styling
-                if is_preview:
-                    continue
-
-                # Handle active indicator for non-preview tabs
-                if i == current_index:
-                    # Add active indicator if not present
-                    if not text.startswith("● "):
-                        text = f"● {text}"
-                else:
-                    # Remove active indicator from inactive tabs
-                    text = text.removeprefix("● ")
-
-                self.setTabText(i, text)
-
-        except Exception as e:
-            logger.error(f"Error updating active tab styling - {e}")
-
-    def setup_middle_click_close(self):
-        """Setup middle-click to close tabs."""
-        try:
-            # Install event filter on the tab bar to capture middle clicks
-            self.tabBar().installEventFilter(self)
-        except Exception as e:
-            logger.error(f"Failed to setup middle-click close - {e}")
-
-    def eventFilter(self, obj, event):
-        """Handle mouse events for middle-click tab closing."""
-        try:
-            # Check if this is a mouse press event on the tab bar
-            if obj == self.tabBar() and hasattr(event, "type"):
-                from .....lib_ui.qt_compat import QtCore
-
-                # Handle middle mouse button press
-                if event.type() == QtCore.QEvent.MouseButtonPress and hasattr(event, "button") and event.button() == Qt.MiddleButton:
-                    # Get the tab index at the click position
-                    tab_index = self.tabBar().tabAt(event.pos())
-
-                    if tab_index >= 0:
-                        # Close the tab
-                        self.close_tab(tab_index)
-                        return True  # Event handled
-
-            # Pass through other events
-            return super().eventFilter(obj, event)
-
-        except Exception as e:
-            logger.error(f"Event filter error - {e}")
-            return super().eventFilter(obj, event)
-
-    def close_current_tab(self):
-        """Close the current tab."""
-        current_index = self.currentIndex()
-        if current_index >= 0:
-            self.close_tab(current_index)
-
-    def save_current_file(self) -> bool:
-        """Save the currently active file."""
-        editor = self.currentWidget()
-        if not isinstance(editor, PythonEditor):
-            return False
-
-        # Cannot save Draft tab
-        if hasattr(editor, "is_draft") and editor.is_draft:
-            CodeEditorMessageBox.information(self, "Cannot Save Draft", "The Draft tab cannot be saved to file.")
-            return False
-
-        if editor.file_path is None:
-            # Save as dialog for untitled files
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Python File", "", "Python Files (*.py)")
-            if not file_path:
-                return False
-        elif not os.path.exists(editor.file_path):
-            # File path exists but file was deleted - create new file
-            file_path = editor.file_path
-            # Ensure parent directory exists
-            parent_dir = os.path.dirname(file_path)
-            if parent_dir and not os.path.exists(parent_dir):
-                try:
-                    os.makedirs(parent_dir, exist_ok=True)
-                except OSError:
-                    # If we can't create parent directory, use save as dialog
-                    file_path, _ = QFileDialog.getSaveFileName(self, "Save Python File", editor.file_path, "Python Files (*.py)")
-                    if not file_path:
-                        return False
-        else:
-            file_path = editor.file_path
-
-        success = editor.save_file(file_path)
-        if success:
-            self.update_tab_title(editor)
-
-            # Save session state after file save
-            QTimer.singleShot(100, self.save_session_if_available)
-
-        return success
-
-    def get_current_code(self) -> str:
-        """Get code from the currently active editor."""
-        editor = self.currentWidget()
-        if isinstance(editor, PythonEditor):
-            return editor.toPlainText()
-        return ""
-
-    def close_tab(self, index: int):
-        """Close a tab after checking for unsaved changes."""
-        editor = self.widget(index)
-        if not isinstance(editor, PythonEditor):
-            return
-
-        # Prevent closing Draft tab - check this first
-        if hasattr(editor, "is_draft") and editor.is_draft:
-            CodeEditorMessageBox.warning(self, "Draft Tab", "The Draft tab cannot be closed.\n\nThis is a permanent workspace for temporary code.")
-            return
-
-        if editor.is_modified:
-            file_name = editor.get_display_name().rstrip("*")
-            reply = CodeEditorMessageBox.question(
-                self,
-                "Unsaved Changes",
-                f"'{file_name}' has unsaved changes. Save before closing?",
-                CodeEditorMessageBox.Yes | CodeEditorMessageBox.No | CodeEditorMessageBox.Cancel,
-            )
-
-            if reply == CodeEditorMessageBox.Yes:
-                if not self.save_file_at_index(index):
-                    return  # Cancel close if save failed
-            elif reply == CodeEditorMessageBox.Cancel:
-                return  # Cancel close
-
-        self.removeTab(index)
-
-        # Update active tab styling after removing tab
-        QTimer.singleShot(0, self.update_active_tab_styling)
-
-        # Save session state after removing tab
-        QTimer.singleShot(100, self.save_session_if_available)
-
-        # Create new Draft tab if all tabs are closed
-        if self.count() == 0:
-            self.new_file(is_draft=True)
-
-    def save_file_at_index(self, index: int) -> bool:
-        """Save file at specific tab index."""
-        current_index = self.currentIndex()
-        self.setCurrentIndex(index)
-        success = self.save_current_file()
-        self.setCurrentIndex(current_index)
-        return success
-
-    def update_tab_title(self, editor: PythonEditor):
-        """Update tab title based on editor state."""
-        # Skip updating preview tabs - they manage their own titles
-        if hasattr(editor, "is_preview") and editor.is_preview:
-            return
-
-        for i in range(self.count()):
-            if self.widget(i) == editor:
-                self.setTabText(i, editor.get_display_name())
-                break
-
-    # Tab visual state is handled by asterisk in tab title
-
-    def save_session_if_available(self):
-        """Save session state if main window is available."""
-        # Find main window (parent)
-        parent = self.parent()
-        while parent:
-            if hasattr(parent, "save_session_state"):
-                parent.save_session_state()
-                break
-            parent = parent.parent()
-
-    def get_current_editor(self):
-        """Get the currently active editor."""
-        return self.currentWidget()
-
-    def get_current_file_path(self):
-        """Get the file path of the currently active editor."""
-        current_editor = self.get_current_editor()
-        if current_editor and hasattr(current_editor, "file_path"):
-            return current_editor.file_path
-        return None
+# Re-exported from the new module so existing imports keep working.
+from .editor_tab_widget import CodeEditorWidget  # noqa: E402, F401

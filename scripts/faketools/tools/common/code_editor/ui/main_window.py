@@ -7,6 +7,7 @@ from logging import getLogger
 import os
 
 from .....lib_ui.qt_compat import QWidget
+from ..command.execution import build_exec_globals
 from ..settings import SettingsManager
 from ..utils.autosave_manager import AutoSaveManager  # Direct import to avoid circular dependency
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
@@ -35,10 +36,7 @@ class MayaCodeEditor(QWidget):
         self.autosave_manager = AutoSaveManager(self.settings_manager, self)
 
         # Persistent execution environment (like Maya Script Editor)
-        self.exec_globals = {
-            "__name__": "__main__",
-        }
-        self.setup_exec_environment()
+        self.exec_globals = build_exec_globals()
         self.toolbar = None
 
         # Initialize execution manager
@@ -50,9 +48,6 @@ class MayaCodeEditor(QWidget):
         # Initialize UI layout manager
         self.layout_manager = UILayoutManager(self)
 
-        # Initialize execution manager (uses properties for lazy access)
-        self.execution_manager = ExecutionManager(self)
-
         # Initialize session manager
         self.session_manager = UISessionManager(self)
 
@@ -63,25 +58,6 @@ class MayaCodeEditor(QWidget):
         self.layout_manager.apply_font_settings()
         self.setup_workspace()
         self.layout_manager.restore_settings()
-
-    def setup_exec_environment(self):
-        """Setup persistent execution environment with Maya imports."""
-        try:
-            import maya.api.OpenMaya as om2  # type: ignore
-            import maya.cmds as cmds  # type: ignore
-
-            # Add Maya modules to persistent environment
-            self.exec_globals.update(
-                {
-                    "cmds": cmds,
-                    "om2": om2,
-                    "om": om2,  # Alias for backward compatibility
-                },
-            )
-
-        except ImportError:
-            # Maya not available
-            pass
 
     def get_current_editor(self):
         """Get the currently active editor widget."""

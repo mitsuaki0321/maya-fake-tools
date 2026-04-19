@@ -1,121 +1,18 @@
 """
 Execution Manager for Code Editor.
-Handles Python code execution, inspection, and result display.
+
+UI-layer coordinator: reads the active editor's selection/content, formats
+inspection snippets, and routes execution through the command-layer
+``NativeExecutionBridge``. All Maya API calls live in ``command.execution``.
 """
 
 import ast
 import contextlib
 from logging import getLogger
 
+from ..command.execution import MAYA_AVAILABLE, NativeExecutionBridge
+
 logger = getLogger(__name__)
-
-try:
-    import maya.cmds as cmds
-
-    MAYA_AVAILABLE = True
-except ImportError:
-    MAYA_AVAILABLE = False
-    logger.debug("Maya commands not available")
-
-
-class NativeExecutionBridge:
-    """Maya native execution using hidden cmdScrollFieldExecuter"""
-
-    def __init__(self):
-        self.hidden_window = None
-        self.python_executer = None
-        self._setup_executer()
-
-    def _setup_executer(self):
-        """Setup hidden cmdScrollFieldExecuter for execution"""
-        if not MAYA_AVAILABLE:
-            return
-
-        # Create hidden window
-        window_name = "hiddenNativeExecuter"
-        if cmds.window(window_name, exists=True):
-            cmds.deleteUI(window_name)
-
-        self.hidden_window = cmds.window(window_name, visible=False, retain=True)
-
-        # Create Python executer
-        cmds.setParent(self.hidden_window)
-        layout = cmds.columnLayout()
-
-        self.python_executer = cmds.cmdScrollFieldExecuter(parent=layout, sourceType="python", width=100, height=100)
-
-    def execute_code(self, code, mode="all", selection_range=None, exec_globals=None):
-        """
-        Execute code using native cmdScrollFieldExecuter
-
-        Args:
-            code: Python code to execute
-            mode: 'all', 'selected', or 'range'
-            selection_range: (start, end) for range execution
-            exec_globals: Global dictionary for execution (used for fallback)
-        """
-        if not MAYA_AVAILABLE or not self.python_executer:
-            return False
-
-        try:
-            import __main__
-
-            # IMPORTANT: First sync __main__ to exec_globals to get latest values
-            # This ensures we get the most current state before executing
-            if exec_globals:
-                # Get current state from __main__ first
-                for key in dir(__main__):
-                    if not key.startswith("__"):
-                        try:
-                            value = getattr(__main__, key)
-                            # Don't sync modules and built-ins
-                            if not (hasattr(value, "__module__") and value.__module__ in ["builtins", "__builtin__"]):
-                                exec_globals[key] = value
-                        except Exception as e:
-                            logger.debug(f"Failed to sync variable '{key}': {e}")
-
-                # Then update __main__ with any exec_globals that might be newer
-                for key, value in exec_globals.items():
-                    if not key.startswith("__"):
-                        setattr(__main__, key, value)
-
-            # Set code text
-            cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, text=code)
-
-            # Execute based on mode
-            if mode == "all":
-                # Execute all code
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, executeAll=True)
-            elif mode == "range" and selection_range:
-                # Select specific range and execute
-                start, end = selection_range
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, select=[start, end])
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, execute=True)
-            else:  # 'selected' or default
-                # Execute selected or current line
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, execute=True)
-
-            # Sync back any new variables from __main__ to exec_globals
-            if exec_globals:
-                for key in dir(__main__):
-                    if not key.startswith("__"):
-                        try:
-                            value = getattr(__main__, key)
-                            # Don't sync modules and built-ins
-                            if not (hasattr(value, "__module__") and value.__module__ in ["builtins", "__builtin__"]):
-                                exec_globals[key] = value
-                        except Exception as e:
-                            logger.debug(f"Failed to sync variable '{key}': {e}")
-
-            return True
-        except Exception as e:
-            logger.error(f"Failed to execute code: {e}")
-            return False
-
-    def cleanup(self):
-        """Cleanup hidden window"""
-        if MAYA_AVAILABLE and self.hidden_window and cmds.window(self.hidden_window, exists=True):
-            cmds.deleteUI(self.hidden_window)
 
 
 class ExecutionManager:
@@ -356,44 +253,19 @@ except Exception as _help_err:
             self.output_terminal.append_error("Error during inspection: " + str(inspection_error))
 
     def execute_inspection_code(self, code: str):
-        """Execute inspection code without displaying the code itself."""
-        # Execute using Maya's python command which doesn't show the code
-        if MAYA_AVAILABLE:
-            try:
-                # Use Maya's python command to execute without showing code in terminal
-                import maya.cmds as cmds
+        """Execute inspection code silently (code text itself is not echoed)."""
+        if MAYA_AVAILABLE and self.native_bridge is None:
+            with contextlib.suppress(Exception):
+                self.native_bridge = NativeExecutionBridge()
 
-                # First sync variables to __main__
-                import __main__
+        if self.native_bridge:
+            self.native_bridge.execute_silent(code, exec_globals=self.exec_globals)
+            return
 
-                for key, value in self.exec_globals.items():
-                    if not key.startswith("__"):
-                        setattr(__main__, key, value)
+        # Non-Maya fallback
+        try:
+            exec(code, self.exec_globals)
+        except Exception:
+            import traceback
 
-                # Execute the code using maya.cmds.python which doesn't echo the code
-                cmds.python(code)
-
-                # Sync back any new variables
-                for key in dir(__main__):
-                    if not key.startswith("__"):
-                        try:
-                            value = getattr(__main__, key)
-                            if not (hasattr(value, "__module__") and value.__module__ in ["builtins", "__builtin__"]):
-                                self.exec_globals[key] = value
-                        except Exception:
-                            pass
-            except Exception as e:
-                # Fallback to native bridge if python command fails
-                logger.debug(f"Maya python command failed: {e}, falling back to native bridge")
-                if self.native_bridge:
-                    self.native_bridge.execute_code(code, mode="all", exec_globals=self.exec_globals)
-                else:
-                    exec(code, self.exec_globals)
-        else:
-            # Fallback to exec-based execution
-            try:
-                exec(code, self.exec_globals)
-            except Exception:
-                import traceback
-
-                traceback.print_exc()
+            traceback.print_exc()

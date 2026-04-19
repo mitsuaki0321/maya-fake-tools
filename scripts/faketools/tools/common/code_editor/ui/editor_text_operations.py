@@ -1,11 +1,12 @@
 """
 Text operations mixin for the Python editor.
-Handles line operations, multi-selection, and text manipulation.
+
+Single-cursor line-wise operations: duplicate, delete, move up/down, select
+line, plus the Smart Home helper. Multi-cursor equivalents live in
+``multi_cursor_*`` modules.
 """
 
-from .....lib_ui.qt_compat import QTextCharFormat, QTextCursor, QTextEdit
-
-# SimpleRenameDialog import removed - F2 feature removed
+from .....lib_ui.qt_compat import QTextCursor
 
 
 class EditorTextOperationsMixin:
@@ -262,201 +263,11 @@ class EditorTextOperationsMixin:
         cursor.endEditBlock()
 
     def select_next_occurrence(self):
-        """Select next occurrence of current selection (Ctrl+D)."""
-        # Delegate to the new multi-cursor implementation
-        if hasattr(self, "add_next_occurrence"):
-            self.add_next_occurrence()
-        else:
-            # Fallback to old implementation if multi-cursor mixin not available
-            cursor = self.textCursor()
-
-            # Initialize multiple selections if not exists
-            if not hasattr(self, "_multi_selections"):
-                self._multi_selections = []
-
-            # If no selection, select word under cursor AND find next occurrence
-            if not cursor.hasSelection():
-                cursor.select(QTextCursor.WordUnderCursor)
-                if not cursor.hasSelection():  # Nothing to select
-                    return
-
-                # Set the cursor with the selection to make it visible
-                self.setTextCursor(cursor)
-
-                # Get the selected text
-                selected_text = cursor.selectedText()
-                if not selected_text.strip():  # Empty or whitespace only
-                    return
-
-                # Initialize first selection
-                self._multi_selections = [
-                    {
-                        "start": cursor.selectionStart(),
-                        "end": cursor.selectionEnd(),
-                        "text": selected_text,
-                    },
-                ]
-
-                # Immediately find and add the next occurrence
-                document = self.document()
-                next_cursor = document.find(selected_text, cursor.selectionEnd())
-
-                # If not found after current position, try from beginning
-                if next_cursor.isNull():
-                    next_cursor = document.find(selected_text, 0)
-
-                # Add next occurrence if found and different from current
-                if not next_cursor.isNull():
-                    next_start = next_cursor.selectionStart()
-                    next_end = next_cursor.selectionEnd()
-
-                    # Check if it's not the same as current selection
-                    if next_start != cursor.selectionStart():
-                        self._multi_selections.append(
-                            {
-                                "start": next_start,
-                                "end": next_end,
-                                "text": selected_text,
-                            },
-                        )
-
-                self._highlight_selections()
-                return
-
-            # Get currently selected text
-            selected_text = cursor.selectedText()
-            if not selected_text.strip():
-                return
-
-            # If this is the first Ctrl+D on a selection, initialize multi-selection AND find next
-            if not self._multi_selections:
-                self._multi_selections = [
-                    {
-                        "start": cursor.selectionStart(),
-                        "end": cursor.selectionEnd(),
-                        "text": selected_text,
-                    },
-                ]
-
-                # Immediately find and add the next occurrence on first Ctrl+D
-                document = self.document()
-                next_cursor = document.find(selected_text, cursor.selectionEnd())
-
-                # If not found after current position, try from beginning
-                if next_cursor.isNull():
-                    next_cursor = document.find(selected_text, 0)
-
-                # Add next occurrence if found and different from current
-                if not next_cursor.isNull():
-                    next_start = next_cursor.selectionStart()
-                    next_end = next_cursor.selectionEnd()
-
-                    # Check if it's not the same as current selection
-                    if next_start != cursor.selectionStart():
-                        self._multi_selections.append(
-                            {
-                                "start": next_start,
-                                "end": next_end,
-                                "text": selected_text,
-                            },
-                        )
-
-                self._highlight_selections()
-                return
-
-            # Find next occurrence after the last selection (for subsequent Ctrl+D presses)
-            last_selection = max(self._multi_selections, key=lambda x: x["end"])
-            search_from = last_selection["end"]
-
-            # Search for next occurrence
-            document = self.document()
-            next_cursor = document.find(selected_text, search_from)
-
-            # If not found from current position, search from beginning
-            if next_cursor.isNull():
-                next_cursor = document.find(selected_text, 0)
-
-            # If still not found or it's one we already have, do nothing
-            if next_cursor.isNull():
-                return
-
-            # Check if this occurrence is already selected
-            new_start = next_cursor.selectionStart()
-            new_end = next_cursor.selectionEnd()
-
-            for selection in self._multi_selections:
-                if selection["start"] == new_start and selection["end"] == new_end:
-                    return  # Already selected
-
-            # Add new selection
-            self._multi_selections.append({"start": new_start, "end": new_end, "text": selected_text})
-
-            # Update visual highlighting
-            self._highlight_selections()
-
-    def _highlight_selections(self):
-        """Highlight all multi-selections."""
-        if not hasattr(self, "_multi_selections") or not self._multi_selections:
-            return
-
-        # Clear previous extra selections
-        self.setExtraSelections([])
-
-        # Create highlight format
-        highlight_format = QTextCharFormat()
-        highlight_format.setBackground(self.palette().color(self.palette().ColorRole.Highlight))
-        highlight_format.setForeground(self.palette().color(self.palette().ColorRole.HighlightedText))
-
-        # Create extra selections for highlighting
-        extra_selections = []
-        for selection in self._multi_selections:
-            extra_selection = QTextEdit.ExtraSelection()
-            extra_selection.format = highlight_format
-
-            cursor = self.textCursor()
-            cursor.setPosition(selection["start"])
-            cursor.setPosition(selection["end"], QTextCursor.KeepAnchor)
-            extra_selection.cursor = cursor
-
-            extra_selections.append(extra_selection)
-
-        self.setExtraSelections(extra_selections)
-
-        # Set main cursor to last selection
-        if self._multi_selections:
-            last_selection = self._multi_selections[-1]
-            cursor = self.textCursor()
-            cursor.setPosition(last_selection["start"])
-            cursor.setPosition(last_selection["end"], QTextCursor.KeepAnchor)
-            self.setTextCursor(cursor)
-
-        # Clear selections after rename
-        self._clear_multi_selections()
-
-    def _replace_multi_selections_with_text(self, replacement_text):
-        """Replace all multi-selected text with the given text."""
-        if not hasattr(self, "_multi_selections") or not self._multi_selections:
-            return
-
-        cursor = self.textCursor()
-        cursor.beginEditBlock()
-
-        try:
-            # Sort selections by position (from end to start to avoid position shifts)
-            sorted_selections = sorted(self._multi_selections, key=lambda x: x["start"], reverse=True)
-
-            # Replace each selection
-            for selection in sorted_selections:
-                # Create cursor for this selection
-                sel_cursor = self.textCursor()
-                sel_cursor.setPosition(selection["start"])
-                sel_cursor.setPosition(selection["end"], QTextCursor.KeepAnchor)
-
-                # Replace the selected text
-                sel_cursor.insertText(replacement_text)
-
-        finally:
-            cursor.endEditBlock()
+        """Ctrl+D — thin alias that forwards to the multi-cursor implementation."""
+        # PythonEditor always inherits from MultiCursorMixin, so add_next_occurrence
+        # is defined. Kept as a separate method purely because ``editor_shortcuts``
+        # binds Ctrl+D to this name and we don't want to touch the shortcut table.
+        self.add_next_occurrence()
 
     def select_current_line(self):
         """Select the entire current line (Ctrl+L). If lines already selected, extend selection."""
@@ -497,9 +308,3 @@ class EditorTextOperationsMixin:
                 cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
 
         self.setTextCursor(cursor)
-
-    def _clear_multi_selections(self):
-        """Clear all multi-selections."""
-        if hasattr(self, "_multi_selections"):
-            self._multi_selections = []
-        self.setExtraSelections([])

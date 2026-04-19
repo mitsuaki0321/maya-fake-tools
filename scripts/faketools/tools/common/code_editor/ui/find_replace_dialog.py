@@ -1,6 +1,9 @@
 """
 Find and Replace dialog for the code editor.
-Provides search and replace functionality with various options.
+
+UI layer only: builds the dialog, translates checkbox state into a
+``SearchOptions``, and delegates pattern matching / replacement to
+``command.search.SearchEngine``.
 """
 
 from .....lib_ui.qt_compat import (
@@ -20,6 +23,7 @@ from .....lib_ui.qt_compat import (
     QTextEdit,
     QVBoxLayout,
 )
+from ..command.search import InvalidRegexError, SearchEngine, SearchOptions
 from .dialog_base import CodeEditorDialog, CodeEditorMessageBox
 
 
@@ -40,6 +44,28 @@ class FindReplaceDialog(CodeEditorDialog):
         self.connect_signals()
         self.setup_shortcuts()
         self.restore_search_settings()
+
+    # -------------------- SearchOptions helpers --------------------
+
+    @property
+    def _engine(self) -> SearchEngine:
+        """Fresh engine bound to the editor's current document.
+
+        Rebuilt on access so that swapping the underlying document (e.g.
+        reloading a file) doesn't leave us holding a stale reference.
+        """
+        return SearchEngine(self.editor.document())
+
+    def get_options(self) -> SearchOptions:
+        """Build a ``SearchOptions`` from the current checkbox state."""
+        return SearchOptions(
+            match_case=self.match_case_cb.isChecked(),
+            whole_words=self.whole_words_cb.isChecked(),
+            use_regex=self.use_regex_cb.isChecked(),
+        )
+
+    def _is_backward(self) -> bool:
+        return self.up_radio.isChecked()
 
     def init_ui(self):
         """Initialize the user interface."""
@@ -270,501 +296,178 @@ class FindReplaceDialog(CodeEditorDialog):
         # Clear any existing search highlights when options change
         self.clear_highlights()
 
-    def get_search_flags(self):
-        """Get search flags based on current options."""
-        try:
-            # Try Qt6 first
-            from PySide6.QtGui import QTextDocument  # type: ignore
-
-            flags = QTextDocument.FindFlags()
-
-            if self.match_case_cb.isChecked():
-                flags |= QTextDocument.FindCaseSensitively
-
-            if self.whole_words_cb.isChecked():
-                flags |= QTextDocument.FindWholeWords
-
-            if self.up_radio.isChecked():
-                flags |= QTextDocument.FindBackward
-
-        except ImportError:
-            # Fallback to Qt5
-            flags = 0
-
-            if self.match_case_cb.isChecked():
-                flags |= QTextCursor.FindCaseSensitively
-
-            if self.whole_words_cb.isChecked():
-                flags |= QTextCursor.FindWholeWords
-
-            if self.up_radio.isChecked():
-                flags |= QTextCursor.FindBackward
-
-        return flags
+    # -------------------- Find actions --------------------
 
     def find_next(self):
-        """Find next occurrence."""
+        """Find the next occurrence (forward), wrapping around at EOF."""
         search_text = self.find_input.text()
         if not search_text:
             return False
-
-        # Clear multi-cursor mode if active
         self.clear_multi_cursor()
-
-        # Force search direction to down for find next
-        old_direction = self.down_radio.isChecked()
-        self.down_radio.setChecked(True)
-
-        result = self.perform_search(search_text, wrap_around=True)
-
-        # Restore original direction if it was changed
-        if not old_direction:
-            self.up_radio.setChecked(True)
-
-        return result
+        return self._jump_to_next_match(search_text, backward=False)
 
     def find_previous(self):
-        """Find previous occurrence."""
+        """Find the previous occurrence (backward), wrapping around at SOF."""
         search_text = self.find_input.text()
         if not search_text:
             return False
-
-        # Clear multi-cursor mode if active
         self.clear_multi_cursor()
-
-        # Force search direction to up for find previous
-        old_direction = self.up_radio.isChecked()
-        self.up_radio.setChecked(True)
-
-        result = self.perform_search(search_text, wrap_around=True)
-
-        # Restore original direction if it was changed
-        if not old_direction:
-            self.down_radio.setChecked(True)
-
-        return result
+        return self._jump_to_next_match(search_text, backward=True)
 
     def find_all(self):
-        """Find all occurrences and select them."""
+        """Populate multi-cursor selections from every forward match."""
         search_text = self.find_input.text()
         if not search_text:
             return 0
 
-        # Clear existing selections
         self.clear_highlights()
-
-        # Find and select all occurrences
         count = self.select_all_matches(search_text)
-
-        # Only show message if nothing found
         if count == 0:
             CodeEditorMessageBox.information(self, "Find All Results", f"'{search_text}' not found")
-
         return count
 
+    def _jump_to_next_match(self, search_text: str, backward: bool) -> bool:
+        """Move the editor cursor to the next match in the given direction.
+
+        Tries from the current cursor first; if that fails, wraps to the
+        opposite end of the document before giving up.
+        """
+        options = self.get_options()
+        cursor = self.editor.textCursor()
+
+        try:
+            found = self._engine.find_from(search_text, cursor, options, backward=backward)
+        except InvalidRegexError as exc:
+            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
+            return False
+
+        if found.isNull():
+            # Wrap around
+            wrap_cursor = QTextCursor(self.editor.document())
+            wrap_cursor.movePosition(QTextCursor.End if backward else QTextCursor.Start)
+            try:
+                found = self._engine.find_from(search_text, wrap_cursor, options, backward=backward)
+            except InvalidRegexError as exc:
+                CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
+                return False
+
+        if found.isNull():
+            CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
+            return False
+
+        block = found.block()
+        if not block.isVisible() and hasattr(self.editor, "fold_manager"):
+            self.editor.fold_manager.unfold_containing(block.blockNumber())
+        self.editor.setTextCursor(found)
+        return True
+
+    # -------------------- Replace actions --------------------
+
     def replace_current(self):
-        """Replace current selection if it matches search text."""
+        """Replace the active selection if it matches the search text, then advance."""
         search_text = self.find_input.text()
         replace_text = self.replace_input.text()
-
         if not search_text:
             return False
 
-        # Clear multi-cursor mode if active
         self.clear_multi_cursor()
 
+        options = self.get_options()
         cursor = self.editor.textCursor()
         if cursor.hasSelection():
-            selected_text = cursor.selectedText()
-
-            # Check if selected text matches search text
-            if self.text_matches(selected_text, search_text):
+            if SearchEngine.texts_equal(cursor.selectedText(), search_text, options):
                 cursor.insertText(replace_text)
-                # Find next occurrence after replacement
                 self.find_next()
                 return True
-        else:
-            # No selection, try to find and select first occurrence
-            if self.find_next():
-                return self.replace_current()
+        elif self.find_next():
+            return self.replace_current()
 
         return False
 
     def replace_all(self):
-        """Replace all occurrences without confirmation."""
+        """Replace every forward match in a single undo block."""
         search_text = self.find_input.text()
         replace_text = self.replace_input.text()
-
         if not search_text:
             return 0
 
-        # Clear multi-cursor mode if active
         self.clear_multi_cursor()
 
-        # Store original cursor position
-        original_cursor = self.editor.textCursor()
-        original_position = original_cursor.position()
+        original_position = self.editor.textCursor().position()
+        options = self.get_options()
 
-        # Begin undo block for single undo
         cursor = self.editor.textCursor()
         cursor.beginEditBlock()
-
         try:
-            # Perform replacement
-            count = self.perform_replace_all(search_text, replace_text)
+            try:
+                count = self._engine.replace_all(search_text, replace_text, options)
+            except InvalidRegexError as exc:
+                CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
+                return 0
 
-            # Restore cursor position after replacement
-            cursor.setPosition(min(original_position, self.editor.document().characterCount() - 1))
+            clamped = min(original_position, self.editor.document().characterCount() - 1)
+            cursor.setPosition(max(clamped, 0))
             self.editor.setTextCursor(cursor)
         finally:
-            # End undo block
             cursor.endEditBlock()
-
         return count
 
-    def perform_search(self, search_text, wrap_around=True):
-        """Perform the actual search operation."""
-        if not search_text:
-            return False
+    # -------------------- Multi-cursor / highlight helpers --------------------
 
-        flags = self.get_search_flags()
-        cursor = self.editor.textCursor()
-
-        # Perform search
-        if self.use_regex_cb.isChecked():
-            # Use regex search (simplified implementation)
-            found_cursor = self.regex_search(search_text, cursor, flags)
-        else:
-            # Use standard text search
-            try:
-                # Try with flags first
-                found_cursor = self.editor.document().find(search_text, cursor, flags)
-            except (TypeError, AttributeError):
-                # Fallback without flags if there's a type error
-                found_cursor = self.editor.document().find(search_text, cursor)
-
-        if not found_cursor.isNull():
-            # Auto-unfold if match is inside a folded region
-            block = found_cursor.block()
-            if not block.isVisible() and hasattr(self.editor, "fold_manager"):
-                self.editor.fold_manager.unfold_containing(block.blockNumber())
-            self.editor.setTextCursor(found_cursor)
-            return True
-        if wrap_around:
-            # Try wrapping around
-            return self.wrap_around_search(search_text, flags)
-        CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
-        return False
-
-    def wrap_around_search(self, search_text, flags):
-        """Search with wrap-around."""
-        # Move cursor to start/end and search again
-        cursor = self.editor.textCursor()
-
-        # Check if searching backwards by examining the radio button state
-        # since flags format may vary between Qt versions
-        if self.up_radio.isChecked():
-            # Searching backwards, start from end
-            cursor.movePosition(QTextCursor.End)
-        else:
-            # Searching forwards, start from beginning
-            cursor.movePosition(QTextCursor.Start)
-
-        if self.use_regex_cb.isChecked():
-            found_cursor = self.regex_search(search_text, cursor, flags)
-        else:
-            try:
-                # Try with flags first
-                found_cursor = self.editor.document().find(search_text, cursor, flags)
-            except (TypeError, AttributeError):
-                # Fallback without flags if there's a type error
-                found_cursor = self.editor.document().find(search_text, cursor)
-
-        if not found_cursor.isNull():
-            # Auto-unfold if match is inside a folded region
-            block = found_cursor.block()
-            if not block.isVisible() and hasattr(self.editor, "fold_manager"):
-                self.editor.fold_manager.unfold_containing(block.blockNumber())
-            self.editor.setTextCursor(found_cursor)
-            return True
-        CodeEditorMessageBox.information(self, "Find", f"'{search_text}' not found")
-        return False
-
-    def regex_search(self, pattern, cursor, flags):
-        """Perform regex search (simplified implementation)."""
-        # This is a simplified regex implementation
-        # In a full implementation, you would use QRegularExpression
-        import re
-
-        # Get document text
-        document = self.editor.document()
-        text = document.toPlainText()
-
-        # Determine search options
-        re_flags = 0
-        if not self.match_case_cb.isChecked():
-            re_flags |= re.IGNORECASE
-
-        # Compile pattern
-        try:
-            regex = re.compile(pattern, re_flags)
-        except re.error:
-            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {pattern}")
-            return QTextCursor()
-
-        # Search from current position
-        start_pos = cursor.position()
-
-        # Check direction using radio button state instead of flags
-        if self.up_radio.isChecked():
-            # Search backwards
-            match = None
-            for m in regex.finditer(text[:start_pos]):
-                match = m
-            if match:
-                new_cursor = QTextCursor(document)
-                new_cursor.setPosition(match.start())
-                new_cursor.setPosition(match.end(), QTextCursor.KeepAnchor)
-                return new_cursor
-        else:
-            # Search forwards
-            match = regex.search(text, start_pos)
-            if match:
-                new_cursor = QTextCursor(document)
-                new_cursor.setPosition(match.start())
-                new_cursor.setPosition(match.end(), QTextCursor.KeepAnchor)
-                return new_cursor
-
-        return QTextCursor()  # Not found
-
-    def select_all_matches(self, search_text):
-        """Select all matches in the editor using multi-cursor."""
-        # If editor has multi-cursor handler, use it directly
-        if hasattr(self.editor, "all_cursors"):
-            # Clear existing cursors
-            self.editor.all_cursors.clear()
-            self.editor.search_text = search_text
-
-            # Find all occurrences
-            count = 0
-            cursor = QTextCursor(self.editor.document())
-            cursor.setPosition(0)
-            flags = self.get_search_flags()
-
-            # Remove FindBackward flag if present for find all
-            try:
-                from PySide6.QtGui import QTextDocument
-
-                if flags & QTextDocument.FindBackward:
-                    flags &= ~QTextDocument.FindBackward
-            except ImportError:
-                if flags & QTextCursor.FindBackward:
-                    flags &= ~QTextCursor.FindBackward
-
-            while True:
-                if self.use_regex_cb.isChecked():
-                    found_cursor = self.regex_search(search_text, cursor, flags)
-                else:
-                    try:
-                        found_cursor = self.editor.document().find(search_text, cursor, flags)
-                    except (TypeError, AttributeError):
-                        found_cursor = self.editor.document().find(search_text, cursor)
-
-                if found_cursor.isNull():
-                    break
-
-                # Create new cursor for each occurrence
-                new_cursor = QTextCursor(self.editor.document())
-                new_cursor.setPosition(found_cursor.selectionStart())
-                new_cursor.setPosition(found_cursor.selectionEnd(), QTextCursor.KeepAnchor)
-                self.editor.all_cursors.append(new_cursor)
-                cursor = found_cursor
-                count += 1
-
-            if self.editor.all_cursors:
-                # Set main cursor to last found
-                self.editor.setTextCursor(self.editor.all_cursors[-1])
-                # Update the viewport to show cursors
-                self.editor.viewport().update()
-
-            return count
-        # Fallback if no multi-cursor support
-        return 0
-
-    def highlight_all_matches(self, search_text):
-        """Highlight all matches in the editor."""
-        count = 0
-        cursor = QTextCursor(self.editor.document())
-        cursor.setPosition(0)
-
-        # Store cursors for all matches
-        match_cursors = []
-        flags = self.get_search_flags()
-
-        # Remove FindBackward flag if present for find all
-        try:
-            from PySide6.QtGui import QTextDocument
-
-            if flags & QTextDocument.FindBackward:
-                flags &= ~QTextDocument.FindBackward
-        except ImportError:
-            if flags & QTextCursor.FindBackward:
-                flags &= ~QTextCursor.FindBackward
-
-        while True:
-            if self.use_regex_cb.isChecked():
-                found_cursor = self.regex_search(search_text, cursor, flags)
-            else:
-                try:
-                    found_cursor = self.editor.document().find(search_text, cursor, flags)
-                except (TypeError, AttributeError):
-                    found_cursor = self.editor.document().find(search_text, cursor)
-
-            if found_cursor.isNull():
-                break
-
-            match_cursors.append(QTextCursor(found_cursor))
-            cursor = found_cursor
-            count += 1
-
-        # Apply highlighting to all matches
-        if match_cursors:
-            # Create extra selections for highlighting
-            extra_selections = []
-            highlight_color = QColor(255, 255, 0, 80)  # Yellow with transparency
-
-            for match_cursor in match_cursors:
-                selection = QTextEdit.ExtraSelection()
-                selection.cursor = match_cursor
-                selection.format.setBackground(highlight_color)
-                extra_selections.append(selection)
-
-            # Apply the extra selections to highlight all matches
-            self.editor.setExtraSelections(extra_selections)
-            self.highlighted_matches = extra_selections  # Store for later clearing
-
-        return count
-
-    def count_matches(self, search_text):
-        """Count total number of matches."""
-        if self.use_regex_cb.isChecked():
-            return self.count_regex_matches(search_text)
-        return self.count_text_matches(search_text)
-
-    def count_text_matches(self, search_text):
-        """Count text matches."""
-        text = self.editor.toPlainText()
-
-        if self.match_case_cb.isChecked():
-            count = text.count(search_text)
-        else:
-            count = text.lower().count(search_text.lower())
-
-        return count
-
-    def count_regex_matches(self, pattern):
-        """Count regex matches."""
-        import re
-
-        text = self.editor.toPlainText()
-        re_flags = 0
-
-        if not self.match_case_cb.isChecked():
-            re_flags |= re.IGNORECASE
-
-        try:
-            regex = re.compile(pattern, re_flags)
-            matches = regex.findall(text)
-            return len(matches)
-        except re.error:
+    def select_all_matches(self, search_text: str) -> int:
+        """Populate ``editor.all_cursors`` with a cursor per forward match."""
+        if not hasattr(self.editor, "all_cursors"):
             return 0
 
-    def perform_replace_all(self, search_text, replace_text):
-        """Perform replace all operation."""
-        if self.use_regex_cb.isChecked():
-            return self.regex_replace_all(search_text, replace_text)
-        return self.text_replace_all(search_text, replace_text)
+        self.editor.all_cursors.clear()
+        self.editor.search_text = search_text
 
-    def text_replace_all(self, search_text, replace_text):
-        """Replace all text matches with proper undo support."""
-        count = 0
-        cursor = QTextCursor(self.editor.document())
-        flags = self.get_search_flags()
-
-        # Remove FindBackward flag for replace all
+        options = self.get_options()
         try:
-            from PySide6.QtGui import QTextDocument
-
-            if flags & QTextDocument.FindBackward:
-                flags &= ~QTextDocument.FindBackward
-        except ImportError:
-            if flags & QTextCursor.FindBackward:
-                flags &= ~QTextCursor.FindBackward
-
-        # Find and replace from end to beginning to preserve positions
-        positions = []
-        cursor.setPosition(0)
-
-        # First, find all matches
-        while True:
-            try:
-                found = self.editor.document().find(search_text, cursor, flags)
-            except (TypeError, AttributeError):
-                found = self.editor.document().find(search_text, cursor)
-
-            if found.isNull():
-                break
-
-            positions.append((found.selectionStart(), found.selectionEnd()))
-            cursor = found
-
-        # Replace from end to beginning to maintain positions
-        for start, end in reversed(positions):
-            cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.KeepAnchor)
-            cursor.insertText(replace_text)
-            count += 1
-
-        return count
-
-    def regex_replace_all(self, pattern, replacement):
-        """Replace all regex matches with proper undo support."""
-        import re
-
-        count = 0
-        cursor = QTextCursor(self.editor.document())
-        text = self.editor.toPlainText()
-        re_flags = 0
-
-        if not self.match_case_cb.isChecked():
-            re_flags |= re.IGNORECASE
-
-        try:
-            regex = re.compile(pattern, re_flags)
-            matches = list(regex.finditer(text))
-
-            # Replace from end to beginning to maintain positions
-            for match in reversed(matches):
-                cursor.setPosition(match.start())
-                cursor.setPosition(match.end(), QTextCursor.KeepAnchor)
-                # Handle regex replacement groups
-                if "\\" in replacement:
-                    replace_text = match.expand(replacement)
-                else:
-                    replace_text = replacement
-                cursor.insertText(replace_text)
-                count += 1
-
-            return count
-        except re.error:
-            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {pattern}")
+            match_cursors = list(self._engine.iter_matches(search_text, options))
+        except InvalidRegexError as exc:
+            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
             return 0
 
-    def text_matches(self, text1, text2):
-        """Check if two texts match based on current options."""
-        if self.match_case_cb.isChecked():
-            return text1 == text2
-        return text1.lower() == text2.lower()
+        if not match_cursors:
+            return 0
+
+        self.editor.all_cursors.extend(match_cursors)
+        self.editor.setTextCursor(match_cursors[-1])
+        self.editor.viewport().update()
+        return len(match_cursors)
+
+    def highlight_all_matches(self, search_text: str) -> int:
+        """Apply yellow ``ExtraSelection`` highlights to every forward match."""
+        options = self.get_options()
+        try:
+            match_cursors = list(self._engine.iter_matches(search_text, options))
+        except InvalidRegexError as exc:
+            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
+            return 0
+
+        if not match_cursors:
+            return 0
+
+        highlight_color = QColor(255, 255, 0, 80)
+        extra_selections = []
+        for match_cursor in match_cursors:
+            selection = QTextEdit.ExtraSelection()
+            selection.cursor = match_cursor
+            selection.format.setBackground(highlight_color)
+            extra_selections.append(selection)
+
+        self.editor.setExtraSelections(extra_selections)
+        self.highlighted_matches = extra_selections
+        return len(match_cursors)
+
+    def count_matches(self, search_text: str) -> int:
+        """Return the total number of forward matches (0 for invalid regex)."""
+        options = self.get_options()
+        try:
+            return self._engine.count_matches(search_text, options)
+        except InvalidRegexError:
+            return 0
 
     def clear_multi_cursor(self):
         """Clear multi-cursor mode if active."""

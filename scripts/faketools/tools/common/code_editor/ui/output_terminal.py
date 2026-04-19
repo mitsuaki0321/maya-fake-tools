@@ -42,8 +42,9 @@ class OutputTerminal(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Try to create Maya native terminal first
-        if MAYA_AVAILABLE and MayaTerminalWidget:
+        # Try to create Maya native terminal first (MAYA_AVAILABLE being True
+        # guarantees MayaTerminalWidget is a real class, not the None fallback).
+        if MAYA_AVAILABLE:
             self.maya_terminal = MayaTerminalWidget(self)
             if self.maya_terminal.is_available():
                 self.use_maya_terminal = True

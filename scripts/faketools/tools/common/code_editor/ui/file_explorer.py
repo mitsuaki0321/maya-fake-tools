@@ -1,6 +1,9 @@
 """
 File explorer widget for Code Editor.
-Provides VSCode-like file tree navigation.
+
+UI layer: tree view + context menu + drag/drop. All filesystem mutations are
+delegated to ``command.file_ops`` so the widget only translates user intent
+into ops and renders the resulting error messages.
 """
 
 from logging import getLogger
@@ -30,6 +33,7 @@ from .....lib_ui.qt_compat import (
     QWidget,
     Signal,
 )
+from ..command import file_ops
 from ..themes import AppTheme
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
@@ -474,47 +478,28 @@ class FileExplorer(QWidget):
         menu.exec_(self.tree_view.mapToGlobal(position))
 
     def create_new_file(self, base_path: str, is_dir: bool):
-        """Create a new Python file."""
-        if is_dir:
-            parent_dir = base_path
-        else:
-            parent_dir = os.path.dirname(base_path)
-
+        """Prompt for a filename and create a new Python file next to it."""
+        parent_dir = base_path if is_dir else os.path.dirname(base_path)
         name, ok = CodeEditorInputDialog.getText(self, "New Python File", "Enter file name:", text="new_script.py")
+        if not (ok and name):
+            return
 
-        if ok and name:
-            if not name.endswith(".py"):
-                name += ".py"
-
-            file_path = os.path.join(parent_dir, name)
-
-            try:
-                # Create empty file
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write("# New Python file\n")
-
-                # Open the new file
-                self.file_selected.emit(file_path)
-
-            except Exception as e:
-                CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {e!s}")
+        result = file_ops.create_python_file(parent_dir, name)
+        if result.success:
+            self.file_selected.emit(result.destination)
+        else:
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {result.error}")
 
     def create_new_folder(self, base_path: str, is_dir: bool):
-        """Create a new folder."""
-        if is_dir:
-            parent_dir = base_path
-        else:
-            parent_dir = os.path.dirname(base_path)
-
+        """Prompt for a folder name and create a new folder."""
+        parent_dir = base_path if is_dir else os.path.dirname(base_path)
         name, ok = CodeEditorInputDialog.getText(self, "New Folder", "Enter folder name:")
+        if not (ok and name):
+            return
 
-        if ok and name:
-            folder_path = os.path.join(parent_dir, name)
-
-            try:
-                os.makedirs(folder_path, exist_ok=True)
-            except Exception as e:
-                CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {e!s}")
+        result = file_ops.create_folder(parent_dir, name)
+        if not result.success:
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {result.error}")
 
     def refresh(self):
         """Refresh the file tree."""
@@ -562,31 +547,54 @@ class FileExplorer(QWidget):
             logger.info(f"Folder renamed: {old_name} -> {new_name}")
 
     def delete_selected_items(self):
-        """Delete all selected files and folders with confirmation dialog."""
-        import shutil
-
-        # Get all selected paths
+        """Confirm, then delete every selected file/folder via ``file_ops``."""
         selected_paths = self.get_selected_paths()
         if not selected_paths:
             return
 
-        # Build confirmation message
+        if not self._confirm_delete(selected_paths):
+            return
+
+        success_count = 0
+        errors = []
+        for path in selected_paths:
+            was_file = os.path.isfile(path)
+            was_dir = os.path.isdir(path)
+            result = file_ops.delete_item(path)
+            if result.success:
+                success_count += 1
+                if was_file:
+                    self.file_deleted.emit(path)
+                elif was_dir:
+                    self.folder_deleted.emit(path)
+            else:
+                errors.append(f"{os.path.basename(path)}: {result.error}")
+
+        self.refresh()
+
+        if errors:
+            error_msg = f"Successfully deleted {success_count} item(s), but failed to delete {len(errors)} item(s)."
+            error_msg += "\n\nErrors:\n" + "\n".join(errors[:5])
+            if len(errors) > 5:
+                error_msg += f"\n... and {len(errors) - 5} more errors"
+            CodeEditorMessageBox.warning(self, "Delete Operation", error_msg)
+        elif success_count > 0:
+            logger.info(f"Successfully deleted {success_count} item(s)")
+
+    def _confirm_delete(self, selected_paths: list) -> bool:
+        """Build the confirmation prompt for a delete and return True on Yes."""
         num_items = len(selected_paths)
         if num_items == 1:
             item_name = os.path.basename(selected_paths[0])
             confirmation_msg = f"Are you sure you want to delete this item?\n\n{item_name}"
         else:
-            # Show first few items and count
             items_to_show = min(5, num_items)
             item_names = [os.path.basename(path) for path in selected_paths[:items_to_show]]
             items_list = "\n".join(f"  • {name}" for name in item_names)
-
             if num_items > items_to_show:
                 items_list += f"\n  ... and {num_items - items_to_show} more"
-
             confirmation_msg = f"Are you sure you want to delete {num_items} items?\n\n{items_list}"
 
-        # Show confirmation dialog
         reply = CodeEditorMessageBox.question(
             self,
             "Confirm Delete",
@@ -594,87 +602,23 @@ class FileExplorer(QWidget):
             CodeEditorMessageBox.Yes | CodeEditorMessageBox.No,
             CodeEditorMessageBox.No,
         )
-
-        if reply != CodeEditorMessageBox.Yes:
-            return
-
-        # Delete each selected item
-        success_count = 0
-        error_count = 0
-        errors = []
-
-        for file_path in selected_paths:
-            try:
-                if os.path.isfile(file_path):
-                    # Delete file
-                    os.remove(file_path)
-                    # Emit signal for tab cleanup
-                    self.file_deleted.emit(file_path)
-                    success_count += 1
-                elif os.path.isdir(file_path):
-                    # Delete folder and all contents
-                    shutil.rmtree(file_path)
-                    # Emit signal for folder cleanup
-                    self.folder_deleted.emit(file_path)
-                    success_count += 1
-                else:
-                    # Path doesn't exist or is neither file nor folder
-                    error_count += 1
-                    errors.append(f"{os.path.basename(file_path)}: Path not found")
-            except Exception as e:
-                error_count += 1
-                errors.append(f"{os.path.basename(file_path)}: {e!s}")
-
-        # Refresh the view
-        self.refresh()
-
-        # Show error summary if there were errors
-        if error_count > 0:
-            error_msg = f"Successfully deleted {success_count} item(s), but failed to delete {error_count} item(s)."
-            if errors:
-                error_msg += "\n\nErrors:\n" + "\n".join(errors[:5])  # Show first 5 errors
-                if len(errors) > 5:
-                    error_msg += f"\n... and {len(errors) - 5} more errors"
-            CodeEditorMessageBox.warning(self, "Delete Operation", error_msg)
-        elif success_count > 0:
-            logger.info(f"Successfully deleted {success_count} item(s)")
+        return reply == CodeEditorMessageBox.Yes
 
     def delete_item(self, file_path: str, is_file: bool):
-        """Delete a file or folder with confirmation dialog (deprecated - use delete_selected_items instead)."""
-        import shutil
-
-        item_name = os.path.basename(file_path)
-        item_type = "file" if is_file else "folder"
-
-        # Show confirmation dialog
-        reply = CodeEditorMessageBox.question(
-            self,
-            "Confirm Delete",
-            f"Are you sure you want to delete this {item_type}?\n\n{item_name}",
-            CodeEditorMessageBox.Yes | CodeEditorMessageBox.No,
-            CodeEditorMessageBox.No,
-        )
-
-        if reply != CodeEditorMessageBox.Yes:
+        """Single-item delete with confirmation (kept for context-menu callers)."""
+        if not self._confirm_delete([file_path]):
             return
 
-        try:
+        result = file_ops.delete_item(file_path)
+        if result.success:
             if is_file:
-                # Delete file
-                os.remove(file_path)
-                # Emit signal for tab cleanup
                 self.file_deleted.emit(file_path)
             else:
-                # Delete folder and all contents
-                shutil.rmtree(file_path)
-                # Emit signal for folder cleanup
                 self.folder_deleted.emit(file_path)
-
-            # Refresh the view
             self.refresh()
-
-        except Exception as e:
-            CodeEditorMessageBox.critical(self, "Error", f"Failed to delete {item_type}: {e!s}")
+        else:
+            item_type = "file" if is_file else "folder"
+            CodeEditorMessageBox.critical(self, "Error", f"Failed to delete {item_type}: {result.error}")
 
     def copy_selected(self):
         """Copy selected items to clipboard."""
@@ -761,56 +705,20 @@ class FileExplorer(QWidget):
         return self.root_path
 
     def copy_item(self, source_path, destination_dir):
-        """Copy a single item (file or folder) to destination."""
-        import shutil
-
-        source_name = os.path.basename(source_path)
-        destination_path = os.path.join(destination_dir, source_name)
-
-        # Handle name conflicts
-        destination_path = self.get_unique_name(destination_path)
-
-        try:
-            if os.path.isfile(source_path):
-                shutil.copy2(source_path, destination_path)
-            else:
-                shutil.copytree(source_path, destination_path)
-            return True
-        except Exception as e:
-            CodeEditorMessageBox.warning(self, "Copy Error", f"Failed to copy {source_name}: {e!s}")
-            return False
+        """Copy through ``file_ops`` and surface errors via the UI."""
+        result = file_ops.copy_item(source_path, destination_dir)
+        if not result.success:
+            name = os.path.basename(source_path)
+            CodeEditorMessageBox.warning(self, "Copy Error", f"Failed to copy {name}: {result.error}")
+        return result.success
 
     def move_item(self, source_path, destination_dir):
-        """Move a single item (file or folder) to destination."""
-        import shutil
-
-        source_name = os.path.basename(source_path)
-        destination_path = os.path.join(destination_dir, source_name)
-
-        # Handle name conflicts
-        destination_path = self.get_unique_name(destination_path)
-
-        try:
-            shutil.move(source_path, destination_path)
-            return True
-        except Exception as e:
-            CodeEditorMessageBox.warning(self, "Move Error", f"Failed to move {source_name}: {e!s}")
-            return False
-
-    def get_unique_name(self, path):
-        """Get unique name if file/folder already exists."""
-        if not os.path.exists(path):
-            return path
-
-        base_path = path
-        counter = 1
-
-        while os.path.exists(path):
-            name, ext = os.path.splitext(base_path)
-            path = f"{name} ({counter}){ext}"
-            counter += 1
-
-        return path
+        """Move through ``file_ops`` and surface errors via the UI."""
+        result = file_ops.move_item(source_path, destination_dir)
+        if not result.success:
+            name = os.path.basename(source_path)
+            CodeEditorMessageBox.warning(self, "Move Error", f"Failed to move {name}: {result.error}")
+        return result.success
 
     def start_drag(self, supportedActions):
         """Start drag operation with custom mime data."""

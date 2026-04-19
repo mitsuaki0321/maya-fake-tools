@@ -10,7 +10,8 @@ Provides comprehensive Python syntax highlighting with support for:
 - Method calls (obj.method(), pkg.mod.func()) and bare function calls
 - Capitalized class constructors (Name())
 
-Uses single tokenization per document revision for efficiency.
+Rebuilds span cache at most once per debounce window while typing; re-uses
+stale spans in between so keystrokes never trigger a full tokenize pass.
 """
 
 from collections import defaultdict
@@ -19,7 +20,7 @@ import keyword
 import token as _token
 import tokenize as _tokenize
 
-from .....lib_ui.qt_compat import QSyntaxHighlighter
+from .....lib_ui.qt_compat import QSyntaxHighlighter, QTimer
 from .syntax_config_loader import SyntaxConfigLoader
 
 
@@ -37,8 +38,16 @@ class PythonHighlighter(QSyntaxHighlighter):
         - Bare function calls (func()) -> method color
         - Capitalized bare calls (Name()) -> class color (toggleable)
 
-    Re-tokenization occurs once per document revision with differential application in highlightBlock.
+    Re-tokenization is debounced: character-only edits reuse the previous span
+    cache and schedule a single rebuild after _REBUILD_DELAY_MS of typing, while
+    edits that change the block count rebuild synchronously to avoid stale spans
+    being misaligned against shifted block numbers.
     """
+
+    # Debounce window (ms) between last keystroke and full re-tokenize.
+    # Short enough that users don't perceive color lag, long enough that bursts
+    # of typing collapse into a single rebuild instead of one per character.
+    _REBUILD_DELAY_MS = 30
 
     # Feature toggles (set to False to disable)
     ENABLE_DECORATOR = True
@@ -73,7 +82,12 @@ class PythonHighlighter(QSyntaxHighlighter):
         self._fmt = {k: self._cfg.get_format(v) for k, v in self._KIND_TO_FMTKEY.items()}
         self._spans = {}
         self._rev = -1
+        self._last_block_count = 0
         self._kw = set(keyword.kwlist)
+
+        self._rebuild_timer = QTimer(self)
+        self._rebuild_timer.setSingleShot(True)
+        self._rebuild_timer.timeout.connect(self._on_rebuild_timer)
 
     # -------------------- Safe tokenization (handles incomplete code) --------------------
 
@@ -356,13 +370,49 @@ class PythonHighlighter(QSyntaxHighlighter):
             spans[row].sort(key=lambda x: x[0])
         return dict(spans)
 
+    # -------------------- Span cache management --------------------
+
+    def _rebuild_now(self):
+        """Synchronously rebuild the span cache from the current document text."""
+        doc = self.document()
+        if doc is None:
+            return
+        self._spans = self._build_spans(doc.toPlainText())
+        self._rev = doc.revision()
+        self._last_block_count = doc.blockCount()
+
+    def _on_rebuild_timer(self):
+        """Timer callback: rebuild spans, then re-apply formats via rehighlight()."""
+        doc = self.document()
+        if doc is None:
+            return
+        if self._rev == doc.revision():
+            # A synchronous rebuild (e.g. triggered by block count change) already
+            # caught up with the current revision — nothing to do.
+            return
+        self._rebuild_now()
+        # rehighlight() re-invokes highlightBlock for every block; each call now
+        # hits the fresh cache and only does the cheap setFormat work.
+        self.rehighlight()
+
     # -------------------- QSyntaxHighlighter hooks --------------------
 
     def highlightBlock(self, text: str):
         doc = self.document()
-        if not self._spans or self._rev != doc.revision():
-            self._spans = self._build_spans(doc.toPlainText())
-            self._rev = doc.revision()
+        rev = doc.revision()
+        block_count = doc.blockCount()
+
+        if not self._spans:
+            # First call: must rebuild synchronously so the initial paint is correct.
+            self._rebuild_now()
+        elif block_count != self._last_block_count:
+            # Line count shifted: block-indexed spans would misalign against the new
+            # layout, so rebuild synchronously to avoid a visible mis-coloring frame.
+            self._rebuild_now()
+        elif rev != self._rev and not self._rebuild_timer.isActive():
+            # Character-only edit: keep using stale spans for now and coalesce
+            # further keystrokes into a single rebuild after the debounce window.
+            self._rebuild_timer.start(self._REBUILD_DELAY_MS)
 
         row = self.currentBlock().blockNumber()
         for c1, c2, kind in self._spans.get(row, ()):
