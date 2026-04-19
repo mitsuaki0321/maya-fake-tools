@@ -65,7 +65,10 @@ class UISessionManager:
     def schedule_session_save(self):
         """Schedule session save with throttling to avoid excessive saves."""
         if not self._session_save_timer:
-            self._session_save_timer = QTimer()
+            # Parent the timer to the main window so it's destroyed with it —
+            # otherwise a pending throttle can fire after the window is gone
+            # and blow up on the dead CodeEditorWidget C++ object.
+            self._session_save_timer = QTimer(self.main_window)
             self._session_save_timer.setSingleShot(True)
             self._session_save_timer.timeout.connect(self.save_session_state)
 
@@ -74,40 +77,50 @@ class UISessionManager:
         self._session_save_timer.start(2000)
 
     def save_session_state(self):
-        """Save current session state (open tabs)."""
+        """Save current session state (open tabs).
+
+        Tolerant of the window being partially torn down: Qt can fire the
+        throttled save timer after the underlying C++ widget has already been
+        deleted (Maya workspace close, tool reload). Swallow the resulting
+        ``RuntimeError`` rather than spam the Script Editor — there's nothing
+        left to persist at that point anyway.
+        """
         if not self.code_editor:
             return
 
-        open_tabs = []
+        try:
+            open_tabs = []
+            draft_content = ""  # Save Draft tab content separately
 
-        draft_content = ""  # Save Draft tab content separately
+            for i in range(self.code_editor.count()):
+                editor = self.code_editor.widget(i)
+                if editor:
+                    tab_name = self.code_editor.tabText(i)
+                    file_path = getattr(editor, "file_path", None)
 
-        for i in range(self.code_editor.count()):
-            editor = self.code_editor.widget(i)
-            if editor:
-                tab_name = self.code_editor.tabText(i)
-                file_path = getattr(editor, "file_path", None)
+                    # Save Draft tab content separately
+                    if hasattr(editor, "is_draft") and editor.is_draft:
+                        draft_content = editor.toPlainText()
+                        continue
 
-                # Save Draft tab content separately
-                if hasattr(editor, "is_draft") and editor.is_draft:
-                    draft_content = editor.toPlainText()
-                    continue
+                    # Skip snippet preview tabs (but keep file preview tabs)
+                    # Check if it's a snippet preview (no file_path) or file preview (has file_path)
+                    if hasattr(editor, "is_preview") and editor.is_preview and not file_path:
+                        # This is a snippet preview tab, skip it
+                        continue
+                    # If it has a file_path, it's a file preview tab, continue to save it
 
-                # Skip snippet preview tabs (but keep file preview tabs)
-                # Check if it's a snippet preview (no file_path) or file preview (has file_path)
-                if hasattr(editor, "is_preview") and editor.is_preview and not file_path:
-                    # This is a snippet preview tab, skip it
-                    continue
-                # If it has a file_path, it's a file preview tab, continue to save it
-
-                tab_info = self.settings_manager.create_tab_info(
-                    file_path=file_path,
-                    content=editor.toPlainText(),
-                    cursor_position=editor.textCursor().position(),
-                    is_modified=getattr(editor, "is_modified", False),
-                    tab_name=tab_name,
-                )
-                open_tabs.append(tab_info)
+                    tab_info = self.settings_manager.create_tab_info(
+                        file_path=file_path,
+                        content=editor.toPlainText(),
+                        cursor_position=editor.textCursor().position(),
+                        is_modified=getattr(editor, "is_modified", False),
+                        tab_name=tab_name,
+                    )
+                    open_tabs.append(tab_info)
+        except RuntimeError:
+            # Underlying QWidget was deleted mid-save; drop this save quietly.
+            return
 
         # Save session and draft content
         self.settings_manager.save_session_state(open_tabs)

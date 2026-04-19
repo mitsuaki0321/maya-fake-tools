@@ -532,13 +532,22 @@ class CodeEditorWidget(QTabWidget):
                 break
 
     def save_session_if_available(self):
-        """Walk up the parent chain and trigger the main window's session save."""
-        parent = self.parent()
-        while parent:
-            if hasattr(parent, "save_session_state"):
-                parent.save_session_state()
-                break
-            parent = parent.parent()
+        """Walk up the parent chain and trigger the main window's session save.
+
+        Fired via ``QTimer.singleShot`` after tab lifecycle events. If the
+        window has already been destroyed between the scheduling and the fire,
+        accessing ``self.parent()`` would raise ``RuntimeError`` — silently
+        skip in that case, there's nothing to persist anyway.
+        """
+        try:
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, "save_session_state"):
+                    parent.save_session_state()
+                    break
+                parent = parent.parent()
+        except RuntimeError:
+            return
 
     def get_current_editor(self):
         return self.currentWidget()

@@ -82,12 +82,26 @@ class AutocompleteController:
         self._model = QStringListModel([], editor)
         self._completer = QCompleter(self._model, editor)
         self._completer.setWidget(editor)
-        self._completer.setCompletionMode(QCompleter.PopupCompletion)
+        # UnfilteredPopupCompletion shows exactly what we put in the model and
+        # uses the prefix only for highlighting. jedi has already filtered by
+        # prefix, so we don't want QCompleter to re-filter — doing both would
+        # reset the popup's current row any time we re-apply the prefix, which
+        # made arrow-key navigation snap back to the first item.
+        self._completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
         self._completer.setCaseSensitivity(Qt.CaseInsensitive)
         popup = self._completer.popup()
         popup.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         popup.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self._completer.activated[str].connect(self._insert_completion)
+        # Use the untyped overload; the slot detects whether it got a string
+        # or a QModelIndex. Connecting via ``activated[str]`` broke in some
+        # PySide builds where the signal emission raced with the popup hide.
+        self._completer.activated.connect(self._on_activated)
+
+        # Surface any popup current-row changes in the log so we can tell
+        # whether the popup is being reset by our own code or by QCompleter.
+        selection_model = popup.selectionModel()
+        if selection_model is not None:
+            selection_model.currentChanged.connect(self._on_popup_current_changed)
 
         # Short-term cache of the items backing the current popup so we can
         # still know what was selected if the model gets cleared mid-accept.
@@ -113,57 +127,183 @@ class AutocompleteController:
     # -------------------- event hooks (called from editor) --------------------
 
     def on_text_changed(self):
-        """Editor's ``textChanged`` entry point.
+        """Editor's content-change entry point.
 
-        Decides whether to schedule a request based on the character right
-        before the caret. The popup is only driven from this side — key press
-        handling deals with accept/navigate, not with opening.
+        Popup-open policy:
+
+        - ``.`` (dot): always schedules a fresh dispatch — this is the main
+          on-ramp into completion.
+        - word character: only refreshes an already-visible popup. We don't
+          auto-open the popup on bare identifier typing, because that's
+          intrusive when the user is just writing new code. ``Ctrl+Space``
+          is the escape hatch for "complete this bare identifier".
+        - anything else: hide the popup.
         """
         if not self._enabled:
             return
 
         trigger = self._classify_trigger()
+        popup_visible = self._completer.popup().isVisible()
+        logger.debug(f"autocomplete.on_text_changed trigger={trigger!r} popup_visible={popup_visible}")
+
         if trigger is None:
             self._hide_popup()
             return
+
         if trigger == "dot":
             self._timer.start(0)
-        else:
+            return
+
+        # trigger == "word": only refresh an already-open popup. Typing a bare
+        # identifier without a preceding dot should not auto-open — that's
+        # what Ctrl+Space is for.
+        if popup_visible:
             self._timer.start(self._debounce_ms)
 
     def handle_key_press(self, event) -> bool:
         """Called before the editor's default ``keyPressEvent``.
 
-        Returns True to consume the key. Popup navigation keys (Enter / Tab /
-        Escape / arrows when popup visible) are claimed; Ctrl+Space is
-        claimed to force a request.
+        Returns True to consume the key. Popup navigation and commit keys are
+        claimed explicitly here rather than delegated to QCompleter's event
+        filter — the filter is inconsistent across Qt versions / widget types
+        for QPlainTextEdit, and this way the behaviour is testable and
+        diagnosable through a single code path.
         """
+        key = event.key()
+        mods = event.modifiers()
+
         # Ctrl+Space always forces a completion, regardless of popup state.
-        if event.key() == Qt.Key_Space and event.modifiers() == Qt.ControlModifier and self._enabled:
-            # Skip debounce on manual trigger; user is waiting.
+        if key == Qt.Key_Space and mods == Qt.ControlModifier and self._enabled:
+            logger.debug("autocomplete: Ctrl+Space — forcing dispatch")
             self._timer.stop()
             self._dispatch_completion()
             return True
 
         popup = self._completer.popup()
-        if not popup.isVisible():
+        visible = popup.isVisible()
+        # ``mods`` is a Qt.KeyboardModifier enum on PySide6 — ``int()`` raises
+        # there, so reach for ``.value`` when available and fall back otherwise.
+        mods_repr = getattr(mods, "value", None)
+        if mods_repr is None:
+            mods_repr = repr(mods)
+        logger.debug(f"autocomplete.handle_key_press key={key} mods={mods_repr} popup_visible={visible}")
+
+        if not visible:
             return False
 
-        key = event.key()
+        row_count = popup.model().rowCount()
+        current_row = popup.currentIndex().row()
+        logger.debug(f"autocomplete: popup rows={row_count} current_row={current_row}")
+
         if key in (Qt.Key_Enter, Qt.Key_Return, Qt.Key_Tab):
-            idx = popup.currentIndex()
-            if not idx.isValid():
-                idx = self._model.index(0, 0)
-            if idx.isValid():
-                completion = self._model.data(idx)
+            completion = self._selected_completion()
+            logger.debug(f"autocomplete: accept -> {completion!r}")
+            # Hide before inserting: the insertion fires contentsChange, and
+            # if the popup were still flagged as visible at that moment the
+            # word-trigger branch in on_text_changed would re-open it with
+            # the freshly inserted suffix as a sole candidate.
+            popup.hide()
+            # Cancel any pending debounced dispatch scheduled before the
+            # accept, for the same reason.
+            self._timer.stop()
+            if completion:
                 self._insert_completion(completion)
-            popup.hide()
             return True
+
         if key == Qt.Key_Escape:
+            logger.debug("autocomplete: escape — hide popup")
             popup.hide()
             return True
-        # Let arrow keys pass through to QCompleter's popup so it can navigate.
+
+        # Explicitly drive popup navigation from our side. Relying on
+        # QCompleter's built-in event filter for this turned out to be
+        # unreliable with QPlainTextEdit (up/down appeared to move selection
+        # briefly then snap back), so we manage currentIndex here ourselves.
+        if key == Qt.Key_Down:
+            new_row = 0 if current_row < 0 else min(current_row + 1, row_count - 1)
+            self._set_popup_row(new_row)
+            logger.debug(f"autocomplete: Down -> row {new_row}")
+            return True
+        if key == Qt.Key_Up:
+            new_row = row_count - 1 if current_row < 0 else max(current_row - 1, 0)
+            self._set_popup_row(new_row)
+            logger.debug(f"autocomplete: Up -> row {new_row}")
+            return True
+        if key == Qt.Key_PageDown:
+            step = max(1, popup.height() // max(1, popup.sizeHintForRow(0)))
+            new_row = min((current_row if current_row >= 0 else 0) + step, row_count - 1)
+            self._set_popup_row(new_row)
+            logger.debug(f"autocomplete: PageDown -> row {new_row}")
+            return True
+        if key == Qt.Key_PageUp:
+            step = max(1, popup.height() // max(1, popup.sizeHintForRow(0)))
+            new_row = max((current_row if current_row >= 0 else 0) - step, 0)
+            self._set_popup_row(new_row)
+            logger.debug(f"autocomplete: PageUp -> row {new_row}")
+            return True
+        if key == Qt.Key_Home and not (mods & Qt.ControlModifier):
+            self._set_popup_row(0)
+            logger.debug("autocomplete: Home -> row 0")
+            return True
+        if key == Qt.Key_End and not (mods & Qt.ControlModifier):
+            self._set_popup_row(row_count - 1)
+            logger.debug(f"autocomplete: End -> row {row_count - 1}")
+            return True
+
+        # Any other key: let it go to the editor. If it changes text, on_text_changed
+        # will refresh the completion; if it's a movement that takes the cursor out of
+        # the completion context, the next refresh will hide the popup.
         return False
+
+    def _set_popup_row(self, row: int):
+        """Move the popup selection to ``row`` and scroll it into view."""
+        popup = self._completer.popup()
+        model = popup.model()
+        if row < 0 or row >= model.rowCount():
+            return
+        index = model.index(row, 0)
+        popup.setCurrentIndex(index)
+        popup.scrollTo(index, QAbstractItemView.EnsureVisible)
+
+    def _on_popup_current_changed(self, current, previous):
+        """Diagnostic: log every popup currentIndex change with a short stack."""
+        try:
+            cur_row = current.row() if current.isValid() else -1
+            prev_row = previous.row() if previous.isValid() else -1
+        except RuntimeError:
+            return
+        logger.debug(f"autocomplete.popup currentChanged prev={prev_row} -> cur={cur_row}")
+
+    def _selected_completion(self) -> str:
+        """Return the text of the currently-highlighted popup row (empty if none)."""
+        popup = self._completer.popup()
+        idx = popup.currentIndex()
+        if idx.isValid():
+            value = popup.model().data(idx)
+            if value:
+                return str(value)
+        # Fallback: first row of the source model. Reached when the popup is
+        # visible but nothing is highlighted yet (unusual, but survivable).
+        if self._model.rowCount() > 0:
+            return str(self._model.data(self._model.index(0, 0)) or "")
+        return ""
+
+    def _on_activated(self, arg):
+        """QCompleter.activated slot. PySide dispatches either ``str`` or ``QModelIndex``."""
+        # Same popup-first / cancel-timer dance as the keyboard accept path —
+        # QCompleter emits ``activated`` on mouse click, and if we insert
+        # before hiding, the word trigger re-opens the popup immediately.
+        popup = self._completer.popup()
+        if popup.isVisible():
+            popup.hide()
+        self._timer.stop()
+        if isinstance(arg, str):
+            self._insert_completion(arg)
+        else:
+            # QModelIndex path — same resolution as Enter/Tab.
+            completion = self._selected_completion()
+            if completion:
+                self._insert_completion(completion)
 
     # -------------------- internals --------------------
 
@@ -191,10 +331,16 @@ class AutocompleteController:
             return
 
         editor = self.editor
-        code = editor.toPlainText()
-        cursor = editor.textCursor()
-        line = cursor.blockNumber() + 1  # jedi is 1-indexed on lines
-        column = cursor.columnNumber()  # 0-indexed within the line
+        try:
+            code = editor.toPlainText()
+            cursor = editor.textCursor()
+            line = cursor.blockNumber() + 1  # jedi is 1-indexed on lines
+            column = cursor.columnNumber()  # 0-indexed within the line
+            file_path = getattr(editor, "file_path", None)
+        except RuntimeError:
+            # Editor widget has been destroyed (workspace close / tool reload).
+            self._enabled = False
+            return
 
         namespaces = []
         try:
@@ -202,14 +348,13 @@ class AutocompleteController:
         except Exception as exc:
             logger.debug(f"namespace_provider raised: {exc}")
 
-        file_path = getattr(editor, "file_path", None)
-
         # Invalidate any previous request: even if it's mid-flight, its
         # emission will be filtered out by the id check in the receiver.
         if self._pending_runnable is not None:
             self._pending_runnable.cancel()
 
         self._request_id += 1
+        logger.debug(f"autocomplete.dispatch id={self._request_id} line={line} col={column} len={len(code)}")
         runnable = CompletionRunnable(
             engine=self.engine,
             request_id=self._request_id,
@@ -226,40 +371,40 @@ class AutocompleteController:
     def _on_completion(self, request_id: int, items: list):
         """Receive jedi results on the UI thread; show popup if still relevant."""
         if request_id != self._request_id:
-            # A newer request has superseded this one; ignore the stale result.
+            logger.debug(f"autocomplete._on_completion id={request_id} stale (current={self._request_id})")
             return
 
         if not self._enabled:
+            logger.debug(f"autocomplete._on_completion id={request_id} disabled")
             return
 
         if not items:
+            logger.debug(f"autocomplete._on_completion id={request_id} empty")
             self._hide_popup()
             return
 
-        # The editor may have moved beyond the word that triggered this
-        # request. If so, don't pop open a list that no longer matches.
-        prefix = self._current_word_prefix()
-        if self._classify_trigger() is None:
-            self._hide_popup()
-            return
+        logger.debug(f"autocomplete._on_completion id={request_id} items={len(items)}")
 
-        self._current_items = items
-        names = [item.name for item in items]
-        self._model.setStringList(names)
-        self._completer.setCompletionPrefix(prefix)
+        try:
+            # The editor may have moved past the word that triggered this request.
+            if self._classify_trigger() is None:
+                self._hide_popup()
+                return
 
-        # Position popup under the current cursor. Expand to fit the widest
-        # visible item so long function names aren't clipped.
-        rect = self.editor.cursorRect()
-        width = self._completer.popup().sizeHintForColumn(0)
-        width += self._completer.popup().verticalScrollBar().sizeHint().width()
-        rect.setWidth(max(width, 180))
-        self._completer.complete(rect)
+            self._current_items = items
+            names = [item.name for item in items]
+            self._model.setStringList(names)
 
-        # Pre-select the first row so Enter/Tab accepts without needing arrow.
-        popup = self._completer.popup()
-        if popup.model().rowCount() > 0:
-            popup.setCurrentIndex(popup.model().index(0, 0))
+            # Position popup under the current cursor. Expand to fit the widest
+            # visible item so long function names aren't clipped.
+            rect = self.editor.cursorRect()
+            width = self._completer.popup().sizeHintForColumn(0)
+            width += self._completer.popup().verticalScrollBar().sizeHint().width()
+            rect.setWidth(max(width, 180))
+            self._completer.complete(rect)
+        except RuntimeError:
+            # Editor / completer got torn down between dispatch and delivery.
+            self._enabled = False
 
     def _current_word_prefix(self) -> str:
         """Return the partial identifier the user has typed at the caret.

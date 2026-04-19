@@ -56,10 +56,24 @@ class JediEngine:
     Script/Interpreter. jedi maintains its own parse cache internally keyed by
     source hash, so repeated identical calls are cheap. A single engine
     instance can therefore be safely shared between editor tabs and threads.
+
+    ``extra_paths`` lets the caller inject additional ``sys.path`` entries
+    that jedi will search when resolving imports — used to point jedi at
+    the Maya-version-specific stub package from ``stub_generator`` so that
+    ``cmds.polyCube(|)`` can surface its flag names as kwargs.
     """
 
     def __init__(self, max_file_bytes: int = _MAX_FILE_BYTES):
         self.max_file_bytes = max_file_bytes
+        self._extra_paths: list[str] = []
+
+    def set_extra_paths(self, paths: Sequence[str]) -> None:
+        """Replace the extra sys.path list used when building jedi ``Project``s.
+
+        Safe to call at any time; existing cached scripts aren't affected
+        (a fresh Interpreter/Script is built per ``complete()`` call).
+        """
+        self._extra_paths = [str(p) for p in paths if p]
 
     @property
     def available(self) -> bool:
@@ -152,10 +166,28 @@ class JediEngine:
         ``Interpreter`` is strictly more capable (it can introspect live
         objects), but requires a namespace list. Falling back to ``Script``
         keeps things working for static-only completion in non-Maya contexts.
+
+        When stubs are registered (via :meth:`set_extra_paths`), we build a
+        :class:`jedi.Project` that surfaces them on ``sys.path``. jedi
+        prefers static stubs over live introspection for type info, which
+        is what gives us flag-name completion inside ``cmds.polyCube(|)``.
         """
+        project = self._build_project()
         if namespaces:
-            return jedi.Interpreter(code, namespaces=list(namespaces), path=path)
-        return jedi.Script(code=code, path=path)
+            return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project)
+        return jedi.Script(code=code, path=path, project=project)
+
+    def _build_project(self):
+        """Construct a ``jedi.Project`` that includes our stub paths (or ``None``)."""
+        if not self._extra_paths:
+            return None
+        # ``path`` must point somewhere; "." is jedi's convention for "use CWD"
+        # when the caller doesn't have a meaningful project root.
+        try:
+            return jedi.Project(path=".", added_sys_path=list(self._extra_paths))
+        except Exception as exc:
+            logger.debug(f"jedi.Project construction failed: {exc}")
+            return None
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:

@@ -44,6 +44,45 @@ DEFAULT_TAB_SIZE = 4
 # Shared across all PythonEditor instances — jedi has internal caches keyed by
 # source hash that we want to reuse across tabs. Stateless, so safe to share.
 _SHARED_JEDI_ENGINE = JediEngine()
+_STUB_PATHS_CONFIGURED = False
+
+
+def _configure_engine_stub_paths():
+    """Point the shared jedi engine at the bundled Maya stubs.
+
+    Runs lazily on the first editor construction so we only pay for the
+    ``maya.cmds.about`` call when someone actually opens the Code Editor.
+    Stubs live under ``faketools/resources/maya_stubs/maya{version}/`` and
+    are committed with the repo — there's no per-user generator step. If we
+    haven't shipped stubs for this Maya version yet (or we're outside Maya),
+    this is a silent no-op and jedi falls back to live introspection via
+    ``exec_globals``.
+    """
+    global _STUB_PATHS_CONFIGURED
+    if _STUB_PATHS_CONFIGURED:
+        return
+    _STUB_PATHS_CONFIGURED = True
+
+    try:
+        import maya.cmds as _cmds  # type: ignore
+
+        maya_version = str(_cmds.about(version=True))
+    except Exception:
+        return
+
+    try:
+        from ....common.stub_generator import command as stub_command
+    except Exception as exc:
+        logger.debug(f"stub_generator unavailable: {exc}")
+        return
+
+    if not stub_command.stubs_exist(maya_version):
+        logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
+        return
+
+    stubs_root = str(stub_command.get_package_root(maya_version))
+    _SHARED_JEDI_ENGINE.set_extra_paths([stubs_root])
+    logger.info(f"Autocomplete stubs active: {stubs_root}")
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
@@ -82,6 +121,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.fold_manager = CodeFoldingManager(self)
 
         # Autocomplete controller (jedi-backed). Silently inert if jedi is missing.
+        _configure_engine_stub_paths()
         self.autocomplete = AutocompleteController(
             self,
             _SHARED_JEDI_ENGINE,
@@ -147,13 +187,22 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     def connect_signals(self):
         """Connect editor signals."""
         self.textChanged.connect(self.on_text_changed)
+        # Route *actual* content edits (not pure formatting repaints) to the
+        # autocomplete controller via ``contentsChange``. ``textChanged`` also
+        # fires when QSyntaxHighlighter reapplies formats via
+        # ``markContentsDirty``, which would otherwise feedback-loop into jedi
+        # once the popup is up.
+        self.document().contentsChange.connect(self._on_contents_change)
 
     def on_text_changed(self):
-        """Handle text changes."""
+        """Handle text changes — bookkeeping only (modified flag)."""
         if not self.is_modified:
             self.is_modified = True
-        # Notify autocomplete after the dirty flag so completion runs against
-        # the just-committed text. Safe no-op if the controller is disabled.
+
+    def _on_contents_change(self, position: int, removed: int, added: int):
+        """Bridge to autocomplete: fires only when characters actually changed."""
+        if removed == 0 and added == 0:
+            return  # Formatting-only notification from the syntax highlighter.
         if getattr(self, "autocomplete", None) is not None:
             self.autocomplete.on_text_changed()
 
