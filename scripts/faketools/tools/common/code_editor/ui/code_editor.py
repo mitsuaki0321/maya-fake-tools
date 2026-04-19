@@ -90,7 +90,21 @@ def _configure_engine_stub_paths():
         logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
         return
 
-    _SHARED_JEDI_ENGINE.set_extra_paths([str(stubs_root)])
+    # Double injection: jedi.Project.added_sys_path for the analyzer AND
+    # sys.path[0] for the running interpreter. The project-level entry alone
+    # wasn't reliable in-Maya — jedi's import resolver still found Maya's
+    # real ``maya`` package (``C:\Program Files\Autodesk\...``) before the
+    # stub because the environment sys_path ordering put it first. Pinning
+    # the stub at sys.path[0] ensures ``maya`` / ``maya.cmds`` resolve to
+    # the stub first, regardless of jedi version quirks.
+    import sys
+
+    stubs_root_str = str(stubs_root)
+    if stubs_root_str not in sys.path:
+        sys.path.insert(0, stubs_root_str)
+        logger.debug(f"sys.path prepended with stubs root: {stubs_root_str}")
+
+    _SHARED_JEDI_ENGINE.set_extra_paths([stubs_root_str])
     logger.info(f"Autocomplete stubs active: {stubs_root}")
 
 

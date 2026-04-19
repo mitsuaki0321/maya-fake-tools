@@ -128,6 +128,8 @@ class JediEngine:
             logger.debug(f"jedi.complete failed at {line}:{column}: {exc}")
             return []
 
+        _log_jedi_resolution(script, line, column, self._extra_paths)
+
         items = [CompletionItem.from_jedi(c) for c in completions]
         items.sort(key=_completion_sort_key)
         if len(items) > max_items:
@@ -228,14 +230,29 @@ class JediEngine:
         return cleaned
 
     def _build_project(self):
-        """Construct a ``jedi.Project`` that includes our stub paths (or ``None``)."""
+        """Construct a ``jedi.Project`` that puts our stub paths at ``sys_path[0]``.
+
+        Earlier attempts relied on ``added_sys_path`` alone, but in-Maya jedi
+        still resolved ``maya.cmds`` to the live C-extension package because
+        the auto-discovered environment path (``C:/.../Maya2025/bin``) landed
+        ahead of the stub. Passing an explicit ``sys_path`` with
+        ``smart_sys_path=False`` forces the order we need.
+        """
         if not self._extra_paths:
             return None
-        # ``path`` must point somewhere; "." is jedi's convention for "use CWD"
-        # when the caller doesn't have a meaningful project root.
         try:
-            project = jedi.Project(path=".", added_sys_path=list(self._extra_paths))
-            logger.debug(f"jedi.Project built added_sys_path={self._extra_paths}")
+            import sys
+
+            forced_sys_path = list(self._extra_paths) + list(sys.path)
+            project = jedi.Project(
+                path=".",
+                sys_path=forced_sys_path,
+                smart_sys_path=False,
+            )
+            logger.debug(
+                f"jedi.Project built (forced) sys_path_head={forced_sys_path[:3]} "
+                f"total={len(forced_sys_path)}"
+            )
             return project
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
@@ -250,6 +267,33 @@ def _ns_keys(namespaces) -> list[str]:
     for ns in namespaces:
         keys.extend(sorted(ns.keys()))
     return keys
+
+
+def _log_jedi_resolution(script, line: int, column: int, expected_paths: list[str]) -> None:
+    """Log how jedi resolved the symbol at the caret and its effective sys_path.
+
+    We want to confirm:
+    - Which ``.pyi`` / ``.py`` file jedi picked for ``maya.cmds`` (the "infer"
+      result points at the module).
+    - What jedi thinks its ``sys_path`` is, so we can tell if our stub dir
+      actually landed at the top of the list.
+    """
+    try:
+        inferred = script.infer(line, column)
+        for result in inferred:
+            mod_path = getattr(result, "module_path", None)
+            logger.debug(f"jedi infer: {result.name!r} type={result.type} module_path={mod_path}")
+    except Exception as exc:
+        logger.debug(f"jedi infer failed: {exc}")
+
+    try:
+        project = script._inference_state.project
+        resolved_sys_path = project._get_sys_path(script._inference_state)
+        matches = [p for p in resolved_sys_path if p in expected_paths]
+        logger.debug(f"jedi sys_path head (first 5): {resolved_sys_path[:5]}")
+        logger.debug(f"jedi sys_path contains stubs? {bool(matches)} — {matches}")
+    except Exception as exc:
+        logger.debug(f"jedi sys_path probe failed: {exc}")
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:
