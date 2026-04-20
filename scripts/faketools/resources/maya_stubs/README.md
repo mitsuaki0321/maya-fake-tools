@@ -26,8 +26,8 @@ When a new Maya version ships or plugins meaningfully change the command
 set, open the target Maya, open its Script Editor, and run:
 
 ```python
-from faketools.tools.common.stub_generator import command
-command.generate_bundled()
+from faketools.tools.common.code_editor.command import stub_generator
+stub_generator.generate_bundled()
 ```
 
 This writes straight into this folder. Commit the diff.

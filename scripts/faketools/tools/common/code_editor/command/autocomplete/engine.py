@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from logging import getLogger
+import re
 from typing import Any, Optional
 
 from .types import CompletionItem
@@ -33,12 +34,21 @@ except Exception as _exc:  # pragma: no cover — diagnostic path
 _MAX_FILE_BYTES = 500 * 1024
 
 
-# Names that live in the bundled Maya stubs. When stubs are registered we
-# filter these out of the ``namespaces`` dict handed to ``jedi.Interpreter``
-# so jedi resolves them statically via ``added_sys_path`` instead — the
-# live ``maya.cmds`` module is lazy-loaded and its ``dir()`` output is
-# largely empty until a command has been called at least once.
-_STUB_BACKED_NAMES = frozenset({"cmds", "maya", "om", "om2", "OpenMaya"})
+# Top-level names that must be resolved through the bundled Maya stubs rather
+# than live introspection. ``maya.cmds`` is the problem child: it's in
+# ``sys.modules`` as soon as Maya starts, but ``dir(cmds)`` stays nearly empty
+# until a command is actually called (lazy loading), and jedi.Interpreter's
+# ``MixedObject`` layer ends up favouring that empty live side over the stub.
+# Routing these names through ``jedi.Script`` (which ignores sys.modules)
+# forces the stub to win. Every other name — user variables, ``eST3``, etc. —
+# goes through ``jedi.Interpreter`` so live ``dir()`` output drives the popup.
+_MAYA_STUB_ROOTS = frozenset({"maya", "cmds", "OpenMaya", "om", "om2"})
+
+
+# Regex to pick the first identifier out of a dotted chain. Used after we've
+# lopped off the text inside any unmatched trailing ``(`` so the callee is
+# what we're matching, not the argument being typed.
+_CHAIN_ROOT_RE = re.compile(r"([A-Za-z_]\w*)(?:\.[A-Za-z_]\w*)*\.?\w*$")
 
 
 # A "category priority" for sort order when the popup mixes types. Lower is
@@ -121,7 +131,7 @@ class JediEngine:
             return []
 
         try:
-            script = self._make_script(code, namespaces, path)
+            script = self._make_script(code, line, column, namespaces, path)
             completions = script.complete(line, column)
         except Exception as exc:
             logger.debug(f"jedi.complete failed at {line}:{column}: {exc}")
@@ -153,7 +163,7 @@ class JediEngine:
             return []
 
         try:
-            script = self._make_script(code, namespaces, path)
+            script = self._make_script(code, line, column, namespaces, path)
             sigs = script.get_signatures(line, column)
         except Exception as exc:
             logger.debug(f"jedi.get_signatures failed at {line}:{column}: {exc}")
@@ -166,45 +176,36 @@ class JediEngine:
     def _make_script(
         self,
         code: str,
+        line: int,
+        column: int,
         namespaces: Optional[Sequence[dict]],
         path: Optional[str],
     ) -> Any:
-        """Return the right jedi driver for the current configuration.
+        """Return the right jedi driver for the current cursor position.
 
-        Three modes, in precedence order:
+        Two modes, picked per call based on what the user is completing:
 
-        1. **Stubs registered** (Maya + bundled stubs exist): use
-           :class:`jedi.Script`. ``Script`` resolves imports purely through
-           ``sys.path`` / ``Project.added_sys_path`` and ignores
-           ``sys.modules``, so our stub for ``maya.cmds`` wins. Using
-           ``Interpreter`` here regresses: Maya's live ``maya.cmds`` module
-           is in ``sys.modules`` but its ``dir()`` is almost empty (lazy
-           command loading), and the ``MixedObject`` layer jedi builds for
-           imported modules ends up favouring the live side → 4 dunders
-           and nothing else.
-        2. **Live namespaces, no stubs**: :class:`jedi.Interpreter` so user
-           variables in ``exec_globals`` keep contributing completions.
-        3. **No namespaces**: plain :class:`jedi.Script` (non-Maya case).
+        1. **Maya-rooted expression** (cursor under ``cmds.`` / ``OpenMaya.`` /
+           their common aliases): use :class:`jedi.Script`. ``Script`` resolves
+           imports purely through ``sys.path`` / the ``Project`` sys_path we
+           build and ignores ``sys.modules``, so our bundled stub for
+           ``maya.cmds`` wins. ``Interpreter`` here regresses to the empty-
+           ``dir`` failure described in ``_MAYA_STUB_ROOTS``.
+        2. **Everything else**: :class:`jedi.Interpreter` with the live
+           ``exec_globals``. This covers user variables (``x = cmds.ls(); x.|``
+           → real list methods) and any other runtime-populated module such as
+           the in-house ``eST3``.
+
+        When no stubs are registered or no live namespaces are provided we
+        just hand jedi the simplest thing that still works.
         """
         project = self._build_project()
-        if self._extra_paths:
+        if self._extra_paths and _is_maya_rooted(code, line, column):
             return jedi.Script(code=code, path=path, project=project)
 
-        effective_namespaces = self._namespaces_for_jedi(namespaces)
-        if effective_namespaces:
-            return jedi.Interpreter(code, namespaces=list(effective_namespaces), path=path, project=project)
+        if namespaces:
+            return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project)
         return jedi.Script(code=code, path=path, project=project)
-
-    def _namespaces_for_jedi(self, namespaces: Optional[Sequence[dict]]) -> Optional[Sequence[dict]]:
-        """Strip stub-backed module aliases from the live namespaces.
-
-        Only runs when stubs are actually registered; otherwise the caller
-        gets ``exec_globals`` back untouched so in-Maya introspection of
-        user variables keeps working.
-        """
-        if not namespaces or not self._extra_paths:
-            return namespaces
-        return [{k: v for k, v in ns.items() if k not in _STUB_BACKED_NAMES} for ns in namespaces]
 
     def _build_project(self):
         """Construct a ``jedi.Project`` that puts our stub paths at ``sys_path[0]``.
@@ -229,6 +230,41 @@ class JediEngine:
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
             return None
+
+
+def _is_maya_rooted(code: str, line: int, column: int) -> bool:
+    """True iff the dotted expression at the cursor starts with a Maya stub root.
+
+    Matches ``cmds.polyCube(|``, ``OpenMaya.MVector.|``, ``om2.MFn|``, etc. —
+    anything whose leftmost identifier is in :data:`_MAYA_STUB_ROOTS`. A bare
+    ``cmds`` (no dot yet) also counts so top-level ``cmds.<TAB>`` triggers
+    stub resolution. Expressions starting with ``(`` or a function call
+    (``get_cmds().polyCube(|``) fall through to ``False`` — we accept the
+    small regression for those rare shapes in exchange for a simpler rule.
+    """
+    try:
+        line_text = code.splitlines()[line - 1]
+    except IndexError:
+        return False
+    prefix = line_text[:column]
+
+    # If the cursor is inside an unclosed call (e.g. ``cmds.polyCube(widt|``)
+    # we want to classify based on the callee, not the argument being typed.
+    depth = 0
+    for i in range(len(prefix) - 1, -1, -1):
+        ch = prefix[i]
+        if ch in ")]}":
+            depth += 1
+        elif ch in "([{":
+            if depth == 0:
+                prefix = prefix[:i]
+                break
+            depth -= 1
+
+    match = _CHAIN_ROOT_RE.search(prefix)
+    if not match:
+        return False
+    return match.group(1) in _MAYA_STUB_ROOTS
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:

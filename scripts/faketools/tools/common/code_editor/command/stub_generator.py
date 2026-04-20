@@ -50,9 +50,10 @@ def get_bundled_stubs_root() -> Path:
     of :func:`generate_bundled`. Committing pre-generated stubs here means
     end users never have to run the generator themselves.
     """
-    # ``command.py`` lives at ``faketools/tools/common/stub_generator/command.py``
-    # — four ``parent`` hops get us to the ``faketools`` package root.
-    return Path(__file__).resolve().parents[3] / "resources" / "maya_stubs"
+    # ``stub_generator.py`` lives at
+    # ``faketools/tools/common/code_editor/command/stub_generator.py`` —
+    # five ``parent`` hops get us to the ``faketools`` package root.
+    return Path(__file__).resolve().parents[4] / "resources" / "maya_stubs"
 
 
 def get_stubs_root(maya_version: str, data_root: Optional[Path] = None) -> Path:
@@ -351,8 +352,8 @@ def generate_bundled(progress: Optional[Callable[[int, int, str], None]] = None)
     Meant to be invoked from Maya's Script Editor with the target Maya
     version loaded:
 
-    >>> from faketools.tools.common.stub_generator import command
-    >>> command.generate_bundled()
+    >>> from faketools.tools.common.code_editor.command import stub_generator
+    >>> stub_generator.generate_bundled()
 
     The ``.pyi`` files are written under
     ``scripts/faketools/resources/maya_stubs/maya{version}/`` so they can be

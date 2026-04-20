@@ -71,7 +71,7 @@ def _configure_engine_stub_paths():
         return
 
     try:
-        from ....common.stub_generator import command as stub_command
+        from ..command import stub_generator as stub_command
     except Exception as exc:
         logger.debug(f"stub_generator unavailable: {exc}")
         return
