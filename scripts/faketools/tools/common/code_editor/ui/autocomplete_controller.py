@@ -281,6 +281,10 @@ class AutocompleteController:
         doc = self.editor.document()
         char = doc.characterAt(position - 1)
         if char == ".":
+            # A dot preceded by a digit is a numeric literal (``0.``, ``1.5``),
+            # not an attribute access — popping the completer here is noise.
+            if position >= 2 and doc.characterAt(position - 2).isdigit():
+                return None
             return "dot"
         if char.isalnum() or char == "_":
             return "word"

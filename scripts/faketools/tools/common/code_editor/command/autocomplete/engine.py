@@ -51,6 +51,20 @@ _MAYA_STUB_ROOTS = frozenset({"maya", "cmds", "OpenMaya", "om", "om2"})
 _CHAIN_ROOT_RE = re.compile(r"([A-Za-z_]\w*)(?:\.[A-Za-z_]\w*)*\.?\w*$")
 
 
+# Virtual import block prepended to the source before handing it to
+# ``jedi.Script`` whenever the cursor is under a Maya stub root. Lets the user
+# write ``cmds.polyCube(|)`` in a scratch buffer without the matching import
+# statement — jedi.Script is static-only and can't see ``exec_globals``, so
+# the name ``cmds`` has to come from somewhere. The shim resolves through our
+# stub because ``stubs_root`` is pinned at ``sys_path[0]`` on the Project. If
+# the user *does* declare their own import, the shim binding is just
+# shadowed — harmless.
+_MAYA_IMPORT_SHIM = (
+    "import maya.cmds as cmds\nfrom maya.api import OpenMaya\nfrom maya.api import OpenMaya as om2\nfrom maya.api import OpenMaya as om\n"
+)
+_MAYA_SHIM_LINES = _MAYA_IMPORT_SHIM.count("\n")
+
+
 # A "category priority" for sort order when the popup mixes types. Lower is
 # higher on-screen. Tunable without touching the UI.
 _TYPE_RANK = {
@@ -131,8 +145,8 @@ class JediEngine:
             return []
 
         try:
-            script = self._make_script(code, line, column, namespaces, path)
-            completions = script.complete(line, column)
+            script, effective_line = self._make_script(code, line, column, namespaces, path)
+            completions = script.complete(effective_line, column)
         except Exception as exc:
             logger.debug(f"jedi.complete failed at {line}:{column}: {exc}")
             return []
@@ -163,8 +177,8 @@ class JediEngine:
             return []
 
         try:
-            script = self._make_script(code, line, column, namespaces, path)
-            sigs = script.get_signatures(line, column)
+            script, effective_line = self._make_script(code, line, column, namespaces, path)
+            sigs = script.get_signatures(effective_line, column)
         except Exception as exc:
             logger.debug(f"jedi.get_signatures failed at {line}:{column}: {exc}")
             return []
@@ -180,8 +194,8 @@ class JediEngine:
         column: int,
         namespaces: Optional[Sequence[dict]],
         path: Optional[str],
-    ) -> Any:
-        """Return the right jedi driver for the current cursor position.
+    ) -> tuple[Any, int]:
+        """Return ``(script, effective_line)`` for the current cursor position.
 
         Two modes, picked per call based on what the user is completing:
 
@@ -191,6 +205,11 @@ class JediEngine:
            build and ignores ``sys.modules``, so our bundled stub for
            ``maya.cmds`` wins. ``Interpreter`` here regresses to the empty-
            ``dir`` failure described in ``_MAYA_STUB_ROOTS``.
+
+           To spare users from writing ``import maya.cmds as cmds`` at the top
+           of every scratch buffer, the Maya shim is prepended to the source
+           so jedi always has a binding for ``cmds`` / ``OpenMaya`` / ``om`` /
+           ``om2``. The user's line number is shifted accordingly.
         2. **Everything else**: :class:`jedi.Interpreter` with the live
            ``exec_globals``. This covers user variables (``x = cmds.ls(); x.|``
            → real list methods) and any other runtime-populated module such as
@@ -201,11 +220,12 @@ class JediEngine:
         """
         project = self._build_project()
         if self._extra_paths and _is_maya_rooted(code, line, column):
-            return jedi.Script(code=code, path=path, project=project)
+            shimmed_code = _MAYA_IMPORT_SHIM + code
+            return jedi.Script(code=shimmed_code, path=path, project=project), line + _MAYA_SHIM_LINES
 
         if namespaces:
-            return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project)
-        return jedi.Script(code=code, path=path, project=project)
+            return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project), line
+        return jedi.Script(code=code, path=path, project=project), line
 
     def _build_project(self):
         """Construct a ``jedi.Project`` that puts our stub paths at ``sys_path[0]``.

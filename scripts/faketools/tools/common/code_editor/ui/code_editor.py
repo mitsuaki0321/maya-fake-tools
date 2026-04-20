@@ -142,19 +142,39 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.connect_signals()
 
     def _get_exec_namespaces(self) -> list[dict]:
-        """Walk up to ``MayaCodeEditor`` and return its ``exec_globals`` (if any).
+        """Return the live namespaces jedi.Interpreter should consult.
 
-        This is what gives jedi access to live ``cmds`` / ``om2`` / user-loaded
-        modules without having to reimport them statically — the same trick
-        the session saver uses in ``editor_tab_widget``.
+        Two sources, in priority order:
+
+        1. The editor's own ``exec_globals`` (populated by
+           :func:`build_exec_globals` with ``cmds`` / ``om2`` / ``om`` and
+           whatever the user's Run has added since).
+        2. Maya's ``__main__.__dict__``. This catches modules the user
+           imported in Maya's Script Editor but never executed inside our
+           editor — without it, ``import eST3`` done at the Maya prompt
+           would be invisible to the popup until the user ran *any* code
+           through our Run button (which syncs ``__main__`` into
+           ``exec_globals``).
         """
+        namespaces: list[dict] = []
         node = self.parent()
         while node is not None:
             exec_globals = getattr(node, "exec_globals", None)
             if isinstance(exec_globals, dict):
-                return [exec_globals]
+                namespaces.append(exec_globals)
+                break
             node = node.parent() if hasattr(node, "parent") else None
-        return []
+
+        try:
+            import __main__
+
+            main_dict = getattr(__main__, "__dict__", None)
+            if isinstance(main_dict, dict) and main_dict not in namespaces:
+                namespaces.append(main_dict)
+        except Exception as exc:
+            logger.debug(f"failed to attach __main__ to namespaces: {exc}")
+
+        return namespaces
 
     def init_editor(self):
         """Initialize editor settings."""
