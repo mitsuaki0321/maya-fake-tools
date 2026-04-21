@@ -54,6 +54,21 @@ _OPENMAYA_ALIASES: tuple[str, ...] = ("OpenMaya", "om2", "om")
 
 _MAYA_STUB_ROOTS: frozenset[str] = frozenset({"maya", *_CMDS_ALIASES, *_OPENMAYA_ALIASES})
 
+# Alias → canonical module name. Drives the root-completion cache: every alias
+# in ``_CMDS_ALIASES`` shares a single cache entry under ``maya.cmds``, so
+# ``cmds.polyC|`` and ``mc.polyC|`` reuse the same populated list. The
+# canonical alias (``cmds``, ``OpenMaya``) is what we type into the synthetic
+# source we hand jedi during populate — it's guaranteed to exist thanks to the
+# shim and picks the cleanest symbol table.
+_MODULE_BY_ALIAS: dict[str, str] = {
+    **{alias: "maya.cmds" for alias in _CMDS_ALIASES},
+    **{alias: "maya.api.OpenMaya" for alias in _OPENMAYA_ALIASES},
+}
+_CANONICAL_ALIAS_BY_MODULE: dict[str, str] = {
+    "maya.cmds": _CMDS_ALIASES[0],
+    "maya.api.OpenMaya": _OPENMAYA_ALIASES[0],
+}
+
 
 def _build_maya_import_shim() -> str:
     """Render a ``.py`` snippet that binds every alias to its stub module.
@@ -85,6 +100,12 @@ _MAYA_SHIM_LINES = _MAYA_IMPORT_SHIM.count("\n")
 # lopped off the text inside any unmatched trailing ``(`` so the callee is
 # what we're matching, not the argument being typed.
 _CHAIN_ROOT_RE = re.compile(r"([A-Za-z_]\w*)(?:\.[A-Za-z_]\w*)*\.?\w*$")
+
+# Regex for the root-completion cache fast path. Only matches when the cursor
+# is at ``<root>.<prefix>`` where ``<root>`` is a standalone identifier (not
+# part of a longer dotted chain like ``cmds.polyCube.<cursor>`` and not a
+# method call result like ``foo().<cursor>``). ``<prefix>`` may be empty.
+_BARE_ROOT_RE = re.compile(r"(?:^|[^A-Za-z_.\)\]])([A-Za-z_]\w*)\.(\w*)$")
 
 
 # A "category priority" for sort order when the popup mixes types. Lower is
@@ -137,17 +158,35 @@ class JediEngine:
         # is visible without raising the whole logger to DEBUG; subsequent
         # completions fall back to per-call DEBUG timing.
         self._seen_roots: set[str] = set()
+        # Per-module completion list cache. Populated lazily on the first
+        # ``<root>.<prefix>`` hit for each Maya stub module and reused for
+        # every subsequent keystroke, so 150 ms of jedi inference collapses
+        # into a ~1 ms Python-side prefix filter. Keyed by the *resolved*
+        # module name (``maya.cmds``, not ``cmds``) so aliases share one entry.
+        # Cleared when ``set_extra_paths`` changes the Project — stubs that
+        # might have been swapped out are no longer authoritative.
+        self._root_completion_cache: dict[str, list[CompletionItem]] = {}
 
     def set_extra_paths(self, paths: Sequence[str]) -> None:
         """Replace the extra sys.path list used when building jedi ``Project``s.
 
         Safe to call at any time; existing cached scripts aren't affected
         (a fresh Interpreter/Script is built per ``complete()`` call). The
-        memoised :class:`jedi.Project` is invalidated so the next call picks
-        up the new sys_path.
+        memoised :class:`jedi.Project` and the per-root completion cache are
+        invalidated so the next call picks up the new sys_path and stubs.
         """
         self._extra_paths = [str(p) for p in paths if p]
         self._cached_project = None
+        self._root_completion_cache.clear()
+
+    def clear_completion_cache(self) -> None:
+        """Drop the Maya-root completion cache.
+
+        Intended for the rare case where cached stubs go stale within a
+        session — e.g. after a Maya plugin load that registers new ``cmds.*``
+        commands. Also useful as a manual escape hatch while debugging.
+        """
+        self._root_completion_cache.clear()
 
     @property
     def available(self) -> bool:
@@ -193,6 +232,36 @@ class JediEngine:
             return []
 
         t_start = time.perf_counter()
+
+        # --- Fast path: cached Maya-root completions ---
+        # When the cursor sits at ``<root>.<prefix>`` and ``<root>`` resolves
+        # to a stubbed Maya module, the full attribute list is invariant for
+        # the whole Maya session. We fetch it from jedi once (the "populate"
+        # call) and answer every subsequent keystroke with a Python-side
+        # prefix filter — ~1 ms instead of ~150 ms.
+        cache_state = "bypass"
+        if self._extra_paths:
+            bare_hit = _match_bare_root(code, line, column)
+            if bare_hit is not None:
+                root_alias, prefix = bare_hit
+                resolved_module = _MODULE_BY_ALIAS.get(root_alias)
+                if resolved_module is not None:
+                    all_items = self._root_completion_cache.get(resolved_module)
+                    if all_items is None:
+                        all_items = self._fetch_root_completions(resolved_module)
+                        if all_items:
+                            self._root_completion_cache[resolved_module] = all_items
+                            cache_state = "populate"
+                        else:
+                            # Empty populate — fall through to the full path
+                            # rather than cache an unauthoritative empty list.
+                            all_items = None
+                    else:
+                        cache_state = "hit"
+                    if all_items is not None:
+                        return self._finalise_cached(all_items, prefix, root_alias, resolved_module, max_items, mru, t_start, cache_state)
+
+        # --- Full path: hand the user's source to jedi ---
         try:
             script, effective_line = self._make_script(code, line, column, namespaces, path)
             t_script = time.perf_counter() - t_start
@@ -218,7 +287,7 @@ class JediEngine:
         msg = (
             f"autocomplete.complete: total={t_total_ms:.1f}ms "
             f"(script={t_script * 1000:.1f}ms jedi={t_jedi * 1000:.1f}ms) "
-            f"root={root} maya_rooted={maya_rooted} items={len(items)}"
+            f"root={root} maya_rooted={maya_rooted} cache=bypass items={len(items)}"
         )
         if root not in self._seen_roots:
             self._seen_roots.add(root)
@@ -227,6 +296,72 @@ class JediEngine:
             logger.info(f"autocomplete.complete (cold) {msg}")
         else:
             logger.debug(msg)
+        return items
+
+    # -------------------- completion cache internals --------------------
+
+    def _finalise_cached(
+        self,
+        all_items: list[CompletionItem],
+        prefix: str,
+        root_alias: str,
+        resolved_module: str,
+        max_items: int,
+        mru: Optional[Mapping[str, int]],
+        t_start: float,
+        cache_state: str,
+    ) -> list[CompletionItem]:
+        """Apply prefix filter + MRU + cap to a cached completion list."""
+        if prefix:
+            items = [c for c in all_items if c.name.startswith(prefix)]
+        else:
+            items = list(all_items)
+        if mru:
+            items.sort(key=lambda it: -mru.get(it.name, 0))
+        if len(items) > max_items:
+            items = items[:max_items]
+
+        t_total_ms = (time.perf_counter() - t_start) * 1000
+        msg = (
+            f"autocomplete.complete: total={t_total_ms:.1f}ms "
+            f"root={root_alias} module={resolved_module} cache={cache_state} "
+            f"prefix={prefix!r} items={len(items)}/{len(all_items)}"
+        )
+        # A populate pays the full jedi cost, so it's worth surfacing at INFO
+        # like the legacy "cold" marker. Hits stay at DEBUG.
+        if cache_state == "populate":
+            logger.info(f"autocomplete.complete (populate) {msg}")
+            self._seen_roots.add(root_alias)
+        else:
+            logger.debug(msg)
+        return items
+
+    def _fetch_root_completions(self, resolved_module: str) -> list[CompletionItem]:
+        """Ask jedi for the full completion list of ``<resolved_module>.``.
+
+        Runs jedi against a tiny synthetic source so the list doesn't depend
+        on the user's document. Reuses the shared ``Project`` and
+        ``InterpreterEnvironment`` so it's subject to the same
+        subprocess-avoidance fix as the main path.
+        """
+        canonical = _CANONICAL_ALIAS_BY_MODULE.get(resolved_module)
+        if canonical is None:
+            return []
+        snippet = _MAYA_IMPORT_SHIM + f"{canonical}."
+        effective_line = _MAYA_SHIM_LINES + 1
+        effective_column = len(canonical) + 1  # cursor immediately after the dot
+        try:
+            script = jedi.Script(
+                code=snippet,
+                project=self._build_project(),
+                environment=self._env,
+            )
+            completions = script.complete(effective_line, effective_column)
+        except Exception as exc:
+            logger.debug(f"root cache populate failed for {resolved_module}: {exc}")
+            return []
+        items = [CompletionItem.from_jedi(c) for c in completions]
+        items.sort(key=_completion_sort_key)
         return items
 
     def signatures(
@@ -346,6 +481,32 @@ def _is_maya_rooted(code: str, line: int, column: int) -> bool:
     """
     root = _expression_root(code, line, column)
     return root is not None and root in _MAYA_STUB_ROOTS
+
+
+def _match_bare_root(code: str, line: int, column: int) -> Optional[tuple[str, str]]:
+    """Return ``(root_alias, prefix)`` iff the cursor is at ``<root>.<prefix>``.
+
+    "Bare" means ``<root>`` is a standalone identifier — not a deeper attribute
+    chain like ``foo.bar.<cursor>``, not a method result like ``foo().<cursor>``,
+    and not following another dotted expression. ``<prefix>`` may be empty.
+
+    Used by the completion cache fast path; the caller further requires that
+    ``root_alias`` be a known Maya stub alias.
+    """
+    start = 0
+    for _ in range(line - 1):
+        nl = code.find("\n", start)
+        if nl < 0:
+            return None
+        start = nl + 1
+    end = code.find("\n", start)
+    line_text = code[start:end] if end >= 0 else code[start:]
+    prefix_line = line_text[:column]
+
+    match = _BARE_ROOT_RE.search(prefix_line)
+    if not match:
+        return None
+    return match.group(1), match.group(2)
 
 
 def _expression_root(code: str, line: int, column: int) -> Optional[str]:
