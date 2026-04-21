@@ -44,11 +44,6 @@ _IDENT_TERMINATORS = set(" \t\n\r()[]{}:,;=+-*/%<>!&|^~")
 # Space and semicolon are deliberately excluded — too easy to hit mid-thought.
 _COMMIT_CHARS = frozenset(".(,=")
 
-# jedi completion types that a sensible "accept" flows into a call — auto
-# insert ``()`` and drop the caret inside. ``statement`` (e.g. module-level
-# constants) and ``instance`` are left as plain name inserts.
-_CALLABLE_TYPES = frozenset({"function", "method", "class"})
-
 # Default debounce window for word-triggered completions. Dot completions
 # skip the debounce entirely so ``foo.`` feels instant.
 _DEFAULT_DEBOUNCE_MS = 100
@@ -446,21 +441,11 @@ class AutocompleteController:
         return doc.toPlainText()[start:pos] if start < pos else ""
 
     def _insert_completion(self, item):
-        """Replace the current partial word with ``item``'s text, plus accept extras.
-
-        Extras, in order:
-
-        - For callables (function / method / class from jedi), append ``()``
-          and leave the caret between the parens so the user can immediately
-          start typing arguments.
-        - Record the accept in ``_mru`` so the name floats up in subsequent
-          popups during the same session.
-        """
+        """Replace the current partial word with ``item``'s name and record MRU."""
         name = getattr(item, "name", "")
         if not name:
             return
 
-        add_parens = getattr(item, "type", "") in _CALLABLE_TYPES
         cursor = self.editor.textCursor()
         prefix_len = len(self._current_word_prefix())
 
@@ -471,11 +456,7 @@ class AutocompleteController:
             if prefix_len > 0:
                 cursor.movePosition(QTextCursor.Left, QTextCursor.KeepAnchor, prefix_len)
                 cursor.removeSelectedText()
-            cursor.insertText(name + ("()" if add_parens else ""))
-            if add_parens:
-                # Step back between the parens so typing the first argument
-                # lands in the right spot.
-                cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
+            cursor.insertText(name)
             self.editor.setTextCursor(cursor)
         finally:
             self._inserting_completion = False
