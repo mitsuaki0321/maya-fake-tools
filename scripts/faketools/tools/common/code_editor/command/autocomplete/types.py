@@ -35,18 +35,21 @@ class CompletionItem:
 
     @classmethod
     def from_jedi(cls, completion) -> CompletionItem:
-        """Build an item from a ``jedi.api.classes.Completion``."""
-        # ``description`` can be expensive on some completions, so we tolerate
-        # it being missing — the popup falls back to the bare name.
-        try:
-            desc = completion.description or ""
-        except Exception:
-            desc = ""
+        """Build an item from a ``jedi.api.classes.Completion``.
+
+        ``completion.description`` is intentionally skipped. On a file-less
+        module (``mCmds`` from the in-house eST3 pipeline, dynamically built
+        without a source file) jedi falls back to a re-inference for every
+        attribute, which measured ~80 ms × ~280 items = 21 seconds per
+        keystroke on the company box. The popup doesn't surface this field
+        to the user today, so paying that cost buys nothing. Fetch lazily
+        via a resolve step if a future UI does need it.
+        """
         return cls(
             name=completion.name,
             complete=completion.complete or "",
             type=completion.type or "",
-            description=desc,
+            description="",
         )
 
 
