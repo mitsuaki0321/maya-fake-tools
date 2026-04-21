@@ -360,7 +360,13 @@ class JediEngine:
         except Exception as exc:
             logger.debug(f"root cache populate failed for {resolved_module}: {exc}")
             return []
-        items = [CompletionItem.from_jedi(c) for c in completions]
+        # Cache populate is the one path where reading ``completion.type`` is
+        # cheap: the bundled Maya stubs (`.pyi`) are on local disk, so the
+        # category-rank sort (param > keyword > function > class > ...) is
+        # worth the ~0.1 ms per item — especially for ``OpenMaya`` where
+        # classes, methods and enum constants would otherwise mix into a
+        # single alphabetical stream.
+        items = [CompletionItem.from_jedi(c, fetch_type=True) for c in completions]
         items.sort(key=_completion_sort_key)
         return items
 
