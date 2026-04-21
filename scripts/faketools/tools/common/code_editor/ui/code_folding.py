@@ -29,16 +29,19 @@ class CodeFoldingManager:
         # Set of block numbers that are currently folded
         self._folded_headers = set()
 
-        # Debounce timer for recalculation
-        self._update_timer = QTimer()
+        # Debounce timer for recalculation. Parent to the editor so Qt destroys
+        # the timer when the editor's C++ object dies — otherwise a pending fire
+        # can reach _do_update after the editor is gone and raise RuntimeError.
+        self._update_timer = QTimer(self.editor)
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._do_update)
 
         # Connect to document changes
         self.editor.document().contentsChanged.connect(self._schedule_update)
 
-        # Initial calculation
-        QTimer.singleShot(0, self._do_update)
+        # Initial calculation — use the editor-parented timer so it's cancelled
+        # if the editor is closed before the first update fires.
+        self._update_timer.start(0)
 
     # ------------------------------------------------------------------
     # Public API — queries
@@ -227,7 +230,14 @@ class CodeFoldingManager:
 
     def _do_update(self):
         """Recalculate fold regions from document content."""
-        new_regions = self._detect_fold_regions()
+        try:
+            new_regions = self._detect_fold_regions()
+        except RuntimeError:
+            # Editor's C++ object was deleted while a recalculation was pending.
+            # Nothing to update — drop the stale state so later callbacks exit fast.
+            self._fold_regions = {}
+            self._folded_headers.clear()
+            return
 
         # Prune folded headers that no longer exist as valid fold regions
         stale = self._folded_headers - set(new_regions.keys())
