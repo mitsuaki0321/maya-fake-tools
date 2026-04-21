@@ -34,35 +34,54 @@ except Exception as _exc:  # pragma: no cover — diagnostic path
 _MAX_FILE_BYTES = 500 * 1024
 
 
-# Top-level names that must be resolved through the bundled Maya stubs rather
-# than live introspection. ``maya.cmds`` is the problem child: it's in
-# ``sys.modules`` as soon as Maya starts, but ``dir(cmds)`` stays nearly empty
-# until a command is actually called (lazy loading), and jedi.Interpreter's
-# ``MixedObject`` layer ends up favouring that empty live side over the stub.
-# Routing these names through ``jedi.Script`` (which ignores sys.modules)
-# forces the stub to win. Every other name — user variables, ``eST3``, etc. —
-# goes through ``jedi.Interpreter`` so live ``dir()`` output drives the popup.
-_MAYA_STUB_ROOTS = frozenset({"maya", "cmds", "OpenMaya", "om", "om2"})
+# ---------------------------------------------------------------------------
+# Maya alias configuration — the *only* place to touch when adding a name.
+#
+# To teach the editor about another local alias (e.g. someone prefers
+# ``import maya.cmds as mc``), just append the alias string to the right
+# tuple below. Both the stub-root detector (``_MAYA_STUB_ROOTS``) and the
+# virtual import shim fed to ``jedi.Script`` are derived from these lists,
+# so a one-word edit is all it takes. Reason this exists at all: ``maya.cmds``
+# and ``maya.api.OpenMaya`` must be routed through ``jedi.Script`` against
+# the bundled stubs — their live ``dir()`` is nearly empty (lazy-load) and
+# jedi.Interpreter's ``MixedObject`` layer favours the empty live side.
+# ---------------------------------------------------------------------------
+_CMDS_ALIASES: tuple[str, ...] = ("cmds", "mc")
+_OPENMAYA_ALIASES: tuple[str, ...] = ("OpenMaya", "om2", "om")
+
+_MAYA_STUB_ROOTS: frozenset[str] = frozenset({"maya", *_CMDS_ALIASES, *_OPENMAYA_ALIASES})
+
+
+def _build_maya_import_shim() -> str:
+    """Render a ``.py`` snippet that binds every alias to its stub module.
+
+    Prepended to the user's source before handing it to ``jedi.Script`` so
+    they don't need to declare the imports themselves. Ordering doesn't
+    matter; duplicates are fine because a user-declared import simply
+    shadows the shim binding downstream.
+    """
+    lines: list[str] = []
+    for alias in _CMDS_ALIASES:
+        if alias == "cmds":
+            lines.append("from maya import cmds")
+        else:
+            lines.append(f"from maya import cmds as {alias}")
+    for alias in _OPENMAYA_ALIASES:
+        if alias == "OpenMaya":
+            lines.append("from maya.api import OpenMaya")
+        else:
+            lines.append(f"from maya.api import OpenMaya as {alias}")
+    return "\n".join(lines) + "\n"
+
+
+_MAYA_IMPORT_SHIM = _build_maya_import_shim()
+_MAYA_SHIM_LINES = _MAYA_IMPORT_SHIM.count("\n")
 
 
 # Regex to pick the first identifier out of a dotted chain. Used after we've
 # lopped off the text inside any unmatched trailing ``(`` so the callee is
 # what we're matching, not the argument being typed.
 _CHAIN_ROOT_RE = re.compile(r"([A-Za-z_]\w*)(?:\.[A-Za-z_]\w*)*\.?\w*$")
-
-
-# Virtual import block prepended to the source before handing it to
-# ``jedi.Script`` whenever the cursor is under a Maya stub root. Lets the user
-# write ``cmds.polyCube(|)`` in a scratch buffer without the matching import
-# statement — jedi.Script is static-only and can't see ``exec_globals``, so
-# the name ``cmds`` has to come from somewhere. The shim resolves through our
-# stub because ``stubs_root`` is pinned at ``sys_path[0]`` on the Project. If
-# the user *does* declare their own import, the shim binding is just
-# shadowed — harmless.
-_MAYA_IMPORT_SHIM = (
-    "import maya.cmds as cmds\nfrom maya.api import OpenMaya\nfrom maya.api import OpenMaya as om2\nfrom maya.api import OpenMaya as om\n"
-)
-_MAYA_SHIM_LINES = _MAYA_IMPORT_SHIM.count("\n")
 
 
 # A "category priority" for sort order when the popup mixes types. Lower is
