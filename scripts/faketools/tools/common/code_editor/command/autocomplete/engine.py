@@ -13,6 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from logging import getLogger
 import re
+import time
 from typing import Any, Optional
 
 from .types import CompletionItem
@@ -122,6 +123,11 @@ class JediEngine:
         # instance across every completion avoids a list copy + jedi-side
         # initialisation on each keystroke.
         self._cached_project: Any = None
+        # Root identifiers (``cmds``, ``om``, ``np``, ...) we have already timed
+        # at least once. First sighting logs at INFO so a cold-path completion
+        # is visible without raising the whole logger to DEBUG; subsequent
+        # completions fall back to per-call DEBUG timing.
+        self._seen_roots: set[str] = set()
 
     def set_extra_paths(self, paths: Sequence[str]) -> None:
         """Replace the extra sys.path list used when building jedi ``Project``s.
@@ -177,12 +183,15 @@ class JediEngine:
         if not code or len(code) > self.max_file_bytes:
             return []
 
+        t_start = time.perf_counter()
         try:
             script, effective_line = self._make_script(code, line, column, namespaces, path)
+            t_script = time.perf_counter() - t_start
             completions = script.complete(effective_line, column)
         except Exception as exc:
             logger.debug(f"jedi.complete failed at {line}:{column}: {exc}")
             return []
+        t_jedi = time.perf_counter() - t_start - t_script
 
         items = [CompletionItem.from_jedi(c) for c in completions]
         items.sort(key=_completion_sort_key)
@@ -193,6 +202,22 @@ class JediEngine:
             items.sort(key=lambda it: -mru.get(it.name, 0))
         if len(items) > max_items:
             items = items[:max_items]
+
+        t_total_ms = (time.perf_counter() - t_start) * 1000
+        root = _expression_root(code, line, column) or "?"
+        maya_rooted = root in _MAYA_STUB_ROOTS
+        msg = (
+            f"autocomplete.complete: total={t_total_ms:.1f}ms "
+            f"(script={t_script * 1000:.1f}ms jedi={t_jedi * 1000:.1f}ms) "
+            f"root={root} maya_rooted={maya_rooted} items={len(items)}"
+        )
+        if root not in self._seen_roots:
+            self._seen_roots.add(root)
+            # Cold call for this root — surface at INFO so it stands out when
+            # comparing network-vs-local without bumping the whole logger.
+            logger.info(f"autocomplete.complete (cold) {msg}")
+        else:
+            logger.debug(msg)
         return items
 
     def signatures(
@@ -281,6 +306,7 @@ class JediEngine:
             return None
         if self._cached_project is not None:
             return self._cached_project
+        t_start = time.perf_counter()
         try:
             import sys
 
@@ -293,6 +319,9 @@ class JediEngine:
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
             self._cached_project = None
+            return self._cached_project
+        t_ms = (time.perf_counter() - t_start) * 1000
+        logger.info(f"autocomplete.project_built: {t_ms:.1f}ms (extra_paths={len(self._extra_paths)}, sys_path={len(forced_sys_path)})")
         return self._cached_project
 
 
@@ -306,6 +335,17 @@ def _is_maya_rooted(code: str, line: int, column: int) -> bool:
     (``get_cmds().polyCube(|``) fall through to ``False`` — we accept the
     small regression for those rare shapes in exchange for a simpler rule.
     """
+    root = _expression_root(code, line, column)
+    return root is not None and root in _MAYA_STUB_ROOTS
+
+
+def _expression_root(code: str, line: int, column: int) -> Optional[str]:
+    """Return the leftmost identifier of the dotted expression at the cursor.
+
+    Used for both the Maya-stub routing decision and for timing logs so we can
+    tell ``cmds.`` from ``om.`` from a user variable when comparing completion
+    latency across environments.
+    """
     # Walk to the start of the target line without materialising every
     # line of the document — ``code.splitlines()`` would allocate O(lines)
     # on every keystroke in a large file.
@@ -313,7 +353,7 @@ def _is_maya_rooted(code: str, line: int, column: int) -> bool:
     for _ in range(line - 1):
         nl = code.find("\n", start)
         if nl < 0:
-            return False
+            return None
         start = nl + 1
     end = code.find("\n", start)
     line_text = code[start:end] if end >= 0 else code[start:]
@@ -334,8 +374,8 @@ def _is_maya_rooted(code: str, line: int, column: int) -> bool:
 
     match = _CHAIN_ROOT_RE.search(prefix)
     if not match:
-        return False
-    return match.group(1) in _MAYA_STUB_ROOTS
+        return None
+    return match.group(1)
 
 
 def _completion_sort_key(item: CompletionItem) -> tuple:

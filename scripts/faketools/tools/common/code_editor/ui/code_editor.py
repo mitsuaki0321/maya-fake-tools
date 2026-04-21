@@ -7,6 +7,7 @@ import contextlib
 from logging import getLogger
 import os
 import re
+import time
 
 from .....lib_ui.qt_compat import (
     QAction,
@@ -63,6 +64,8 @@ def _configure_engine_stub_paths():
         return
     _STUB_PATHS_CONFIGURED = True
 
+    t_start = time.perf_counter()
+
     try:
         import maya.cmds as _cmds  # type: ignore
 
@@ -76,7 +79,10 @@ def _configure_engine_stub_paths():
         logger.debug(f"stub_generator unavailable: {exc}")
         return
 
-    if not stub_command.stubs_exist(maya_version):
+    t_exist_start = time.perf_counter()
+    stubs_ok = stub_command.stubs_exist(maya_version)
+    t_exist_ms = (time.perf_counter() - t_exist_start) * 1000
+    if not stubs_ok:
         logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
         return
 
@@ -92,7 +98,8 @@ def _configure_engine_stub_paths():
         sys.path.insert(0, stubs_root_str)
 
     _SHARED_JEDI_ENGINE.set_extra_paths([stubs_root_str])
-    logger.info(f"Autocomplete stubs active: {stubs_root}")
+    t_total_ms = (time.perf_counter() - t_start) * 1000
+    logger.info(f"Autocomplete stubs active: {stubs_root} (setup={t_total_ms:.1f}ms stubs_exist={t_exist_ms:.1f}ms)")
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
