@@ -117,14 +117,22 @@ class JediEngine:
     def __init__(self, max_file_bytes: int = _MAX_FILE_BYTES):
         self.max_file_bytes = max_file_bytes
         self._extra_paths: list[str] = []
+        # ``_cached_project`` is rebuilt only when ``set_extra_paths`` changes
+        # the paths — the Project's sys_path is a snapshot, so reusing one
+        # instance across every completion avoids a list copy + jedi-side
+        # initialisation on each keystroke.
+        self._cached_project: Any = None
 
     def set_extra_paths(self, paths: Sequence[str]) -> None:
         """Replace the extra sys.path list used when building jedi ``Project``s.
 
         Safe to call at any time; existing cached scripts aren't affected
-        (a fresh Interpreter/Script is built per ``complete()`` call).
+        (a fresh Interpreter/Script is built per ``complete()`` call). The
+        memoised :class:`jedi.Project` is invalidated so the next call picks
+        up the new sys_path.
         """
         self._extra_paths = [str(p) for p in paths if p]
+        self._cached_project = None
 
     @property
     def available(self) -> bool:
@@ -258,28 +266,34 @@ class JediEngine:
         return jedi.Script(code=code, path=path, project=project), line
 
     def _build_project(self):
-        """Construct a ``jedi.Project`` that puts our stub paths at ``sys_path[0]``.
+        """Return the (memoised) ``jedi.Project`` with our stubs at ``sys_path[0]``.
 
         Earlier attempts relied on ``added_sys_path`` alone, but in-Maya jedi
         still resolved ``maya.cmds`` to the live C-extension package because
         the auto-discovered environment path (``C:/.../Maya2025/bin``) landed
         ahead of the stub. Passing an explicit ``sys_path`` with
         ``smart_sys_path=False`` forces the order we need.
+
+        The Project is cached across completions — its sys_path is a snapshot
+        that only changes when :meth:`set_extra_paths` is called.
         """
         if not self._extra_paths:
             return None
+        if self._cached_project is not None:
+            return self._cached_project
         try:
             import sys
 
             forced_sys_path = list(self._extra_paths) + list(sys.path)
-            return jedi.Project(
+            self._cached_project = jedi.Project(
                 path=".",
                 sys_path=forced_sys_path,
                 smart_sys_path=False,
             )
         except Exception as exc:
             logger.debug(f"jedi.Project construction failed: {exc}")
-            return None
+            self._cached_project = None
+        return self._cached_project
 
 
 def _is_maya_rooted(code: str, line: int, column: int) -> bool:
@@ -292,10 +306,17 @@ def _is_maya_rooted(code: str, line: int, column: int) -> bool:
     (``get_cmds().polyCube(|``) fall through to ``False`` — we accept the
     small regression for those rare shapes in exchange for a simpler rule.
     """
-    try:
-        line_text = code.splitlines()[line - 1]
-    except IndexError:
-        return False
+    # Walk to the start of the target line without materialising every
+    # line of the document — ``code.splitlines()`` would allocate O(lines)
+    # on every keystroke in a large file.
+    start = 0
+    for _ in range(line - 1):
+        nl = code.find("\n", start)
+        if nl < 0:
+            return False
+        start = nl + 1
+    end = code.find("\n", start)
+    line_text = code[start:end] if end >= 0 else code[start:]
     prefix = line_text[:column]
 
     # If the cursor is inside an unclosed call (e.g. ``cmds.polyCube(widt|``)

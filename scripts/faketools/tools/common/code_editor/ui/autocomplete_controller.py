@@ -420,12 +420,13 @@ class AutocompleteController:
             # Editor / completer got torn down between dispatch and delivery.
             self._enabled = False
 
-    def _current_word_prefix(self) -> str:
-        """Return the partial identifier the user has typed at the caret.
+    def _current_word_prefix_length(self) -> int:
+        """Return how many chars left of the caret belong to the current identifier.
 
-        We can't use ``QTextCursor.WordUnderCursor`` because that grabs the
-        whole word including characters to the right; we want only what's
-        left of the caret so QCompleter's prefix filter behaves.
+        We only ever need the length (to know how much to delete before
+        inserting the completion), so we walk back char-by-char and stop at
+        the first non-identifier char. Avoids ``doc.toPlainText()``'s full-
+        document string allocation on every accept.
         """
         cursor = self.editor.textCursor()
         pos = cursor.position()
@@ -438,7 +439,7 @@ class AutocompleteController:
                 start -= 1
                 continue
             break
-        return doc.toPlainText()[start:pos] if start < pos else ""
+        return pos - start
 
     def _insert_completion(self, item):
         """Replace the current partial word with ``item``'s name and record MRU."""
@@ -447,7 +448,7 @@ class AutocompleteController:
             return
 
         cursor = self.editor.textCursor()
-        prefix_len = len(self._current_word_prefix())
+        prefix_len = self._current_word_prefix_length()
 
         # Flag the document mutation as "not user typing" so on_text_changed
         # doesn't re-dispatch on the intermediate state after removeSelectedText.
