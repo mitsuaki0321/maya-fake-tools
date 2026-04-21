@@ -74,6 +74,12 @@ class AutocompleteController:
         self._request_id = 0
         self._pending_runnable: Optional[CompletionRunnable] = None
 
+        # True while _insert_completion is editing the document. The remove /
+        # insertText pair fires textChanged on each half, and the "cursor lands
+        # on a dot" moment in the middle would otherwise re-open the popup
+        # right after the user just accepted something.
+        self._inserting_completion = False
+
         self._debounce_ms = _DEFAULT_DEBOUNCE_MS
         self._timer = QTimer(editor)
         self._timer.setSingleShot(True)
@@ -134,6 +140,11 @@ class AutocompleteController:
         - anything else: hide the popup.
         """
         if not self._enabled:
+            return
+        if self._inserting_completion:
+            # Document edits caused by accepting a completion are not the user
+            # typing — suppressing the trigger here keeps the popup closed
+            # after accept instead of re-opening on the intermediate dot.
             return
 
         trigger = self._classify_trigger()
@@ -356,13 +367,23 @@ class AutocompleteController:
             names = [item.name for item in items]
             self._model.setStringList(names)
 
+            popup = self._completer.popup()
+            # Mirror the editor's current font (family + zoomed size) before
+            # measuring, so sizeHintForColumn reflects the font actually used
+            # to render the list. This has to happen per-show because
+            # Ctrl+Wheel / Ctrl+= can change the editor font at any time.
+            popup.setFont(self.editor.font())
+
             # Position popup under the current cursor. Expand to fit the widest
             # visible item so long function names aren't clipped.
             rect = self.editor.cursorRect()
-            width = self._completer.popup().sizeHintForColumn(0)
-            width += self._completer.popup().verticalScrollBar().sizeHint().width()
+            width = popup.sizeHintForColumn(0)
+            width += popup.verticalScrollBar().sizeHint().width()
             rect.setWidth(max(width, 180))
             self._completer.complete(rect)
+            # Highlight the first row so Enter/Tab accepts the obvious match
+            # without the user having to press Down first.
+            self._set_popup_row(0)
         except RuntimeError:
             # Editor / completer got torn down between dispatch and delivery.
             self._enabled = False
@@ -394,12 +415,17 @@ class AutocompleteController:
         cursor = self.editor.textCursor()
         prefix_len = len(self._current_word_prefix())
 
-        # Select the prefix range and overwrite it with the full completion.
-        if prefix_len > 0:
-            cursor.movePosition(QTextCursor.Left, QTextCursor.KeepAnchor, prefix_len)
-            cursor.removeSelectedText()
-        cursor.insertText(completion)
-        self.editor.setTextCursor(cursor)
+        # Flag the document mutation as "not user typing" so on_text_changed
+        # doesn't re-dispatch on the intermediate state after removeSelectedText.
+        self._inserting_completion = True
+        try:
+            if prefix_len > 0:
+                cursor.movePosition(QTextCursor.Left, QTextCursor.KeepAnchor, prefix_len)
+                cursor.removeSelectedText()
+            cursor.insertText(completion)
+            self.editor.setTextCursor(cursor)
+        finally:
+            self._inserting_completion = False
 
     def _hide_popup(self):
         if self._completer.popup().isVisible():
