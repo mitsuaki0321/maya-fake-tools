@@ -600,9 +600,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     def keyPressEvent(self, event):
         """Handle key press events using the shortcut manager."""
-        # Give autocomplete first dibs: Ctrl+Space forces a request, and when
-        # the popup is visible it claims Enter / Tab / Escape before anything
-        # else looks at them.
+        # Give autocomplete first dibs: when the popup is visible it claims
+        # Enter / Tab / Escape / arrow keys before anything else looks at them.
         if getattr(self, "autocomplete", None) is not None and self.autocomplete.handle_key_press(event):
             return
 

@@ -3,7 +3,7 @@ Autocomplete controller for a single ``PythonEditor`` instance.
 
 Responsibilities:
 
-- Decide *when* to trigger a completion (dot, printable keystrokes, Ctrl+Space)
+- Decide *when* to trigger a completion (dot or a printable keystroke while the popup is open)
 - Debounce word-triggered requests so fast typing doesn't thrash jedi
 - Dispatch requests through ``QThreadPool`` via :class:`CompletionRunnable`
 - Filter out stale responses once a newer request has superseded them
@@ -135,8 +135,9 @@ class AutocompleteController:
           on-ramp into completion.
         - word character: only refreshes an already-visible popup. We don't
           auto-open the popup on bare identifier typing, because that's
-          intrusive when the user is just writing new code. ``Ctrl+Space``
-          is the escape hatch for "complete this bare identifier".
+          intrusive when the user is just writing new code. To complete a
+          bare identifier, type a ``.`` (or toggle autocomplete off entirely
+          via the toolbar if it's in the way).
         - anything else: hide the popup.
         """
         if not self._enabled:
@@ -157,8 +158,7 @@ class AutocompleteController:
             return
 
         # trigger == "word": only refresh an already-open popup. Typing a bare
-        # identifier without a preceding dot should not auto-open — that's
-        # what Ctrl+Space is for.
+        # identifier without a preceding dot should not auto-open the popup.
         if self._completer.popup().isVisible():
             self._timer.start(self._debounce_ms)
 
@@ -173,12 +173,6 @@ class AutocompleteController:
         """
         key = event.key()
         mods = event.modifiers()
-
-        # Ctrl+Space always forces a completion, regardless of popup state.
-        if key == Qt.Key_Space and mods == Qt.ControlModifier and self._enabled:
-            self._timer.stop()
-            self._dispatch_completion()
-            return True
 
         popup = self._completer.popup()
         if not popup.isVisible():

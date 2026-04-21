@@ -293,7 +293,7 @@ class ToolBar(QWidget):
         self.unfold_all_button = VSCodeButton("unfoldall", "Unfold All")
         self.autocomplete_button = ToggleButton(
             "autocomplete",
-            "Toggle Autocomplete (Ctrl+Space)",
+            "Toggle Autocomplete",
             active_icon_name="autocomplete_active",
         )
         self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
