@@ -10,7 +10,7 @@ work, just without completion popups.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from logging import getLogger
 import re
 from typing import Any, Optional
@@ -139,6 +139,7 @@ class JediEngine:
         namespaces: Optional[Sequence[dict]] = None,
         path: Optional[str] = None,
         max_items: int = 50,
+        mru: Optional[Mapping[str, int]] = None,
     ) -> list[CompletionItem]:
         """Compute completions at ``(line, column)`` in ``code``.
 
@@ -153,6 +154,11 @@ class JediEngine:
             path:       Optional file path so jedi can resolve sibling
                         imports. Safe to omit.
             max_items:  Hard cap on returned items to keep the popup snappy.
+            mru:        Optional ``{name: count}`` tally of previously-accepted
+                        items. Applied as a stable boost *before* the cap, so
+                        that a frequently-picked command (``ls``) still rises
+                        to the top even when ``cmds.`` would otherwise produce
+                        1500 alphabetically-sorted items and truncate.
 
         Returns ``[]`` when jedi is unavailable or the source is too large.
         Errors inside jedi are swallowed and logged at debug level so one
@@ -172,6 +178,11 @@ class JediEngine:
 
         items = [CompletionItem.from_jedi(c) for c in completions]
         items.sort(key=_completion_sort_key)
+        if mru:
+            # Stable sort: items with a positive MRU count rise, ties keep
+            # the prior alphabetic/category order. Runs before the cap so
+            # MRU items in a long list don't get truncated off the end.
+            items.sort(key=lambda it: -mru.get(it.name, 0))
         if len(items) > max_items:
             items = items[:max_items]
         return items

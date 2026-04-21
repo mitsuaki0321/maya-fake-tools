@@ -38,6 +38,17 @@ logger = getLogger(__name__)
 # caret is one of these, there's no word to complete against.
 _IDENT_TERMINATORS = set(" \t\n\r()[]{}:,;=+-*/%<>!&|^~")
 
+# Keys that commit the highlighted completion *and* then type through to the
+# editor. Chosen conservatively: a char should belong here only if "accept
+# the item, then type this char" matches how a user naturally ends a name.
+# Space and semicolon are deliberately excluded — too easy to hit mid-thought.
+_COMMIT_CHARS = frozenset(".(,=")
+
+# jedi completion types that a sensible "accept" flows into a call — auto
+# insert ``()`` and drop the caret inside. ``statement`` (e.g. module-level
+# constants) and ``instance`` are left as plain name inserts.
+_CALLABLE_TYPES = frozenset({"function", "method", "class"})
+
 # Default debounce window for word-triggered completions. Dot completions
 # skip the debounce entirely so ``foo.`` feels instant.
 _DEFAULT_DEBOUNCE_MS = 100
@@ -79,6 +90,12 @@ class AutocompleteController:
         # on a dot" moment in the middle would otherwise re-open the popup
         # right after the user just accepted something.
         self._inserting_completion = False
+
+        # Per-session usage counter. Incremented each time the user accepts an
+        # item; applied as a positive bias in _apply_mru_sort so recent picks
+        # float to the top. Not persisted — resets when the controller is
+        # rebuilt (tool reload / editor reopen).
+        self._mru: dict[str, int] = {}
 
         self._debounce_ms = _DEFAULT_DEBOUNCE_MS
         self._timer = QTimer(editor)
@@ -182,7 +199,7 @@ class AutocompleteController:
         current_row = popup.currentIndex().row()
 
         if key in (Qt.Key_Enter, Qt.Key_Return, Qt.Key_Tab):
-            completion = self._selected_completion()
+            item = self._selected_item()
             # Hide before inserting: the insertion fires contentsChange, and
             # if the popup were still flagged as visible at that moment the
             # word-trigger branch in on_text_changed would re-open it with
@@ -191,13 +208,28 @@ class AutocompleteController:
             # Cancel any pending debounced dispatch scheduled before the
             # accept, for the same reason.
             self._timer.stop()
-            if completion:
-                self._insert_completion(completion)
+            if item is not None:
+                self._insert_completion(item)
             return True
 
         if key == Qt.Key_Escape:
             popup.hide()
             return True
+
+        # Commit characters: popup is open and the user typed a char that
+        # terminates the current identifier in a meaningful way (chain dot,
+        # call open-paren, arg separator, assignment). Accept first, then
+        # let the char itself flow through to the editor — the subsequent
+        # textChanged either opens a fresh popup (``.``) or just types the
+        # char (``,`` / ``=``). Returning False *after* inserting the
+        # completion is what makes the sequence atomic to the user.
+        if self._is_commit_character(event):
+            item = self._selected_item()
+            popup.hide()
+            self._timer.stop()
+            if item is not None:
+                self._insert_completion(item)
+            return False
 
         # Explicitly drive popup navigation from our side. Relying on
         # QCompleter's built-in event filter for this turned out to be
@@ -243,19 +275,20 @@ class AutocompleteController:
         popup.setCurrentIndex(index)
         popup.scrollTo(index, QAbstractItemView.EnsureVisible)
 
-    def _selected_completion(self) -> str:
-        """Return the text of the currently-highlighted popup row (empty if none)."""
+    def _selected_item(self):
+        """Return the full ``CompletionItem`` for the highlighted popup row.
+
+        The popup model only holds the display name; we need the jedi
+        metadata (``type``, etc.) to decide whether to auto-insert ``()`` on
+        accept, so we re-read it from ``_current_items`` using the popup row.
+        Falls back to row 0 when nothing is highlighted.
+        """
         popup = self._completer.popup()
         idx = popup.currentIndex()
-        if idx.isValid():
-            value = popup.model().data(idx)
-            if value:
-                return str(value)
-        # Fallback: first row of the source model. Reached when the popup is
-        # visible but nothing is highlighted yet (unusual, but survivable).
-        if self._model.rowCount() > 0:
-            return str(self._model.data(self._model.index(0, 0)) or "")
-        return ""
+        row = idx.row() if idx.isValid() else 0
+        if 0 <= row < len(self._current_items):
+            return self._current_items[row]
+        return None
 
     def _on_activated(self, arg):
         """QCompleter.activated slot. PySide dispatches either ``str`` or ``QModelIndex``."""
@@ -266,13 +299,20 @@ class AutocompleteController:
         if popup.isVisible():
             popup.hide()
         self._timer.stop()
+
+        item = None
         if isinstance(arg, str):
-            self._insert_completion(arg)
+            # Match the string back to the underlying item so accept-time
+            # behaviour (auto-parens, MRU) can see the ``type`` field.
+            for candidate in self._current_items:
+                if candidate.name == arg:
+                    item = candidate
+                    break
         else:
-            # QModelIndex path — same resolution as Enter/Tab.
-            completion = self._selected_completion()
-            if completion:
-                self._insert_completion(completion)
+            item = self._selected_item()
+
+        if item is not None:
+            self._insert_completion(item)
 
     # -------------------- internals --------------------
 
@@ -335,6 +375,7 @@ class AutocompleteController:
             column=column,
             namespaces=namespaces,
             path=file_path,
+            mru=self._mru,
         )
         runnable.signals.completed.connect(self._on_completion)
         self._pending_runnable = runnable
@@ -357,6 +398,8 @@ class AutocompleteController:
                 self._hide_popup()
                 return
 
+            # Engine already applied the MRU boost (before its cap), so items
+            # arrive here in final display order.
             self._current_items = items
             names = [item.name for item in items]
             self._model.setStringList(names)
@@ -402,10 +445,22 @@ class AutocompleteController:
             break
         return doc.toPlainText()[start:pos] if start < pos else ""
 
-    def _insert_completion(self, completion: str):
-        """Replace the current partial word with ``completion``."""
-        if not completion:
+    def _insert_completion(self, item):
+        """Replace the current partial word with ``item``'s text, plus accept extras.
+
+        Extras, in order:
+
+        - For callables (function / method / class from jedi), append ``()``
+          and leave the caret between the parens so the user can immediately
+          start typing arguments.
+        - Record the accept in ``_mru`` so the name floats up in subsequent
+          popups during the same session.
+        """
+        name = getattr(item, "name", "")
+        if not name:
             return
+
+        add_parens = getattr(item, "type", "") in _CALLABLE_TYPES
         cursor = self.editor.textCursor()
         prefix_len = len(self._current_word_prefix())
 
@@ -416,10 +471,34 @@ class AutocompleteController:
             if prefix_len > 0:
                 cursor.movePosition(QTextCursor.Left, QTextCursor.KeepAnchor, prefix_len)
                 cursor.removeSelectedText()
-            cursor.insertText(completion)
+            cursor.insertText(name + ("()" if add_parens else ""))
+            if add_parens:
+                # Step back between the parens so typing the first argument
+                # lands in the right spot.
+                cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
             self.editor.setTextCursor(cursor)
         finally:
             self._inserting_completion = False
+
+        # Record for MRU re-ranking on subsequent popups in this session.
+        self._mru[name] = self._mru.get(name, 0) + 1
+
+    def _is_commit_character(self, event) -> bool:
+        """Return True if ``event`` is a printable commit char while the popup is open.
+
+        Commit chars are chars that naturally end an identifier in Python and
+        for which "accept the current item then type the char" matches user
+        intent. We deliberately stop short of VSCode's full per-language set
+        — space and semicolon feel too eager in our editor, and tab/enter
+        already have dedicated branches.
+        """
+        # Modifier keys (Ctrl, Alt, Meta) disqualify — we only react to
+        # plain printable keys. Shift is fine (``(`` is shift+8 on US).
+        mods = event.modifiers()
+        if mods & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier):
+            return False
+        text = event.text()
+        return len(text) == 1 and text in _COMMIT_CHARS
 
     def _hide_popup(self):
         if self._completer.popup().isVisible():

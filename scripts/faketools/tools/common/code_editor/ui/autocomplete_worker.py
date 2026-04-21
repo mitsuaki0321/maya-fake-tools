@@ -11,7 +11,7 @@ ones in out-of-order execution.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from logging import getLogger
 from typing import Optional
 
@@ -51,6 +51,7 @@ class CompletionRunnable(QRunnable):
         namespaces: Optional[Sequence[dict]] = None,
         path: Optional[str] = None,
         max_items: int = 50,
+        mru: Optional[Mapping[str, int]] = None,
     ):
         super().__init__()
         self.signals = CompletionSignals()
@@ -64,6 +65,10 @@ class CompletionRunnable(QRunnable):
         self._namespaces = namespaces
         self._path = path
         self._max_items = max_items
+        # Snapshot the MRU so the engine gets a stable view even if the
+        # controller mutates it mid-flight (accept happening during a
+        # racing completion request).
+        self._mru: Optional[Mapping[str, int]] = dict(mru) if mru else None
         self._cancel = False
 
     def cancel(self):
@@ -81,6 +86,7 @@ class CompletionRunnable(QRunnable):
                 namespaces=self._namespaces,
                 path=self._path,
                 max_items=self._max_items,
+                mru=self._mru,
             )
         except Exception as exc:
             # Engine already catches internal jedi errors; this is defence for
