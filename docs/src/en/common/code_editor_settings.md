@@ -71,6 +71,15 @@ Used when integrating with tools like MCP Server.
 | `enabled` | false | Whether to enable command port |
 | `port` | 7001 | Port number to use |
 
+### Autocomplete Settings (autocomplete)
+Settings for the code editor's autocomplete feature.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `enabled` | true | Whether to enable autocomplete |
+
+Note: Also toggleable via the Toggle Autocomplete toolbar button. Auto-disabled when jedi is not installed.
+
 ### Autosave Settings (autosave)
 Settings for automatic saving of work.
 
@@ -115,6 +124,9 @@ Settings for window layout.
   "command_port": {
     "enabled": false,
     "port": 7001
+  },
+  "autocomplete": {
+    "enabled": true
   },
   "autosave": {
     "enabled": true,

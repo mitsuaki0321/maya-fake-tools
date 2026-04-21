@@ -125,6 +125,43 @@ Foldable blocks (such as `def`, `class`, `if`, `for`, `while`, `try`, `with`) di
 - **Multi-cursor**: If an added cursor lands inside a folded region, the region is automatically unfolded.
 - **Line operations**: Moving, duplicating, or deleting a folded header line automatically unfolds it first.
 
+## Autocomplete
+
+The code editor ships with [jedi](https://github.com/davidhalter/jedi)-backed autocomplete, covering the Python standard library, user variables, and Maya's `maya.cmds` / `maya.api.OpenMaya` APIs.
+
+### Triggering and Acceptance
+
+| Action | Behavior |
+|--------|----------|
+| Type `.` | Opens attribute completion (e.g. `sys.` → `argv`, `exit`, `path`, ...) |
+| Type an identifier char | Filters the open popup |
+| ↑ / ↓ / PageUp / PageDown / Home / End | Navigate the candidate list |
+| Enter / Tab | Accept the highlighted item |
+| `.` / `(` / `,` / `=` (commit character) | Accept the item and type the character (e.g. `sys.p` + `.` → `sys.path.`) |
+| Escape | Close the popup |
+
+The top row is preselected as soon as the popup opens, so Enter / Tab accept the top match without a prior Down press. The popup uses the editor's current font and size; changes via Ctrl+MouseWheel are reflected automatically.
+
+### Maya API Support
+
+- **Bundled stubs**: `.pyi` stubs for `maya.cmds` and `maya.api.OpenMaya` are shipped per Maya version. No extra setup required.
+- **Imports optional**: Typing `cmds.polyCube` in a scratch buffer works without an explicit import — the editor prepends a virtual import shim behind the scenes.
+- **Recognised aliases**: `cmds`, `mc`, `maya`, `OpenMaya`, `om`, `om2`.
+- **User variables**: When a user variable holds the return value of a call (e.g. `x = cmds.ls(); x.`), completions for that variable come from live `dir()` introspection.
+
+### Numeric Literals
+
+When `.` is preceded by a digit (`0.`, `1.5`), the editor treats it as a float literal and does not open the popup.
+
+### MRU (Most Recently Used)
+
+Items accepted earlier in the same session float to the top of subsequent popups. The MRU resets when the editor is closed.
+
+### Disabling
+
+The [Toggle Autocomplete](code_editor_toolbar.html) toolbar button turns the entire feature off. While off, no jedi request is dispatched, so typing stays responsive on low-end machines. The setting is persisted across sessions. The button is also auto-disabled when jedi is not installed.
+
+
 ## Special Context Menu Features
 
 The context menu (right-click menu) has several code editor-specific features.

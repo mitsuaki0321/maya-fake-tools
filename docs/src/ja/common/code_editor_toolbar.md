@@ -82,6 +82,14 @@ lang-ref: code_editor_toolbar
 
 - 現在のエディタの全ての折り畳まれたコードブロックを展開します。
 
+**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete**
+
+- オートコンプリート機能の ON/OFF を切り替えます。
+- OFF 時は jedi への問い合わせが一切行われないため、タイピング時の遅延をゼロにできます (低スペック PC 向け)。
+- この設定はセッション間で保持されます。
+- jedi が未インストールの場合、このボタンは自動的に無効化されます。
+- 動作の詳細は [コードエディターのオートコンプリート](code_editor_editor.html) を参照してください。
+
 **![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
 
 - コードエディタとターミナルの位置を上下に入れ替えます。

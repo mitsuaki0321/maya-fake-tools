@@ -71,6 +71,15 @@ MCP Serverなどのツールと連携する場合に使用します。
 | `enabled` | false | コマンドポートを有効にするか |
 | `port` | 7001 | 使用するポート番号 |
 
+### オートコンプリート設定 (autocomplete)
+コードエディターのオートコンプリート機能に関する設定です。
+
+| 設定名 | デフォルト値 | 説明 |
+|--------|------------|------|
+| `enabled` | true | オートコンプリートを有効にするか |
+
+※ ツールバーの Toggle Autocomplete ボタンからも切り替え可能です。jedi が未インストールの場合は自動的に無効化されます。
+
 ### 自動保存設定 (autosave)
 作業内容の自動保存に関する設定です。
 
@@ -115,6 +124,9 @@ MCP Serverなどのツールと連携する場合に使用します。
   "command_port": {
     "enabled": false,
     "port": 7001
+  },
+  "autocomplete": {
+    "enabled": true
   },
   "autosave": {
     "enabled": true,

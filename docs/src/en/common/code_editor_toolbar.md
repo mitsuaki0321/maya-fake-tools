@@ -82,6 +82,14 @@ If there are unsaved changes, an asterisk (*) appears on the tab.
 
 - Unfolds (expands) all folded code blocks in the current editor.
 
+**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete**
+
+- Toggles the autocomplete feature ON/OFF.
+- When OFF, no jedi request is dispatched, eliminating any typing latency — useful on low-end machines.
+- This setting is persisted across sessions.
+- This button is auto-disabled when jedi is not installed.
+- See [Code Editor Autocomplete](code_editor_editor.html) for details.
+
 **![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
 
 - Swaps the vertical positions of the code editor and terminal.
