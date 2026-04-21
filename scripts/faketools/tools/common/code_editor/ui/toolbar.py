@@ -249,6 +249,7 @@ class ToolBar(QWidget):
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
+    terminal_toggled = Signal(bool)  # Signal for toggling terminal visibility (True=visible, False=hidden)
     echo_all_toggled = Signal(bool)  # Signal for toggling echoAllCommands (True=on, False=off)
     word_wrap_toggled = Signal(bool)  # Signal for toggling word wrap (True=on, False=off)
     fold_all_clicked = Signal()  # Signal for folding all regions
@@ -296,6 +297,12 @@ class ToolBar(QWidget):
             "Toggle Autocomplete",
             active_icon_name="autocomplete_active",
         )
+        self.terminal_toggle_button = ToggleButton(
+            "terminal",
+            "Toggle Terminal Visibility",
+            active_icon_name="terminal_active",
+        )
+        self.terminal_toggle_button.set_active(True)  # Terminal visible by default
         self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 
         # Create separators
@@ -326,6 +333,7 @@ class ToolBar(QWidget):
         layout.addWidget(self.unfold_all_button)
         layout.addWidget(self.autocomplete_button)
         layout.addWidget(sep4)
+        layout.addWidget(self.terminal_toggle_button)
         layout.addWidget(self.swap_layout_button)
         layout.addStretch()
 
@@ -349,6 +357,7 @@ class ToolBar(QWidget):
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)
+        self.terminal_toggle_button.clicked.connect(lambda: self.terminal_toggled.emit(self.terminal_toggle_button.is_active()))
         self.echo_all_button.clicked.connect(lambda: self.echo_all_toggled.emit(self.echo_all_button.is_active()))
         self.word_wrap_button.clicked.connect(lambda: self.word_wrap_toggled.emit(self.word_wrap_button.is_active()))
         self.fold_all_button.clicked.connect(self.fold_all_clicked.emit)

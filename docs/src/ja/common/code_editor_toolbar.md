@@ -90,6 +90,13 @@ lang-ref: code_editor_toolbar
 - jedi が未インストールの場合、このボタンは自動的に無効化されます。
 - 動作の詳細は [コードエディターのオートコンプリート](code_editor_editor.html) を参照してください。
 
+**![image](../../images/common/code_editor/terminal_normal.svg) Toggle Terminal Visibility**
+
+- ターミナルの表示/非表示を切り替えます。
+- 非表示時は、エディタがターミナル領域まで広がります。
+- 非表示にする直前のターミナル高さが保存され、再表示時に復元されます。
+- この設定はセッション間で保持されます。
+
 **![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
 
 - コードエディタとターミナルの位置を上下に入れ替えます。

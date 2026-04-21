@@ -90,6 +90,13 @@ If there are unsaved changes, an asterisk (*) appears on the tab.
 - This button is auto-disabled when jedi is not installed.
 - See [Code Editor Autocomplete](code_editor_editor.html) for details.
 
+**![image](../../images/common/code_editor/terminal_normal.svg) Toggle Terminal Visibility**
+
+- Toggles the terminal panel visibility.
+- When hidden, the editor expands into the terminal area.
+- The terminal height immediately before hiding is saved and restored when shown again.
+- This setting is persisted across sessions.
+
 **![image](../../images/common/code_editor/swap_normal.svg) Swap Editor/Terminal Position**
 
 - Swaps the vertical positions of the code editor and terminal.

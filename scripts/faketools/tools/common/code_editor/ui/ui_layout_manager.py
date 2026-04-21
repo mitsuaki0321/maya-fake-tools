@@ -165,6 +165,7 @@ class UILayoutManager:
             self.main_window.toolbar.clear_clicked.connect(self.main_window.clear_terminal)
             self.main_window.toolbar.workspace_clicked.connect(self.main_window.open_workspace_directory)
             self.main_window.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)
+            self.main_window.toolbar.terminal_toggled.connect(self.main_window.toggle_terminal)
             self.main_window.toolbar.echo_all_toggled.connect(self.main_window.toggle_echo_all)
             self.main_window.toolbar.word_wrap_toggled.connect(self.main_window.toggle_word_wrap)
             self.main_window.toolbar.fold_all_clicked.connect(self.main_window.fold_all)
@@ -288,6 +289,14 @@ class UILayoutManager:
             if v_sizes:
                 self.main_window.v_splitter.setSizes(v_sizes)
 
+        # Restore terminal visibility
+        if hasattr(self.main_window, "output_terminal") and self.main_window.output_terminal:
+            terminal_visible = self.main_window.settings_manager.get("layout.terminal_visible", True)
+            if not terminal_visible:
+                self.main_window.output_terminal.hide()
+            if self.main_window.toolbar and hasattr(self.main_window.toolbar, "terminal_toggle_button"):
+                self.main_window.toolbar.terminal_toggle_button.set_active(terminal_visible)
+
         # No longer need left_splitter settings
 
         # Restore session after UI is set up (with slight delay to ensure everything is ready)
@@ -365,6 +374,10 @@ class UILayoutManager:
         if not top_widget or not bottom_widget:
             return
 
+        # Preserve pre-swap visibility (terminal may be toggled off by the user)
+        top_was_visible = top_widget.isVisible()
+        bottom_was_visible = bottom_widget.isVisible()
+
         # Hide both widgets temporarily to prevent flicker
         top_widget.hide()
         bottom_widget.hide()
@@ -382,9 +395,11 @@ class UILayoutManager:
         if len(current_sizes) == 2:
             self.main_window.v_splitter.setSizes([current_sizes[1], current_sizes[0]])
 
-        # Show both widgets again
-        bottom_widget.show()
-        top_widget.show()
+        # Restore visibility
+        if bottom_was_visible:
+            bottom_widget.show()
+        if top_was_visible:
+            top_widget.show()
 
         # Toggle the state
         self.terminal_at_bottom = not self.terminal_at_bottom

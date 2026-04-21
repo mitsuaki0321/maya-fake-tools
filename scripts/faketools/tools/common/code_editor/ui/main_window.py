@@ -599,6 +599,36 @@ class MayaCodeEditor(QWidget):
         # Save settings
         self.settings_manager.save_settings()
 
+    def toggle_terminal(self):
+        """Toggle the visibility of the output terminal panel."""
+        if not self.output_terminal or not hasattr(self, "v_splitter"):
+            return
+
+        terminal_idx = self.v_splitter.indexOf(self.output_terminal)
+        if terminal_idx < 0:
+            return
+
+        if self.output_terminal.isVisible():
+            sizes = self.v_splitter.sizes()
+            if terminal_idx < len(sizes) and sizes[terminal_idx] > 0:
+                self.settings_manager.set("layout.terminal_height", sizes[terminal_idx])
+            self.output_terminal.hide()
+            self.settings_manager.set("layout.terminal_visible", False)
+        else:
+            self.output_terminal.show()
+            self.settings_manager.set("layout.terminal_visible", True)
+            saved_height = self.settings_manager.get("layout.terminal_height", 150)
+            sizes = self.v_splitter.sizes()
+            if len(sizes) == 2:
+                other_idx = 1 - terminal_idx
+                total = sum(sizes)
+                new_sizes = [0, 0]
+                new_sizes[terminal_idx] = saved_height
+                new_sizes[other_idx] = max(100, total - saved_height)
+                self.v_splitter.setSizes(new_sizes)
+
+        self.settings_manager.save_settings()
+
     def closeEvent(self, event):
         """Handle main window close event."""
         # Save current content to auto-save before closing
