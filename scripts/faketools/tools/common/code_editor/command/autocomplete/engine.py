@@ -22,10 +22,12 @@ logger = getLogger(__name__)
 
 try:
     import jedi  # type: ignore
+    from jedi.api.environment import InterpreterEnvironment  # type: ignore
 
     JEDI_AVAILABLE = True
 except Exception as _exc:  # pragma: no cover — diagnostic path
     jedi = None  # type: ignore[assignment]
+    InterpreterEnvironment = None  # type: ignore[assignment,misc]
     JEDI_AVAILABLE = False
     logger.info(f"jedi not available, autocomplete disabled: {_exc}")
 
@@ -123,6 +125,13 @@ class JediEngine:
         # instance across every completion avoids a list copy + jedi-side
         # initialisation on each keystroke.
         self._cached_project: Any = None
+        # Force jedi into same-process mode. Without this, ``jedi.Script``
+        # spawns the interpreter (``mayapy.exe``) as a subprocess on first
+        # call to query its environment — inside Maya that costs 7+ seconds
+        # and is the single biggest factor in "first cmds. completion feels
+        # frozen". InterpreterEnvironment reuses the live Python process
+        # instead, dropping that cost to ~25 ms.
+        self._env: Any = InterpreterEnvironment() if JEDI_AVAILABLE else None
         # Root identifiers (``cmds``, ``om``, ``np``, ...) we have already timed
         # at least once. First sighting logs at INFO so a cold-path completion
         # is visible without raising the whole logger to DEBUG; subsequent
@@ -284,11 +293,11 @@ class JediEngine:
         project = self._build_project()
         if self._extra_paths and _is_maya_rooted(code, line, column):
             shimmed_code = _MAYA_IMPORT_SHIM + code
-            return jedi.Script(code=shimmed_code, path=path, project=project), line + _MAYA_SHIM_LINES
+            return jedi.Script(code=shimmed_code, path=path, project=project, environment=self._env), line + _MAYA_SHIM_LINES
 
         if namespaces:
             return jedi.Interpreter(code, namespaces=list(namespaces), path=path, project=project), line
-        return jedi.Script(code=code, path=path, project=project), line
+        return jedi.Script(code=code, path=path, project=project, environment=self._env), line
 
     def _build_project(self):
         """Return the (memoised) ``jedi.Project`` with our stubs at ``sys_path[0]``.
