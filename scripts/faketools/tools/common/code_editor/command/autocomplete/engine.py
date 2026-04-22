@@ -142,6 +142,75 @@ _TYPE_RANK = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Fast-path matcher strategies.
+#
+# ``ci_substring`` is the shipped default — case-insensitive "contains"
+# matching against ``CompletionItem.name_lower``. The other two are kept
+# callable so the editor can be A/B-swapped at runtime for benchmarking
+# (set via :func:`set_matcher_strategy`), without restarting Maya or
+# re-warming the root cache (the cache stores the full unfiltered list).
+# ---------------------------------------------------------------------------
+MATCHER_PREFIX = "prefix"
+MATCHER_CI_SUBSTRING = "ci_substring"
+MATCHER_SUBSEQUENCE = "subsequence"
+_MATCHER_DEFAULT = MATCHER_CI_SUBSTRING
+_VALID_MATCHERS = frozenset({MATCHER_PREFIX, MATCHER_CI_SUBSTRING, MATCHER_SUBSEQUENCE})
+
+_matcher_strategy: str = _MATCHER_DEFAULT
+
+
+def set_matcher_strategy(name: str) -> None:
+    """Swap the fast-path filter strategy at runtime.
+
+    Intended for A/B benchmarking from the Maya Script Editor:
+
+        >>> from faketools.tools.common.code_editor.command.autocomplete import engine
+        >>> engine.set_matcher_strategy("prefix")
+
+    Valid names are ``"prefix"``, ``"ci_substring"`` (default),
+    ``"subsequence"``. Takes effect on the next keystroke; the populated
+    root-completion cache is reused so there's no warmup cost.
+    """
+    global _matcher_strategy
+    if name not in _VALID_MATCHERS:
+        raise ValueError(f"unknown matcher strategy: {name!r}; valid: {sorted(_VALID_MATCHERS)}")
+    _matcher_strategy = name
+    logger.info(f"autocomplete matcher strategy set to {name!r}")
+
+
+def get_matcher_strategy() -> str:
+    """Return the active fast-path matcher name."""
+    return _matcher_strategy
+
+
+def _filter_cached_items(all_items: list[CompletionItem], prefix: str) -> list[CompletionItem]:
+    """Apply the active matcher strategy to ``all_items``.
+
+    Keeps the strategy dispatch out of :meth:`JediEngine._finalise_cached`
+    so the hot path stays compact and the three implementations can be
+    compared side-by-side.
+    """
+    if not prefix:
+        return list(all_items)
+    strategy = _matcher_strategy
+    if strategy == MATCHER_PREFIX:
+        return [c for c in all_items if c.name.startswith(prefix)]
+    prefix_lower = prefix.lower()
+    if strategy == MATCHER_CI_SUBSTRING:
+        return [c for c in all_items if prefix_lower in c.name_lower]
+    # subsequence — ``all(ch in it for ch in query)`` advances an iterator
+    # over the candidate so each query char must appear *after* the previous
+    # one, matching VSCode-style fuzzy behaviour. Case-insensitive against
+    # the precomputed ``name_lower``.
+    out: list[CompletionItem] = []
+    for c in all_items:
+        it = iter(c.name_lower)
+        if all(ch in it for ch in prefix_lower):
+            out.append(c)
+    return out
+
+
 class JediEngine:
     """Stateless-ish wrapper around ``jedi.Interpreter`` / ``jedi.Script``.
 
@@ -316,11 +385,17 @@ class JediEngine:
         t_start: float,
         cache_state: str,
     ) -> list[CompletionItem]:
-        """Apply prefix filter + MRU + cap to a cached completion list."""
-        if prefix:
-            items = [c for c in all_items if c.name.startswith(prefix)]
-        else:
-            items = list(all_items)
+        """Apply the active matcher + MRU + cap to a cached completion list.
+
+        Strategy dispatch lives in :func:`_filter_cached_items` so the three
+        implementations can be A/B-compared by flipping the module-global
+        via :func:`set_matcher_strategy`. The default is case-insensitive
+        substring matching against ``CompletionItem.name_lower``.
+        ``AutoCompleteController._insert_completion`` removes the current
+        partial word before inserting the chosen ``name``, so non-prefix
+        matches (``cube`` → ``polyCube``) insert correctly.
+        """
+        items = _filter_cached_items(all_items, prefix)
         if mru:
             items.sort(key=lambda it: -mru.get(it.name, 0))
         if len(items) > max_items:
@@ -330,7 +405,7 @@ class JediEngine:
         logger.debug(
             f"autocomplete.complete: total={t_total_ms:.1f}ms "
             f"root={root_alias} module={resolved_module} cache={cache_state} "
-            f"prefix={prefix!r} items={len(items)}/{len(all_items)}"
+            f"matcher={_matcher_strategy} prefix={prefix!r} items={len(items)}/{len(all_items)}"
         )
         return items
 
@@ -573,4 +648,12 @@ def _format_signature(sig) -> str:
     return f"{sig.name}({params})"
 
 
-__all__ = ["JEDI_AVAILABLE", "JediEngine"]
+__all__ = [
+    "JEDI_AVAILABLE",
+    "MATCHER_CI_SUBSTRING",
+    "MATCHER_PREFIX",
+    "MATCHER_SUBSEQUENCE",
+    "JediEngine",
+    "get_matcher_strategy",
+    "set_matcher_strategy",
+]

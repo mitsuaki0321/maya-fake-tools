@@ -9,7 +9,7 @@ touching the UI.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass(frozen=True)
@@ -17,18 +17,28 @@ class CompletionItem:
     """One row in the autocomplete popup.
 
     Attributes:
-        name:     Full identifier shown to the user ("polyCube").
-        complete: Text to insert at cursor position — the suffix after the
-                  partial word the user already typed ("Cube" when they
-                  typed "poly").
-        type:     jedi's category string — "function", "class", "module",
-                  "instance", "keyword", "statement", "param" etc. Used for
-                  sort ordering and icon lookup.
+        name:       Full identifier shown to the user ("polyCube").
+        complete:   Text to insert at cursor position — the suffix after the
+                    partial word the user already typed ("Cube" when they
+                    typed "poly").
+        type:       jedi's category string — "function", "class", "module",
+                    "instance", "keyword", "statement", "param" etc. Used for
+                    sort ordering and icon lookup.
+        name_lower: Lower-cased ``name``, precomputed so the fast-path filter
+                    in :mod:`engine` can do case-insensitive substring matches
+                    without paying ``str.lower()`` per keystroke on every
+                    cached item.
     """
 
     name: str
     complete: str
     type: str = ""
+    name_lower: str = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        # Frozen dataclass forbids ordinary assignment; ``object.__setattr__``
+        # is the canonical escape hatch documented in the dataclasses module.
+        object.__setattr__(self, "name_lower", self.name.lower())
 
     @classmethod
     def from_jedi(cls, completion, *, fetch_type: bool = False) -> CompletionItem:
