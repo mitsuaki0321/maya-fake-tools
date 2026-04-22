@@ -1,22 +1,26 @@
 """
 Maya stub generation for autocomplete.
 
-Two outputs, both UTF-8 ``.pyi`` files placed under the tool's data dir:
+Outputs are UTF-8 ``.pyi`` files placed under the tool's data dir:
 
-- ``maya/cmds.pyi``       — every command from ``dir(cmds)`` with its flag
+- ``maya/cmds.pyi`` — every command from ``dir(cmds)`` with its flag
   names expanded as keyword arguments so popups can suggest them inside
   ``cmds.polyCube(|)``. Flags are harvested by parsing ``cmds.help(name)``.
-- ``maya/api/OpenMaya.pyi`` — every attribute on ``maya.api.OpenMaya``;
-  classes emit a nested block of member stubs via ``dir()``.
+- ``maya/api/<submodule>.pyi`` — one file per entry in :data:`_API_MODULES`
+  (``OpenMaya``, ``OpenMayaAnim``, ``OpenMayaRender``, ``OpenMayaUI``).
+  Each lists every attribute on the submodule; classes emit a nested block
+  of member stubs via ``dir()``.
 
 The pyi files are per-Maya-version (stubs for 2023 and 2025 live in
-different folders) because flag sets shift between releases. The UI layer
-calls :func:`generate_all` with a progress callback; this module owns no
-Qt imports and can run headlessly in ``mayapy`` too.
+different folders) because flag sets and API surfaces shift between
+releases. The UI layer calls :func:`generate_all` with a progress
+callback; this module owns no Qt imports and can run headlessly in
+``mayapy`` too.
 """
 
 from __future__ import annotations
 
+import importlib
 import inspect
 from logging import getLogger
 from pathlib import Path
@@ -209,7 +213,20 @@ def generate_cmds_stub(progress: Optional[Callable[[int, int, str], None]] = Non
     return "\n".join(lines)
 
 
-# -------------------- OpenMaya --------------------
+# -------------------- OpenMaya family --------------------
+
+
+# API sub-modules we generate stubs for. Each is imported via
+# ``maya.api.<name>``; any that fails to import under the running Maya
+# (e.g. a release that drops a submodule) is logged and skipped so
+# ``generate_all`` still produces the rest. Explicit rather than derived
+# from ``dir(maya.api)`` so private helpers don't leak into the output.
+_API_MODULES: tuple[str, ...] = (
+    "OpenMaya",
+    "OpenMayaAnim",
+    "OpenMayaRender",
+    "OpenMayaUI",
+)
 
 
 def _emit_class_stub(class_name: str, cls: type) -> list[str]:
@@ -240,23 +257,35 @@ def _emit_class_stub(class_name: str, cls: type) -> list[str]:
     return lines
 
 
-def generate_openmaya_stub(progress: Optional[Callable[[int, int, str], None]] = None) -> str:
-    """Build the full text of ``maya/api/OpenMaya.pyi``."""
-    import maya.api.OpenMaya as om2  # type: ignore
+def generate_api_stub(
+    module_name: str,
+    progress: Optional[Callable[[int, int, str], None]] = None,
+) -> Optional[str]:
+    """Build the full text of ``maya/api/{module_name}.pyi``.
+
+    ``module_name`` is the bare submodule name — e.g. ``"OpenMaya"``,
+    ``"OpenMayaAnim"``. Returns ``None`` when the module is not importable
+    under the running Maya, so callers can skip writing the file.
+    """
+    try:
+        module = importlib.import_module(f"maya.api.{module_name}")
+    except Exception as exc:
+        logger.warning(f"maya.api.{module_name} not importable, skipping stub: {exc}")
+        return None
 
     lines: list[str] = [
-        '"""Auto-generated stub for maya.api.OpenMaya. Do not edit."""',
+        f'"""Auto-generated stub for maya.api.{module_name}. Do not edit."""',
         "",
         "from typing import Any",
         "",
     ]
 
-    names = sorted(n for n in dir(om2) if not n.startswith("_"))
+    names = sorted(n for n in dir(module) if not n.startswith("_"))
     total = len(names)
 
     for i, name in enumerate(names):
         try:
-            obj = getattr(om2, name)
+            obj = getattr(module, name)
         except Exception:
             lines.append(f"{name}: Any = ...")
             lines.append("")
@@ -271,7 +300,7 @@ def generate_openmaya_stub(progress: Optional[Callable[[int, int, str], None]] =
         lines.append("")
 
         if progress is not None and (i % 20 == 0 or i == total - 1):
-            progress(i + 1, total, name)
+            progress(i + 1, total, f"{module_name}.{name}")
 
     return "\n".join(lines)
 
@@ -290,21 +319,27 @@ def generate_all(
     data_root: Optional[Path] = None,
     progress: Optional[Callable[[int, int, str], None]] = None,
 ) -> Path:
-    """Generate cmds + OpenMaya stubs for ``maya_version``.
+    """Generate cmds + OpenMaya-family stubs for ``maya_version``.
 
     Writes the package layout under ``{stubs_root}/maya{version}/``:
 
     ::
 
-        maya/
+        maya-stubs/
             __init__.pyi
             cmds.pyi
             api/
                 __init__.pyi
                 OpenMaya.pyi
+                OpenMayaAnim.pyi
+                OpenMayaRender.pyi
+                OpenMayaUI.pyi
+
+    Submodules that don't exist in the running Maya are skipped and their
+    re-export is omitted from ``api/__init__.pyi``.
 
     Returns the directory path to add to ``sys.path`` so the stubs can be
-    imported as ``maya.cmds`` / ``maya.api.OpenMaya``.
+    imported as ``maya.cmds`` / ``maya.api.<OpenMaya*>``.
     """
     stubs_root = get_stubs_root(maya_version, data_root)
     # PEP 561 "stub-only package" layout: ``maya-stubs`` mirrors the real
@@ -320,23 +355,35 @@ def generate_all(
     maya_pkg = stubs_root / "maya-stubs"
     api_pkg = maya_pkg / "api"
 
-    # Explicit submodule re-exports — without them jedi's stub-only import
-    # resolution leaves the popup with only module dunders on ``maya.``.
+    # ``maya-stubs/__init__.pyi`` re-exports its subpackages — without this,
+    # jedi's stub-only import resolution leaves the popup with only module
+    # dunders on ``maya.``. ``api/__init__.pyi`` is written after we know
+    # which submodules we actually generated so it doesn't point at files
+    # that aren't there.
     _write(maya_pkg / "__init__.pyi", "from . import api as api\nfrom . import cmds as cmds\n")
-    _write(api_pkg / "__init__.pyi", "from . import OpenMaya as OpenMaya\n")
+
+    total_steps = 1 + len(_API_MODULES)
 
     if progress is not None:
-        progress(0, 2, "cmds")
+        progress(0, total_steps, "cmds")
     cmds_text = generate_cmds_stub(progress=progress)
     _write(maya_pkg / "cmds.pyi", cmds_text)
 
-    if progress is not None:
-        progress(1, 2, "OpenMaya")
-    om2_text = generate_openmaya_stub(progress=progress)
-    _write(api_pkg / "OpenMaya.pyi", om2_text)
+    api_reexports: list[str] = []
+    for step_idx, module_name in enumerate(_API_MODULES, start=1):
+        if progress is not None:
+            progress(step_idx, total_steps, module_name)
+        text = generate_api_stub(module_name, progress=progress)
+        if text is None:
+            continue
+        _write(api_pkg / f"{module_name}.pyi", text)
+        api_reexports.append(f"from . import {module_name} as {module_name}")
+
+    api_init_text = "\n".join(api_reexports) + "\n" if api_reexports else ""
+    _write(api_pkg / "__init__.pyi", api_init_text)
 
     if progress is not None:
-        progress(2, 2, "done")
+        progress(total_steps, total_steps, "done")
     return stubs_root
 
 
@@ -368,9 +415,9 @@ def generate_bundled(progress: Optional[Callable[[int, int, str], None]] = None)
 
 __all__ = [
     "generate_all",
+    "generate_api_stub",
     "generate_bundled",
     "generate_cmds_stub",
-    "generate_openmaya_stub",
     "get_bundled_stubs_root",
     "get_package_root",
     "get_stubs_root",

@@ -40,34 +40,50 @@ _MAX_FILE_BYTES = 500 * 1024
 # ---------------------------------------------------------------------------
 # Maya alias configuration — the *only* place to touch when adding a name.
 #
-# To teach the editor about another local alias (e.g. someone prefers
-# ``import maya.cmds as mc``), just append the alias string to the right
-# tuple below. Both the stub-root detector (``_MAYA_STUB_ROOTS``) and the
-# virtual import shim fed to ``jedi.Script`` are derived from these lists,
-# so a one-word edit is all it takes. Reason this exists at all: ``maya.cmds``
-# and ``maya.api.OpenMaya`` must be routed through ``jedi.Script`` against
-# the bundled stubs — their live ``dir()`` is nearly empty (lazy-load) and
-# jedi.Interpreter's ``MixedObject`` layer favours the empty live side.
+# To teach the editor about another local alias (e.g. ``import maya.cmds as
+# mc`` or ``import maya.api.OpenMayaAnim as oma``), append the alias to the
+# right tuple below. The stub-root detector (``_MAYA_STUB_ROOTS``), the
+# alias → canonical-module table, and the virtual import shim fed to
+# ``jedi.Script`` are all derived from these lists, so a one-word edit is
+# all it takes. Reason this layer exists at all: ``maya.cmds`` and the
+# ``maya.api.OpenMaya*`` family must be routed through ``jedi.Script``
+# against the bundled stubs — their live ``dir()`` is nearly empty
+# (lazy-load) and jedi.Interpreter's ``MixedObject`` layer favours the
+# empty live side.
 # ---------------------------------------------------------------------------
 _CMDS_ALIASES: tuple[str, ...] = ("cmds", "mc")
-_OPENMAYA_ALIASES: tuple[str, ...] = ("OpenMaya", "om2", "om")
 
-_MAYA_STUB_ROOTS: frozenset[str] = frozenset({"maya", *_CMDS_ALIASES, *_OPENMAYA_ALIASES})
+# Each API submodule mapped to the aliases that should resolve to it. The
+# first alias in each tuple is the canonical name — it's what the synthetic
+# populate-source fed to jedi uses, so keep the bare module name first for
+# the cleanest stub resolution.
+_API_ALIASES: dict[str, tuple[str, ...]] = {
+    "maya.api.OpenMaya": ("OpenMaya", "om2", "om"),
+    "maya.api.OpenMayaAnim": ("OpenMayaAnim", "oma"),
+    "maya.api.OpenMayaRender": ("OpenMayaRender", "omr"),
+    "maya.api.OpenMayaUI": ("OpenMayaUI", "omu"),
+}
 
-# Alias → canonical module name. Drives the root-completion cache: every alias
-# in ``_CMDS_ALIASES`` shares a single cache entry under ``maya.cmds``, so
-# ``cmds.polyC|`` and ``mc.polyC|`` reuse the same populated list. The
-# canonical alias (``cmds``, ``OpenMaya``) is what we type into the synthetic
-# source we hand jedi during populate — it's guaranteed to exist thanks to the
-# shim and picks the cleanest symbol table.
-_MODULE_BY_ALIAS: dict[str, str] = {
-    **{alias: "maya.cmds" for alias in _CMDS_ALIASES},
-    **{alias: "maya.api.OpenMaya" for alias in _OPENMAYA_ALIASES},
-}
-_CANONICAL_ALIAS_BY_MODULE: dict[str, str] = {
-    "maya.cmds": _CMDS_ALIASES[0],
-    "maya.api.OpenMaya": _OPENMAYA_ALIASES[0],
-}
+
+def _build_alias_tables() -> tuple[dict[str, str], dict[str, str], frozenset[str]]:
+    """Derive the alias → module, module → canonical, and stub-root tables.
+
+    Drives the root-completion cache: every alias in ``_CMDS_ALIASES`` shares
+    a single cache entry under ``maya.cmds``, so ``cmds.polyC|`` and
+    ``mc.polyC|`` reuse the same populated list. Same idea for the API
+    family — ``oma.MFn|`` and ``OpenMayaAnim.MFn|`` hit one entry.
+    """
+    module_by_alias: dict[str, str] = {alias: "maya.cmds" for alias in _CMDS_ALIASES}
+    canonical_by_module: dict[str, str] = {"maya.cmds": _CMDS_ALIASES[0]}
+    for module, aliases in _API_ALIASES.items():
+        for alias in aliases:
+            module_by_alias[alias] = module
+        canonical_by_module[module] = aliases[0]
+    stub_roots = frozenset({"maya", *module_by_alias.keys()})
+    return module_by_alias, canonical_by_module, stub_roots
+
+
+_MODULE_BY_ALIAS, _CANONICAL_ALIAS_BY_MODULE, _MAYA_STUB_ROOTS = _build_alias_tables()
 
 
 def _build_maya_import_shim() -> str:
@@ -84,11 +100,13 @@ def _build_maya_import_shim() -> str:
             lines.append("from maya import cmds")
         else:
             lines.append(f"from maya import cmds as {alias}")
-    for alias in _OPENMAYA_ALIASES:
-        if alias == "OpenMaya":
-            lines.append("from maya.api import OpenMaya")
-        else:
-            lines.append(f"from maya.api import OpenMaya as {alias}")
+    for module, aliases in _API_ALIASES.items():
+        bare = module.rsplit(".", 1)[-1]
+        for alias in aliases:
+            if alias == bare:
+                lines.append(f"from maya.api import {bare}")
+            else:
+                lines.append(f"from maya.api import {bare} as {alias}")
     return "\n".join(lines) + "\n"
 
 
