@@ -153,11 +153,6 @@ class JediEngine:
         # frozen". InterpreterEnvironment reuses the live Python process
         # instead, dropping that cost to ~25 ms.
         self._env: Any = InterpreterEnvironment() if JEDI_AVAILABLE else None
-        # Root identifiers (``cmds``, ``om``, ``np``, ...) we have already timed
-        # at least once. First sighting logs at INFO so a cold-path completion
-        # is visible without raising the whole logger to DEBUG; subsequent
-        # completions fall back to per-call DEBUG timing.
-        self._seen_roots: set[str] = set()
         # Per-module completion list cache. Populated lazily on the first
         # ``<root>.<prefix>`` hit for each Maya stub module and reused for
         # every subsequent keystroke, so 150 ms of jedi inference collapses
@@ -283,19 +278,11 @@ class JediEngine:
 
         t_total_ms = (time.perf_counter() - t_start) * 1000
         root = _expression_root(code, line, column) or "?"
-        maya_rooted = root in _MAYA_STUB_ROOTS
-        msg = (
+        logger.debug(
             f"autocomplete.complete: total={t_total_ms:.1f}ms "
             f"(script={t_script * 1000:.1f}ms jedi={t_jedi * 1000:.1f}ms) "
-            f"root={root} maya_rooted={maya_rooted} cache=bypass items={len(items)}"
+            f"root={root} maya_rooted={root in _MAYA_STUB_ROOTS} cache=bypass items={len(items)}"
         )
-        if root not in self._seen_roots:
-            self._seen_roots.add(root)
-            # Cold call for this root — surface at INFO so it stands out when
-            # comparing network-vs-local without bumping the whole logger.
-            logger.info(f"autocomplete.complete (cold) {msg}")
-        else:
-            logger.debug(msg)
         return items
 
     # -------------------- completion cache internals --------------------
@@ -322,18 +309,11 @@ class JediEngine:
             items = items[:max_items]
 
         t_total_ms = (time.perf_counter() - t_start) * 1000
-        msg = (
+        logger.debug(
             f"autocomplete.complete: total={t_total_ms:.1f}ms "
             f"root={root_alias} module={resolved_module} cache={cache_state} "
             f"prefix={prefix!r} items={len(items)}/{len(all_items)}"
         )
-        # A populate pays the full jedi cost, so it's worth surfacing at INFO
-        # like the legacy "cold" marker. Hits stay at DEBUG.
-        if cache_state == "populate":
-            logger.info(f"autocomplete.complete (populate) {msg}")
-            self._seen_roots.add(root_alias)
-        else:
-            logger.debug(msg)
         return items
 
     def _fetch_root_completions(self, resolved_module: str) -> list[CompletionItem]:
@@ -471,7 +451,7 @@ class JediEngine:
             self._cached_project = None
             return self._cached_project
         t_ms = (time.perf_counter() - t_start) * 1000
-        logger.info(f"autocomplete.project_built: {t_ms:.1f}ms (extra_paths={len(self._extra_paths)}, sys_path={len(forced_sys_path)})")
+        logger.debug(f"autocomplete.project_built: {t_ms:.1f}ms (extra_paths={len(self._extra_paths)}, sys_path={len(forced_sys_path)})")
         return self._cached_project
 
 
