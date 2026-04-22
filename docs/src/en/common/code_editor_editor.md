@@ -161,6 +161,33 @@ Items accepted earlier in the same session float to the top of subsequent popups
 
 The [Toggle Autocomplete](code_editor_toolbar.html) toolbar button turns the entire feature off. While off, no jedi request is dispatched, so typing stays responsive on low-end machines. The setting is persisted across sessions. The button is also auto-disabled when jedi is not installed.
 
+### Performance Characteristics and Caveats
+
+The following behaviours are intentional design trade-offs. Useful to know when deploying or debugging.
+
+**First-completion latency**
+
+- The **first** `cmds.` / `om.` / `OpenMaya.` completion in a session ingests the entire stub module at once and takes noticeable time: ~1 second on local SSD, ~2–6 seconds when the tool is deployed to a network drive.
+- Every subsequent keystroke against the same root is served from the in-memory cache in 1–2 ms.
+- `cmds` and `om` have separate caches, so each pays the first-time cost once.
+
+**Network drive deployments**
+
+- When the tool (or just its bundled stubs) lives on a DFS / SMB share, only the **first Maya session** pays the full populate cost.
+- jedi persists its parsed stubs under `%LOCALAPPDATA%\jedi\Jedi\`, so **subsequent Maya sessions are roughly 1.5–2× faster** at populate time.
+- The disk cache is keyed by the stub's absolute path and mtime — updating the stubs or moving them to a different path triggers one re-parse on the next launch.
+
+**Completion order for dynamic (file-less) modules**
+
+- For dynamically constructed modules that carry no `__file__` / `__path__` (common with in-house pipeline packages), the engine skips the category classification step (`param` / `keyword` / `function` / `class` / ...).
+- As a result, completions for such modules fall back to **pure alphabetical order** — the "functions first, then classes, then constants" grouping is lost.
+- This is a deliberate trade-off: fetching categories for a dynamic module hosted on a network share measured several seconds *per keystroke*. Every candidate is still returned correctly, only the sort order is affected.
+
+**Plugin-loaded commands**
+
+- Commands registered into `cmds.*` via Maya's `loadPlugin` are not picked up by an already-populated completion cache.
+- To surface newly-registered commands in the popup, close and re-open the Code Editor.
+
 
 ## Special Context Menu Features
 
