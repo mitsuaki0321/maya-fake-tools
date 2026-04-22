@@ -6,8 +6,8 @@ Integrates with ToolRegistry to automatically generate tool listings.
 """
 
 import json
-import re
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -386,9 +386,7 @@ class DocBuilder:
         if scripts:
             injection = "\n    ".join(scripts)
             # Inject before main.js script tag
-            html = html.replace(
-                '<script src="', f'{injection}\n    <script src="', 1
-            )
+            html = html.replace('<script src="', f'{injection}\n    <script src="', 1)
             output_file.write_text(html, encoding="utf-8")
 
     def substitute_template_vars(self, template: str, vars: dict) -> str:
@@ -482,7 +480,7 @@ class DocBuilder:
             elif item.get("url"):
                 html_parts.append(f'        <li><a href="{item["url"]}">{item["text"]}</a></li>')
             else:
-                html_parts.append(f'        <li>{item["text"]}</li>')
+                html_parts.append(f"        <li>{item['text']}</li>")
 
         html_parts.append("    </ol>")
         html_parts.append("</nav>")
@@ -644,7 +642,9 @@ class DocBuilder:
                         metadata, _ = self.parse_front_matter(doc_file)
                         order = metadata.get("order", 100)
 
-                    tools_data.append({"name": tool_name, "description": tool_description, "version": tool_version, "url": url, "has_doc": has_doc, "order": order})
+                    tools_data.append(
+                        {"name": tool_name, "description": tool_description, "version": tool_version, "url": url, "has_doc": has_doc, "order": order}
+                    )
 
                 # Sort by order (ascending), then by name (alphabetically)
                 tools_data.sort(key=lambda t: (t["order"], t["name"]))
@@ -722,7 +722,9 @@ class DocBuilder:
         html_parts.append("            </div>")
         html_parts.append('            <div class="header-actions">')
         html_parts.append('                <button class="search-trigger-btn" aria-label="Search">')
-        html_parts.append('                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>')
+        html_parts.append(
+            '                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6.5" cy="6.5" r="5"/><line x1="10" y1="10" x2="15" y2="15"/></svg>'
+        )
         html_parts.append('                    <span class="search-shortcut-hint">Ctrl+K</span>')
         html_parts.append("                </button>")
         html_parts.append('                <nav class="language-switcher">')
@@ -758,11 +760,11 @@ class DocBuilder:
 
         # Navigation data inline script
         if data["lang"] in self._nav_json:
-            html_parts.append(f'    <script>window.__NAV_DATA__={self._nav_json[data["lang"]]};</script>')
+            html_parts.append(f"    <script>window.__NAV_DATA__={self._nav_json[data['lang']]};</script>")
 
         # Search index inline script
         if data["lang"] in self._search_indices:
-            html_parts.append(f'    <script>window.__SEARCH_INDEX__={self._search_indices[data["lang"]]};</script>')
+            html_parts.append(f"    <script>window.__SEARCH_INDEX__={self._search_indices[data['lang']]};</script>")
 
         # Scripts
         html_parts.append('    <script src="js/main.js"></script>')
@@ -859,7 +861,9 @@ class DocBuilder:
                     if has_thumb:
                         src = thumb["static"] or thumb["gif"]
                         gif_attr = f' data-gif="{thumb["gif"]}"' if thumb["gif"] and thumb["static"] else ""
-                        html_parts.append(f'                            <img class="tool-card-thumb" src="{src}"{gif_attr} alt="{tool["name"]}" loading="lazy">')
+                        html_parts.append(
+                            f'                            <img class="tool-card-thumb" src="{src}"{gif_attr} alt="{tool["name"]}" loading="lazy">'
+                        )
 
                     html_parts.append('                            <div class="tool-card-body">')
                     html_parts.append(f'                            <p class="tool-description">{tool.get("description", "")}</p>')
@@ -974,13 +978,15 @@ class DocBuilder:
             # Calculate URL
             url = f"{lang}/{str(rel_path.with_suffix('.html')).replace(chr(92), '/')}"
 
-            entries.append({
-                "title": title,
-                "description": description,
-                "category": category_name,
-                "url": url,
-                "body": body_text,
-            })
+            entries.append(
+                {
+                    "title": title,
+                    "description": description,
+                    "category": category_name,
+                    "url": url,
+                    "body": body_text,
+                }
+            )
 
         return json.dumps(entries, ensure_ascii=False)
 
