@@ -159,7 +159,7 @@ Ctrl キーを押しながらクリックすることで、複数のカーソル
 
 ### 無効化
 
-ツールバーの [Toggle Autocomplete](code_editor_toolbar.html) ボタンで機能全体を OFF にできます。OFF 時は jedi への問い合わせが発生しないため、低スペック PC でタイピング速度に影響しません。設定はセッション間で保持されます。jedi が未インストールの場合もボタンは自動的に無効化されます。
+ツールバーの [Toggle Autocomplete](code_editor_toolbar.html) ボタンまたは **Ctrl+Space** で機能全体を ON/OFF できます。OFF 時は jedi への問い合わせが発生しないため、低スペック PC でタイピング速度に影響しません。設定はセッション間で保持されます。jedi が未インストールの場合はボタン・ショートカットともに無反応になります。
 
 ### パフォーマンスの特性と注意事項
 
@@ -278,5 +278,6 @@ Ctrl キーを押しながらクリックすることで、複数のカーソル
 | Ctrl+Shift+]              | 現在のブロックを展開           |
 | Ctrl+Alt+[                | 全て折り畳み                   |
 | Ctrl+Alt+]                | 全て展開                       |
+| Ctrl+Space                | オートコンプリートの ON/OFF    |
 | Ctrl+K                    | ターミナル出力をクリア         |
 | Ctrl+MouseWheel           | フォントサイズの調整           |

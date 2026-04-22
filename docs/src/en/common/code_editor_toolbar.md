@@ -82,7 +82,7 @@ If there are unsaved changes, an asterisk (*) appears on the tab.
 
 - Unfolds (expands) all folded code blocks in the current editor.
 
-**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete**
+**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete (Ctrl+Space)**
 
 - Toggles the autocomplete feature ON/OFF.
 - When OFF, no jedi request is dispatched, eliminating any typing latency — useful on low-end machines.
@@ -113,3 +113,4 @@ The following keyboard shortcuts are assigned to toolbar actions.
 | Save All Files        | Ctrl+Shift+S                  |
 | Fold All              | Ctrl+Alt+[                    |
 | Unfold All            | Ctrl+Alt+]                    |
+| Toggle Autocomplete   | Ctrl+Space                    |

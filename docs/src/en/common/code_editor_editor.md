@@ -159,7 +159,7 @@ Items accepted earlier in the same session float to the top of subsequent popups
 
 ### Disabling
 
-The [Toggle Autocomplete](code_editor_toolbar.html) toolbar button turns the entire feature off. While off, no jedi request is dispatched, so typing stays responsive on low-end machines. The setting is persisted across sessions. The button is also auto-disabled when jedi is not installed.
+The [Toggle Autocomplete](code_editor_toolbar.html) toolbar button or **Ctrl+Space** flips the feature on and off. While off, no jedi request is dispatched, so typing stays responsive on low-end machines. The setting is persisted across sessions. Both the button and the shortcut become no-ops when jedi is not installed.
 
 ### Performance Characteristics and Caveats
 
@@ -278,5 +278,6 @@ Main keyboard shortcuts available in the code editor:
 | Ctrl+Shift+]              | Unfold current block                     |
 | Ctrl+Alt+[                | Fold all                                 |
 | Ctrl+Alt+]                | Unfold all                               |
+| Ctrl+Space                | Toggle autocomplete on/off               |
 | Ctrl+K                    | Clear terminal output                    |
 | Ctrl+MouseWheel           | Adjust font size                         |

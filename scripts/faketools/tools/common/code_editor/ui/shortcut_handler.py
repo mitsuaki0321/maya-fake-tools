@@ -117,6 +117,15 @@ class ShortcutHandler:
         self.unfold_all_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.unfold_all_shortcut.activated.connect(self._handle_unfold_all)
 
+        # Autocomplete toggle. Ctrl+Space collides with Maya's "Toggle Maximize
+        # Panel Size" when the shortcut uses Qt.WindowShortcut / Qt.ApplicationShortcut
+        # — scoping it to WidgetWithChildrenShortcut lets Qt dispatch the event
+        # before Maya's global hotkey handler sees it, same trick Ctrl+N uses
+        # to co-exist with Maya's "New Scene".
+        self.toggle_autocomplete_shortcut = QShortcut(QKeySequence("Ctrl+Space"), self.main_window)
+        self.toggle_autocomplete_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.toggle_autocomplete_shortcut.activated.connect(self._handle_toggle_autocomplete)
+
     # Editor tab-scoped shortcut handlers (requires focus check)
     def _handle_new_file(self):
         """Handle new file shortcut - only when code editor widget has focus."""
@@ -169,6 +178,25 @@ class ShortcutHandler:
     def _handle_unfold_all(self):
         """Handle unfold all shortcut."""
         self.main_window.unfold_all()
+
+    def _handle_toggle_autocomplete(self):
+        """Flip the autocomplete toggle and keep the toolbar button in sync.
+
+        Routes through the toolbar's ``autocomplete_toggled`` signal rather
+        than calling ``main_window.toggle_autocomplete`` directly so the
+        existing signal path (button state, settings persistence, etc.)
+        runs exactly like a user click would.
+        """
+        toolbar = getattr(self.main_window, "toolbar", None)
+        if toolbar is None:
+            return
+        button = getattr(toolbar, "autocomplete_button", None)
+        if button is None or not button.isEnabled():
+            # jedi missing → button disabled; do nothing so the shortcut is
+            # a no-op rather than silently toggling a setting nobody can see.
+            return
+        button.set_active(not button.is_active())
+        toolbar.autocomplete_toggled.emit(button.is_active())
 
     def show_find_dialog(self):
         """Show the find dialog."""

@@ -82,7 +82,7 @@ lang-ref: code_editor_toolbar
 
 - 現在のエディタの全ての折り畳まれたコードブロックを展開します。
 
-**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete**
+**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete (Ctrl+Space)**
 
 - オートコンプリート機能の ON/OFF を切り替えます。
 - OFF 時は jedi への問い合わせが一切行われないため、タイピング時の遅延をゼロにできます (低スペック PC 向け)。
@@ -113,3 +113,4 @@ lang-ref: code_editor_toolbar
 | Save All Files         | Ctrl+Shift+S          |
 | Fold All               | Ctrl+Alt+[            |
 | Unfold All             | Ctrl+Alt+]            |
+| Toggle Autocomplete    | Ctrl+Space            |
