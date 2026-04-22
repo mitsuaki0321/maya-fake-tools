@@ -122,13 +122,33 @@ class AutocompleteController:
     # -------------------- enable / disable --------------------
 
     def set_enabled(self, enabled: bool):
-        """Toggle completion. Immediately hides the popup on disable."""
+        """Toggle completion.
+
+        Disable hides the popup and bumps the request id so a late jedi
+        response can't reopen it. Enable, when flipping from a previously-off
+        state, checks whether the caret already sits at a natural dot trigger
+        (``cmds.|`` and such) and fires a completion immediately — that way
+        the user doesn't have to delete and retype the ``.`` to see the
+        popup after turning autocomplete back on via the toolbar / shortcut.
+        Word triggers are intentionally not auto-fired here, matching
+        :meth:`on_text_changed`'s policy of not popping on bare identifier
+        typing. Guarded by ``editor.hasFocus()`` so background tabs don't
+        spawn popups when the setting broadcasts to every tab at once.
+        """
+        was_enabled = self._enabled
         self._enabled = enabled and JEDI_AVAILABLE
         if not self._enabled:
             self._hide_popup()
-            # Invalidate any in-flight request so a late response can't
-            # reopen the popup after the user turned autocomplete off.
             self._request_id += 1
+            return
+        if was_enabled:
+            return
+        try:
+            focused = self.editor.hasFocus()
+        except RuntimeError:
+            return
+        if focused and self._classify_trigger() == "dot":
+            self._timer.start(0)
 
     def is_enabled(self) -> bool:
         return self._enabled
