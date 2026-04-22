@@ -1,21 +1,24 @@
 # Maya Autocomplete Stubs
 
 This directory contains pre-generated `.pyi` stubs for `maya.cmds` and
-`maya.api.OpenMaya`, committed per Maya version. The Code Editor's
-autocomplete picks them up automatically — **end users don't have to run
-anything**.
+the `maya.api.OpenMaya*` family, committed per Maya version. The Code
+Editor's autocomplete picks them up automatically — **end users don't
+have to run anything**.
 
 Layout:
 
 ```
 maya_stubs/
   maya2023/
-    maya/
+    maya-stubs/
       __init__.pyi
       cmds.pyi
       api/
         __init__.pyi
         OpenMaya.pyi
+        OpenMayaAnim.pyi
+        OpenMayaRender.pyi
+        OpenMayaUI.pyi
   maya2025/
     ...
 ```
