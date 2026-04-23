@@ -173,8 +173,47 @@ def _format_cmds_signature(name: str, flags: list[str]) -> str:
     return f"def {name}(*args: Any, {pieces}, **kwargs: Any) -> Any: ..."
 
 
+def _collect_plugin_command_names(cmds) -> set[str]:
+    """Return all command names registered by currently-loaded plugins.
+
+    Used to keep ``cmds.pyi`` free of plugin-provided commands
+    (``AbcExport``, ``renderPartition``, etc.). Whether these commands
+    exist depends on which plugins happen to be loaded, so emitting them
+    into a committed, per-Maya-version stub would paint a misleading
+    picture of the API surface — autocomplete would suggest commands
+    the user may not have available. Excluding them keeps the stub
+    deterministic and tied to Maya's built-in surface only.
+
+    Runs a single ``pluginInfo(listPlugins)`` + one ``pluginInfo(command)``
+    per plugin, so the cost is negligible next to the full stub
+    generation pass.
+    """
+    names: set[str] = set()
+    try:
+        plugins = cmds.pluginInfo(query=True, listPlugins=True) or []
+    except Exception as exc:
+        logger.debug(f"pluginInfo(listPlugins=True) failed: {exc}")
+        return names
+    for plugin in plugins:
+        try:
+            plugin_cmds = cmds.pluginInfo(plugin, query=True, command=True) or []
+        except Exception as exc:
+            logger.debug(f"pluginInfo({plugin!r}, command=True) failed: {exc}")
+            continue
+        names.update(plugin_cmds)
+    return names
+
+
 def generate_cmds_stub(progress: Optional[Callable[[int, int, str], None]] = None) -> str:
-    """Build the full text of ``cmds.pyi`` from the currently-loaded ``maya.cmds``."""
+    """Build the full text of ``cmds.pyi`` from ``maya.cmds``.
+
+    Excludes:
+
+    - Runtime commands (``cmds.runTimeCommand(..., exists=True)``) — these
+      are UI/menu hotkey bindings, not API-level commands.
+    - Plugin-registered commands — environment-dependent, vary by which
+      plugins are loaded; committing them to stubs would be misleading.
+    """
     import maya.cmds as cmds  # type: ignore
 
     lines: list[str] = [
@@ -184,10 +223,18 @@ def generate_cmds_stub(progress: Optional[Callable[[int, int, str], None]] = Non
         "",
     ]
 
+    plugin_commands = _collect_plugin_command_names(cmds)
+    logger.info(f"excluding {len(plugin_commands)} plugin-registered command(s) from cmds stub")
+
     names = sorted(n for n in dir(cmds) if not n.startswith("_"))
     total = len(names)
 
     for i, name in enumerate(names):
+        if cmds.runTimeCommand(name, query=True, exists=True):
+            continue
+        if name in plugin_commands:
+            continue
+
         try:
             obj = getattr(cmds, name)
         except Exception as exc:
