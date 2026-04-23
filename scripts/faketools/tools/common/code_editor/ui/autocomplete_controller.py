@@ -38,12 +38,6 @@ logger = getLogger(__name__)
 # caret is one of these, there's no word to complete against.
 _IDENT_TERMINATORS = set(" \t\n\r()[]{}:,;=+-*/%<>!&|^~")
 
-# Keys that commit the highlighted completion *and* then type through to the
-# editor. Chosen conservatively: a char should belong here only if "accept
-# the item, then type this char" matches how a user naturally ends a name.
-# Space and semicolon are deliberately excluded — too easy to hit mid-thought.
-_COMMIT_CHARS = frozenset(".(,=")
-
 # Default debounce window for word-triggered completions. Dot completions
 # skip the debounce entirely so ``foo.`` feels instant.
 _DEFAULT_DEBOUNCE_MS = 100
@@ -197,11 +191,22 @@ class AutocompleteController:
     def handle_key_press(self, event) -> bool:
         """Called before the editor's default ``keyPressEvent``.
 
-        Returns True to consume the key. Popup navigation and commit keys are
-        claimed explicitly here rather than delegated to QCompleter's event
-        filter — the filter is inconsistent across Qt versions / widget types
-        for QPlainTextEdit, and this way the behaviour is testable and
-        diagnosable through a single code path.
+        Returns True to consume the key. Popup navigation and the explicit
+        accept keys (Tab / Enter / Return) are claimed here rather than
+        delegated to QCompleter's event filter — the filter is inconsistent
+        across Qt versions / widget types for QPlainTextEdit, and this way
+        the behaviour is testable and diagnosable through a single code
+        path.
+
+        **Accept is strictly Tab / Enter / Return.** Previously ``.``,
+        ``(``, ``,``, and ``=`` would also commit the highlighted item and
+        type through — a "commit character" shortcut borrowed from other
+        editors — but that caused surprise inserts whenever the ranked top
+        item wasn't what the user was typing (e.g. typing ``cmds.ls(``
+        inserted ``cmds.ActivateGlobalScreenSlider(`` because the top row
+        happened to match the ``ls`` substring). Removing commit chars
+        means the user's typed text survives verbatim; they only get a
+        completion when they explicitly ask for one with Tab / Enter.
         """
         key = event.key()
         mods = event.modifiers()
@@ -230,21 +235,6 @@ class AutocompleteController:
         if key == Qt.Key_Escape:
             popup.hide()
             return True
-
-        # Commit characters: popup is open and the user typed a char that
-        # terminates the current identifier in a meaningful way (chain dot,
-        # call open-paren, arg separator, assignment). Accept first, then
-        # let the char itself flow through to the editor — the subsequent
-        # textChanged either opens a fresh popup (``.``) or just types the
-        # char (``,`` / ``=``). Returning False *after* inserting the
-        # completion is what makes the sequence atomic to the user.
-        if self._is_commit_character(event):
-            item = self._selected_item()
-            popup.hide()
-            self._timer.stop()
-            if item is not None:
-                self._insert_completion(item)
-            return False
 
         # Explicitly drive popup navigation from our side. Relying on
         # QCompleter's built-in event filter for this turned out to be
@@ -484,23 +474,6 @@ class AutocompleteController:
 
         # Record for MRU re-ranking on subsequent popups in this session.
         self._mru[name] = self._mru.get(name, 0) + 1
-
-    def _is_commit_character(self, event) -> bool:
-        """Return True if ``event`` is a printable commit char while the popup is open.
-
-        Commit chars are chars that naturally end an identifier in Python and
-        for which "accept the current item then type the char" matches user
-        intent. We deliberately stop short of VSCode's full per-language set
-        — space and semicolon feel too eager in our editor, and tab/enter
-        already have dedicated branches.
-        """
-        # Modifier keys (Ctrl, Alt, Meta) disqualify — we only react to
-        # plain printable keys. Shift is fine (``(`` is shift+8 on US).
-        mods = event.modifiers()
-        if mods & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier):
-            return False
-        text = event.text()
-        return len(text) == 1 and text in _COMMIT_CHARS
 
     def _hide_popup(self):
         if self._completer.popup().isVisible():

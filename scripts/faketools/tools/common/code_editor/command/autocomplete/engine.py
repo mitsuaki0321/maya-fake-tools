@@ -324,10 +324,22 @@ class JediEngine:
         ``AutoCompleteController._insert_completion`` removes the current
         partial word before inserting the chosen ``name``, so non-prefix
         matches insert correctly.
+
+        After the filter, prefix-matches (names that *start* with the
+        typed text) are stable-sorted to the top so the "obvious" match
+        lands on the highlighted row. Without this, typing ``ls``
+        highlights ``ActivateGlobalScreenSlider`` (which alphabetically
+        precedes ``ls`` but is only a substring match), and Tab/Enter
+        would commit the wrong item. Stable sort preserves the
+        alphabetical ordering that ``_fetch_root_completions`` already
+        established, so within each group items stay in name order.
+        MRU ranking still runs after, and wins ties — a recently-picked
+        substring-only match floats above a fresh prefix match.
         """
         if prefix:
             prefix_lower = prefix.lower()
             items = [c for c in all_items if prefix_lower in c.name_lower]
+            items.sort(key=lambda c: 0 if c.name_lower.startswith(prefix_lower) else 1)
         else:
             items = list(all_items)
         if mru:
