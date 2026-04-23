@@ -58,5 +58,17 @@
         "import_name": "jedi",
         "required_by": ["Code Editor (Autocomplete)"],
         "optional": true
+    },
+    {
+        "pip_name": "Pygments",
+        "import_name": "pygments",
+        "required_by": ["Code Editor (Docstring Rich Rendering)"],
+        "optional": true
+    },
+    {
+        "pip_name": "docstring-parser",
+        "import_name": "docstring_parser",
+        "required_by": ["Code Editor (Docstring Rich Rendering)"],
+        "optional": true
     }
 ]
