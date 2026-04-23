@@ -101,4 +101,77 @@ class CompletionRunnable(QRunnable):
         self.signals.completed.emit(self._request_id, items)
 
 
-__all__ = ["CompletionRunnable", "CompletionSignals"]
+class DocstringSignals(QObject):
+    """Signal carrier for :class:`DocstringRunnable`.
+
+    Mirror of :class:`CompletionSignals` — ``QRunnable`` can't own signals
+    directly, so we compose. The ``completed`` signal carries the request
+    id so late emissions (user already moved on) can be dropped.
+    """
+
+    # (request_id, docstring_text). Empty text means jedi couldn't resolve
+    # the identifier or the resolved object has no docstring.
+    completed = Signal(int, str)
+
+
+class DocstringRunnable(QRunnable):
+    """Runs jedi's ``get_docstring()`` in a thread-pool worker.
+
+    Same stateless-with-cancel-flag shape as :class:`CompletionRunnable`.
+    Help popup triggers one per Ctrl+Shift+Space press (and per arrow-
+    key selection change while the popup is visible). jedi inference on
+    file-less in-house modules (network-mounted ``mCmds`` and the like)
+    costs ~70 ms, hence the mandatory off-UI-thread dispatch.
+    """
+
+    def __init__(
+        self,
+        engine: JediEngine,
+        request_id: int,
+        code: str,
+        line: int,
+        column: int,
+        namespaces: Optional[Sequence[dict]] = None,
+        path: Optional[str] = None,
+    ):
+        super().__init__()
+        self.signals = DocstringSignals()
+        self._engine = engine
+        self._request_id = request_id
+        self._code = code
+        self._line = line
+        self._column = column
+        self._namespaces = namespaces
+        self._path = path
+        self._cancel = False
+
+    def cancel(self):
+        """Mark this request as superseded; its result will be ignored."""
+        self._cancel = True
+
+    def run(self):
+        if self._cancel:
+            return
+        try:
+            text = self._engine.get_docstring(
+                self._code,
+                self._line,
+                self._column,
+                namespaces=self._namespaces,
+                path=self._path,
+            )
+        except Exception as exc:
+            logger.debug(f"DocstringRunnable crashed: {exc}")
+            text = ""
+
+        if self._cancel:
+            return
+        self.signals.completed.emit(self._request_id, text)
+
+
+__all__ = [
+    "CompletionRunnable",
+    "CompletionSignals",
+    "DocstringRunnable",
+    "DocstringSignals",
+]

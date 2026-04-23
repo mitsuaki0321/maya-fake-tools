@@ -16,22 +16,243 @@ is cheap. The ``JediEngine`` can be (and is) shared between controllers.
 
 from __future__ import annotations
 
+import contextlib
 from logging import getLogger
 from typing import Callable, Optional
 
 from .....lib_ui.qt_compat import (
     QAbstractItemView,
+    QApplication,
     QCompleter,
+    QEvent,
+    QObject,
     QStringListModel,
     Qt,
     QTextCursor,
     QThreadPool,
     QTimer,
+    QWidget,
 )
 from ..command.autocomplete import JEDI_AVAILABLE, JediEngine
 from .autocomplete_worker import CompletionRunnable
 
 logger = getLogger(__name__)
+
+
+class _OwnerWindowWatcher(QObject):
+    """Hides the autocomplete popup when its owner window changes state.
+
+    We don't parent QCompleter-managed popups onto Maya's main window
+    — reparenting a top-level widget that QCompleter manages crashes
+    Maya when the workspace is torn down (observed on dock → undock →
+    close). Instead we install an event filter on the current top-level
+    window and hide the popup ourselves whenever Maya's window goes
+    away (``Hide``), is minimised (``WindowStateChange`` with the
+    ``WindowMinimized`` flag set), or loses focus to another app
+    (``WindowDeactivate``).
+
+    ``popup_getter`` is re-invoked on every event. This matters because
+    QCompleter can replace its popup widget internally (observed after
+    ``setWindowFlags``: the original QListView C++ object is destroyed
+    and a new one appears on the next access to ``QCompleter.popup()``).
+    Caching the reference would leave us holding a dangling pointer;
+    the getter pattern keeps us on the current popup.
+
+    Callers should ``attach`` right before the popup becomes visible —
+    ``editor.window()`` can change between docked and floating states.
+    """
+
+    def __init__(self, popup_getter: Callable[[], Optional[QWidget]], parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self._popup_getter = popup_getter
+        self._watched_window: Optional[QWidget] = None
+        self._alive = True
+
+    def mark_dead(self) -> None:
+        """External teardown signal (e.g. AutocompleteController shutdown)."""
+        self._alive = False
+        self.detach()
+
+    def attach(self, window: Optional[QWidget]) -> None:
+        """Begin watching ``window``. No-op if already watching it or dead."""
+        if not self._alive or window is None:
+            return
+        if self._watched_window is window:
+            return
+        self.detach()
+        window.installEventFilter(self)
+        self._watched_window = window
+
+    def detach(self) -> None:
+        """Stop watching whatever window we're on. Safe to call repeatedly."""
+        if self._watched_window is not None:
+            with contextlib.suppress(RuntimeError):
+                self._watched_window.removeEventFilter(self)
+            self._watched_window = None
+
+    def _resolve_popup(self) -> Optional[QWidget]:
+        try:
+            return self._popup_getter()
+        except Exception as exc:
+            logger.debug(f"_OwnerWindowWatcher popup_getter failed: {exc}")
+            return None
+
+    def eventFilter(self, obj, event):
+        if not self._alive or obj is not self._watched_window:
+            return False
+        et = event.type()
+        if et not in (QEvent.Hide, QEvent.WindowStateChange, QEvent.WindowDeactivate):
+            return False
+        popup = self._resolve_popup()
+        if popup is None:
+            return False
+        try:
+            visible = popup.isVisible()
+        except RuntimeError:
+            return False
+        if not visible:
+            return False
+        try:
+            if et == QEvent.WindowStateChange:
+                # WindowStateChange fires on every state transition.
+                # Only hide when the window ended up minimised — we don't
+                # want to nuke the popup on e.g. maximise/restore.
+                ws = getattr(self._watched_window, "windowState", None)
+                if ws is None or not bool(ws() & Qt.WindowMinimized):
+                    return False
+            popup.hide()
+            logger.debug(f"_OwnerWindowWatcher hid popup (event_type={et})")
+        except RuntimeError:
+            pass
+        return False
+
+
+class _OutsideClickWatcher(QObject):
+    """Closes the autocomplete popup on clicks outside of it.
+
+    Replacement for ``Qt.Popup``'s built-in mouse-grab-and-auto-close
+    behaviour. We drop ``Qt.Popup`` in favour of ``Qt.Tool`` so the
+    help popup can receive its own mouse events (drag-select, scroll,
+    right-click menu), which means the built-in auto-close no longer
+    runs. This watcher reinstates it at the application level, with an
+    optional ``exception`` widget carved out so clicks into the help
+    popup don't dismiss the autocomplete list.
+
+    ``popup_getter`` is re-invoked on every event for the same reason
+    as :class:`_OwnerWindowWatcher`: QCompleter may internally swap the
+    popup widget (observed after ``setWindowFlags``), so caching a
+    reference at construction leaves us dangling.
+    """
+
+    def __init__(self, popup_getter: Callable[[], Optional[QWidget]], parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self._popup_getter = popup_getter
+        self._exception: Optional[QWidget] = None
+        self._alive = True
+        self._installed = False  # idempotency flag — safe to re-install
+        self._extra_targets: list[QWidget] = []
+
+    def mark_dead(self) -> None:
+        """External teardown signal. Auto-removes event filters via Qt."""
+        self._alive = False
+        self.uninstall()
+
+    def set_exception(self, widget: Optional[QWidget]) -> None:
+        """Mark ``widget`` as a "click-inside" region; ``None`` clears it."""
+        self._exception = widget
+
+    def install(self, extra_targets: Optional[list[QWidget]] = None) -> None:
+        """Install on QApplication + optional ``extra_targets``. Idempotent."""
+        if self._installed:
+            return
+        app = QApplication.instance()
+        if app is None:
+            logger.warning("_OutsideClickWatcher: QApplication.instance() is None — filter NOT installed")
+            return
+        app.installEventFilter(self)
+        # Belt-and-suspenders: also register on explicit widgets (editor)
+        # in case Maya intercepts application-level events before our
+        # filter runs. Same filter object can be installed multiple
+        # times; Qt deduplicates per (target, filter) pair.
+        for target in extra_targets or ():
+            if target is None:
+                continue
+            with contextlib.suppress(RuntimeError):
+                target.installEventFilter(self)
+                self._extra_targets.append(target)
+        self._installed = True
+
+    def _resolve_popup(self) -> Optional[QWidget]:
+        try:
+            return self._popup_getter()
+        except Exception as exc:
+            logger.debug(f"_OutsideClickWatcher popup_getter failed: {exc}")
+            return None
+
+    def uninstall(self) -> None:
+        """Remove from everywhere we registered. Idempotent."""
+        if not self._installed:
+            return
+        app = QApplication.instance()
+        if app is not None:
+            with contextlib.suppress(RuntimeError):
+                app.removeEventFilter(self)
+        for target in self._extra_targets:
+            with contextlib.suppress(RuntimeError):
+                target.removeEventFilter(self)
+        self._extra_targets.clear()
+        self._installed = False
+
+    def eventFilter(self, obj, event):
+        if not self._alive:
+            return False
+        # Fast reject: non-mouse-press events are ~all of the traffic here
+        # (paint, move, key, etc.). This single comparison is the entire
+        # overhead we add to Maya's event loop when nothing else is going
+        # on — everything heavier runs only on real mouse presses.
+        if event.type() != QEvent.MouseButtonPress:
+            return False
+
+        popup = self._resolve_popup()
+        if popup is None:
+            return False
+        try:
+            if not popup.isVisible():
+                return False
+            popup_rect = popup.geometry()
+        except RuntimeError:
+            # The popup instance we resolved just got torn down between
+            # resolve and use — exceedingly rare but Qt/PySide can race
+            # here during shutdown. Next event will re-resolve.
+            return False
+
+        # Qt5 exposes ``globalPos()``; Qt6 renamed it to ``globalPosition()``.
+        # We support Maya 2023 (Qt5) through 2027 (Qt6) so probe both.
+        if hasattr(event, "globalPosition"):
+            global_pos = event.globalPosition().toPoint()
+        else:
+            global_pos = event.globalPos()
+
+        if popup_rect.contains(global_pos):
+            return False  # click inside autocomplete list — default handling
+
+        exc_widget = self._exception
+        if exc_widget is not None:
+            try:
+                if exc_widget.isVisible() and exc_widget.frameGeometry().contains(global_pos):
+                    return False  # click on help popup — keep list open
+            except RuntimeError:
+                self._exception = None
+
+        try:
+            popup.hide()
+            logger.debug(
+                f"_OutsideClickWatcher hid popup on click at {global_pos.x()},{global_pos.y()} "
+                f"(popup_rect={popup_rect.x()},{popup_rect.y()},{popup_rect.width()}x{popup_rect.height()})"
+            )
+        except RuntimeError:
+            pass
+        return False
 
 
 # Characters that end an identifier — if the character immediately before the
@@ -104,10 +325,59 @@ class AutocompleteController:
         popup = self._completer.popup()
         popup.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         popup.setSelectionBehavior(QAbstractItemView.SelectRows)
+        # Drop ``Qt.Popup`` (QCompleter's default) in favour of ``Qt.Tool``.
+        # Rationale:
+        #   * Qt.Popup mouse-grabs globally → every click in the app
+        #     (including on our help popup) gets delivered to the
+        #     QListView first, and QCompleter then auto-closes its list
+        #     because the click is "outside". That blocks help-popup
+        #     interaction (text select, scroll, right-click menu).
+        #   * Qt.Tool drops the grab → clicks go to the widget under the
+        #     cursor. Auto-close-on-outside is re-implemented in
+        #     :class:`_OutsideClickWatcher` which also whitelists the
+        #     help popup as an exception.
+        #
+        # NO ``setParent`` call here: reparenting a QCompleter-owned
+        # popup to Maya's main window has a history of crashing Maya on
+        # workspace teardown (undock → close). ``setWindowFlags`` alone
+        # is the safe path.
+        #
+        # No ``Qt.WindowStaysOnTopHint``: the popup is meant to sit
+        # above Maya's windows, not above other applications.
+        popup.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus)
+        popup.setAttribute(Qt.WA_ShowWithoutActivating, True)
         # Use the untyped overload; the slot detects whether it got a string
         # or a QModelIndex. Connecting via ``activated[str]`` broke in some
         # PySide builds where the signal emission raced with the popup hide.
         self._completer.activated.connect(self._on_activated)
+
+        # Both watchers use a getter that re-resolves the popup widget
+        # on every event. QCompleter can replace its popup internally
+        # (observed after the ``setWindowFlags`` call above: the original
+        # QListView C++ object gets torn down and a new one takes its
+        # place on the next ``popup()`` access). Caching the initial
+        # reference would leave us holding a dangling pointer and
+        # silently no-op'ing all subsequent mouse presses.
+        def _get_popup() -> Optional[QWidget]:
+            try:
+                return self._completer.popup()
+            except RuntimeError:
+                return None
+            except AttributeError:
+                return None
+
+        # Replacement for ``Qt.Popup``'s built-in auto-close. Holds an
+        # optional exception (the help popup window) so clicks there keep
+        # the list alive. We install on QApplication AND on the editor
+        # directly — the latter is a safety net in case Maya intercepts
+        # application-level mouse events before our filter sees them.
+        self._outside_click_watcher = _OutsideClickWatcher(_get_popup, editor)
+        self._outside_click_watcher.install(extra_targets=[editor])
+        # Hide the popup when Maya's top-level window is minimised,
+        # hidden, or deactivated — replaces the "follows parent" behaviour
+        # we'd otherwise get from Qt parent ownership (which we avoid
+        # because it crashes Maya).
+        self._owner_window_watcher = _OwnerWindowWatcher(_get_popup, editor)
 
         # Short-term cache of the items backing the current popup so we can
         # still know what was selected if the model gets cleared mid-accept.
@@ -118,25 +388,36 @@ class AutocompleteController:
     def set_enabled(self, enabled: bool):
         """Toggle completion.
 
-        Disable hides the popup and bumps the request id so a late jedi
-        response can't reopen it. Enable, when flipping from a previously-off
-        state, checks whether the caret already sits at a natural dot trigger
-        (``cmds.|`` and such) and fires a completion immediately — that way
-        the user doesn't have to delete and retype the ``.`` to see the
-        popup after turning autocomplete back on via the toolbar / shortcut.
-        Word triggers are intentionally not auto-fired here, matching
-        :meth:`on_text_changed`'s policy of not popping on bare identifier
-        typing. Guarded by ``editor.hasFocus()`` so background tabs don't
-        spawn popups when the setting broadcasts to every tab at once.
+        Disable hides the popup, bumps the request id so a late jedi
+        response can't reopen it, **and fully uninstalls the app-level
+        mouse event filter** so Maya's event loop runs with zero
+        overhead from this controller while autocomplete is off. Enable,
+        when flipping from a previously-off state, re-installs the filter
+        and checks whether the caret already sits at a natural dot
+        trigger (``cmds.|`` and such) to fire a completion immediately —
+        so the user doesn't have to delete and retype the ``.`` to see
+        the popup after turning autocomplete back on via the toolbar /
+        shortcut. Word triggers are intentionally not auto-fired here,
+        matching :meth:`on_text_changed`'s policy of not popping on bare
+        identifier typing. Guarded by ``editor.hasFocus()`` so background
+        tabs don't spawn popups when the setting broadcasts to every tab
+        at once.
         """
         was_enabled = self._enabled
         self._enabled = enabled and JEDI_AVAILABLE
         if not self._enabled:
             self._hide_popup()
             self._request_id += 1
+            # Detach from all event streams so we cost nothing while off.
+            self._outside_click_watcher.uninstall()
+            self._owner_window_watcher.detach()
             return
         if was_enabled:
             return
+        # Re-enabling: put the filters back. Idempotent — safe if we're
+        # called while already installed (e.g. initial ``set_enabled(True)``
+        # right after construction).
+        self._outside_click_watcher.install(extra_targets=[self.editor])
         try:
             focused = self.editor.hasFocus()
         except RuntimeError:
@@ -295,6 +576,95 @@ class AutocompleteController:
             return self._current_items[row]
         return None
 
+    # -------------------- public API for the help popup --------------------
+
+    def is_popup_visible(self) -> bool:
+        """True iff the autocomplete popup is currently shown."""
+        return self._completer.popup().isVisible()
+
+    def selected_item(self):
+        """Public wrapper around :meth:`_selected_item`.
+
+        The help popup needs the currently-highlighted :class:`CompletionItem`
+        to decide what to fetch docstring for.
+        """
+        return self._selected_item()
+
+    def popup_widget(self):
+        """Return the autocomplete popup widget (QListView).
+
+        Used by the help popup controller to install an event filter
+        that ties help-popup lifetime to autocomplete-popup state
+        changes (Show / Hide).
+        """
+        return self._completer.popup()
+
+    def popup_global_rect(self):
+        """Rectangle of the autocomplete popup in global screen coords.
+
+        The help popup uses this to anchor itself beside the list without
+        overlapping. Returns ``None`` when the list isn't visible.
+        """
+        popup = self._completer.popup()
+        if not popup.isVisible():
+            return None
+        top_left = popup.mapToGlobal(popup.rect().topLeft())
+        return popup.rect().translated(top_left)
+
+    def set_help_popup_widget(self, widget) -> None:
+        """Register a help popup window to exclude from outside-click-close.
+
+        While the help popup is visible, clicks inside it are treated as
+        "inside" by :class:`_OutsideClickWatcher` — the autocomplete list
+        stays open when the user scrolls, selects text, or opens the
+        context menu inside the help panel. Pass ``None`` to clear.
+        """
+        self._outside_click_watcher.set_exception(widget)
+
+    def connect_popup_selection_changed(self, slot) -> bool:
+        """Connect ``slot`` to the popup's selection-model ``currentChanged``.
+
+        Returns ``True`` when the connection took, ``False`` if the popup
+        hasn't been set up yet (slot simply won't fire). The slot receives
+        the usual ``(QModelIndex, QModelIndex)`` pair from Qt — callers
+        re-query :meth:`selected_item` for the actual data.
+        """
+        sel_model = self._completer.popup().selectionModel()
+        if sel_model is None:
+            return False
+        sel_model.currentChanged.connect(slot)
+        return True
+
+    def disconnect_popup_selection_changed(self, slot) -> None:
+        """Best-effort disconnect matching :meth:`connect_popup_selection_changed`."""
+        with contextlib.suppress(Exception):
+            sel_model = self._completer.popup().selectionModel()
+            if sel_model is not None:
+                sel_model.currentChanged.disconnect(slot)
+
+    def synthesize_accepted_source(self, item) -> tuple[str, int, int]:
+        """Return ``(code, line, column)`` as if ``item`` were just accepted.
+
+        Used by the help popup so ``jedi.Script.help`` can resolve the
+        currently-highlighted candidate — the partial word the user has
+        typed isn't enough on its own, jedi needs to see the full name
+        in the source. ``line`` is 1-indexed, ``column`` 0-indexed
+        (jedi's convention).
+        """
+        text = self.editor.toPlainText()
+        cursor = self.editor.textCursor()
+        caret = cursor.position()
+        prefix_len = self._current_word_prefix_length()
+        start = caret - prefix_len
+        name = getattr(item, "name", "") or ""
+        new_text = text[:start] + name + text[caret:]
+        end_pos = start + len(name)
+        before = new_text[:end_pos]
+        line = before.count("\n") + 1
+        last_nl = before.rfind("\n")
+        column = end_pos - (last_nl + 1) if last_nl >= 0 else end_pos
+        return new_text, line, column
+
     def _on_activated(self, arg):
         """QCompleter.activated slot. PySide dispatches either ``str`` or ``QModelIndex``."""
         # Same popup-first / cancel-timer dance as the keyboard accept path —
@@ -422,6 +792,11 @@ class AutocompleteController:
             width = popup.sizeHintForColumn(0)
             width += popup.verticalScrollBar().sizeHint().width()
             rect.setWidth(max(width, 180))
+            # Re-anchor the Maya-main-window watcher right before the
+            # popup becomes visible. ``editor.window()`` changes between
+            # docked and floating states, so we look it up fresh each
+            # time rather than caching at construction.
+            self._owner_window_watcher.attach(self.editor.window() or self.editor)
             self._completer.complete(rect)
             # Highlight the first row so Enter/Tab accepts the obvious match
             # without the user having to press Down first.

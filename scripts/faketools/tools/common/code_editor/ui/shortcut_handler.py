@@ -126,6 +126,15 @@ class ShortcutHandler:
         self.toggle_autocomplete_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.toggle_autocomplete_shortcut.activated.connect(self._handle_toggle_autocomplete)
 
+        # Help popup toggle. Paired with Ctrl+Space (+Shift) so users
+        # only need to remember one base key. Opens the floating doc
+        # window for the autocomplete list's highlighted candidate, or
+        # — when the list is closed — for the identifier at the caret.
+        # jedi stays silent until this shortcut fires.
+        self.toggle_help_popup_shortcut = QShortcut(QKeySequence("Ctrl+Shift+Space"), self.main_window)
+        self.toggle_help_popup_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.toggle_help_popup_shortcut.activated.connect(self._handle_toggle_help_popup)
+
     # Editor tab-scoped shortcut handlers (requires focus check)
     def _handle_new_file(self):
         """Handle new file shortcut - only when code editor widget has focus."""
@@ -197,6 +206,59 @@ class ShortcutHandler:
             return
         button.set_active(not button.is_active())
         toolbar.autocomplete_toggled.emit(button.is_active())
+
+    def _handle_toggle_help_popup(self):
+        """Toggle the floating docstring popup (Ctrl+Shift+Space).
+
+        Lazily constructs the :class:`HelpPopupController` on first use
+        so jedi / the help popup widget don't load until someone asks.
+        The controller decides whether to target the autocomplete
+        selection or the identifier at the caret based on popup state.
+        """
+        controller = self._get_or_create_help_popup_controller()
+        if controller is None:
+            return
+        controller.toggle()
+
+    def _get_or_create_help_popup_controller(self):
+        """Return the shared ``HelpPopupController``, lazily building it.
+
+        Returns ``None`` when autocomplete isn't wired up (jedi missing,
+        no editor, etc.). The controller is attached to the main window
+        so it lives as long as the window does.
+        """
+        existing = getattr(self.main_window, "_help_popup_controller", None)
+        if existing is not None:
+            return existing
+
+        engine = self._shared_engine()
+        if engine is None:
+            return None
+
+        from .help_popup_controller import HelpPopupController
+
+        controller = HelpPopupController(self.main_window, engine)
+        self.main_window._help_popup_controller = controller
+        return controller
+
+    def _shared_engine(self):
+        """Find the ``JediEngine`` used by the current editor's autocomplete.
+
+        Reusing the already-configured engine means we inherit its
+        ``sys.path`` / stubs / subprocess avoidance settings. Returns
+        ``None`` when no editor is available yet (tool just opened,
+        headless, jedi missing).
+        """
+        get_current_editor = getattr(self.main_window, "get_current_editor", None)
+        if get_current_editor is None:
+            return None
+        editor = get_current_editor()
+        if editor is None:
+            return None
+        ac = getattr(editor, "autocomplete", None)
+        if ac is None:
+            return None
+        return getattr(ac, "engine", None)
 
     def show_find_dialog(self):
         """Show the find dialog."""

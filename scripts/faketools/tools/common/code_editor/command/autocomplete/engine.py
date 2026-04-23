@@ -417,6 +417,49 @@ class JediEngine:
 
         return [_format_signature(sig) for sig in sigs]
 
+    def get_docstring(
+        self,
+        code: str,
+        line: int,
+        column: int,
+        namespaces: Optional[Sequence[dict]] = None,
+        path: Optional[str] = None,
+    ) -> str:
+        """Return the docstring for the identifier at ``(line, column)``.
+
+        Uses ``Script.help`` which returns ``Name`` objects for every
+        definition jedi can resolve at the cursor. The first non-empty
+        ``docstring(raw=False)`` wins — ``raw=False`` yields the rendered
+        form (signature + body) that matches what ``help()`` would print.
+
+        Empty string when jedi can't resolve anything, when every
+        resolved definition is docstring-less (C builtins etc.), or when
+        jedi isn't available. Typical cost: sub-ms for bundled stubs,
+        ~70 ms for file-less in-house modules on network drives — so
+        callers must run this off the UI thread.
+        """
+        if not JEDI_AVAILABLE:
+            return ""
+        if not code or len(code) > self.max_file_bytes:
+            return ""
+
+        try:
+            script, effective_line = self._make_script(code, line, column, namespaces, path)
+            names = script.help(effective_line, column)
+        except Exception as exc:
+            logger.debug(f"jedi.help failed at {line}:{column}: {exc}")
+            return ""
+
+        for name in names:
+            try:
+                text = name.docstring(raw=False) or ""
+            except Exception as exc:
+                logger.debug(f"name.docstring failed for {name!r}: {exc}")
+                continue
+            if text.strip():
+                return text
+        return ""
+
     # -------------------- internals --------------------
 
     def _make_script(
