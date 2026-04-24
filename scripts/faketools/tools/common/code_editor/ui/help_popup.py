@@ -1,44 +1,4 @@
-"""
-Floating help popup for the Code Editor.
-
-Shows the docstring of a symbol next to the autocomplete list (when
-open) or near the caret. Triggered via ``Ctrl+Shift+Space`` — see
-:mod:`help_popup_controller` for the decision of *what* symbol to
-display.
-
-Content rendering is delegated to :mod:`.help_renderer` — this
-module is only the Qt-level shell (window flags, positioning, the
-loading placeholder, theme-surface wiring). The renderer returns an
-HTML string we hand to ``QTextEdit.setHtml``.
-
-Design rationale — why ``parent=None``:
-
-The autocomplete popup (``QCompleter.popup()``) is a top-level window
-with no Qt parent. If we parent this help popup to Maya's main window,
-``HelpPopup.show()`` raises the main window in z-order, which then
-shoves the autocomplete popup *behind* the main window — the user sees
-the list vanish. Keeping the help popup parent-less makes both popups
-independent top-levels; neither raises Maya main when shown, so their
-relative z-order stays stable.
-
-Following Maya's window state (minimise / hide / deactivate) is handled
-explicitly by :class:`_OwnerWindowWatcher` in
-:mod:`help_popup_controller`, not via Qt parent ownership.
-
-Interaction model:
-
-- ``Qt.Tool | FramelessWindowHint``: borderless, no taskbar entry,
-  follows app-level z-order without staying above other applications.
-- ``Qt.WindowDoesNotAcceptFocus`` + ``Qt.WA_ShowWithoutActivating``:
-  keeps keyboard focus on the editor so the autocomplete popup's own
-  key handlers (arrows, Tab, Enter) keep working while the help popup
-  is visible.
-- ``setTextInteractionFlags(Qt.TextSelectableByMouse)`` *before*
-  ``setFocusPolicy(Qt.NoFocus)``: the flags setter implicitly rewrites
-  focusPolicy to ``ClickFocus``; we pin it back to ``NoFocus``
-  afterwards so mouse selection works without pulling focus off the
-  editor (which would close the autocomplete list).
-"""
+"""Floating docstring popup for the Code Editor. Qt shell only — content rendering lives in :mod:`.help_renderer`."""
 
 from __future__ import annotations
 
@@ -58,47 +18,30 @@ from .help_renderer import SURFACE_BG, render_docstring, render_loading
 
 logger = getLogger(__name__)
 
-# Dimensions. Docstrings run long — keep the popup generous enough that
-# the internal scroll bar does the work rather than clipping content.
 _MIN_WIDTH_PX = 360
 _MIN_HEIGHT_PX = 120
 _MAX_WIDTH_PX = 640
 _MAX_HEIGHT_PX = 420
-
-# Padding between the anchor (autocomplete popup or caret rect) and this
-# window, so the two visual elements don't visually touch.
 _ANCHOR_GAP_PX = 6
 
 
 class HelpPopup(QFrame):
-    """Floating, non-activating docstring window.
-
-    Single shared instance per main window — :meth:`show_at` repositions
-    and :meth:`set_text` replaces content, so one popup serves every
-    editor tab.
-    """
+    """Non-activating docstring window. One instance serves every editor tab."""
 
     def __init__(self):
-        # parent=None is a deliberate choice — see the module docstring
-        # for why it's required to keep z-order with the autocomplete
-        # popup stable.
+        # parent=None: parenting to Maya main would re-raise it and sink
+        # the autocomplete popup (itself parent-less) behind it.
         flags = Qt.Tool | Qt.FramelessWindowHint | Qt.WindowDoesNotAcceptFocus
         super().__init__(None, flags)
 
-        # Belt-and-braces against activating on show. The window flag
-        # alone isn't reliably honoured on all platforms.
         self.setAttribute(Qt.WA_ShowWithoutActivating, True)
         self.setFocusPolicy(Qt.NoFocus)
 
         self._text_view = QTextEdit(self)
         self._text_view.setReadOnly(True)
-        # Order matters: ``setTextInteractionFlags`` rewrites
-        # ``focusPolicy`` under the hood (to ``ClickFocus`` when
-        # ``TextSelectableByMouse`` is set). Calling it first and then
-        # hard-pinning to ``NoFocus`` gives us the combination we want:
-        # mouse selection works (hit-testing doesn't require focus) but
-        # clicking the popup never moves keyboard focus off the editor,
-        # which is what would otherwise close the autocomplete list.
+        # setTextInteractionFlags rewrites focusPolicy to ClickFocus; pin
+        # it back to NoFocus so mouse selection doesn't close the
+        # autocomplete list.
         self._text_view.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self._text_view.setFocusPolicy(Qt.NoFocus)
         self._text_view.setLineWrapMode(QTextEdit.WidgetWidth)
@@ -117,18 +60,6 @@ class HelpPopup(QFrame):
         self._apply_style()
 
     def _apply_style(self) -> None:
-        """Paint the widget chrome (background + border + selection).
-
-        The content itself is always a self-coloured HTML fragment
-        produced by :mod:`.help_renderer`, so this stylesheet only
-        needs to handle the surface. We use ``SURFACE_BG`` — slightly
-        lighter than the renderer's ``code_bg`` — so code blocks read
-        as "inset" against the body.
-
-        Border / selection colours come from the editor's ``AppTheme``
-        when it's importable so the popup visually matches the rest of
-        the Code Editor; otherwise we fall back to hard-coded neutrals.
-        """
         try:
             from ..themes import AppTheme
 
@@ -152,30 +83,17 @@ class HelpPopup(QFrame):
             """
         )
 
-    # -------------------- content --------------------
-
     def set_loading(self, identifier: str = "") -> None:
-        """Show a placeholder while the docstring fetch is in flight."""
         self._text_view.setHtml(render_loading(identifier))
 
     def set_text(self, text: str) -> None:
-        """Replace the popup body with the rendered docstring HTML."""
         self._text_view.setHtml(render_docstring(text))
-        # Scroll back to the top so a long docstring starts from its
-        # beginning rather than wherever the previous scroll landed.
         cursor = self._text_view.textCursor()
         cursor.setPosition(0)
         self._text_view.setTextCursor(cursor)
 
-    # -------------------- positioning --------------------
-
     def show_at(self, anchor_rect: QRect) -> None:
-        """Show next to ``anchor_rect`` (global screen coords).
-
-        Prefers placing on the right of the anchor; flips to the left if
-        the right side overflows the screen. Vertical position is
-        clamped so the popup stays on-screen.
-        """
+        """Show next to ``anchor_rect`` (global coords). Prefers right of anchor, flips left if overflowing."""
         screen = self._screen_geometry(anchor_rect.topLeft())
         size = self.size()
 
@@ -201,7 +119,6 @@ class HelpPopup(QFrame):
 
     @staticmethod
     def _screen_geometry(point: QPoint) -> QRect:
-        """Available geometry of the screen containing ``point``."""
         app = QApplication.instance()
         if app is None:
             return QRect(0, 0, 1920, 1080)

@@ -1,18 +1,8 @@
-"""
-Renderer for Maya ``cmds.help(...)`` output.
+"""Renderer for Maya ``cmds.help(...)`` output.
 
-Maya's help has a fixed layout driven by section headings that end in
-a colon:
-
-- Synopsis:     ``polyCube [flags] [String]``
-- Flags:        two-column flag table + a type column
-- Return value: single type + description
-- Modes:        one line per mode with ``(-e)`` / ``(-q)`` annotations
-- Examples:     Python snippet
-
-Each known section gets its own specialised renderer below so the
-output looks like a doc page rather than a raw dump. Unknown sections
-fall through to a preserved-whitespace code block.
+Sections are identified by heading lines ending in ``:`` — Synopsis,
+Flags, Return value, Modes, Examples. Each gets its own sub-renderer;
+unknown sections fall through to a preserved-whitespace block.
 """
 
 from __future__ import annotations
@@ -25,7 +15,6 @@ from . import blocks
 
 
 def render(text: str, theme: dict[str, str]) -> str:
-    """Dispatch each ``Section:`` block to its specialised renderer."""
     parts: list[str] = []
     heading_re = re.compile(r"^([A-Z][A-Za-z ]*):\s*(.*)$")
     current_title: Optional[str] = None
@@ -67,7 +56,6 @@ def render(text: str, theme: dict[str, str]) -> str:
     flush()
 
     if not parts:
-        # No headings found at all — let plain.render have a go.
         from . import plain
 
         return plain.render(text, theme)
@@ -78,20 +66,13 @@ def render(text: str, theme: dict[str, str]) -> str:
 
 
 def synopsis(body: str, theme: dict[str, str]) -> str:
-    """Colour the command name and ``[placeholder]`` tokens.
-
-    First non-placeholder word is the command itself (``polyCube``);
-    tokens wrapped in square brackets (``[flags]``, ``[String]``) are
-    placeholders.
-    """
+    """First non-placeholder word is the command; ``[tokens]`` are placeholders."""
     pieces: list[str] = []
     seen_command = False
     for token in body.split():
         if token.startswith("[") and token.endswith("]"):
             pieces.append(f'<span style="color:{theme["param_type"]};">{html.escape(token)}</span>')
         elif not seen_command:
-            # The command reads better in the "function" colour than
-            # the variable colour ``param_name`` now carries.
             pieces.append(f'<span style="color:{theme["function"]};">{html.escape(token)}</span>')
             seen_command = True
         else:
@@ -103,17 +84,7 @@ _FLAG_ROW_RE = re.compile(r"^\s*(-[A-Za-z]\S*)\s+(-[A-Za-z]\S*)\s*(.*)$")
 
 
 def flags_table(body: str, theme: dict[str, str]) -> str:
-    """Three-column HTML table for the flag list.
-
-    Columns:
-        short flag (``-ax``)       → muted grey
-        long flag (``-axis``)       → ``param_type`` green
-        type (``Float Float Float``) → ``param_type`` green
-
-    Lines that don't match the ``-sh -long type`` pattern fall back to
-    a plain preserved-whitespace row so we never drop content on weird
-    flag definitions.
-    """
+    """Three columns: short flag (muted) / long flag / type. Non-matching lines fall back to a plain row."""
     rows: list[str] = []
     for raw_line in body.splitlines():
         if not raw_line.strip():
@@ -143,12 +114,7 @@ _RETURN_TYPE_RE = re.compile(r"^(\s*)(\S+)(\s+)(.*)$")
 
 
 def return_value(body: str, theme: dict[str, str]) -> str:
-    """Colour the leading type token; leave the description plain.
-
-    Typical input: ``    String[]    Object name and node name``. Only
-    the first non-whitespace token is touched; multi-line bodies fall
-    back to preserved text.
-    """
+    """Colour the leading type token; leave the description plain."""
     first_line, _sep, rest = body.partition("\n")
     m = _RETURN_TYPE_RE.match(first_line)
     if not m:
@@ -164,12 +130,7 @@ _MODE_FLAG_RE = re.compile(r"\(([^)]+)\)")
 
 
 def modes(body: str, theme: dict[str, str]) -> str:
-    """Colour ``(-e)`` / ``(-q)`` flag annotations and ``(default)``.
-
-    Anything starting with ``-`` inside parens is treated as a CLI
-    flag and gets the ``literal`` colour; anything else (e.g.
-    ``(default)``) gets the muted colour because it's just a note.
-    """
+    """``(-e)`` / ``(-q)`` get the literal colour; other parens (e.g. ``(default)``) get muted."""
     rows: list[str] = []
     for raw_line in body.splitlines():
         stripped = raw_line.strip()

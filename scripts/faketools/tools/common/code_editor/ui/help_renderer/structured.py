@@ -1,23 +1,11 @@
-"""
-Renderer for structured Python docstrings (numpydoc / Google / RST).
+"""Renderer for numpydoc / Google / RST docstrings via ``docstring_parser``.
 
-Built on top of :mod:`docstring_parser`. The parser handles format
-detection and produces a typed object with ``short_description``,
-``long_description``, ``params``, ``returns``, ``raises``, and generic
-``meta`` entries for Examples / Notes / etc.
-
-A couple of parser quirks are worked around here:
-
-- numpydoc's Examples section gets split into one meta per doctest
-  output block, with the ``>>>`` prompt lines dropped entirely. We
-  fall back to :func:`detect.extract_numpydoc_sections` to pull the
-  raw Examples text so the prompts survive.
-- The parser can emit several meta entries with the same section name
-  (notably Examples). We group by section name before rendering so we
-  don't produce a duplicate heading per doctest chunk.
-
-If ``docstring_parser`` itself is missing, :data:`AVAILABLE` is False
-and the orchestrator falls back to :mod:`.plain`.
+Parser quirks handled:
+- numpydoc Examples: split into one meta per doctest output block with
+  ``>>>`` stripped. We group metas by section name and pull the raw
+  Examples body from :func:`detect.extract_numpydoc_sections`.
+- Signature line: peeled off before parsing so it isn't adopted as
+  ``short_description`` and rendered twice.
 """
 
 from __future__ import annotations
@@ -40,9 +28,8 @@ except Exception as exc:  # pragma: no cover — diagnostic only
     logger.debug(f"docstring_parser unavailable, structured parsing disabled: {exc}")
 
 
-# Section names docstring_parser already models as typed attributes
-# (``parsed.params`` / ``.returns`` / ``.raises``). We skip these in
-# the generic meta loop so they aren't rendered twice.
+# Section names already modelled as typed attributes on the parse result —
+# skip them in the generic meta loop so they aren't rendered twice.
 HANDLED_META_NAMES = frozenset(
     {
         "param",
@@ -69,13 +56,8 @@ HANDLED_META_NAMES = frozenset(
 
 
 def render(text: str, theme: dict[str, str]) -> str:
-    """Render a Python docstring as semantic HTML sections."""
     parts: list[str] = []
 
-    # Peel the leading ``foo(...)`` / ``def foo(...):`` line BEFORE
-    # handing to docstring_parser. Otherwise docstring_parser adopts
-    # the signature as its ``short_description`` and we'd render it
-    # twice — once as highlighted code block, once as bold prose.
     body_text = text.lstrip()
     sig_line, rest_after_sig = detect.extract_signature_line(body_text)
     if sig_line:
@@ -90,8 +72,6 @@ def render(text: str, theme: dict[str, str]) -> str:
 
         return plain.render(text, theme)
 
-    # numpydoc Examples parsing is lossy — pull the raw section bodies
-    # so we can use them instead of the parsed meta entries.
     numpydoc_sections = detect.extract_numpydoc_sections(doc_for_parse)
 
     if parsed.short_description:
@@ -118,9 +98,8 @@ def render(text: str, theme: dict[str, str]) -> str:
         parts.append(blocks.section_header("Raises", theme, accent=theme["raise_accent"]))
         parts.append(raises_list(raises, theme))
 
-    # Group remaining meta entries by section name so multi-entry
-    # sections (numpydoc Examples emits one meta per doctest output
-    # block) are rendered under a single header.
+    # Group remaining metas by section name so multi-entry sections
+    # (numpydoc Examples) render under a single header.
     grouped: OrderedDict[str, list] = OrderedDict()
     for meta in getattr(parsed, "meta", []) or []:
         names = getattr(meta, "args", []) or []
@@ -135,7 +114,6 @@ def render(text: str, theme: dict[str, str]) -> str:
         title = _title_case(key)
         parts.append(blocks.section_header(title, theme))
         if key == "examples":
-            # Prefer the raw numpydoc section text (keeps >>> prompts).
             raw = numpydoc_sections.get("Examples")
             body = raw if raw else _join_meta_descriptions(metas)
             parts.append(blocks.code_block(body or "", theme))
@@ -154,12 +132,7 @@ def render(text: str, theme: dict[str, str]) -> str:
 
 
 def param_list(params, theme: dict[str, str]) -> str:
-    """Parameter rows: coloured ``name : type = default``, description indented.
-
-    All three header pieces share the body font + size so
-    ``user_id : int`` reads as a single horizontal unit — colour is
-    what distinguishes them.
-    """
+    """``name : type = default`` header (colour-distinguished) + indented description."""
     rows: list[str] = []
     for p in params:
         name = html.escape(p.arg_name or "")
@@ -177,7 +150,7 @@ def param_list(params, theme: dict[str, str]) -> str:
 
 
 def returns(ret, theme: dict[str, str]) -> str:
-    """Single Returns row. Handles the numpydoc ``name : type`` shape."""
+    """Handles the numpydoc ``name : type`` shape."""
     type_name = html.escape(ret.return_name or ret.type_name or "")
     desc = blocks.inline_format(ret.description or "", theme).replace("\n", "<br>")
     header = ""
@@ -194,7 +167,6 @@ def returns(ret, theme: dict[str, str]) -> str:
 
 
 def raises_list(raises_iter, theme: dict[str, str]) -> str:
-    """Raises rows — exception name in warm accent, description indented."""
     rows: list[str] = []
     for r in raises_iter:
         exc_name = html.escape(r.type_name or "")
@@ -212,7 +184,6 @@ def _join_meta_descriptions(metas) -> str:
 
 
 def _title_case(name: str) -> str:
-    """``'examples'`` → ``'Examples'``; ``'see also'`` → ``'See Also'``."""
     return " ".join(w.title() for w in name.split())
 
 

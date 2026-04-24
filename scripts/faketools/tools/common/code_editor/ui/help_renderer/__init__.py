@@ -1,44 +1,13 @@
-"""
-Docstring → HTML rendering for the Code Editor's help popup.
+"""Docstring → HTML rendering for the help popup. Qt-independent.
 
-Qt-independent: :func:`render_docstring` takes a raw docstring string
-and a theme-colour override dict, and returns an HTML string suitable
-for ``QTextEdit.setHtml``. The popup module pumps the returned string
-into the widget; all visual policy (colours, spacing, section
-ordering) lives in this package so the prototype launcher in
-``scripts/debug/`` shares the exact same code path as production.
-
-The package is split by concern so "which file do I open to change
-X?" has a one-line answer:
-
-- :mod:`.theme`      — colour palette & sizing defaults
-- :mod:`.syntax`     — Pygments style + function-call filter (editor-
-                       matching syntax highlighting)
-- :mod:`.detect`     — format detection heuristics, signature / section
-                       text extraction
-- :mod:`.blocks`     — shared HTML primitives (section headers, code
-                       blocks, paragraphs, inline code pills, …)
-- :mod:`.structured` — numpydoc / Google / RST renderer via
-                       ``docstring_parser``
-- :mod:`.maya`       — Maya ``cmds.help()`` renderer, with each section
-                       (Synopsis / Flags / Return value / Modes /
-                       Examples) getting its own sub-renderer
-- :mod:`.plain`      — bare fallback (signature + paragraph-split body)
-
-Caller widget responsibilities:
-
-- Set the widget background via stylesheet. Use
-  :data:`SURFACE_BG` as the surface colour so the code blocks render
-  as "inset" against a slightly-lighter body.
-- ``QTextEdit.setHtml(render_docstring(text))`` is the only call
-  callers make.
-
-Optional dependencies:
-
-- ``pygments`` — signature / Examples syntax highlighting. Missing →
-  plain escaped text for code blocks.
-- ``docstring_parser`` — structured section parsing. Missing → the
-  whole thing falls back to :mod:`.plain`.
+Modules:
+- :mod:`.theme`      — palette & sizing
+- :mod:`.syntax`     — Pygments highlighter
+- :mod:`.detect`     — format detection + signature / section extraction
+- :mod:`.blocks`     — shared HTML primitives
+- :mod:`.structured` — numpydoc / Google / RST via ``docstring_parser``
+- :mod:`.maya`       — ``cmds.help()`` output
+- :mod:`.plain`      — fallback
 """
 
 from __future__ import annotations
@@ -52,11 +21,7 @@ _LOADING_PLACEHOLDER = "Loading…"
 
 
 def render_loading(identifier: str = "", theme: Optional[dict[str, str]] = None) -> str:
-    """HTML for the "fetch in flight" placeholder.
-
-    Matches the body font / size used by :func:`render_docstring` so
-    swapping the placeholder for the real content doesn't flicker.
-    """
+    """HTML placeholder shown while the docstring fetch is in flight."""
     merged_theme = dict(DEFAULT_THEME)
     if theme:
         merged_theme.update(theme)
@@ -70,16 +35,10 @@ def render_loading(identifier: str = "", theme: Optional[dict[str, str]] = None)
 
 
 def render_docstring(text: Optional[str], theme: Optional[dict[str, str]] = None) -> str:
-    """Convert ``text`` (a raw docstring) to HTML for ``QTextEdit.setHtml``.
+    """Convert ``text`` to HTML for ``QTextEdit.setHtml``.
 
-    Picks a backend based on the input:
-
-    - Looks like Maya ``cmds.help()`` output → :mod:`.maya`
-    - ``docstring_parser`` available → :mod:`.structured`
-    - Otherwise → :mod:`.plain`
-
-    Empty / whitespace-only input returns a muted "(no documentation)"
-    placeholder.
+    Maya help → :mod:`.maya`; ``docstring_parser`` available →
+    :mod:`.structured`; otherwise → :mod:`.plain`.
     """
     merged_theme = dict(DEFAULT_THEME)
     if theme:

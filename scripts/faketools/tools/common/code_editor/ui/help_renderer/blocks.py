@@ -1,27 +1,12 @@
-"""
-Shared HTML building blocks used by every renderer.
+"""Shared HTML building blocks. Each function takes a ``theme`` dict and returns HTML.
 
-Everything here takes a ``theme`` dict (see :mod:`.theme`) and returns
-an HTML string. Functions are grouped roughly by scope:
-
-- Document-level:  :func:`wrap`, :func:`empty_placeholder`
-- Section-level:   :func:`section_header`, :func:`paragraphs`
-- Code surfaces:   :func:`signature`, :func:`code_block`,
-                   :func:`wrap_code_block`
-- Inline spans:    :func:`inline_format` (pill-styled ``\\`code\\```)
-
-Qt rich-text quirks worth remembering when editing this file:
-
-- ``padding`` only works on ``<td>`` — not on ``<div>`` / ``<pre>``.
-  Code blocks therefore go through a single-cell table with
-  ``cellpadding``.
-- CSS ``width: 100%`` on a ``<table>`` is flaky; the HTML attribute
-  form ``<table width="100%">`` is honoured reliably.
-- ``<p>`` blocks inherit the widget's palette for their background —
-  if the outer ``wrap`` tried to paint a colour behind the document,
-  gaps between ``<p>`` blocks would flash the widget background and
-  read as row stripes. :func:`wrap` therefore leaves background to the
-  host widget's stylesheet.
+Qt rich-text quirks this file works around:
+- ``padding`` only works on ``<td>`` — code blocks use a single-cell
+  ``<table cellpadding=...>``.
+- ``width: 100%`` as CSS is flaky on tables; the HTML attribute form
+  ``<table width="100%">`` is honoured.
+- :func:`wrap` leaves background to the host widget — painting one here
+  makes ``<p>`` gaps flash through and look like row stripes.
 """
 
 from __future__ import annotations
@@ -36,16 +21,11 @@ from . import syntax
 
 
 def wrap(body: str, theme: dict[str, str]) -> str:
-    """Outer font / colour wrapper around a rendered body.
-
-    Deliberately leaves background to the host widget — see the
-    module docstring for why.
-    """
+    """Outer font / colour wrapper. No background — see module docstring."""
     return f'<div style="color:{theme["foreground"]};font-family:{theme["font_family_body"]};font-size:{theme["font_size_pt"]}pt;">{body}</div>'
 
 
 def empty_placeholder(theme: dict[str, str]) -> str:
-    """Body used when the incoming text is empty / all whitespace."""
     return f'<p style="color:{theme["muted"]};font-style:italic;">(no documentation)</p>'
 
 
@@ -53,12 +33,7 @@ def empty_placeholder(theme: dict[str, str]) -> str:
 
 
 def section_header(title: str, theme: dict[str, str], accent: Optional[str] = None) -> str:
-    """Small left-accent-bar + uppercase letter-spaced title.
-
-    ``accent`` defaults to ``theme["accent"]``. The Raises section
-    passes the warmer ``raise_accent`` colour to hint at "this is an
-    error pathway" at a glance.
-    """
+    """Left-accent-bar + uppercase letter-spaced title. Raises uses a warmer accent."""
     bar_colour = accent or theme["accent"]
     return (
         f'<p style="color:{bar_colour};font-weight:bold;font-size:8pt;'
@@ -76,13 +51,12 @@ CODE_SPAN_RE = re.compile(r"``([^`]+)``|`([^`]+)`")
 
 
 def paragraphs(text: str, theme: dict[str, str]) -> str:
-    """Split ``text`` on blank lines; wrap each paragraph in ``<p>``."""
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     return "\n".join(f"<p>{inline_format(p, theme)}</p>" for p in paras)
 
 
 def inline_format(text: str, theme: dict[str, str]) -> str:
-    """Escape + convert ``\\`foo\\``` / ``\\`\\`foo\\`\\``` spans to monospace pills."""
+    """Escape + convert ``\\`foo\\``` spans to monospace pills."""
     escaped = html.escape(text)
 
     def replace(match: re.Match) -> str:
@@ -101,14 +75,7 @@ def inline_format(text: str, theme: dict[str, str]) -> str:
 
 
 def signature(sig: str, theme: dict[str, str]) -> str:
-    """Highlighted code block for a function signature.
-
-    Wrapped in a single-cell ``<table>`` because Qt's rich-text engine
-    honours ``padding`` only on table cells. The ``cellpadding``
-    attribute gives us the inner breathing room; ``width="100%"`` as
-    an HTML attribute (not CSS) makes the box stretch the full width
-    of the container.
-    """
+    """Highlighted signature block."""
     body_html = syntax.highlight_python(sig)
     return (
         f'<table width="100%" cellpadding="8" cellspacing="0" '
@@ -122,15 +89,7 @@ def signature(sig: str, theme: dict[str, str]) -> str:
 
 
 def code_block(text: str, theme: dict[str, str], *, highlight_python: bool = False) -> str:
-    """Preserved-whitespace code block.
-
-    With ``highlight_python=True`` the content goes through the
-    Pygments highlighter (used for Examples / Maya's Examples section
-    / any case where the block is actual Python). Without it we only
-    colour the ``>>>`` doctest prompts — enough for most docstring
-    Examples and avoids lexer overhead on content that isn't really
-    code (e.g. Maya's flag table).
-    """
+    """Preserved-whitespace code block. ``highlight_python`` toggles Pygments vs doctest-prompts-only."""
     stripped = text.rstrip()
     if highlight_python:
         inner = syntax.highlight_python(stripped)
@@ -140,7 +99,6 @@ def code_block(text: str, theme: dict[str, str], *, highlight_python: bool = Fal
 
 
 def wrap_code_block(inner_html: str, theme: dict[str, str]) -> str:
-    """Apply the standard code-block shell (table + pre)."""
     return (
         f'<table width="100%" cellpadding="8" cellspacing="0" '
         f'style="background-color:{theme["code_bg"]};'

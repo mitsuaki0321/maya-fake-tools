@@ -1,15 +1,7 @@
-"""
-Colour palette and sizing defaults for the help popup rendering.
+"""Colour palette and sizing for the help popup.
 
-Kept as a plain dict rather than a dataclass so callers can pass a
-subset of keys to override individual colours without having to
-reconstruct the whole object. Anything missing from a caller-supplied
-theme falls back to :data:`DEFAULT_THEME`.
-
-Colours mirror the editor's own syntax theme (see
-``themes/syntax_colors.json``, "VS Code Dark Modern"), so the help
-popup speaks the same visual vocabulary as the source under the
-caret.
+Mirrors the editor's VS Code Dark Modern syntax theme. Plain dict so
+callers can override a subset of keys.
 """
 
 from __future__ import annotations
@@ -17,35 +9,24 @@ from __future__ import annotations
 DEFAULT_THEME: dict[str, str] = {
     "foreground": "#d4d4d4",
     "muted": "#a0a0a0",
-    "accent": "#4fc3f7",  # section headers + left accent bar
-    # Code blocks are rendered DARKER than the surrounding surface so
-    # they read as "inset" into the prose rather than "raised" out of
-    # it. The caller (``QTextEdit.setStyleSheet(...)``) paints the body
-    # background, which we assume is a slightly lighter dark grey
-    # (e.g. ``SURFACE_BG`` below). ``code_bg`` / ``code_pill_bg`` are
-    # tuned against that.
+    "accent": "#4fc3f7",
+    # Code blocks are darker than the surface (SURFACE_BG) so they read as "inset".
     "code_bg": "#1a1a1a",
     "code_border": "#3e3e42",
     "code_pill_bg": "#1a1a1a",
-    # Parameter / return names share the editor's "variable" colour so
-    # they look identical to how parameter names read in the signature
-    # block and in normal source code.
     "param_name": "#9cdcfe",
-    "param_type": "#4ec9b0",  # type annotations after ``name :``
-    "function": "#dcdcaa",  # method / function-like names (cmds.polyCube)
-    "raise_accent": "#e6c07b",  # Raises header uses a warmer bar
-    "literal": "#d19a66",  # default values / (-e) CLI flags
-    "prompt_green": "#98c379",  # doctest ">>>" prompt
+    "param_type": "#4ec9b0",
+    "function": "#dcdcaa",
+    "raise_accent": "#e6c07b",
+    "literal": "#d19a66",
+    "prompt_green": "#98c379",
     "font_family_mono": "Consolas, 'Courier New', monospace",
     "font_family_body": "inherit",
     "font_size_pt": "10",
 }
 
 
-# Recommended widget background for hosts rendering this HTML. The
-# caller's ``QTextEdit.setStyleSheet(...)`` should use this value so
-# the outer surface sits slightly lighter than the code blocks and the
-# "inset" effect reads correctly.
+# Recommended widget background — keep slightly lighter than ``code_bg``.
 SURFACE_BG = "#262626"
 
 
