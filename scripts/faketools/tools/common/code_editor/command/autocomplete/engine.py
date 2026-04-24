@@ -428,9 +428,12 @@ class JediEngine:
         """Docstring for the identifier at ``(line, column)``.
 
         Maya ``cmds.*`` names fall through to ``cmds.help(name)`` since
-        the bundled stubs carry signatures only. Everything else uses
-        ``Name.docstring(raw=False)``. Cost: ~70 ms on file-less
-        in-house modules, so callers must run this off the UI thread.
+        the bundled stubs carry signatures only. Other names try the
+        static jedi docstring first; on empty (e.g. C-implemented
+        ufuncs like ``numpy.absolute`` whose docs live only on the
+        runtime object) we fall back to live ``__doc__``. Cost:
+        ~70 ms on file-less in-house modules, so callers must run
+        this off the UI thread.
         """
         if not JEDI_AVAILABLE:
             return ""
@@ -460,6 +463,13 @@ class JediEngine:
             except Exception as exc:
                 logger.debug(f"name.docstring failed for {name!r}: {exc}")
                 continue
+            if text.strip():
+                return text
+
+        # Pass 3 — live ``__doc__`` fallback for names whose stubs lack docs.
+        for name in names:
+            full_name = getattr(name, "full_name", None) or ""
+            text = _try_live_doc(full_name)
             if text.strip():
                 return text
         return ""
@@ -639,6 +649,32 @@ def _format_signature(sig) -> str:
     except Exception:
         params = ""
     return f"{sig.name}({params})"
+
+
+def _try_live_doc(full_name: str) -> str:
+    """Resolve ``full_name`` (e.g. ``numpy.absolute``) to a live object and return its ``__doc__``.
+
+    Empty string on any import / attribute / type failure. Walks the
+    dotted path via ``importlib.import_module`` + ``getattr``.
+    """
+    if not full_name or "." not in full_name:
+        return ""
+    parts = full_name.split(".")
+    try:
+        import importlib
+
+        obj = importlib.import_module(parts[0])
+    except Exception as exc:
+        logger.debug(f"live doc import({parts[0]!r}) failed: {exc}")
+        return ""
+    try:
+        for attr in parts[1:]:
+            obj = getattr(obj, attr)
+    except Exception as exc:
+        logger.debug(f"live doc resolution of {full_name!r} failed: {exc}")
+        return ""
+    doc = getattr(obj, "__doc__", None)
+    return doc if isinstance(doc, str) else ""
 
 
 def _try_cmds_help(name: str) -> str:
