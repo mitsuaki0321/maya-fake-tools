@@ -54,11 +54,9 @@ from .....lib_ui.qt_compat import (
     QTextEdit,
     QVBoxLayout,
 )
-from .help_renderer import DEFAULT_THEME, SURFACE_BG, render_docstring
+from .help_renderer import SURFACE_BG, render_docstring, render_loading
 
 logger = getLogger(__name__)
-
-_LOADING_PLACEHOLDER = "Loading…"
 
 # Dimensions. Docstrings run long — keep the popup generous enough that
 # the internal scroll bar does the work rather than clipping content.
@@ -119,10 +117,13 @@ class HelpPopup(QFrame):
         self._apply_style()
 
     def _apply_style(self) -> None:
-        """Set the widget surface so the renderer's HTML sits on a uniform,
-        slightly-lighter surface than the code blocks inside the HTML
-        (``SURFACE_BG`` vs ``theme["code_bg"]``) — the "inset" effect
-        needs the widget's own background to be the lighter of the two.
+        """Paint the widget chrome (background + border + selection).
+
+        The content itself is always a self-coloured HTML fragment
+        produced by :mod:`.help_renderer`, so this stylesheet only
+        needs to handle the surface. We use ``SURFACE_BG`` — slightly
+        lighter than the renderer's ``code_bg`` — so code blocks read
+        as "inset" against the body.
 
         Border / selection colours come from the editor's ``AppTheme``
         when it's importable so the popup visually matches the rest of
@@ -145,7 +146,6 @@ class HelpPopup(QFrame):
             }}
             QTextEdit {{
                 background-color: {SURFACE_BG};
-                color: {DEFAULT_THEME["foreground"]};
                 border: none;
                 selection-background-color: {selection};
             }}
@@ -155,20 +155,8 @@ class HelpPopup(QFrame):
     # -------------------- content --------------------
 
     def set_loading(self, identifier: str = "") -> None:
-        """Show a placeholder while the docstring fetch is in flight.
-
-        Rendered as the same minimal HTML shell the real content uses
-        so there's no font flicker when the fetched docstring
-        eventually replaces this placeholder.
-        """
-        label = _LOADING_PLACEHOLDER if not identifier else f"{_LOADING_PLACEHOLDER}  {identifier}"
-        theme = DEFAULT_THEME
-        self._text_view.setHtml(
-            f'<div style="color:{theme["muted"]};'
-            f"font-family:{theme['font_family_body']};"
-            f"font-size:{theme['font_size_pt']}pt;"
-            f'font-style:italic;padding:10px;">{label}</div>'
-        )
+        """Show a placeholder while the docstring fetch is in flight."""
+        self._text_view.setHtml(render_loading(identifier))
 
     def set_text(self, text: str) -> None:
         """Replace the popup body with the rendered docstring HTML."""

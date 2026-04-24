@@ -48,6 +48,26 @@ from typing import Optional
 from . import blocks, detect, maya, plain, structured
 from .theme import DEFAULT_THEME, SURFACE_BG
 
+_LOADING_PLACEHOLDER = "Loading…"
+
+
+def render_loading(identifier: str = "", theme: Optional[dict[str, str]] = None) -> str:
+    """HTML for the "fetch in flight" placeholder.
+
+    Matches the body font / size used by :func:`render_docstring` so
+    swapping the placeholder for the real content doesn't flicker.
+    """
+    merged_theme = dict(DEFAULT_THEME)
+    if theme:
+        merged_theme.update(theme)
+    label = _LOADING_PLACEHOLDER if not identifier else f"{_LOADING_PLACEHOLDER}  {identifier}"
+    return (
+        f'<div style="color:{merged_theme["muted"]};'
+        f"font-family:{merged_theme['font_family_body']};"
+        f"font-size:{merged_theme['font_size_pt']}pt;"
+        f'font-style:italic;padding:10px;">{label}</div>'
+    )
+
 
 def render_docstring(text: Optional[str], theme: Optional[dict[str, str]] = None) -> str:
     """Convert ``text`` (a raw docstring) to HTML for ``QTextEdit.setHtml``.
@@ -78,4 +98,4 @@ def render_docstring(text: Optional[str], theme: Optional[dict[str, str]] = None
     return blocks.wrap(body, merged_theme)
 
 
-__all__ = ["DEFAULT_THEME", "SURFACE_BG", "render_docstring"]
+__all__ = ["DEFAULT_THEME", "SURFACE_BG", "render_docstring", "render_loading"]
