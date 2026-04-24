@@ -33,6 +33,9 @@ Dependency Installer は、FakeTools の一部ツールが必要とするオプ�
 | aggdraw | Snapshot Capture | No |
 | mss | Snapshot Capture | No |
 | robust-laplacian | Robust Weight Transfer | No |
+| jedi | Code Editor (Autocomplete) | No |
+| Pygments | Code Editor (Docstring Rich Rendering) | No |
+| docstring-parser | Code Editor (Docstring Rich Rendering) | No |
 
 
 ## 起動方法

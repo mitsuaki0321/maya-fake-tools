@@ -129,6 +129,8 @@ Foldable blocks (such as `def`, `class`, `if`, `for`, `while`, `try`, `with`) di
 
 The code editor ships with [jedi](https://github.com/davidhalter/jedi)-backed autocomplete, covering the Python standard library, user variables, and Maya's `maya.cmds` / `maya.api.OpenMaya` APIs.
 
+![image](../../images/common/code_editor/autocomplete.png)
+
 ### Triggering and Acceptance
 
 | Action | Behavior |
@@ -137,10 +139,13 @@ The code editor ships with [jedi](https://github.com/davidhalter/jedi)-backed au
 | Type an identifier char | Filters the open popup |
 | ↑ / ↓ / PageUp / PageDown / Home / End | Navigate the candidate list |
 | Enter / Tab | Accept the highlighted item |
-| `.` / `(` / `,` / `=` (commit character) | Accept the item and type the character (e.g. `sys.p` + `.` → `sys.path.`) |
 | Escape | Close the popup |
 
-The top row is preselected as soon as the popup opens, so Enter / Tab accept the top match without a prior Down press. The popup uses the editor's current font and size; changes via Ctrl+MouseWheel are reflected automatically.
+Acceptance is Tab / Enter only — typing `.`, `(`, or any other character inserts it verbatim without accepting the highlighted candidate, so intermediate punctuation never triggers an unintended accept. The top row is preselected as soon as the popup opens, so Enter / Tab accept the top match without a prior Down press. The popup uses the editor's current font and size; changes via Ctrl+MouseWheel are reflected automatically.
+
+### Candidate Ranking
+
+Candidates whose name **starts with the typed prefix** are listed first, followed by case-insensitive substring matches elsewhere in the name. For example, typing `get` ranks `getAttr` / `getPoints` (prefix matches) above `widgetGet` (mid-name match). Within the same tier, entries are sorted by MRU and then alphabetically.
 
 ### Maya API Support
 
@@ -187,6 +192,47 @@ The following behaviours are intentional design trade-offs. Useful to know when 
 
 - Commands registered into `cmds.*` via Maya's `loadPlugin` are not picked up by an already-populated completion cache.
 - To surface newly-registered commands in the popup, close and re-open the Code Editor.
+
+
+## Documentation Popup
+
+**Ctrl+Shift+Space** shows the docstring of the symbol at the caret (or the one highlighted in the completion list) in a floating window. The look is close to VS Code's hover popup — the signature, parameters, return values, raises, and examples are rendered with distinct colours.
+
+![image](../../images/common/code_editor/autocomplete-help.png)
+
+### Trigger and Target
+
+| Completion list state | Target |
+|-----------------------|--------|
+| Open | Docstring of the **currently highlighted** candidate |
+| Closed | Docstring of the identifier under the caret |
+
+While the completion list is open, pressing ↑ / ↓ to change the selection refreshes the popup contents to match (with a small debounce).
+
+### Dismissal
+
+- **Escape**
+- **Ctrl+Shift+Space** again (toggle)
+- Completion list opens or closes (the context is considered stale, so the popup auto-closes)
+- The Code Editor window is minimised or hidden
+
+The popup never takes keyboard focus, so caret edits and completion-list navigation keep working while it's visible.
+
+### Rendering
+
+- **Signature line**: extracted as a leading code block; function names, parameters, and default values are syntax-highlighted.
+- **Structured docstrings** (numpydoc / Google / RST): parsed via `docstring_parser`; Parameters / Returns / Raises / Examples are rendered with coloured section headers and labels.
+- **Maya commands** (`cmds.polyCube`, …): the popup calls `maya.cmds.help(name)` at runtime and renders the Synopsis / Flags / Return value / Modes / Examples sections with a Maya-specific style, giving more detail than the stubs alone could carry.
+- **C-implemented objects** (numpy ufuncs, OpenMaya `MFn*` methods, …): when the stubs carry no docstring, the runtime `__doc__` is used as a fallback.
+
+### Optional Dependencies
+
+Rich rendering uses these optional packages. The popup still works without them, but the output is simpler.
+
+- **Pygments**: syntax highlighting (missing → plain-text code blocks).
+- **docstring_parser**: structured section parsing (missing → paragraph-based plain rendering).
+
+Both can be installed from the [Dependency Installer](dependency_installer.html).
 
 
 ## Special Context Menu Features
@@ -279,5 +325,6 @@ Main keyboard shortcuts available in the code editor:
 | Ctrl+Alt+[                | Fold all                                 |
 | Ctrl+Alt+]                | Unfold all                               |
 | Ctrl+Space                | Toggle autocomplete on/off               |
+| Ctrl+Shift+Space          | Toggle documentation popup               |
 | Ctrl+K                    | Clear terminal output                    |
 | Ctrl+MouseWheel           | Adjust font size                         |

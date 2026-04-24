@@ -33,6 +33,9 @@ Two launch methods are supported:
 | aggdraw | Snapshot Capture | No |
 | mss | Snapshot Capture | No |
 | robust-laplacian | Robust Weight Transfer | No |
+| jedi | Code Editor (Autocomplete) | No |
+| Pygments | Code Editor (Docstring Rich Rendering) | No |
+| docstring-parser | Code Editor (Docstring Rich Rendering) | No |
 
 
 ## How to Launch
