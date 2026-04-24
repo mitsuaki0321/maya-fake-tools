@@ -24,6 +24,9 @@ logger = getLogger(__name__)
 # Arrow-key debounce so scrolling past items doesn't fire a jedi call per row.
 _SELECTION_DEBOUNCE_MS = 80
 
+# Lines scrolled per Ctrl+Shift+Up/Down press inside the help popup.
+_SCROLL_LINES_PER_PRESS = 3
+
 
 class HelpPopupController(QObject):
     """Owns the :class:`HelpPopup` instance and wires its dependencies."""
@@ -289,6 +292,20 @@ class HelpPopupController(QObject):
             # Don't consume — Esc should also dismiss the autocomplete list.
             self.hide()
             return False
+
+        # Ctrl+Shift+Up/Down scrolls the help popup body. Handled on both the
+        # editor and the autocomplete popup so it works whether the list is
+        # open (keys go to the popup widget) or closed (keys go to the editor).
+        if et == QEvent.KeyPress and obj in (self._active_editor, self._active_autocomplete_popup):
+            mods = event.modifiers()
+            if mods & Qt.ControlModifier and mods & Qt.ShiftModifier:
+                key = event.key()
+                if key == Qt.Key_Up:
+                    self._popup.scroll_lines(-_SCROLL_LINES_PER_PRESS)
+                    return True
+                if key == Qt.Key_Down:
+                    self._popup.scroll_lines(_SCROLL_LINES_PER_PRESS)
+                    return True
 
         if obj is self._active_autocomplete_popup and et in (QEvent.Show, QEvent.Hide):
             self.hide()

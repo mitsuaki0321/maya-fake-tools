@@ -209,6 +209,10 @@ The following behaviours are intentional design trade-offs. Useful to know when 
 
 While the completion list is open, pressing ↑ / ↓ to change the selection refreshes the popup contents to match (with a small debounce).
 
+### Scrolling
+
+Long docstrings scroll inside the popup. In addition to the mouse wheel, **Ctrl+Shift+↑ / Ctrl+Shift+↓** scroll by a few lines from the keyboard (only while the popup is visible).
+
 ### Dismissal
 
 - **Escape**
@@ -326,5 +330,6 @@ Main keyboard shortcuts available in the code editor:
 | Ctrl+Alt+]                | Unfold all                               |
 | Ctrl+Space                | Toggle autocomplete on/off               |
 | Ctrl+Shift+Space          | Toggle documentation popup               |
+| Ctrl+Shift+↑ / ↓          | Scroll the documentation popup (while visible) |
 | Ctrl+K                    | Clear terminal output                    |
 | Ctrl+MouseWheel           | Adjust font size                         |

@@ -92,6 +92,11 @@ class HelpPopup(QFrame):
         cursor.setPosition(0)
         self._text_view.setTextCursor(cursor)
 
+    def scroll_lines(self, delta: int) -> None:
+        """Scroll the doc body by ``delta`` lines (positive = down). Keyboard-driven."""
+        bar = self._text_view.verticalScrollBar()
+        bar.setValue(bar.value() + delta * bar.singleStep())
+
     def show_at(self, anchor_rect: QRect) -> None:
         """Show next to ``anchor_rect`` (global coords). Prefers right of anchor, flips left if overflowing."""
         screen = self._screen_geometry(anchor_rect.topLeft())
