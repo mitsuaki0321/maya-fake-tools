@@ -456,23 +456,37 @@ class JediEngine:
             if text:
                 return text
 
-        # Pass 2 — jedi docstring (standard Python path).
+        # Pass 2 — jedi docstring. Use ``raw=True`` to decide whether the
+        # stub actually has a body: ``raw=False`` synthesises a signature
+        # line even for empty stubs (``getPoints(self, *args: Any) -> Any``),
+        # which would block the live-doc fallback. We keep that synthetic
+        # signature as a last resort.
+        synthetic_fallback = ""
         for name in names:
             try:
-                text = name.docstring(raw=False) or ""
+                body = name.docstring(raw=True) or ""
             except Exception as exc:
-                logger.debug(f"name.docstring failed for {name!r}: {exc}")
+                logger.debug(f"name.docstring(raw=True) failed for {name!r}: {exc}")
                 continue
-            if text.strip():
-                return text
+            if body.strip():
+                try:
+                    return name.docstring(raw=False) or body
+                except Exception as exc:
+                    logger.debug(f"name.docstring(raw=False) failed for {name!r}: {exc}")
+                    return body
+            if not synthetic_fallback:
+                try:
+                    synthetic_fallback = name.docstring(raw=False) or ""
+                except Exception as exc:
+                    logger.debug(f"name.docstring(raw=False) failed for {name!r}: {exc}")
 
-        # Pass 3 — live ``__doc__`` fallback for names whose stubs lack docs.
+        # Pass 3 — live ``__doc__`` for names whose stubs lack docs (numpy ufuncs, OpenMaya bindings, …).
         for name in names:
             full_name = getattr(name, "full_name", None) or ""
             text = _try_live_doc(full_name)
             if text.strip():
                 return text
-        return ""
+        return synthetic_fallback
 
     # -------------------- internals --------------------
 
@@ -652,23 +666,35 @@ def _format_signature(sig) -> str:
 
 
 def _try_live_doc(full_name: str) -> str:
-    """Resolve ``full_name`` (e.g. ``numpy.absolute``) to a live object and return its ``__doc__``.
+    """Resolve ``full_name`` (e.g. ``maya.api.OpenMaya.MFnMesh.getPoints``) to a live object and return its ``__doc__``.
 
-    Empty string on any import / attribute / type failure. Walks the
-    dotted path via ``importlib.import_module`` + ``getattr``.
+    Walks ``full_name`` by importing the longest dotted prefix that
+    resolves as a module, then following the remainder with
+    ``getattr``. Handles nested packages (``maya.api.OpenMaya.*``)
+    where ``getattr`` alone from the top package doesn't see
+    lazy-loaded subpackages. Any failure → ``""``.
     """
     if not full_name or "." not in full_name:
         return ""
     parts = full_name.split(".")
-    try:
-        import importlib
 
-        obj = importlib.import_module(parts[0])
-    except Exception as exc:
-        logger.debug(f"live doc import({parts[0]!r}) failed: {exc}")
+    import importlib
+
+    module = None
+    module_depth = 0
+    for depth in range(1, len(parts) + 1):
+        try:
+            module = importlib.import_module(".".join(parts[:depth]))
+            module_depth = depth
+        except Exception:
+            break
+    if module is None:
+        logger.debug(f"live doc: no importable prefix of {full_name!r}")
         return ""
+
+    obj = module
     try:
-        for attr in parts[1:]:
+        for attr in parts[module_depth:]:
             obj = getattr(obj, attr)
     except Exception as exc:
         logger.debug(f"live doc resolution of {full_name!r} failed: {exc}")
