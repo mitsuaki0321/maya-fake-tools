@@ -428,13 +428,24 @@ class JediEngine:
         """Return the docstring for the identifier at ``(line, column)``.
 
         Uses ``Script.help`` which returns ``Name`` objects for every
-        definition jedi can resolve at the cursor. The first non-empty
-        ``docstring(raw=False)`` wins — ``raw=False`` yields the rendered
-        form (signature + body) that matches what ``help()`` would print.
+        definition jedi can resolve at the cursor. Resolution strategy:
 
-        Empty string when jedi can't resolve anything, when every
-        resolved definition is docstring-less (C builtins etc.), or when
-        jedi isn't available. Typical cost: sub-ms for bundled stubs,
+        1. **Maya cmds commands** — if a resolved name lives under
+           ``maya.cmds.*``, call ``cmds.help(name)`` at runtime and
+           use that output. The bundled ``.pyi`` stubs carry only
+           signatures (no description, no flag table), so jedi alone
+           would render Maya commands as bare ``polyCube(*args, ...)``
+           with no useful context. ``cmds.help(name)`` returns the
+           full Synopsis / Flags / Return value / Modes / Examples
+           layout that the help popup's Maya renderer is tuned for.
+        2. **Everything else** — the first non-empty
+           ``Name.docstring(raw=False)`` wins. ``raw=False`` yields the
+           rendered form (signature + body) that matches what Python's
+           ``help()`` would print.
+
+        Empty string when nothing resolves, when every resolved
+        definition is docstring-less (C builtins etc.), or when jedi
+        isn't available. Typical cost: sub-ms for bundled stubs,
         ~70 ms for file-less in-house modules on network drives — so
         callers must run this off the UI thread.
         """
@@ -450,6 +461,16 @@ class JediEngine:
             logger.debug(f"jedi.help failed at {line}:{column}: {exc}")
             return ""
 
+        # Pass 1 — Maya cmds.help() override, preferred when available.
+        for name in names:
+            full_name = getattr(name, "full_name", None) or ""
+            if not full_name.startswith("maya.cmds."):
+                continue
+            text = _try_cmds_help(getattr(name, "name", ""))
+            if text:
+                return text
+
+        # Pass 2 — jedi docstring (standard Python path).
         for name in names:
             try:
                 text = name.docstring(raw=False) or ""
@@ -635,6 +656,32 @@ def _format_signature(sig) -> str:
     except Exception:
         params = ""
     return f"{sig.name}({params})"
+
+
+def _try_cmds_help(name: str) -> str:
+    """Return ``maya.cmds.help(name)`` output, or ``""`` if anything fails.
+
+    Runs on the docstring worker thread so any exception from a cmds
+    access (Maya not available, invalid name, thread-safety hiccup)
+    just gets logged and the caller falls through to the jedi path.
+    Maya's ``cmds.help`` is a pure query — no scene mutation — so
+    calling it from a non-main thread is generally safe in practice;
+    if a future Maya version tightens this up we can marshal through
+    ``maya.utils.executeInMainThreadWithResult``.
+    """
+    if not name:
+        return ""
+    try:
+        import maya.cmds as cmds  # type: ignore
+    except Exception as exc:
+        logger.debug(f"maya.cmds import failed: {exc}")
+        return ""
+    try:
+        text = cmds.help(name) or ""
+    except Exception as exc:
+        logger.debug(f"cmds.help({name!r}) failed: {exc}")
+        return ""
+    return text
 
 
 __all__ = ["JEDI_AVAILABLE", "JediEngine"]

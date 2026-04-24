@@ -6,6 +6,11 @@ open) or near the caret. Triggered via ``Ctrl+Shift+Space`` — see
 :mod:`help_popup_controller` for the decision of *what* symbol to
 display.
 
+Content rendering is delegated to :mod:`.help_renderer` — this
+module is only the Qt-level shell (window flags, positioning, the
+loading placeholder, theme-surface wiring). The renderer returns an
+HTML string we hand to ``QTextEdit.setHtml``.
+
 Design rationale — why ``parent=None``:
 
 The autocomplete popup (``QCompleter.popup()``) is a top-level window
@@ -49,11 +54,11 @@ from .....lib_ui.qt_compat import (
     QTextEdit,
     QVBoxLayout,
 )
+from .help_renderer import DEFAULT_THEME, SURFACE_BG, render_docstring
 
 logger = getLogger(__name__)
 
 _LOADING_PLACEHOLDER = "Loading…"
-_EMPTY_PLACEHOLDER = "(no documentation)"
 
 # Dimensions. Docstrings run long — keep the popup generous enough that
 # the internal scroll bar does the work rather than clipping content.
@@ -114,23 +119,35 @@ class HelpPopup(QFrame):
         self._apply_style()
 
     def _apply_style(self) -> None:
-        """Blend visually with the editor theme."""
+        """Set the widget surface so the renderer's HTML sits on a uniform,
+        slightly-lighter surface than the code blocks inside the HTML
+        (``SURFACE_BG`` vs ``theme["code_bg"]``) — the "inset" effect
+        needs the widget's own background to be the lighter of the two.
+
+        Border / selection colours come from the editor's ``AppTheme``
+        when it's importable so the popup visually matches the rest of
+        the Code Editor; otherwise we fall back to hard-coded neutrals.
+        """
         try:
             from ..themes import AppTheme
+
+            border = AppTheme.BORDER
+            selection = AppTheme.SELECTION
         except Exception:
-            return
+            border = "#3e3e42"
+            selection = "#264f78"
+
         self.setStyleSheet(
             f"""
             QFrame {{
-                background-color: {AppTheme.BACKGROUND};
-                border: 1px solid {AppTheme.BORDER};
+                background-color: {SURFACE_BG};
+                border: 1px solid {border};
             }}
             QTextEdit {{
-                background-color: {AppTheme.BACKGROUND};
-                color: {AppTheme.FOREGROUND};
+                background-color: {SURFACE_BG};
+                color: {DEFAULT_THEME["foreground"]};
                 border: none;
-                padding: 6px 8px;
-                selection-background-color: {AppTheme.SELECTION};
+                selection-background-color: {selection};
             }}
             """
         )
@@ -138,13 +155,24 @@ class HelpPopup(QFrame):
     # -------------------- content --------------------
 
     def set_loading(self, identifier: str = "") -> None:
-        """Show a placeholder while the docstring fetch is in flight."""
+        """Show a placeholder while the docstring fetch is in flight.
+
+        Rendered as the same minimal HTML shell the real content uses
+        so there's no font flicker when the fetched docstring
+        eventually replaces this placeholder.
+        """
         label = _LOADING_PLACEHOLDER if not identifier else f"{_LOADING_PLACEHOLDER}  {identifier}"
-        self._text_view.setPlainText(label)
+        theme = DEFAULT_THEME
+        self._text_view.setHtml(
+            f'<div style="color:{theme["muted"]};'
+            f"font-family:{theme['font_family_body']};"
+            f"font-size:{theme['font_size_pt']}pt;"
+            f'font-style:italic;padding:10px;">{label}</div>'
+        )
 
     def set_text(self, text: str) -> None:
-        """Replace the popup body with ``text``."""
-        self._text_view.setPlainText(text.strip() if text else _EMPTY_PLACEHOLDER)
+        """Replace the popup body with the rendered docstring HTML."""
+        self._text_view.setHtml(render_docstring(text))
         # Scroll back to the top so a long docstring starts from its
         # beginning rather than wherever the previous scroll landed.
         cursor = self._text_view.textCursor()
