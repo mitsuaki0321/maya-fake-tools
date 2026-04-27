@@ -138,15 +138,15 @@ class ShortcutHandler:
     # Editor tab-scoped shortcut handlers (requires focus check)
     def _handle_new_file(self):
         """Handle new file shortcut - only when code editor widget has focus."""
-        self.main_window.new_file()
+        self.main_window.file_ops.new_file()
 
     def _handle_save_file(self):
         """Handle save file shortcut - only when code editor widget has focus."""
-        self.main_window.save_current_file()
+        self.main_window.file_ops.save_current_file()
 
     def _handle_save_all_files(self):
         """Handle save all files shortcut - only when code editor widget has focus."""
-        self.main_window.save_all_files()
+        self.main_window.file_ops.save_all_files()
 
     def _handle_toggle_line_comment(self):
         """Handle toggle line comment shortcut - only when code editor widget has focus."""
@@ -178,7 +178,7 @@ class ShortcutHandler:
 
     def _handle_clear_terminal(self):
         """Handle clear terminal shortcut - only when code editor widget has focus."""
-        self.main_window.clear_terminal()
+        self.main_window.layout_manager.clear_terminal()
 
     def _handle_fold_all(self):
         """Handle fold all shortcut."""

@@ -154,32 +154,35 @@ class UILayoutManager:
 
     def connect_signals(self):
         """Connect signals between components."""
-        if self.main_window.toolbar:
-            self.main_window.toolbar.toggle_explorer_clicked.connect(self.main_window.toggle_file_explorer)
-            self.main_window.toolbar.refresh_explorer_clicked.connect(self._refresh_file_explorer)
-            self.main_window.toolbar.run_clicked.connect(self.main_window.execution_manager.run_current_script)
-            self.main_window.toolbar.save_clicked.connect(self.main_window.save_current_file)
-            self.main_window.toolbar.save_all_clicked.connect(self.main_window.save_all_files)
-            self.main_window.toolbar.new_clicked.connect(self.main_window.new_file)
-            self.main_window.toolbar.clear_clicked.connect(self.main_window.clear_terminal)
-            self.main_window.toolbar.workspace_clicked.connect(self.main_window.open_workspace_directory)
-            self.main_window.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)
-            self.main_window.toolbar.terminal_toggled.connect(self.main_window.toggle_terminal)
-            self.main_window.toolbar.echo_all_toggled.connect(self.main_window.toggle_echo_all)
-            self.main_window.toolbar.word_wrap_toggled.connect(self.main_window.toggle_word_wrap)
-            self.main_window.toolbar.fold_all_clicked.connect(self.main_window.fold_all)
-            self.main_window.toolbar.unfold_all_clicked.connect(self.main_window.unfold_all)
-            self.main_window.toolbar.add_to_shelf_clicked.connect(self.main_window.add_to_shelf)
-            self.main_window.toolbar.autocomplete_toggled.connect(self.main_window.toggle_autocomplete)
+        mw = self.main_window
+        file_ops = mw.file_ops
 
-        if self.main_window.file_explorer:
-            self.main_window.file_explorer.file_selected.connect(self.main_window.open_file_permanent)
-            self.main_window.file_explorer.file_preview.connect(self.main_window.open_file_preview)
-            self.main_window.file_explorer.file_executed.connect(self.main_window.execute_file_directly)
-            self.main_window.file_explorer.file_renamed.connect(self.main_window.handle_file_renamed)
-            self.main_window.file_explorer.folder_renamed.connect(self.main_window.handle_folder_renamed)
-            self.main_window.file_explorer.file_deleted.connect(self.main_window.handle_file_deleted)
-            self.main_window.file_explorer.folder_deleted.connect(self.main_window.handle_folder_deleted)
+        if mw.toolbar:
+            mw.toolbar.toggle_explorer_clicked.connect(self.toggle_file_explorer)
+            mw.toolbar.refresh_explorer_clicked.connect(self._refresh_file_explorer)
+            mw.toolbar.run_clicked.connect(mw.execution_manager.run_current_script)
+            mw.toolbar.save_clicked.connect(file_ops.save_current_file)
+            mw.toolbar.save_all_clicked.connect(file_ops.save_all_files)
+            mw.toolbar.new_clicked.connect(file_ops.new_file)
+            mw.toolbar.clear_clicked.connect(self.clear_terminal)
+            mw.toolbar.workspace_clicked.connect(mw.open_workspace_directory)
+            mw.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)
+            mw.toolbar.terminal_toggled.connect(self.toggle_terminal)
+            mw.toolbar.echo_all_toggled.connect(self.toggle_echo_all)
+            mw.toolbar.word_wrap_toggled.connect(self.toggle_word_wrap)
+            mw.toolbar.fold_all_clicked.connect(mw.fold_all)
+            mw.toolbar.unfold_all_clicked.connect(mw.unfold_all)
+            mw.toolbar.add_to_shelf_clicked.connect(mw.add_to_shelf)
+            mw.toolbar.autocomplete_toggled.connect(self.toggle_autocomplete)
+
+        if mw.file_explorer:
+            mw.file_explorer.file_selected.connect(file_ops.open_file_permanent)
+            mw.file_explorer.file_preview.connect(file_ops.open_file_preview)
+            mw.file_explorer.file_executed.connect(file_ops.execute_file_directly)
+            mw.file_explorer.file_renamed.connect(file_ops.handle_file_renamed)
+            mw.file_explorer.folder_renamed.connect(file_ops.handle_folder_renamed)
+            mw.file_explorer.file_deleted.connect(file_ops.handle_file_deleted)
+            mw.file_explorer.folder_deleted.connect(file_ops.handle_folder_deleted)
 
         if self.main_window.code_editor:
             self.main_window.code_editor.inspect_object.connect(self.main_window.execution_manager.handle_object_inspection)
@@ -410,3 +413,90 @@ class UILayoutManager:
         # Update collapsible settings based on new positions
         self.main_window.v_splitter.setCollapsible(0, False)  # Top widget cannot be collapsed
         self.main_window.v_splitter.setCollapsible(1, True)  # Bottom widget can be collapsed
+
+    # -------------------- Panel toggles --------------------
+
+    def toggle_file_explorer(self):
+        """Show or hide the file explorer panel and persist its width."""
+        mw = self.main_window
+        if not mw.file_explorer or not hasattr(mw, "main_splitter"):
+            return
+
+        if mw.file_explorer.isVisible():
+            sizes = mw.main_splitter.sizes()
+            if len(sizes) >= 2 and sizes[0] > 0:
+                mw.settings_manager.set("layout.explorer_width", sizes[0])
+            mw.file_explorer.hide()
+            mw.settings_manager.set("layout.explorer_visible", False)
+        else:
+            mw.file_explorer.show()
+            mw.settings_manager.set("layout.explorer_visible", True)
+            saved_width = mw.settings_manager.get("layout.explorer_width", 200)
+            sizes = mw.main_splitter.sizes()
+            if len(sizes) >= 2:
+                total = sum(sizes)
+                mw.main_splitter.setSizes([saved_width, total - saved_width])
+
+        if mw.toolbar and hasattr(mw.toolbar, "refresh_explorer_button"):
+            mw.toolbar.refresh_explorer_button.setEnabled(mw.file_explorer.isVisible())
+
+        mw.settings_manager.save_settings()
+
+    def toggle_terminal(self):
+        """Show or hide the output terminal panel and persist its height."""
+        mw = self.main_window
+        if not mw.output_terminal or not hasattr(mw, "v_splitter"):
+            return
+
+        terminal_idx = mw.v_splitter.indexOf(mw.output_terminal)
+        if terminal_idx < 0:
+            return
+
+        if mw.output_terminal.isVisible():
+            sizes = mw.v_splitter.sizes()
+            if terminal_idx < len(sizes) and sizes[terminal_idx] > 0:
+                mw.settings_manager.set("layout.terminal_height", sizes[terminal_idx])
+            mw.output_terminal.hide()
+            mw.settings_manager.set("layout.terminal_visible", False)
+        else:
+            mw.output_terminal.show()
+            mw.settings_manager.set("layout.terminal_visible", True)
+            saved_height = mw.settings_manager.get("layout.terminal_height", 150)
+            sizes = mw.v_splitter.sizes()
+            if len(sizes) == 2:
+                other_idx = 1 - terminal_idx
+                total = sum(sizes)
+                new_sizes = [0, 0]
+                new_sizes[terminal_idx] = saved_height
+                new_sizes[other_idx] = max(100, total - saved_height)
+                mw.v_splitter.setSizes(new_sizes)
+
+        mw.settings_manager.save_settings()
+
+    # -------------------- View-state toggles --------------------
+
+    def toggle_word_wrap(self, enabled):
+        """Apply word wrap to every editor tab and persist the choice."""
+        mw = self.main_window
+        if mw.code_editor:
+            mw.code_editor.set_word_wrap_all(enabled)
+        mw.settings_manager.set("editor.word_wrap", enabled)
+        mw.settings_manager.save_settings()
+
+    def toggle_echo_all(self, enabled):
+        """Mirror Maya's ``echoAllCommands`` setting onto the output terminal."""
+        if self.main_window.output_terminal:
+            self.main_window.output_terminal.set_echo_all(enabled)
+
+    def toggle_autocomplete(self, enabled: bool):
+        """Enable/disable jedi autocomplete across all tabs and persist."""
+        mw = self.main_window
+        if mw.code_editor and hasattr(mw.code_editor, "set_autocomplete_enabled"):
+            mw.code_editor.set_autocomplete_enabled(enabled)
+        mw.settings_manager.set("autocomplete.enabled", enabled)
+        mw.settings_manager.save_settings()
+
+    def clear_terminal(self):
+        """Clear the output terminal."""
+        if self.main_window.output_terminal:
+            self.main_window.output_terminal.clear()
