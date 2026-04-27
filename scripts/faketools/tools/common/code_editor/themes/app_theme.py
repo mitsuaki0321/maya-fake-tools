@@ -30,6 +30,7 @@ class _Palette:
     SURFACE_SCROLL = "#2b2b2b"       # scrollbar track
     SURFACE_TOOLBAR = "#2d2d30"      # toolbar
     SURFACE_HIGHLIGHT = "#2a2a2a"    # current-line / row highlight
+    SURFACE_LIST_HOVER = "#2a2d2e"   # VSCode list.hoverBackground
     SURFACE_HOVER = "#37373d"        # tab / list hover
 
     # Borders / separators (dark → bright).
@@ -103,8 +104,9 @@ class AppTheme:
     ICON_PRESSED = _Palette.ICON_PRESSED
 
     # ===== Sidebar (file explorer) =====
-    SIDEBAR_BACKGROUND = _Palette.SURFACE_TERTIARY
+    SIDEBAR_BACKGROUND = _Palette.SURFACE_PRIMARY  # share editor's bg
     SIDEBAR_TEXT_COLOR = _Palette.TEXT_NORMAL
+    EXPLORER_ROW_HOVER = _Palette.SURFACE_LIST_HOVER
 
     # ===== Context menus =====
     MENU_BACKGROUND = _Palette.SURFACE_TERTIARY
@@ -115,7 +117,6 @@ class AppTheme:
     PRESSED_BACKGROUND = _Palette.ACCENT_BG_STRONG
 
     # ===== Editor decorations =====
-    CURRENT_LINE = _Palette.SURFACE_HIGHLIGHT          # explorer hovered row
     CURRENT_LINE_HIGHLIGHT = _Palette.SURFACE_HIGHLIGHT  # editor caret line
     INDENT_GUIDE_COLOR = _Palette.BORDER_STRONG
 
@@ -252,7 +253,7 @@ class AppTheme:
             padding: 2px;
         }}
         QTreeView::item:hover {{
-            background-color: {cls.CURRENT_LINE};
+            background-color: {cls.EXPLORER_ROW_HOVER};
         }}
         QTreeView::item:selected {{
             background-color: {cls.HOVER_BACKGROUND};

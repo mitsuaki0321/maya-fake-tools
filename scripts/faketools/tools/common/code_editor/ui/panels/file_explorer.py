@@ -207,7 +207,7 @@ class FileExplorer(QWidget):
         # Create tree view
         self.tree_view = QTreeView()
         self.tree_view.setHeaderHidden(True)
-        self.tree_view.setAlternatingRowColors(True)
+        self.tree_view.setAlternatingRowColors(False)
         self.tree_view.setSelectionMode(QTreeView.ExtendedSelection)  # Enable multi-selection
         self.tree_view.setSortingEnabled(True)
         self.tree_view.setMouseTracking(True)  # Enable mouse tracking for hover

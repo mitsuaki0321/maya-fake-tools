@@ -123,7 +123,7 @@ class UILayoutManager:
 
                     # Update current line highlight color
                     selection = QTextEdit.ExtraSelection()
-                    line_color = QColor(AppTheme.CURRENT_LINE)
+                    line_color = QColor(AppTheme.CURRENT_LINE_HIGHLIGHT)
                     selection.format.setBackground(line_color)
                     selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
                     selection.cursor = editor.textCursor()

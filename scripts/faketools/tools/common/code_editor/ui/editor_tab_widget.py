@@ -224,7 +224,7 @@ class CodeEditorWidget(QTabWidget):
         editor.setStyleSheet(AppTheme.get_editor_stylesheet())
 
         selection = QTextEdit.ExtraSelection()
-        selection.format.setBackground(QColor(AppTheme.CURRENT_LINE))
+        selection.format.setBackground(QColor(AppTheme.CURRENT_LINE_HIGHLIGHT))
         selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
         selection.cursor = editor.textCursor()
         selection.cursor.clearSelection()
