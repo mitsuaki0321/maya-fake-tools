@@ -145,12 +145,8 @@ class UILayoutManager:
             explorer_style = AppTheme.get_file_explorer_stylesheet()
             self.main_window.file_explorer.setStyleSheet(explorer_style)
 
-        # Apply toolbar theme
-        if self.main_window.toolbar:
-            toolbar_style = AppTheme.get_toolbar_stylesheet()
-            self.main_window.toolbar.setStyleSheet(toolbar_style)
-
-        # Snippet panel theme removed - no longer needed
+        # ToolBar styles itself in its own init_ui (it's a QWidget, not a
+        # QToolBar, so AppTheme's QToolBar-targeted rules wouldn't match).
 
     def connect_signals(self):
         """Connect signals between components."""

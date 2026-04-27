@@ -260,32 +260,6 @@ class AppTheme:
         """
 
     @classmethod
-    def get_toolbar_stylesheet(cls):
-        """Get toolbar stylesheet."""
-        return f"""
-        QToolBar {{
-            background-color: {cls.TOOLBAR_BACKGROUND};
-            border: 1px solid {cls.BORDER};
-            spacing: 2px;
-            padding: 2px;
-        }}
-        QToolButton {{
-            background-color: transparent;
-            border: 1px solid transparent;
-            border-radius: 3px;
-            padding: 5px;
-            margin: 1px;
-        }}
-        QToolButton:hover {{
-            background-color: {cls.BORDER};
-            border: 1px solid {cls.ACCENT_BLUE};
-        }}
-        QToolButton:pressed {{
-            background-color: {cls.PRESSED_BACKGROUND};
-        }}
-        """
-
-    @classmethod
     def get_menu_stylesheet(cls):
         """Get context menu stylesheet."""
         return f"""
