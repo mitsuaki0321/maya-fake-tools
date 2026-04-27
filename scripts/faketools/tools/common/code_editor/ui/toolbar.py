@@ -146,7 +146,7 @@ class RunButton(VSCodeButton):
                 padding: 3px;
             }}
             QPushButton:hover {{
-                background-color: {AppTheme.TOOLBAR_BUTTON_HOVER};
+                background-color: {AppTheme.RUN_BUTTON_HOVER_BACKGROUND};
             }}
             QPushButton:pressed {{
                 background-color: {AppTheme.RUN_BUTTON_PRESSED_BACKGROUND};

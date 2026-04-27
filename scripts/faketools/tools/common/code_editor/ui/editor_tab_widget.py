@@ -13,13 +13,10 @@ from logging import getLogger
 import os
 
 from .....lib_ui.qt_compat import (
-    QColor,
     QFileDialog,
     Qt,
     QTabWidget,
-    QTextCharFormat,
     QTextCursor,  # noqa: F401 — re-exported historically; kept for downstream compat
-    QTextEdit,
     QTimer,
     Signal,
 )
@@ -220,15 +217,9 @@ class CodeEditorWidget(QTabWidget):
             editor.autocomplete.set_enabled(self._autocomplete_enabled)
 
     def apply_editor_theme(self, editor):
-        """Apply theme styling + current-line highlight to ``editor``."""
+        """Apply theme styling + refresh the current-line highlight."""
         editor.setStyleSheet(AppTheme.get_editor_stylesheet())
-
-        selection = QTextEdit.ExtraSelection()
-        selection.format.setBackground(QColor(AppTheme.CURRENT_LINE_HIGHLIGHT))
-        selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
-        selection.cursor = editor.textCursor()
-        selection.cursor.clearSelection()
-        editor.setExtraSelections([selection])
+        editor.highlight_current_line()
 
     def open_file_permanent(self, file_path: str):
         """Open ``file_path`` in a permanent tab, or refocus an existing one."""

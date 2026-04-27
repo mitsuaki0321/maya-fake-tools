@@ -49,8 +49,7 @@ class _Palette:
     # Text / icons (dim → brightest).
     TEXT_DIMMER = "#6a6a6a"          # fold placeholder
     TEXT_DIM = "#858585"             # inactive line numbers, fold indicators
-    TEXT_NORMAL = "#cccccc"          # standard chrome text (tabs, lists, menus)
-    TEXT_BRIGHT = "#c6c6c6"          # active line numbers, fold hover
+    TEXT_NORMAL = "#cccccc"          # chrome text + active accents (active line, fold hover)
     TEXT_BRIGHTER = "#d4d4d4"        # editor foreground / output text
     TEXT_BRIGHTEST = "#ffffff"       # selected tab text
 
@@ -94,8 +93,8 @@ class AppTheme:
 
     # ===== Toolbar =====
     TOOLBAR_BACKGROUND = _Palette.SURFACE_TOOLBAR
-    TOOLBAR_BUTTON_HOVER = _Palette.BORDER_DEFAULT
     VSCODE_BUTTON_HOVER_BACKGROUND = _Palette.BUTTON_HOVER
+    RUN_BUTTON_HOVER_BACKGROUND = _Palette.BORDER_DEFAULT
     RUN_BUTTON_PRESSED_BACKGROUND = _Palette.BUTTON_RUN_PRESSED
 
     ICON_SVG_SOURCE = _Palette.ICON_SOURCE
@@ -112,9 +111,8 @@ class AppTheme:
     MENU_BACKGROUND = _Palette.SURFACE_TERTIARY
     MENU_TEXT_COLOR = _Palette.TEXT_NORMAL
 
-    # ===== List / menu hover & pressed =====
+    # ===== List / menu hover & selection =====
     HOVER_BACKGROUND = _Palette.ACCENT_BG_STRONG
-    PRESSED_BACKGROUND = _Palette.ACCENT_BG_STRONG
 
     # ===== Editor decorations =====
     CURRENT_LINE_HIGHLIGHT = _Palette.SURFACE_HIGHLIGHT  # editor caret line
@@ -122,12 +120,12 @@ class AppTheme:
 
     # ===== Line numbers =====
     LINE_NUMBER_BACKGROUND = _Palette.SURFACE_PRIMARY
-    LINE_NUMBER_ACTIVE = _Palette.TEXT_BRIGHT
+    LINE_NUMBER_ACTIVE = _Palette.TEXT_NORMAL
     LINE_NUMBER_INACTIVE = _Palette.TEXT_DIM
 
     # ===== Code folding =====
     FOLD_INDICATOR_COLOR = _Palette.TEXT_DIM
-    FOLD_INDICATOR_HOVER = _Palette.TEXT_BRIGHT
+    FOLD_INDICATOR_HOVER = _Palette.TEXT_NORMAL
     FOLD_PLACEHOLDER_COLOR = _Palette.TEXT_DIMMER
 
     # ===== Scrollbar =====
@@ -161,12 +159,13 @@ class AppTheme:
 
     @classmethod
     def get_main_window_stylesheet(cls):
-        """Get main window stylesheet."""
+        """Splitter handle styling for the main window.
+
+        The main widget itself is a ``QWidget`` (not a ``QMainWindow``), so a
+        ``QMainWindow {}`` rule wouldn't match. Only the ``QSplitter::handle``
+        descendants need styling here.
+        """
         return f"""
-        QMainWindow {{
-            background-color: {cls.BACKGROUND};
-            color: {cls.FOREGROUND};
-        }}
         QSplitter::handle {{
             background-color: {cls.BORDER};
         }}

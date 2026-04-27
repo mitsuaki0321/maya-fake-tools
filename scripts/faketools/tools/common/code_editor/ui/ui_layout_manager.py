@@ -6,7 +6,7 @@ Handles UI initialization, theming, and layout management.
 import contextlib
 from logging import getLogger
 
-from .....lib_ui.qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
+from .....lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
 from ..themes import AppTheme
 from .code_editor import CodeEditorWidget
 from .panels import FileExplorer, OutputTerminal
@@ -120,15 +120,7 @@ class UILayoutManager:
                 editor = self.main_window.code_editor.widget(i)
                 if editor:
                     editor.setStyleSheet(editor_style)
-
-                    # Update current line highlight color
-                    selection = QTextEdit.ExtraSelection()
-                    line_color = QColor(AppTheme.CURRENT_LINE_HIGHLIGHT)
-                    selection.format.setBackground(line_color)
-                    selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
-                    selection.cursor = editor.textCursor()
-                    selection.cursor.clearSelection()
-                    editor.setExtraSelections([selection])
+                    editor.highlight_current_line()
 
         # Apply terminal theme
         # Only apply stylesheet if using QTextEdit (not Maya native terminal)
