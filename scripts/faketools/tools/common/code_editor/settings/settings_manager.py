@@ -10,8 +10,7 @@ import os
 from typing import Any
 
 from .....lib_ui.qt_compat import QFont
-from ..ui.code_editor import DEFAULT_FONT_FAMILY as EDITOR_FONT_FAMILY
-from ..ui.panels import DEFAULT_FONT_FAMILY as TERMINAL_FONT_FAMILY
+from ..themes import AppTheme
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager
@@ -238,22 +237,18 @@ class SettingsManager:
 
     def get_editor_font(self) -> QFont:  # type: ignore
         """Get editor font settings as QFont object."""
-        size = self.user_settings.get_editor_font_size()
-
-        font = QFont(EDITOR_FONT_FAMILY, size)
-        if not font.exactMatch():
-            font = QFont("Courier New", size)
-
-        return font
+        return self._build_monospace_font(self.user_settings.get_editor_font_size())
 
     def get_terminal_font(self) -> QFont:  # type: ignore
         """Get terminal font settings as QFont object."""
-        size = self.user_settings.get_terminal_font_size()
+        return self._build_monospace_font(self.user_settings.get_terminal_font_size())
 
-        font = QFont(TERMINAL_FONT_FAMILY, size)
+    @staticmethod
+    def _build_monospace_font(size: int) -> QFont:  # type: ignore
+        """Build a QFont for a monospace family with platform-fallback."""
+        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
         if not font.exactMatch():
-            font = QFont("Courier New", size)
-
+            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
         return font
 
     def add_recent_file(self, file_path: str):

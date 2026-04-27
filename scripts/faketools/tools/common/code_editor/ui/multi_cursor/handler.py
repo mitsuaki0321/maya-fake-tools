@@ -17,6 +17,7 @@ read, modified, and in future tested independently.
 from __future__ import annotations
 
 from ......lib_ui.qt_compat import QColor, QKeySequence, QShortcut, Signal
+from ...themes import AppTheme
 from .controller import MultiCursorController
 from .input import MultiCursorInputHandler
 from .painter import MultiCursorPainter
@@ -56,9 +57,9 @@ class MultiCursorMixin:
         self.rect_end_col = 0
 
         # Visual palette
-        self.multi_cursor_color = QColor(255, 255, 255, 200)
-        self.multi_selection_color = QColor(60, 120, 200, 100)
-        self.rect_selection_color = QColor(100, 150, 255, 80)
+        self.multi_cursor_color = QColor(*AppTheme.MULTI_CURSOR_COLOR)
+        self.multi_selection_color = QColor(*AppTheme.MULTI_SELECTION_COLOR)
+        self.rect_selection_color = QColor(*AppTheme.RECT_SELECTION_COLOR)
 
         # Remember the standard cursor width so we can restore it on exit
         self.original_cursor_width = self.cursorWidth()

@@ -339,48 +339,8 @@ class CodeEditorWidget(QTabWidget):
         return True
 
     def apply_close_button_styles(self):
-        """Apply basic tab styling (kept Maya-safe: no custom paintEvent)."""
-        try:
-            tab_style = """
-                QTabWidget::pane {
-                    border: 1px solid #3c3c3c;
-                    background-color: #242424;
-                }
-
-                QTabBar {
-                    background-color: #242424;
-                    padding-top: 4px;
-                    border-bottom: 1px solid #0a0a0a;
-                }
-
-                QTabWidget::tab-bar {
-                    background-color: #242424;
-                }
-
-                QTabBar::tab {
-                    background-color: #242424;
-                    color: #cccccc;
-                    border: 1px solid #3c3c3c;
-                    border-bottom: none;
-                    padding: 8px 16px 8px 16px;
-                    margin-right: 2px;
-                    margin-top: 0px;
-                }
-
-                QTabBar::tab:selected {
-                    background-color: #1e1e1e;
-                    color: #ffffff;
-                    border-top: 2px solid #0078d4;
-                }
-
-                QTabBar::tab:hover:!selected {
-                    background-color: #2a2a2a;
-                }
-
-            """
-            self.setStyleSheet(tab_style)
-        except Exception as e:
-            logger.error(f"Error applying tab styles - {e}")
+        """Apply tab styling from the central theme."""
+        self.setStyleSheet(AppTheme.get_tab_widget_stylesheet())
 
     def update_active_tab_styling(self):
         """Prefix the active tab title with ● (skip preview tabs, which self-style)."""

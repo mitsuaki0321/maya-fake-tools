@@ -32,7 +32,6 @@ from .multi_cursor import MultiCursorMixin
 logger = getLogger(__name__)
 
 # Editor constants
-DEFAULT_FONT_FAMILY = "Consolas"
 DEFAULT_TAB_SIZE = 4
 
 
@@ -119,9 +118,9 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     def init_editor(self):
         """Initialize editor settings."""
         # Set font using current font size
-        font = QFont(DEFAULT_FONT_FAMILY, self.current_font_size)
+        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, self.current_font_size)
         if not font.exactMatch():
-            font = QFont("Courier New", self.current_font_size)
+            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, self.current_font_size)
         self.setFont(font)
 
         # Set tab width (4 spaces * 10 pixels = 40)
@@ -292,9 +291,9 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         # If no font family set yet, use defaults
         if not font.family() or font.family() == "":
-            font = QFont(DEFAULT_FONT_FAMILY, size)
+            font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
             if not font.exactMatch():
-                font = QFont("Courier New", size)
+                font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
 
         self.setFont(font)
 

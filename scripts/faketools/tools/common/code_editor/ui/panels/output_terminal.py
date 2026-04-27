@@ -8,7 +8,6 @@ from ......lib_ui.qt_compat import QApplication, QColor, QFont, Qt, QTextCharFor
 from ...themes import AppTheme
 
 # Terminal constants
-DEFAULT_FONT_FAMILY = "Consolas"
 MAX_OUTPUT_LINES = 1000
 
 # Try to import Maya terminal widget
@@ -71,9 +70,9 @@ class OutputTerminal(QWidget):
         self.output_display.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # Set font for terminal-like appearance
-        font = QFont(DEFAULT_FONT_FAMILY, self.default_font_size)
+        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, self.default_font_size)
         if not font.exactMatch():
-            font = QFont("Courier New", self.default_font_size)
+            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, self.default_font_size)
         self.output_display.setFont(font)
 
         # Set colors for terminal appearance with scrollbar styling
@@ -232,9 +231,9 @@ class OutputTerminal(QWidget):
 
         # Update terminal font
         if self.output_display:
-            font = QFont(DEFAULT_FONT_FAMILY, size)
+            font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
             if not font.exactMatch():
-                font = QFont("Courier New", size)
+                font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
             self.output_display.setFont(font)
 
     def reset_font_size(self):

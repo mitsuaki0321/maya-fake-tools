@@ -24,6 +24,7 @@ from .....lib_ui.qt_compat import (
     QVBoxLayout,
 )
 from ..command.search import InvalidRegexError, SearchEngine, SearchOptions
+from ..themes import AppTheme
 from .dialog_base import CodeEditorDialog, CodeEditorMessageBox
 
 
@@ -155,7 +156,7 @@ class FindReplaceDialog(CodeEditorDialog):
         direction_layout.setContentsMargins(0, 0, 0, 0)
 
         direction_label = QLabel("Direction:")
-        direction_label.setStyleSheet("font-weight: bold; font-size: 10px;")
+        direction_label.setStyleSheet(AppTheme.get_emphasized_label_stylesheet())
         direction_layout.addWidget(direction_label)
 
         self.direction_group = QButtonGroup()
@@ -449,7 +450,7 @@ class FindReplaceDialog(CodeEditorDialog):
         if not match_cursors:
             return 0
 
-        highlight_color = QColor(255, 255, 0, 80)
+        highlight_color = QColor(*AppTheme.FIND_HIGHLIGHT_COLOR)
         extra_selections = []
         for match_cursor in match_cursors:
             selection = QTextEdit.ExtraSelection()

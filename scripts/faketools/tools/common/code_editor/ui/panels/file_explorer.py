@@ -77,9 +77,6 @@ class FileExplorerDelegate(QStyledItemDelegate):
     BUTTON_SIZE = 16
     BUTTON_MARGIN = 4
     CLICK_AREA_MULTIPLIER = 1.5
-    BUTTON_BG_COLOR = QColor(60, 60, 60)
-    BUTTON_BORDER_COLOR = QColor(100, 100, 100)
-    BUTTON_PLAY_COLOR = QColor(115, 185, 0)  # Match toolbar run icon color
 
     def __init__(self, file_explorer, parent=None):
         super().__init__(parent)
@@ -118,8 +115,8 @@ class FileExplorerDelegate(QStyledItemDelegate):
         painter.setRenderHint(QPainter.Antialiasing)
 
         # Background circle (slightly darker for better visibility)
-        painter.setPen(QPen(QColor(80, 80, 80), 1))
-        painter.setBrush(QBrush(QColor(45, 45, 45)))
+        painter.setPen(QPen(QColor(*AppTheme.EXPLORER_RUN_BUTTON_BORDER), 1))
+        painter.setBrush(QBrush(QColor(*AppTheme.EXPLORER_RUN_BUTTON_BACKGROUND)))
         painter.drawEllipse(x, y, self.BUTTON_SIZE, self.BUTTON_SIZE)
 
         # Play triangle (centered in the button, matching toolbar icon color)
@@ -130,7 +127,7 @@ class FileExplorerDelegate(QStyledItemDelegate):
         ]
         triangle = QPolygonF(triangle_points)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(QBrush(self.BUTTON_PLAY_COLOR))
+        painter.setBrush(QBrush(QColor(*AppTheme.EXPLORER_RUN_BUTTON_PLAY)))
         painter.drawPolygon(triangle)
 
         painter.restore()

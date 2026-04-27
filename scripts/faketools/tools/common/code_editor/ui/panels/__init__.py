@@ -5,6 +5,6 @@ Exports the high-level widgets the main window assembles. Internal modules
 """
 
 from .file_explorer import FileExplorer
-from .output_terminal import DEFAULT_FONT_FAMILY, OutputTerminal
+from .output_terminal import OutputTerminal
 
-__all__ = ["DEFAULT_FONT_FAMILY", "FileExplorer", "OutputTerminal"]
+__all__ = ["FileExplorer", "OutputTerminal"]

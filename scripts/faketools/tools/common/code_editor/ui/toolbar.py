@@ -6,13 +6,13 @@ Provides quick access to common actions with proper icon states and styling.
 import os
 
 from .....lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
+from ..themes import AppTheme
 
-# Icon color definitions for each button state (applied via dynamic SVG recoloring)
-_ICON_SOURCE_COLOR = "#808080"
+# Icon target colours per button state (applied via dynamic SVG recoloring).
 _ICON_STATE_COLORS = {
-    "normal": "#A0A0A0",
-    "hover": "#D0D0D0",
-    "pressed": "#888888",
+    "normal": AppTheme.ICON_NORMAL,
+    "hover": AppTheme.ICON_HOVER,
+    "pressed": AppTheme.ICON_PRESSED,
 }
 
 
@@ -73,25 +73,25 @@ class VSCodeButton(QPushButton):
         with open(normal_path, encoding="utf-8") as f:
             svg_template = f.read()
         for state, color in _ICON_STATE_COLORS.items():
-            self.icons[state] = _create_icon_from_svg(svg_template, _ICON_SOURCE_COLOR, color)
+            self.icons[state] = _create_icon_from_svg(svg_template, AppTheme.ICON_SVG_SOURCE, color)
 
     def _set_normal_state(self):
         """Set button to normal state."""
         if "normal" in self.icons:
             self.setIcon(self.icons["normal"])
-        self.setStyleSheet("""
-            QPushButton {
+        self.setStyleSheet(f"""
+            QPushButton {{
                 background-color: transparent;
                 border: none;
                 border-radius: 3px;
                 padding: 3px;
-            }
-            QPushButton:hover {
-                background-color: #484848;
-            }
-            QPushButton:pressed {
-                background-color: #484848;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+            }}
+            QPushButton:pressed {{
+                background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+            }}
         """)
 
     def enterEvent(self, event):
@@ -138,19 +138,19 @@ class RunButton(VSCodeButton):
         """Set button to normal state with green theme."""
         if "normal" in self.icons:
             self.setIcon(self.icons["normal"])
-        self.setStyleSheet("""
-            QPushButton {
+        self.setStyleSheet(f"""
+            QPushButton {{
                 background-color: transparent;
                 border: none;
                 border-radius: 3px;
                 padding: 3px;
-            }
-            QPushButton:hover {
-                background-color: #3c3c3c;
-            }
-            QPushButton:pressed {
-                background-color: #5A504A;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {AppTheme.TOOLBAR_BUTTON_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {AppTheme.RUN_BUTTON_PRESSED_BACKGROUND};
+            }}
         """)
 
 
@@ -172,7 +172,7 @@ class ToggleButton(VSCodeButton):
                 with open(active_path, encoding="utf-8") as f:
                     svg_template = f.read()
                 for state, color in _ICON_STATE_COLORS.items():
-                    self._active_icons[state] = _create_icon_from_svg(svg_template, _ICON_SOURCE_COLOR, color)
+                    self._active_icons[state] = _create_icon_from_svg(svg_template, AppTheme.ICON_SVG_SOURCE, color)
 
     def is_active(self):
         """Return current toggle state."""
@@ -226,13 +226,13 @@ class ToolBarSeparator(QFrame):
         self.setFrameShape(QFrame.VLine)
         self.setFrameShadow(QFrame.Plain)
         self.setFixedWidth(1)
-        self.setStyleSheet("""
-            QFrame {
-                color: #3c3c3c;
-                background-color: #3c3c3c;
+        self.setStyleSheet(f"""
+            QFrame {{
+                color: {AppTheme.TAB_BORDER};
+                background-color: {AppTheme.TAB_BORDER};
                 margin-top: 3px;
                 margin-bottom: 3px;
-            }
+            }}
         """)
 
 
@@ -270,11 +270,11 @@ class ToolBar(QWidget):
         layout.setSpacing(2)
 
         # Apply VSCode Dark Modern toolbar styling
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #2d2d30;
-                border-bottom: 1px solid #3c3c3c;
-            }
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {AppTheme.TOOLBAR_BACKGROUND};
+                border-bottom: 1px solid {AppTheme.TAB_BORDER};
+            }}
         """)
 
         # Create all buttons

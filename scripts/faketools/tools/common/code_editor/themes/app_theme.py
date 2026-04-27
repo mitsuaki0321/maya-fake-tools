@@ -56,8 +56,37 @@ class AppTheme:
     TOOLBAR_BUTTON_PRESSED = "#094771"
     TOOLBAR_DISABLED = "#3c3c3c"
 
+    # Toolbar icon SVG recoloring (source colour in shipped SVGs is replaced
+    # at runtime by one of the per-state target colours).
+    ICON_SVG_SOURCE = "#808080"
+    ICON_NORMAL = "#A0A0A0"
+    ICON_HOVER = "#D0D0D0"
+    ICON_PRESSED = "#888888"
+
+    # VSCode-style toolbar button backgrounds.
+    VSCODE_BUTTON_HOVER_BACKGROUND = "#484848"
+    RUN_BUTTON_PRESSED_BACKGROUND = "#5A504A"
+
+    # Monospace font family used by the editor and terminal. ``FALLBACK`` is
+    # tried when the primary family is not installed (font.exactMatch() = False).
+    MONOSPACE_FONT_FAMILY = "Consolas"
+    MONOSPACE_FONT_FALLBACK = "Courier New"
+
     # Editor visual guides
     INDENT_GUIDE_COLOR = "#3e3e42"
+
+    # Multi-cursor / rectangle-selection overlays (RGBA tuples for QColor).
+    MULTI_CURSOR_COLOR = (255, 255, 255, 200)
+    MULTI_SELECTION_COLOR = (60, 120, 200, 100)
+    RECT_SELECTION_COLOR = (100, 150, 255, 80)
+
+    # Find/Replace dialog: yellow background for in-document match highlights.
+    FIND_HIGHLIGHT_COLOR = (255, 255, 0, 80)
+
+    # File-explorer hover-run button (RGB tuples for QColor).
+    EXPLORER_RUN_BUTTON_BACKGROUND = (45, 45, 45)
+    EXPLORER_RUN_BUTTON_BORDER = (80, 80, 80)
+    EXPLORER_RUN_BUTTON_PLAY = (115, 185, 0)  # green play triangle
 
     # Code folding colors
     FOLD_INDICATOR_COLOR = "#858585"
@@ -207,6 +236,11 @@ class AppTheme:
             background-color: {cls.HOVER_BACKGROUND};
         }}
         """
+
+    @classmethod
+    def get_emphasized_label_stylesheet(cls):
+        """Small bold caption label (used inside dialogs / option groups)."""
+        return "font-weight: bold; font-size: 10px;"
 
     @classmethod
     def get_scrollbar_stylesheet(cls):
