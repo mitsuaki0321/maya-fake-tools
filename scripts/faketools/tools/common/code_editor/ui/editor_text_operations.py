@@ -2,8 +2,8 @@
 Text operations mixin for the Python editor.
 
 Single-cursor line-wise operations: duplicate, delete, move up/down, select
-line, plus the Smart Home helper. Multi-cursor equivalents live in
-``multi_cursor_*`` modules.
+line, the Smart Home helper, and Tab / Shift+Tab / Backspace indent editing.
+Multi-cursor equivalents live in the ``multi_cursor`` package.
 """
 
 from .....lib_ui.qt_compat import QTextCursor
@@ -308,3 +308,131 @@ class EditorTextOperationsMixin:
                 cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
 
         self.setTextCursor(cursor)
+
+    # -------------------- Indent editing (Tab / Shift+Tab / Backspace) --------------------
+
+    def handle_tab_key(self):
+        """Handle Tab key press."""
+        if self.textCursor().hasSelection():
+            self.indent_selection()
+        else:
+            self.insertPlainText("    ")
+
+    def handle_backtab_key(self):
+        """Handle Shift+Tab key press."""
+        if self.textCursor().hasSelection():
+            self.unindent_selection()
+        else:
+            self.remove_indent_at_cursor()
+
+    def indent_selection(self):
+        """Indent all selected lines by four spaces."""
+        cursor = self.textCursor()
+        start_pos = cursor.selectionStart()
+        end_pos = cursor.selectionEnd()
+
+        cursor.setPosition(start_pos)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        start_line = cursor.blockNumber()
+
+        cursor.setPosition(end_pos)
+        end_line = cursor.blockNumber()
+
+        cursor.beginEditBlock()
+        for line_num in range(start_line, end_line + 1):
+            cursor.movePosition(QTextCursor.Start)
+            for _ in range(line_num):
+                cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.StartOfLine)
+            cursor.insertText("    ")
+        cursor.endEditBlock()
+
+    def unindent_selection(self):
+        """Unindent all selected lines (up to 4 leading spaces per line)."""
+        cursor = self.textCursor()
+        start_pos = cursor.selectionStart()
+        end_pos = cursor.selectionEnd()
+
+        cursor.setPosition(start_pos)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        start_line = cursor.blockNumber()
+
+        cursor.setPosition(end_pos)
+        end_line = cursor.blockNumber()
+
+        cursor.beginEditBlock()
+        for line_num in range(start_line, end_line + 1):
+            cursor.movePosition(QTextCursor.Start)
+            for _ in range(line_num):
+                cursor.movePosition(QTextCursor.NextBlock)
+            cursor.movePosition(QTextCursor.StartOfLine)
+
+            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+            line_text = cursor.selectedText()
+
+            spaces_to_remove = 0
+            for char in line_text:
+                if char == " " and spaces_to_remove < 4:
+                    spaces_to_remove += 1
+                else:
+                    break
+
+            if spaces_to_remove > 0:
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, spaces_to_remove)
+                cursor.removeSelectedText()
+        cursor.endEditBlock()
+
+    def remove_indent_at_cursor(self):
+        """Remove up to four leading spaces between line start and the cursor."""
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.StartOfLine)
+
+        original_pos = self.textCursor().position()
+        line_start = cursor.position()
+
+        spaces_count = 0
+        pos = line_start
+        while pos < original_pos and pos < line_start + 4:
+            cursor.setPosition(pos)
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
+            if cursor.selectedText() == " ":
+                spaces_count += 1
+                pos += 1
+            else:
+                break
+
+        if spaces_count > 0:
+            cursor.setPosition(line_start)
+            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, spaces_count)
+            cursor.removeSelectedText()
+
+    def handle_backspace_key(self):
+        """Handle Backspace with smart indent removal (4-space groups)."""
+        cursor = self.textCursor()
+
+        if cursor.hasSelection():
+            cursor.deletePreviousChar()
+            return
+
+        current_pos = cursor.position()
+
+        cursor.movePosition(QTextCursor.StartOfLine)
+        line_start_pos = cursor.position()
+
+        cursor.setPosition(line_start_pos)
+        cursor.setPosition(current_pos, QTextCursor.KeepAnchor)
+        text_before_cursor = cursor.selectedText()
+
+        if text_before_cursor and all(c == " " for c in text_before_cursor):
+            spaces_count = len(text_before_cursor)
+            if spaces_count > 0:
+                spaces_to_remove = min(4, spaces_count % 4 if spaces_count % 4 != 0 else 4)
+                cursor = self.textCursor()
+                cursor.setPosition(current_pos - spaces_to_remove)
+                cursor.setPosition(current_pos, QTextCursor.KeepAnchor)
+                cursor.removeSelectedText()
+                return
+
+        cursor = self.textCursor()
+        cursor.deletePreviousChar()

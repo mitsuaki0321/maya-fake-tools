@@ -23,9 +23,18 @@ class MultiCursorInputHandler:
 
     # -------------------- Mouse --------------------
 
-    def handle_mouse(self, event) -> bool:
-        """Handle a mouse press. Returns True when the event was consumed."""
+    def handle_mouse_press(self, event) -> bool:
+        """Handle a mouse press. Returns True when the event was consumed.
+
+        Branches: middle button → start a rectangle selection; Ctrl + click
+        → drop a new cursor (or start a Ctrl+drag); plain click → clear any
+        existing multi-cursor state and let the editor handle it.
+        """
         editor = self.editor
+        if event.button() == Qt.MiddleButton:
+            self.controller.start_rectangle_selection(event)
+            return True
+
         if not (event.modifiers() & Qt.ControlModifier):
             if editor.all_cursors:
                 self.controller.clear()
@@ -80,6 +89,86 @@ class MultiCursorInputHandler:
         editor.viewport().update()
         with contextlib.suppress(Exception):
             editor.multi_cursor_status.emit(f"Added cursor (total: {len(editor.all_cursors)})")
+        return True
+
+    def handle_mouse_move(self, event) -> bool:
+        """Handle Ctrl+drag selection and middle-button rectangle dragging."""
+        editor = self.editor
+
+        if getattr(editor, "is_rect_selecting", False) and event.buttons() & Qt.MiddleButton:
+            self.controller.update_rectangle_selection(event)
+            return True
+
+        if (
+            getattr(editor, "is_ctrl_dragging", False)
+            and event.modifiers() & Qt.ControlModifier
+            and event.buttons() & Qt.LeftButton
+        ):
+            try:
+                current_pos = event.position().toPoint()  # PySide6
+            except AttributeError:
+                current_pos = event.pos()  # PySide2
+
+            cursor = editor.cursorForPosition(current_pos)
+            if editor.ctrl_drag_cursor:
+                editor.ctrl_drag_cursor.setPosition(editor.ctrl_drag_start)
+                editor.ctrl_drag_cursor.setPosition(cursor.position(), QTextCursor.KeepAnchor)
+                editor.viewport().update()
+            return True
+
+        return False
+
+    def handle_mouse_release(self, event) -> bool:
+        """Finalize Ctrl+drag selection or middle-button rectangle selection."""
+        editor = self.editor
+
+        if event.button() == Qt.MiddleButton and getattr(editor, "is_rect_selecting", False):
+            self.controller.finalize_rectangle_selection(event)
+            return True
+
+        if not (
+            event.button() == Qt.LeftButton
+            and event.modifiers() & Qt.ControlModifier
+            and getattr(editor, "is_ctrl_dragging", False)
+        ):
+            return False
+
+        if editor.ctrl_drag_cursor is not None:
+            if editor.ctrl_drag_cursor.hasSelection():
+                # Drag produced a selection — keep it as an extra cursor.
+                editor.all_cursors.append(editor.ctrl_drag_cursor)
+                with contextlib.suppress(Exception):
+                    editor.multi_cursor_status.emit(f"Added selection (total: {len(editor.all_cursors)})")
+            else:
+                # Plain Ctrl+click — drop a cursor at the click position.
+                try:
+                    click_pos = event.position().toPoint()  # PySide6
+                except AttributeError:
+                    click_pos = event.pos()  # PySide2
+
+                cursor = editor.cursorForPosition(click_pos)
+
+                if not editor.all_cursors:
+                    main_cursor = editor.textCursor()
+                    first_cursor = QTextCursor(editor.document())
+                    first_cursor.setPosition(main_cursor.position())
+                    editor.all_cursors.append(first_cursor)
+                    editor.setCursorWidth(0)
+
+                already_present = any(
+                    existing.position() == cursor.position() and not existing.hasSelection() for existing in editor.all_cursors
+                )
+                if not already_present:
+                    new_cursor = QTextCursor(editor.document())
+                    new_cursor.setPosition(cursor.position())
+                    editor.all_cursors.append(new_cursor)
+                    with contextlib.suppress(Exception):
+                        editor.multi_cursor_status.emit(f"Added cursor {len(editor.all_cursors)}")
+
+        editor.is_ctrl_dragging = False
+        editor.ctrl_drag_cursor = None
+        editor.ctrl_drag_start = None
+        editor.viewport().update()
         return True
 
     # -------------------- Keyboard --------------------

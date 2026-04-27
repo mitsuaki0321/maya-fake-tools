@@ -3,7 +3,17 @@ Line number area widget for the code editor.
 Displays line numbers and fold indicators alongside the code editor.
 """
 
-from .....lib_ui.qt_compat import Qt, QTimer, QWidget
+from .....lib_ui.qt_compat import (
+    QColor,
+    QPainter,
+    QPen,
+    QPointF,
+    QPolygonF,
+    Qt,
+    QTimer,
+    QWidget,
+)
+from ..themes import AppTheme
 
 # Fade animation settings
 _FADE_DURATION_MS = 150  # Total animation duration
@@ -31,16 +41,139 @@ class LineNumberArea(QWidget):
 
     def sizeHint(self):
         """Return the size hint for the line number area."""
-        return self.code_editor.lineNumberAreaWidth()
+        return self.calculate_width()
 
-    def paintEvent(self, event):
-        """Paint the line numbers and fold indicators."""
-        self.code_editor.lineNumberAreaPaintEvent(event)
+    def calculate_width(self):
+        """Calculate the width needed for line numbers and fold gutter.
+
+        Layout: ``[ line_numbers | fold_gutter | spacing(1char) | code ]``
+        """
+        editor = self.code_editor
+        digits = 1
+        max_num = max(1, editor.blockCount())
+        while max_num >= 10:
+            max_num //= 10
+            digits += 1
+
+        char_width = editor.fontMetrics().horizontalAdvance("9")
+        extra_spacing = editor.fontMetrics().horizontalAdvance(" ")
+        return 3 + char_width * digits + extra_spacing + self._fold_gutter_width()
+
+    def _fold_gutter_width(self):
+        """Return the width of the fold indicator gutter area."""
+        return self.code_editor.fontMetrics().horizontalAdvance("9") + 4
 
     def _fold_gutter_x(self):
         """Return the X coordinate where the fold gutter column starts."""
         spacing = self.code_editor.fontMetrics().horizontalAdvance(" ")
-        return self.width() - spacing - self.code_editor._fold_gutter_width()
+        return self.width() - spacing - self._fold_gutter_width()
+
+    def paintEvent(self, event):
+        """Paint line numbers and fold indicators."""
+        editor = self.code_editor
+        painter = QPainter(self)
+        painter.fillRect(event.rect(), QColor(AppTheme.LINE_NUMBER_BACKGROUND))
+        painter.setFont(editor.font())
+
+        block = editor.firstVisibleBlock()
+        block_number = block.blockNumber()
+        top = editor.blockBoundingGeometry(block).translated(editor.contentOffset()).top()
+        bottom = top + editor.blockBoundingRect(block).height()
+        current_block_number = editor.textCursor().blockNumber()
+
+        single_line_height = painter.fontMetrics().height()
+
+        # Layout: [ line_numbers | fold_gutter | spacing(1char) | code ]
+        fold_gutter_w = self._fold_gutter_width()
+        spacing = editor.fontMetrics().horizontalAdvance(" ")
+        line_number_draw_width = self.width() - spacing - fold_gutter_w
+        fold_gutter_x = line_number_draw_width
+
+        while block.isValid() and (top <= event.rect().bottom()):
+            if block.isVisible() and (bottom >= event.rect().top()):
+                number = str(block_number + 1)
+                if block_number == current_block_number:
+                    painter.setPen(QColor(AppTheme.LINE_NUMBER_ACTIVE))
+                else:
+                    painter.setPen(QColor(AppTheme.LINE_NUMBER_INACTIVE))
+                painter.drawText(0, int(top), line_number_draw_width, single_line_height, Qt.AlignRight, number)
+
+                self._draw_fold_indicator(painter, block_number, fold_gutter_x, int(top), fold_gutter_w + spacing, single_line_height)
+
+            block = block.next()
+            top = bottom
+            bottom = top + editor.blockBoundingRect(block).height()
+            block_number += 1
+
+    def _draw_fold_indicator(self, painter, block_number, x, y, width, height):
+        """Draw a VSCode-style chevron fold indicator for a block.
+
+        Args:
+            painter (QPainter): Active painter on this widget.
+            block_number (int): Current block number.
+            x (int): Left edge of the fold gutter area.
+            y (int): Top of the block.
+            width (int): Width of the fold gutter area.
+            height (int): Single line height.
+        """
+        fold_manager = self.code_editor.fold_manager
+        if not fold_manager.is_fold_header(block_number):
+            return
+
+        is_folded = fold_manager.is_folded(block_number)
+
+        # Folded indicators are always fully visible; unfolded ones fade with hover.
+        if not is_folded and self._indicator_opacity <= 0.0:
+            return
+
+        if block_number == self._hover_fold_block:
+            color = QColor(AppTheme.FOLD_INDICATOR_HOVER)
+        else:
+            color = QColor(AppTheme.FOLD_INDICATOR_COLOR)
+
+        if not is_folded:
+            color.setAlphaF(self._indicator_opacity)
+
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+
+        # Stroke-based chevron (VSCode style) — no fill.
+        pen = QPen(color, 1.2)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        padding = 2
+        half_w = max(3, (width - padding * 2) // 2)
+        cx = x + width // 2
+        cy = y + height // 2
+        s = half_w * 0.5
+
+        if is_folded:
+            # Right-pointing chevron ›
+            painter.drawPolyline(
+                QPolygonF(
+                    [
+                        QPointF(cx - s * 0.35, cy - s),
+                        QPointF(cx + s * 0.55, cy),
+                        QPointF(cx - s * 0.35, cy + s),
+                    ]
+                )
+            )
+        else:
+            # Down-pointing chevron ˅
+            painter.drawPolyline(
+                QPolygonF(
+                    [
+                        QPointF(cx - s, cy - s * 0.35),
+                        QPointF(cx, cy + s * 0.55),
+                        QPointF(cx + s, cy - s * 0.35),
+                    ]
+                )
+            )
+
+        painter.restore()
 
     def _start_fade(self, target):
         """Start fade animation towards target opacity.

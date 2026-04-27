@@ -94,8 +94,14 @@ class MultiCursorMixin:
     def add_cursors_to_line_ends(self):
         self._mc_controller.add_cursors_to_line_ends()
 
-    def handle_multi_cursor_mouse(self, event) -> bool:
-        return self._mc_input.handle_mouse(event)
+    def handle_multi_cursor_mouse_press(self, event) -> bool:
+        return self._mc_input.handle_mouse_press(event)
+
+    def handle_multi_cursor_mouse_move(self, event) -> bool:
+        return self._mc_input.handle_mouse_move(event)
+
+    def handle_multi_cursor_mouse_release(self, event) -> bool:
+        return self._mc_input.handle_mouse_release(event)
 
     def handle_multi_cursor_keys(self, event) -> bool:
         return self._mc_input.handle_keys(event)

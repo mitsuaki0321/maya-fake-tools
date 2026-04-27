@@ -3,21 +3,16 @@ Code editor widget with tab support.
 Provides tabbed interface for editing multiple Python files.
 """
 
-import contextlib
 from logging import getLogger
 import os
-import re
 import time
 
 from .....lib_ui.qt_compat import (
-    QAction,
     QColor,
     QFont,
     QPainter,
     QPen,
     QPlainTextEdit,
-    QPointF,
-    QPolygonF,
     Qt,
     QTextCharFormat,
     QTextCursor,
@@ -28,6 +23,7 @@ from ..command import file_io
 from ..command.autocomplete import JediEngine
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
+from . import auto_indent, editor_context_menu
 from .autocomplete import AutocompleteController
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
@@ -405,37 +401,15 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.current_font_size = size
         self.set_font_size(size)
 
-    # Line number area methods
-    def lineNumberAreaWidth(self):
-        """Calculate the width needed for line numbers and fold gutter."""
-        digits = 1
-        max_num = max(1, self.blockCount())
-        while max_num >= 10:
-            max_num //= 10
-            digits += 1
-
-        char_width = self.fontMetrics().horizontalAdvance("9")
-        # Add extra spacing between line numbers and code (1 character worth)
-        extra_spacing = self.fontMetrics().horizontalAdvance(" ")
-        # Add fold gutter width (indicator triangle area)
-        fold_gutter_width = char_width + 4
-        space = 3 + char_width * digits + extra_spacing + fold_gutter_width
-        return space
-
-    def _fold_gutter_width(self):
-        """Return the width of the fold indicator gutter area."""
-        return self.fontMetrics().horizontalAdvance("9") + 4
-
     def update_line_number_area_width(self, new_block_count):
-        """Update the width of the line number area."""
-        self.setViewportMargins(self.lineNumberAreaWidth(), 0, 0, 0)
+        """Update the editor's left margin to fit the line number area."""
+        self.setViewportMargins(self.line_number_area.calculate_width(), 0, 0, 0)
 
     def update_line_number_area(self, rect, dy):
         """Update the line number area when scrolling or resizing."""
         if dy:
             self.line_number_area.scroll(0, dy)
         else:
-            # Convert rect to integer values to avoid type errors
             self.line_number_area.update(0, int(rect.y()), int(self.line_number_area.width()), int(rect.height()))
 
         if rect.contains(self.viewport().rect()):
@@ -446,7 +420,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().resizeEvent(event)
 
         cr = self.contentsRect()
-        self.line_number_area.setGeometry(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height())
+        self.line_number_area.setGeometry(cr.left(), cr.top(), self.line_number_area.calculate_width(), cr.height())
 
     def highlight_current_line(self):
         """Highlight the current line."""
@@ -471,129 +445,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             filtered_selections.append(selection)
 
         self.setExtraSelections(filtered_selections)
-
-    def lineNumberAreaPaintEvent(self, event):
-        """Paint line numbers and fold indicators."""
-        painter = QPainter(self.line_number_area)
-        painter.fillRect(event.rect(), QColor(AppTheme.LINE_NUMBER_BACKGROUND))
-
-        # Set font to match editor font
-        editor_font = self.font()
-        painter.setFont(editor_font)
-
-        block = self.firstVisibleBlock()
-        block_number = block.blockNumber()
-        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
-        bottom = top + self.blockBoundingRect(block).height()
-        current_block_number = self.textCursor().blockNumber()
-
-        # Use current font metrics for single line height (for drawing)
-        font_metrics = painter.fontMetrics()
-        single_line_height = font_metrics.height()
-
-        # Layout: [ line_numbers | fold_gutter | spacing(1char) | code ]
-        fold_gutter_w = self._fold_gutter_width()
-        line_area_width = self.line_number_area.width()
-        spacing = self.fontMetrics().horizontalAdvance(" ")
-        line_number_draw_width = line_area_width - spacing - fold_gutter_w
-        fold_gutter_x = line_number_draw_width  # Start of fold gutter (right of line numbers)
-
-        while block.isValid() and (top <= event.rect().bottom()):
-            if block.isVisible() and (bottom >= event.rect().top()):
-                number = str(block_number + 1)
-                # Use different colors for current line vs other lines
-                if block_number == current_block_number:
-                    painter.setPen(QColor(AppTheme.LINE_NUMBER_ACTIVE))
-                else:
-                    painter.setPen(QColor(AppTheme.LINE_NUMBER_INACTIVE))
-                # Draw line number (left side)
-                painter.drawText(0, int(top), line_number_draw_width, single_line_height, Qt.AlignRight, number)
-
-                # Draw fold indicator centered in the space between line numbers and code
-                self._draw_fold_indicator(painter, block_number, fold_gutter_x, int(top), fold_gutter_w + spacing, single_line_height)
-
-            block = block.next()
-            top = bottom
-            bottom = top + self.blockBoundingRect(block).height()
-            block_number += 1
-
-    def _draw_fold_indicator(self, painter, block_number, x, y, width, height):
-        """Draw VSCode-style chevron fold indicator for a block.
-
-        Args:
-            painter (QPainter): Active painter on the line number area.
-            block_number (int): Current block number.
-            x (int): Left edge of the fold gutter area.
-            y (int): Top of the block.
-            width (int): Width of the fold gutter area.
-            height (int): Single line height.
-        """
-        if not self.fold_manager.is_fold_header(block_number):
-            return
-
-        is_folded = self.fold_manager.is_folded(block_number)
-        opacity = getattr(self.line_number_area, "_indicator_opacity", 0.0)
-
-        # Folded indicators are always fully visible; unfolded ones fade with hover
-        if not is_folded and opacity <= 0.0:
-            return
-
-        # Highlight the specific block under the mouse
-        hover_block = getattr(self.line_number_area, "_hover_fold_block", -1)
-        if block_number == hover_block:
-            color = QColor(AppTheme.FOLD_INDICATOR_HOVER)
-        else:
-            color = QColor(AppTheme.FOLD_INDICATOR_COLOR)
-
-        # Apply fade opacity to unfolded indicators
-        if not is_folded:
-            color.setAlphaF(opacity)
-
-        painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
-
-        # Stroke-based chevron (VSCode style) — no fill
-        pen = QPen(color, 1.2)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
-
-        # Chevron size: fit within the gutter column width (with small padding)
-        padding = 2
-        half_w = max(3, (width - padding * 2) // 2)
-        cx = x + width // 2
-        cy = y + height // 2
-
-        # Base shape: down-pointing chevron ˅ defined as offsets from center
-        # (-1, -0.35) -> (0, 0.55) -> (1, -0.35)
-        # Rotated -90° (CW) for right-pointing: (x,y) -> (y,-x)
-        s = half_w * 0.5
-
-        if is_folded:
-            # Right-pointing chevron › (-90° rotation of ˅)
-            painter.drawPolyline(
-                QPolygonF(
-                    [
-                        QPointF(cx - s * 0.35, cy - s),
-                        QPointF(cx + s * 0.55, cy),
-                        QPointF(cx - s * 0.35, cy + s),
-                    ]
-                )
-            )
-        else:
-            # Down-pointing chevron ˅
-            painter.drawPolyline(
-                QPolygonF(
-                    [
-                        QPointF(cx - s, cy - s * 0.35),
-                        QPointF(cx, cy + s * 0.55),
-                        QPointF(cx + s, cy - s * 0.35),
-                    ]
-                )
-            )
-
-        painter.restore()
 
     def insertFromMimeData(self, source):
         """Override to ensure plain text paste only."""
@@ -661,116 +512,24 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().keyPressEvent(event)
 
     def mousePressEvent(self, event):
-        """Handle mouse press events for multi-cursor support."""
-        # Handle middle-click for rectangle selection
-        if event.button() == Qt.MiddleButton:
-            self.start_rectangle_selection(event)
+        """Dispatch mouse presses (middle-button rect, Ctrl+click) to multi-cursor."""
+        if self.handle_multi_cursor_mouse_press(event):
             event.accept()
             return
-
-        # Try to handle multi-cursor mouse events first
-        if self.handle_multi_cursor_mouse(event):
-            event.accept()
-            return
-
-        # Delegate to parent
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Handle mouse move events for Ctrl+drag and rectangle selection."""
-        # Handle rectangle selection
-        if hasattr(self, "is_rect_selecting") and self.is_rect_selecting and event.buttons() & Qt.MiddleButton:
-            self.update_rectangle_selection(event)
+        """Dispatch mouse moves (rect drag, Ctrl+drag) to multi-cursor."""
+        if self.handle_multi_cursor_mouse_move(event):
             event.accept()
             return
-
-        # Handle Ctrl+drag selection
-        if hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging and event.modifiers() & Qt.ControlModifier and event.buttons() & Qt.LeftButton:
-            # Get current position
-            try:
-                current_pos = event.position().toPoint()  # PySide6
-            except AttributeError:
-                current_pos = event.pos()  # PySide2
-
-            cursor = self.cursorForPosition(current_pos)
-
-            # Update drag selection
-            if self.ctrl_drag_cursor:
-                self.ctrl_drag_cursor.setPosition(self.ctrl_drag_start)
-                self.ctrl_drag_cursor.setPosition(cursor.position(), QTextCursor.KeepAnchor)
-
-                # Update display to show selection
-                self.viewport().update()
-
-            event.accept()
-            return
-
-        # Delegate to parent
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """Handle mouse release events for Ctrl+drag and rectangle selection."""
-        # Finalize rectangle selection
-        if event.button() == Qt.MiddleButton and hasattr(self, "is_rect_selecting") and self.is_rect_selecting:
-            self.finalize_rectangle_selection(event)
+        """Dispatch mouse releases (rect finalize, Ctrl+click commit) to multi-cursor."""
+        if self.handle_multi_cursor_mouse_release(event):
             event.accept()
             return
-
-        # Handle Ctrl+click or Ctrl+drag
-        if event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier and hasattr(self, "is_ctrl_dragging") and self.is_ctrl_dragging:
-            # Check if this was a drag or just a click
-            if self.ctrl_drag_cursor:
-                if self.ctrl_drag_cursor.hasSelection():
-                    # It was a drag - add the selection
-                    self.all_cursors.append(self.ctrl_drag_cursor)
-                    with contextlib.suppress(Exception):
-                        self.multi_cursor_status.emit(f"Added selection (total: {len(self.all_cursors)})")
-                else:
-                    # It was just a click - add cursor at click position
-                    try:
-                        click_pos = event.position().toPoint()  # PySide6
-                    except AttributeError:
-                        click_pos = event.pos()  # PySide2
-
-                    cursor = self.cursorForPosition(click_pos)
-
-                    # If this is the first Ctrl+click and we have no cursors,
-                    # add the current cursor position first
-                    if not self.all_cursors:
-                        main_cursor = self.textCursor()
-                        first_cursor = QTextCursor(self.document())
-                        first_cursor.setPosition(main_cursor.position())
-                        self.all_cursors.append(first_cursor)
-                        # Hide the normal cursor when entering multi-cursor mode
-                        self.setCursorWidth(0)
-
-                    # Check if we already have a cursor at this position
-                    cursor_exists = False
-                    for existing_cursor in self.all_cursors:
-                        if existing_cursor.position() == cursor.position() and not existing_cursor.hasSelection():
-                            cursor_exists = True
-                            break
-
-                    if not cursor_exists:
-                        # Add new cursor at click position
-                        new_cursor = QTextCursor(self.document())
-                        new_cursor.setPosition(cursor.position())
-                        self.all_cursors.append(new_cursor)
-
-                        with contextlib.suppress(Exception):
-                            self.multi_cursor_status.emit(f"Added cursor {len(self.all_cursors)}")
-
-            # Reset drag state
-            self.is_ctrl_dragging = False
-            self.ctrl_drag_cursor = None
-            self.ctrl_drag_start = None
-
-            # Update display
-            self.viewport().update()
-            event.accept()
-            return
-
-        # Delegate to parent
         super().mouseReleaseEvent(event)
 
     def paintEvent(self, event):
@@ -868,492 +627,33 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         return 0
 
     def contextMenuEvent(self, event):
-        """Handle context menu events."""
-        # Get the default context menu
-        context_menu = self.createStandardContextMenu()
-
-        # Apply theme to context menu
-        context_menu.setStyleSheet(AppTheme.get_menu_stylesheet())
-
-        # Check for Maya command at cursor position
-        cursor_position = self.textCursor().position()
-        text_content = self.toPlainText()
-
-        # Get settings manager from parent
-        settings_manager = None
-        parent_widget = self.parent()
-        while parent_widget:
-            if hasattr(parent_widget, "settings_manager"):
-                settings_manager = parent_widget.settings_manager
-                break
-            parent_widget = parent_widget.parent()
-
-        from ..utils.maya_help_detector import MayaHelpDetector
-
-        maya_detector = MayaHelpDetector(settings_manager)
-        maya_command = maya_detector.detect_maya_command_at_cursor(text_content, cursor_position)
-
-        if maya_command:
-            alias, command, full_match = maya_command
-            context_menu.addSeparator()
-
-            # Add Maya help action
-            help_text = maya_detector.get_help_menu_text(alias, command)
-            maya_help_action = QAction(help_text, self)
-            maya_help_action.triggered.connect(lambda: maya_detector.open_help_url(alias, command))
-            context_menu.addAction(maya_help_action)
-
-        # Get selected text or word under cursor for inspection
-        selected_text = self.textCursor().selectedText().strip()
-        if not selected_text:
-            # If no selection, try to get the word under cursor
-            cursor = self.cursorForPosition(event.pos())
-            cursor.select(QTextCursor.WordUnderCursor)
-            selected_text = cursor.selectedText().strip()
-
-        # Add inspection actions if we have a valid identifier
-        if selected_text and self.is_valid_identifier(selected_text):
-            context_menu.addSeparator()
-
-            # Inspect Object action
-            inspect_action = QAction("Inspect Object '" + selected_text + "'", self)
-            inspect_action.triggered.connect(lambda: self.inspect_object.emit(selected_text, "dir"))
-            context_menu.addAction(inspect_action)
-
-            # Inspect Object Help action
-            inspect_help_action = QAction("Inspect Object Help '" + selected_text + "'", self)
-            inspect_help_action.triggered.connect(lambda: self.inspect_object.emit(selected_text, "help"))
-            context_menu.addAction(inspect_help_action)
-
-            # Reload Module action - supports dotted module names like package.module
-            # Check if it could be a module name (allows dots for package.module format)
-            if self.is_valid_module_name(selected_text):
-                reload_action = QAction("Reload Module '" + selected_text + "'", self)
-                reload_action.triggered.connect(lambda: self.reload_module(selected_text))
-                context_menu.addAction(reload_action)
-
-        # Add "Add to Shelf" action if text is selected
-        if self.textCursor().hasSelection():
-            context_menu.addSeparator()
-            shelf_action = QAction("Add to Shelf", self)
-            shelf_action.triggered.connect(self._add_selection_to_shelf)
-            context_menu.addAction(shelf_action)
-
-        # Show the context menu
-        context_menu.exec_(event.globalPos())
-
-    def _add_selection_to_shelf(self):
-        """Trigger add_to_shelf on the main window."""
-        parent_widget = self.parent()
-        while parent_widget:
-            if hasattr(parent_widget, "add_to_shelf"):
-                parent_widget.add_to_shelf()
-                return
-            parent_widget = parent_widget.parent()
-
-    def is_valid_identifier(self, text):
-        """Check if the text is a valid Python identifier."""
-        if not text:
-            return False
-        # Basic check for valid Python identifier
-        return text.replace("_", "").replace(".", "").isalnum() and not text[0].isdigit()
-
-    def is_valid_module_name(self, text):
-        """Check if the text could be a valid module name (including dotted names)."""
-        if not text:
-            return False
-        # Module names can have dots for packages (e.g., package.subpackage.module)
-        # But shouldn't end with a dot or have consecutive dots
-        if text.startswith(".") or text.endswith(".") or ".." in text:
-            return False
-        # Check each part of the module name
-        parts = text.split(".")
-        for part in parts:
-            if not part:  # Empty part between dots
-                return False
-            # Each part should be a valid Python identifier
-            if not (part.replace("_", "").isalnum() and not part[0].isdigit()):
-                return False
-        return True
-
-    def reload_module(self, module_name):
-        """Reload a Python module."""
-        # Get the execution manager from parent
-        exec_manager = None
-        parent_widget = self.parent()
-        while parent_widget:
-            if hasattr(parent_widget, "parent") and hasattr(parent_widget.parent(), "execution_manager"):
-                exec_manager = parent_widget.parent().execution_manager
-                break
-            parent_widget = parent_widget.parent()
-
-        if exec_manager:
-            reload_code = f"""
-import importlib
-import sys
-import types
-
-try:
-    if '{module_name}' in sys.modules:
-        # Direct match in sys.modules (full module path)
-        importlib.reload(sys.modules['{module_name}'])
-        print("Code Editor: Module '{module_name}' reloaded successfully.")
-    else:
-        # Try to resolve as a variable name (e.g. import alias)
-        _reload_obj = eval('{module_name}')
-        if not isinstance(_reload_obj, types.ModuleType):
-            print("Code Editor: Error: '{module_name}' is not a module.")
-        elif _reload_obj.__name__ not in sys.modules:
-            print(f"Code Editor: Error: Module '{{_reload_obj.__name__}}' is not in sys.modules.")
-        else:
-            importlib.reload(sys.modules[_reload_obj.__name__])
-            print(f"Code Editor: Module '{{_reload_obj.__name__}}' reloaded successfully.")
-except NameError:
-    print("Code Editor: Error: '{module_name}' is not defined.")
-except Exception as e:
-    print(f"Code Editor: Error reloading module '{module_name}': {{e}}")
-"""
-            # Execute the reload code silently like inspect object
-            if hasattr(exec_manager, "execute_inspection_code"):
-                # Add header message before execution
-                if exec_manager.output_terminal:
-                    exec_manager.output_terminal.append_output(f"\n=== Reloading Module: {module_name} ===")
-                exec_manager.execute_inspection_code(reload_code)
-            else:
-                # Fallback to normal execution
-                exec_manager.execute_python_code(reload_code)
+        """Show the editor's right-click menu."""
+        editor_context_menu.build_context_menu(self, event).exec_(event.globalPos())
 
     def handle_return_key(self):
         """Handle Return/Enter key press for auto-indentation."""
-        # Unfold if cursor is on a folded header to prevent inserting into hidden blocks
         block_number = self.textCursor().blockNumber()
         if self.fold_manager.is_folded(block_number):
+            # Prevents inserting into hidden blocks.
             self.fold_manager.unfold(block_number)
 
         cursor = self.textCursor()
         current_position = cursor.position()
 
-        # Get current line text for indentation calculation
         cursor.movePosition(QTextCursor.StartOfLine)
         line_start = cursor.position()
         cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
         current_line = cursor.selectedText()
 
-        # Get the text before cursor on current line
         cursor.setPosition(line_start)
         cursor.setPosition(current_position, QTextCursor.KeepAnchor)
         text_before_cursor = cursor.selectedText()
 
-        # Calculate current indentation
-        indent_match = re.match(r"^(\s*)", current_line)
-        current_indent = indent_match.group(1) if indent_match else ""
-
-        # Check if current line ends with colon (function, class, if, etc.)
-        # Only check the part before cursor for colon
-        stripped_before = text_before_cursor.strip()
-        needs_extra_indent = stripped_before.endswith(":") and not stripped_before.startswith("#")
-
-        # Look for an unclosed opening bracket on the current line (hanging indent)
-        bracket_column = self._find_hanging_indent_column(text_before_cursor)
-
-        # If the line starts with a closing bracket, align with the matching opener's line
-        closing_dedent = None
-        if bracket_column < 0:
-            closing_dedent = self._find_closing_bracket_alignment(block_number, current_line)
-
-        # Restore cursor to original position
         cursor.setPosition(current_position)
         self.setTextCursor(cursor)
 
-        # Insert newline with indentation
-        if bracket_column >= 0:
-            new_indent = " " * bracket_column
-        elif closing_dedent is not None:
-            new_indent = closing_dedent
-        elif needs_extra_indent:
-            new_indent = current_indent + "    "  # Add 4 spaces for Python
-        else:
-            new_indent = current_indent
-
-        newline_text = "\n" + new_indent
-        self.insertPlainText(newline_text)
-
-    @staticmethod
-    def _iter_code_brackets(text: str):
-        """Yield ``(index, char)`` for bracket characters in ``text``.
-
-        Skips Python single-line / triple-quoted string literals and
-        ``#`` comments so that brackets inside them are not reported.
-
-        Args:
-            text (str): Source text to scan.
-
-        Yields:
-            tuple[int, str]: ``(index, char)`` pairs where ``char`` is one
-                of ``()[]{}``.
-        """
-        i = 0
-        n = len(text)
-        while i < n:
-            ch = text[i]
-            if ch == "#":
-                return
-            if ch in ('"', "'"):
-                quote = ch
-                if text[i : i + 3] == quote * 3:
-                    i += 3
-                    while i < n:
-                        if text[i : i + 3] == quote * 3:
-                            i += 3
-                            break
-                        if text[i] == "\\" and i + 1 < n:
-                            i += 2
-                            continue
-                        i += 1
-                    continue
-                i += 1
-                while i < n:
-                    if text[i] == "\\" and i + 1 < n:
-                        i += 2
-                        continue
-                    if text[i] == quote:
-                        i += 1
-                        break
-                    i += 1
-                continue
-            if ch in "([{)]}":
-                yield i, ch
-            i += 1
-
-    @staticmethod
-    def _find_hanging_indent_column(text_before_cursor: str) -> int:
-        """Find the column right after the last unclosed opening bracket.
-
-        Scans the given text left-to-right, skipping Python string literals
-        and comments, and returns the 0-based column position immediately
-        after the last unclosed ``(``, ``[`` or ``{``.
-
-        Args:
-            text_before_cursor (str): Text from the start of the current line
-                up to the cursor position.
-
-        Returns:
-            int: Column index to align the next line to. ``-1`` when there is
-                no unclosed bracket on the current line.
-        """
-        stack: list[int] = []
-        for idx, ch in PythonEditor._iter_code_brackets(text_before_cursor):
-            if ch in "([{":
-                stack.append(idx)
-            elif stack:
-                stack.pop()
-
-        if not stack:
-            return -1
-        return stack[-1] + 1
-
-    def _find_closing_bracket_alignment(self, current_block_number: int, current_line: str) -> "str | None":
-        """Return the indent of the line containing the matching opener.
-
-        Applies when the current line begins (after leading whitespace) with
-        a closing bracket ``)`` / ``]`` / ``}``. Scans preceding blocks to
-        locate the matching opening bracket and returns the leading
-        whitespace of that block.
-
-        Args:
-            current_block_number (int): Block index of the current line.
-            current_line (str): Full text of the current line.
-
-        Returns:
-            str | None: Indent string to use, or ``None`` when the current
-                line does not start with a closing bracket or when no
-                matching opener can be found.
-        """
-        stripped = current_line.lstrip()
-        if not stripped or stripped[0] not in ")]}":
-            return None
-
-        doc = self.document()
-        stack: list[int] = []
-        for block_num in range(current_block_number):
-            block = doc.findBlockByNumber(block_num)
-            if not block.isValid():
-                continue
-            for _idx, ch in self._iter_code_brackets(block.text()):
-                if ch in "([{":
-                    stack.append(block_num)
-                elif stack:
-                    stack.pop()
-
-        if not stack:
-            return None
-
-        opener_block = doc.findBlockByNumber(stack[-1])
-        if not opener_block.isValid():
-            return None
-
-        match = re.match(r"^(\s*)", opener_block.text())
-        return match.group(1) if match else ""
-
-    def handle_tab_key(self):
-        """Handle Tab key press."""
-        cursor = self.textCursor()
-
-        if cursor.hasSelection():
-            # Indent selected lines
-            self.indent_selection()
-        else:
-            # Insert 4 spaces
-            self.insertPlainText("    ")
-
-    def handle_backtab_key(self):
-        """Handle Shift+Tab key press."""
-        cursor = self.textCursor()
-
-        if cursor.hasSelection():
-            # Unindent selected lines
-            self.unindent_selection()
-        else:
-            # Remove up to 4 spaces before cursor
-            self.remove_indent_at_cursor()
-
-    def indent_selection(self):
-        """Indent all selected lines."""
-        cursor = self.textCursor()
-        start_pos = cursor.selectionStart()
-        end_pos = cursor.selectionEnd()
-
-        # Move to start of first line
-        cursor.setPosition(start_pos)
-        cursor.movePosition(QTextCursor.StartOfLine)
-        start_line = cursor.blockNumber()
-
-        # Move to end of last line
-        cursor.setPosition(end_pos)
-        end_line = cursor.blockNumber()
-
-        # Indent each line
-        cursor.beginEditBlock()
-        for line_num in range(start_line, end_line + 1):
-            cursor.movePosition(QTextCursor.Start)
-            for _ in range(line_num):
-                cursor.movePosition(QTextCursor.NextBlock)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.insertText("    ")
-        cursor.endEditBlock()
-
-    def unindent_selection(self):
-        """Unindent all selected lines."""
-        cursor = self.textCursor()
-        start_pos = cursor.selectionStart()
-        end_pos = cursor.selectionEnd()
-
-        # Move to start of first line
-        cursor.setPosition(start_pos)
-        cursor.movePosition(QTextCursor.StartOfLine)
-        start_line = cursor.blockNumber()
-
-        # Move to end of last line
-        cursor.setPosition(end_pos)
-        end_line = cursor.blockNumber()
-
-        # Unindent each line
-        cursor.beginEditBlock()
-        for line_num in range(start_line, end_line + 1):
-            cursor.movePosition(QTextCursor.Start)
-            for _ in range(line_num):
-                cursor.movePosition(QTextCursor.NextBlock)
-            cursor.movePosition(QTextCursor.StartOfLine)
-
-            # Check if line starts with spaces and remove up to 4
-            cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
-            line_text = cursor.selectedText()
-
-            spaces_to_remove = 0
-            for char in line_text:
-                if char == " " and spaces_to_remove < 4:
-                    spaces_to_remove += 1
-                else:
-                    break
-
-            if spaces_to_remove > 0:
-                cursor.movePosition(QTextCursor.StartOfLine)
-                cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, spaces_to_remove)
-                cursor.removeSelectedText()
-
-        cursor.endEditBlock()
-
-    def remove_indent_at_cursor(self):
-        """Remove indentation at cursor position."""
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.StartOfLine)
-
-        # Count spaces at beginning of line up to cursor
-        original_pos = self.textCursor().position()
-        line_start = cursor.position()
-
-        spaces_count = 0
-        pos = line_start
-        while pos < original_pos and pos < line_start + 4:
-            cursor.setPosition(pos)
-            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor)
-            if cursor.selectedText() == " ":
-                spaces_count += 1
-                pos += 1
-            else:
-                break
-
-        # Remove the spaces
-        if spaces_count > 0:
-            cursor.setPosition(line_start)
-            cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, spaces_count)
-            cursor.removeSelectedText()
-
-    def handle_backspace_key(self):
-        """Handle Backspace key press for smart indentation removal."""
-        cursor = self.textCursor()
-
-        # Don't do smart backspace if there's a selection
-        if cursor.hasSelection():
-            # Use deletePreviousChar for simple deletion when there's a selection
-            cursor.deletePreviousChar()
-            return
-
-        # Get current position
-        current_pos = cursor.position()
-
-        # Move to start of line
-        cursor.movePosition(QTextCursor.StartOfLine)
-        line_start_pos = cursor.position()
-
-        # Get text from start of line to current position
-        cursor.setPosition(line_start_pos)
-        cursor.setPosition(current_pos, QTextCursor.KeepAnchor)
-        text_before_cursor = cursor.selectedText()
-
-        # Check if text before cursor contains only spaces
-        if text_before_cursor and all(c == " " for c in text_before_cursor):
-            # Calculate how many spaces to remove (up to 4, or all if less than 4)
-            spaces_count = len(text_before_cursor)
-
-            if spaces_count > 0:
-                # Remove spaces in groups of 4, or all remaining if less than 4
-                spaces_to_remove = min(4, spaces_count % 4 if spaces_count % 4 != 0 else 4)
-
-                # Position cursor at the end of spaces to remove
-                cursor = self.textCursor()  # Get fresh cursor
-                cursor.setPosition(current_pos - spaces_to_remove)
-                cursor.setPosition(current_pos, QTextCursor.KeepAnchor)
-                cursor.removeSelectedText()
-                return
-
-        # Default backspace behavior for other cases - use the simpler method
-        cursor = self.textCursor()
-        cursor.deletePreviousChar()
-
-    # Removed enter/leave events - no longer needed for tooltips
-
-    # Removed mouseMoveEvent - no longer needed for tooltips
+        new_indent = auto_indent.compute_new_indent(self.document(), block_number, current_line, text_before_cursor)
+        self.insertPlainText("\n" + new_indent)
 
 
 # Re-exported from the new module so existing imports keep working.
