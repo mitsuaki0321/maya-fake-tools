@@ -18,11 +18,9 @@ class AppTheme:
 
     # UI component colors
     SIDEBAR_BACKGROUND = "#252526"
-    TAB_BACKGROUND = "#2d2d30"
     TAB_BAR_BACKGROUND = "#242424"  # Match inactive tab background
     TAB_INACTIVE_BACKGROUND = "#242424"  # Non-active tabs
     TAB_ACTIVE_BACKGROUND = "#1e1e1e"  # Match code editor background
-    TAB_HOVER_BACKGROUND = "#2a2a2a"  # Tab hover state
     TOOLBAR_BACKGROUND = "#2d2d30"
     MENU_BACKGROUND = "#252526"
     HOVER_BACKGROUND = "#094771"
@@ -48,13 +46,10 @@ class AppTheme:
 
     # Tab colors
     TAB_BORDER = "#3c3c3c"
-    TAB_ACTIVE_ACCENT = "#0078d4"
     TAB_HOVER_BACKGROUND = "#37373d"
 
     # Toolbar specific colors
     TOOLBAR_BUTTON_HOVER = "#3c3c3c"
-    TOOLBAR_BUTTON_PRESSED = "#094771"
-    TOOLBAR_DISABLED = "#3c3c3c"
 
     # Toolbar icon SVG recoloring (source colour in shipped SVGs is replaced
     # at runtime by one of the per-state target colours).
