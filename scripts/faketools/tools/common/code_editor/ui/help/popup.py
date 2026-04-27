@@ -1,10 +1,10 @@
-"""Floating docstring popup for the Code Editor. Qt shell only — content rendering lives in :mod:`.help_renderer`."""
+"""Floating docstring popup for the Code Editor. Qt shell only — content rendering lives in :mod:`.renderer`."""
 
 from __future__ import annotations
 
 from logging import getLogger
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QApplication,
     QFrame,
     QPoint,
@@ -14,7 +14,7 @@ from .....lib_ui.qt_compat import (
     QTextEdit,
     QVBoxLayout,
 )
-from .help_renderer import SURFACE_BG, render_docstring, render_loading
+from .renderer import SURFACE_BG, render_docstring, render_loading
 
 logger = getLogger(__name__)
 
@@ -61,7 +61,7 @@ class HelpPopup(QFrame):
 
     def _apply_style(self) -> None:
         try:
-            from ..themes import AppTheme
+            from ...themes import AppTheme
 
             border = AppTheme.BORDER
             selection = AppTheme.SELECTION

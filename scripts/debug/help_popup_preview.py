@@ -22,7 +22,7 @@ import sys
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT))
 
-from faketools.tools.common.code_editor.ui.help_renderer import render_docstring  # noqa: E402
+from faketools.tools.common.code_editor.ui.help.renderer import render_docstring  # noqa: E402
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtGui import QFont  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402

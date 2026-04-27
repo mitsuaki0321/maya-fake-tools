@@ -13,7 +13,7 @@ try:
 except ImportError:
     MAYA_AVAILABLE = False
 
-from .....lib_ui.qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
+from ......lib_ui.qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
 
 logger = getLogger(__name__)
 
@@ -337,7 +337,7 @@ class MayaTerminalWidget(QWidget):
 
         # Apply theme from AppTheme
         try:
-            from ..themes.app_theme import AppTheme
+            from ...themes.app_theme import AppTheme
 
             menu.setStyleSheet(AppTheme.get_menu_stylesheet())
         except Exception:

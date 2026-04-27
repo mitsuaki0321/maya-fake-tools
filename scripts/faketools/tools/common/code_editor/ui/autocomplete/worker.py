@@ -15,8 +15,8 @@ from collections.abc import Mapping, Sequence
 from logging import getLogger
 from typing import Optional
 
-from .....lib_ui.qt_compat import QObject, QRunnable, Signal
-from ..command.autocomplete import CompletionItem, JediEngine
+from ......lib_ui.qt_compat import QObject, QRunnable, Signal
+from ...command.autocomplete import CompletionItem, JediEngine
 
 logger = getLogger(__name__)
 

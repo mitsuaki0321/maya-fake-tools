@@ -9,8 +9,7 @@ from logging import getLogger
 from .....lib_ui.qt_compat import QColor, QSplitter, Qt, QTextCharFormat, QTextEdit, QTimer, QVBoxLayout, QWidget
 from ..themes import AppTheme
 from .code_editor import CodeEditorWidget
-from .file_explorer import FileExplorer
-from .output_terminal import OutputTerminal
+from .panels import FileExplorer, OutputTerminal
 from .toolbar import ToolBar
 
 logger = getLogger(__name__)

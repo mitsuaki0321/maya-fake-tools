@@ -16,10 +16,10 @@ read, modified, and in future tested independently.
 
 from __future__ import annotations
 
-from .....lib_ui.qt_compat import QColor, QKeySequence, QShortcut, Signal
-from .multi_cursor_controller import MultiCursorController
-from .multi_cursor_input import MultiCursorInputHandler
-from .multi_cursor_painter import MultiCursorPainter
+from ......lib_ui.qt_compat import QColor, QKeySequence, QShortcut, Signal
+from .controller import MultiCursorController
+from .input import MultiCursorInputHandler
+from .painter import MultiCursorPainter
 
 
 class MultiCursorMixin:

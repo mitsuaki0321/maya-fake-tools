@@ -28,13 +28,13 @@ from ..command import file_io
 from ..command.autocomplete import JediEngine
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
-from .autocomplete_controller import AutocompleteController
+from .autocomplete import AutocompleteController
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
 from .editor_text_operations import EditorTextOperationsMixin
 from .line_number_area import LineNumberArea
-from .multi_cursor_handler import MultiCursorMixin
+from .multi_cursor import MultiCursorMixin
 
 logger = getLogger(__name__)
 

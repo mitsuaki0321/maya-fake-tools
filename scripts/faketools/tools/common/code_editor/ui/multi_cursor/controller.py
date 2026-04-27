@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import contextlib
 
-from .....lib_ui.qt_compat import Qt, QTextCursor  # noqa: F401 — imported for type hints / cursor flags
+from ......lib_ui.qt_compat import Qt, QTextCursor  # noqa: F401 — imported for type hints / cursor flags
 
 
 class MultiCursorController:

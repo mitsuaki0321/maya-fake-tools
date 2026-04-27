@@ -11,7 +11,7 @@ from typing import Any
 
 from .....lib_ui.qt_compat import QFont
 from ..ui.code_editor import DEFAULT_FONT_FAMILY as EDITOR_FONT_FAMILY
-from ..ui.output_terminal import DEFAULT_FONT_FAMILY as TERMINAL_FONT_FAMILY
+from ..ui.panels import DEFAULT_FONT_FAMILY as TERMINAL_FONT_FAMILY
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager

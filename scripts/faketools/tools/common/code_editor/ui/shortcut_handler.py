@@ -235,7 +235,7 @@ class ShortcutHandler:
         if engine is None:
             return None
 
-        from .help_popup_controller import HelpPopupController
+        from .help.controller import HelpPopupController
 
         controller = HelpPopupController(self.main_window, engine)
         self.main_window._help_popup_controller = controller

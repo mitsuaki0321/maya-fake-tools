@@ -9,7 +9,7 @@ into ops and renders the resulting error messages.
 from logging import getLogger
 import os
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QAction,
     QBrush,
     QColor,
@@ -33,9 +33,9 @@ from .....lib_ui.qt_compat import (
     QWidget,
     Signal,
 )
-from ..command import file_ops
-from ..themes import AppTheme
-from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
+from ...command import file_ops
+from ...themes import AppTheme
+from ..dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
 
@@ -366,7 +366,7 @@ class FileExplorer(QWidget):
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts for file operations."""
-        from .....lib_ui.qt_compat import Qt
+        from ......lib_ui.qt_compat import Qt
 
         if event.modifiers() == Qt.ControlModifier:
             if event.key() == Qt.Key_C:
@@ -722,7 +722,7 @@ class FileExplorer(QWidget):
 
     def start_drag(self, supportedActions):
         """Start drag operation with custom mime data."""
-        from .....lib_ui.qt_compat import QtCore, QtGui
+        from ......lib_ui.qt_compat import QtCore, QtGui
 
         # Get selected items
         selected_paths = self.get_selected_paths()

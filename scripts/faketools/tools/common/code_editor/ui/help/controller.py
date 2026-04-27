@@ -12,11 +12,11 @@ import contextlib
 from logging import getLogger
 from typing import Optional
 
-from .....lib_ui.qt_compat import QEvent, QObject, QRect, Qt, QTextCursor, QThreadPool, QTimer
-from ..command.autocomplete import JEDI_AVAILABLE, JediEngine
-from .autocomplete_controller import _OwnerWindowWatcher
-from .autocomplete_worker import DocstringRunnable
-from .help_popup import HelpPopup
+from ......lib_ui.qt_compat import QEvent, QObject, QRect, Qt, QTextCursor, QThreadPool, QTimer
+from ...command.autocomplete import JEDI_AVAILABLE, JediEngine
+from .._common import _OwnerWindowWatcher
+from ..autocomplete import DocstringRunnable
+from .popup import HelpPopup
 
 logger = getLogger(__name__)
 
