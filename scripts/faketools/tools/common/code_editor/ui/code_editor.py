@@ -5,13 +5,11 @@ Provides tabbed interface for editing multiple Python files.
 
 from logging import getLogger
 import os
-import time
 
 from .....lib_ui.qt_compat import (
     QColor,
     QFont,
     QPainter,
-    QPen,
     QPlainTextEdit,
     Qt,
     QTextCharFormat,
@@ -20,11 +18,10 @@ from .....lib_ui.qt_compat import (
     Signal,
 )
 from ..command import file_io
-from ..command.autocomplete import JediEngine
 from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
-from . import auto_indent, editor_context_menu
-from .autocomplete import AutocompleteController
+from . import auto_indent, editor_context_menu, editor_overlays
+from .autocomplete import AutocompleteController, get_shared_engine
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
@@ -37,65 +34,6 @@ logger = getLogger(__name__)
 # Editor constants
 DEFAULT_FONT_FAMILY = "Consolas"
 DEFAULT_TAB_SIZE = 4
-
-# Shared across all PythonEditor instances — jedi has internal caches keyed by
-# source hash that we want to reuse across tabs. Stateless, so safe to share.
-_SHARED_JEDI_ENGINE = JediEngine()
-_STUB_PATHS_CONFIGURED = False
-
-
-def _configure_engine_stub_paths():
-    """Point the shared jedi engine at the bundled Maya stubs.
-
-    Runs lazily on the first editor construction so we only pay for the
-    ``maya.cmds.about`` call when someone actually opens the Code Editor.
-    Stubs live under ``faketools/resources/maya_stubs/maya{version}/`` and
-    are committed with the repo — there's no per-user generator step. If we
-    haven't shipped stubs for this Maya version yet (or we're outside Maya),
-    this is a silent no-op and jedi falls back to live introspection via
-    ``exec_globals``.
-    """
-    global _STUB_PATHS_CONFIGURED
-    if _STUB_PATHS_CONFIGURED:
-        return
-    _STUB_PATHS_CONFIGURED = True
-
-    t_start = time.perf_counter()
-
-    try:
-        import maya.cmds as _cmds  # type: ignore
-
-        maya_version = str(_cmds.about(version=True))
-    except Exception:
-        return
-
-    try:
-        from ..command import stub_generator as stub_command
-    except Exception as exc:
-        logger.debug(f"stub_generator unavailable: {exc}")
-        return
-
-    t_exist_start = time.perf_counter()
-    stubs_ok = stub_command.stubs_exist(maya_version)
-    t_exist_ms = (time.perf_counter() - t_exist_start) * 1000
-    if not stubs_ok:
-        logger.info(f"Maya {maya_version} stubs not bundled with this build — cmds / OpenMaya autocomplete will fall back to live introspection.")
-        return
-
-    # Pin the stub dir at ``sys.path[0]`` *and* on the jedi ``Project`` so
-    # ``import maya`` resolves to the bundled ``maya-stubs`` package before
-    # Maya's real install (which otherwise wins because its path is
-    # auto-discovered by jedi's environment detection).
-    import sys
-
-    stubs_root = stub_command.get_package_root(maya_version)
-    stubs_root_str = str(stubs_root)
-    if stubs_root_str not in sys.path:
-        sys.path.insert(0, stubs_root_str)
-
-    _SHARED_JEDI_ENGINE.set_extra_paths([stubs_root_str])
-    t_total_ms = (time.perf_counter() - t_start) * 1000
-    logger.info(f"Autocomplete stubs active: {stubs_root} (setup={t_total_ms:.1f}ms stubs_exist={t_exist_ms:.1f}ms)")
 
 
 class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
@@ -134,10 +72,9 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.fold_manager = CodeFoldingManager(self)
 
         # Autocomplete controller (jedi-backed). Silently inert if jedi is missing.
-        _configure_engine_stub_paths()
         self.autocomplete = AutocompleteController(
             self,
-            _SHARED_JEDI_ENGINE,
+            get_shared_engine(),
             namespace_provider=self._get_exec_namespaces,
         )
 
@@ -533,98 +470,14 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().mouseReleaseEvent(event)
 
     def paintEvent(self, event):
-        """Paint the editor with multi-cursor support, indent guides, and fold placeholders."""
-        # First, let the parent class paint everything normally
+        """Paint text, then editor overlays, then multi-cursor indicators."""
         super().paintEvent(event)
+        editor_overlays.paint_indent_guides(self, event)
+        editor_overlays.paint_fold_placeholders(self, event)
 
-        # Paint indent guides
-        self._paint_indent_guides(event)
-
-        # Paint fold placeholder text on folded headers
-        self._paint_fold_placeholders(event)
-
-        # Then paint multi-cursor indicators on top
         painter = QPainter(self.viewport())
         self.paint_multi_cursors(painter)
         painter.end()
-
-    def _paint_fold_placeholders(self, event):
-        """Paint '...' placeholder text at the end of folded header lines."""
-        if not self.fold_manager._folded_headers:
-            return
-
-        painter = QPainter(self.viewport())
-        painter.setPen(QColor(AppTheme.FOLD_PLACEHOLDER_COLOR))
-        font = self.font()
-        painter.setFont(font)
-
-        block = self.firstVisibleBlock()
-        while block.isValid():
-            geometry = self.blockBoundingGeometry(block).translated(self.contentOffset())
-            if geometry.top() > event.rect().bottom():
-                break
-
-            block_number = block.blockNumber()
-            if block.isVisible() and self.fold_manager.is_folded(block_number):
-                # Get the visual end position of the block text
-                text = block.text()
-                text_width = self.fontMetrics().horizontalAdvance(text)
-                placeholder = self.fold_manager.get_placeholder_text(block_number)
-
-                # Draw placeholder after the line text
-                x = text_width + 4
-                y = int(geometry.top())
-                h = self.fontMetrics().height()
-                painter.drawText(x, y, self.viewport().width() - x, h, Qt.AlignLeft, placeholder)
-
-            block = block.next()
-
-        painter.end()
-
-    def _paint_indent_guides(self, event):
-        """Paint vertical indent guide lines."""
-        painter = QPainter(self.viewport())
-        painter.setPen(QPen(QColor(AppTheme.INDENT_GUIDE_COLOR), 1))
-
-        char_width = self.fontMetrics().horizontalAdvance(" ")
-        tab_width = char_width * 4  # 4 spaces per indent level
-
-        block = self.firstVisibleBlock()
-        while block.isValid():
-            geometry = self.blockBoundingGeometry(block).translated(self.contentOffset())
-            if geometry.top() > event.rect().bottom():
-                break
-
-            text = block.text()
-            if text.strip():
-                # Non-empty line: draw guides based on its indentation
-                indent = len(text) - len(text.lstrip())
-                indent_levels = indent // 4
-            else:
-                # Empty line: find next non-empty line's indentation
-                indent_levels = self._get_next_block_indent_level(block)
-
-            for level in range(indent_levels):
-                x = int(level * tab_width)
-                painter.drawLine(x, int(geometry.top()), x, int(geometry.bottom()))
-
-            block = block.next()
-
-        painter.end()
-
-    def _get_next_block_indent_level(self, current_block):
-        """Get the indent level of the next non-empty visible block."""
-        block = current_block.next()
-        while block.isValid():
-            if not block.isVisible():
-                block = block.next()
-                continue
-            text = block.text()
-            if text.strip():
-                indent = len(text) - len(text.lstrip())
-                return indent // 4
-            block = block.next()
-        return 0
 
     def contextMenuEvent(self, event):
         """Show the editor's right-click menu."""
