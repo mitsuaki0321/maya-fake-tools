@@ -72,6 +72,9 @@ class CodeEditorWidget(QTabWidget):
 
     def connect_signals(self):
         self.tabCloseRequested.connect(self.close_tab)
+        # Drag-reordered tabs need to be persisted too — tabMoved fires after
+        # the bar has finished moving, so the new index order is already in place.
+        self.tabBar().tabMoved.connect(lambda *_: self.save_session_if_available())
 
     def new_file(self, is_draft=False) -> PythonEditor:
         """Create a new file tab (or the Draft tab on first launch)."""
@@ -101,7 +104,7 @@ class CodeEditorWidget(QTabWidget):
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
 
         return editor
 
@@ -189,7 +192,7 @@ class CodeEditorWidget(QTabWidget):
         if hasattr(self.custom_tab_bar, "set_preview_tab"):
             self.custom_tab_bar.set_preview_tab(index, False)
 
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
 
     def set_word_wrap_all(self, enabled):
         """Push ``enabled`` to every open editor tab."""
@@ -256,7 +259,7 @@ class CodeEditorWidget(QTabWidget):
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
         return True
 
     def open_file_preview(self, file_path: str):
@@ -288,7 +291,7 @@ class CodeEditorWidget(QTabWidget):
                 self.setTabText(existing_preview_index, file_name + " (Preview)")
                 self.setCurrentIndex(existing_preview_index)
                 self.preview_tab_index = existing_preview_index
-                QTimer.singleShot(100, self.save_session_if_available)
+                self.save_session_if_available()
                 return True
 
         editor = PythonEditor(self)
@@ -309,7 +312,7 @@ class CodeEditorWidget(QTabWidget):
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
         return True
 
     def make_preview_permanent(self, file_path: str = None):
@@ -326,7 +329,7 @@ class CodeEditorWidget(QTabWidget):
             self.setTabText(self.preview_tab_index, current_text.replace(" (Preview)", ""))
 
         self.preview_tab_index = -1
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
         return True
 
     def apply_close_button_styles(self):
@@ -417,7 +420,7 @@ class CodeEditorWidget(QTabWidget):
         success = editor.save_file(file_path)
         if success:
             self.update_tab_title(editor)
-            QTimer.singleShot(100, self.save_session_if_available)
+            self.save_session_if_available()
         return success
 
     def get_current_code(self) -> str:
@@ -458,7 +461,7 @@ class CodeEditorWidget(QTabWidget):
         self.removeTab(index)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
-        QTimer.singleShot(100, self.save_session_if_available)
+        self.save_session_if_available()
 
         # Never leave the editor empty — spawn a Draft tab if everything is gone.
         if self.count() == 0:
@@ -485,20 +488,26 @@ class CodeEditorWidget(QTabWidget):
     def save_session_if_available(self):
         """Walk up the parent chain and trigger the main window's session save.
 
-        Fired via ``QTimer.singleShot`` after tab lifecycle events. If the
-        window has already been destroyed between the scheduling and the fire,
-        accessing ``self.parent()`` would raise ``RuntimeError`` — silently
-        skip in that case, there's nothing to persist anyway.
+        Called synchronously after every tab-state change (add / close /
+        rename / drag-reorder / save). The main window exposes the session
+        manager as ``session_manager`` (a ``UISessionManager``); we look up
+        the chain for the first ancestor that owns one and call through.
+
+        Tolerant of mid-teardown state: if the underlying C++ widget is
+        already gone, accessing ``self.parent()`` raises ``RuntimeError`` and
+        we simply skip — there's nothing left to persist at that point.
         """
         try:
             parent = self.parent()
             while parent:
-                if hasattr(parent, "save_session_state"):
-                    parent.save_session_state()
-                    break
+                session_manager = getattr(parent, "session_manager", None)
+                if session_manager is not None and hasattr(session_manager, "save_session_state"):
+                    session_manager.save_session_state()
+                    return
                 parent = parent.parent()
         except RuntimeError:
             return
+        logger.debug("save_session_if_available: no session_manager found on parent chain")
 
     def get_current_editor(self):
         return self.currentWidget()

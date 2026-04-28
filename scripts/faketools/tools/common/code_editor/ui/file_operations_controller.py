@@ -128,9 +128,7 @@ class FileOperationsController:
             CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
             return
 
-        filename, ok = CodeEditorInputDialog.getText(
-            mw, "New File", "Enter filename (with .py extension):", text="new_script.py"
-        )
+        filename, ok = CodeEditorInputDialog.getText(mw, "New File", "Enter filename (with .py extension):", text="new_script.py")
         if not ok or not filename.strip():
             return
 
@@ -195,6 +193,8 @@ class FileOperationsController:
         if tabs_updated > 0:
             mw.settings_manager.update_recent_file_path(old_path, new_path)
             mw.output_terminal.append_output(f"File renamed: {old_filename} → {new_filename}")
+            # Tab paths and titles changed without a focus event — persist now.
+            mw.session_manager.save_session_state()
 
     def handle_folder_renamed(self, old_folder_path: str, new_folder_path: str) -> None:
         """Update tabs / autosave / recent-files for files inside a renamed folder."""
@@ -211,7 +211,7 @@ class FileOperationsController:
             if not old_file_path or not old_file_path.startswith(prefix):
                 continue
 
-            relative_path = old_file_path[len(prefix):]
+            relative_path = old_file_path[len(prefix) :]
             new_file_path = os.path.join(new_folder_path, relative_path)
 
             editor.file_path = new_file_path
@@ -226,6 +226,8 @@ class FileOperationsController:
         if updated_count > 0:
             folder_name = os.path.basename(new_folder_path)
             mw.output_terminal.append_output(f"Updated {updated_count} file(s) in renamed folder: {folder_name}")
+            # Tab paths changed without a focus event — persist now.
+            mw.session_manager.save_session_state()
 
     def handle_file_deleted(self, deleted_file_path: str) -> None:
         """Close the tab matching ``deleted_file_path`` and clean up state."""
@@ -249,6 +251,8 @@ class FileOperationsController:
 
             filename = os.path.basename(deleted_file_path)
             mw.output_terminal.append_output(f"Closed tab for deleted file: {filename}")
+            # Direct removeTab() bypasses close_tab's session save hook.
+            mw.session_manager.save_session_state()
             return
 
     def handle_folder_deleted(self, deleted_folder_path: str) -> None:
@@ -280,6 +284,8 @@ class FileOperationsController:
         mw.settings_manager.save_settings()
         folder_name = os.path.basename(deleted_folder_path)
         mw.output_terminal.append_output(f"Closed {len(tabs_to_remove)} tab(s) from deleted folder: {folder_name}")
+        # Direct removeTab() bypasses close_tab's session save hook.
+        mw.session_manager.save_session_state()
 
     # -------------------- Execute without opening --------------------
 

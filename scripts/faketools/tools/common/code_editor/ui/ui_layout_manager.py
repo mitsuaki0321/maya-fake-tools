@@ -180,32 +180,45 @@ class UILayoutManager:
             self._connect_editor_focus_signals()
 
     def _connect_editor_focus_signals(self):
-        """Connect focus_lost signals from all editors to flush backups."""
+        """Wire ``focus_lost`` on every editor to backup flush + session save.
+
+        Focus-out is the primary trigger for session.json persistence in the
+        new design: a session save fires whenever the user moves focus away
+        from the code area (other tab, explorer, terminal, another window).
+        """
         if not self.main_window.code_editor or not self.main_window.autosave_manager:
             return
 
-        # Connect existing editors
         for i in range(self.main_window.code_editor.count()):
             editor = self.main_window.code_editor.widget(i)
             if editor and hasattr(editor, "focus_lost"):
-                with contextlib.suppress(Exception):
-                    editor.focus_lost.connect(self.main_window.autosave_manager.flush_backups)
+                self._wire_focus_lost(editor)
 
-        # Connect signal for new tabs to auto-connect their focus_lost signal
+        # Late-created tabs need the same wiring; piggyback on currentChanged.
         self.main_window.code_editor.currentChanged.connect(self._on_tab_changed_connect_focus)
 
     def _on_tab_changed_connect_focus(self, index):
-        """Connect focus_lost signal when switching to a new tab."""
+        """Re-wire ``focus_lost`` when the active tab changes."""
         if index < 0 or not self.main_window.code_editor or not self.main_window.autosave_manager:
             return
 
         editor = self.main_window.code_editor.widget(index)
         if editor and hasattr(editor, "focus_lost"):
-            # Disconnect first to avoid duplicate connections
-            with contextlib.suppress(Exception):
-                editor.focus_lost.disconnect(self.main_window.autosave_manager.flush_backups)
-            with contextlib.suppress(Exception):
-                editor.focus_lost.connect(self.main_window.autosave_manager.flush_backups)
+            self._wire_focus_lost(editor)
+
+    def _wire_focus_lost(self, editor):
+        """Connect ``focus_lost`` to backup flush + session save (idempotent)."""
+        flush = self.main_window.autosave_manager.flush_backups
+        save = self.main_window.session_manager.save_session_state
+
+        with contextlib.suppress(Exception):
+            editor.focus_lost.disconnect(flush)
+        with contextlib.suppress(Exception):
+            editor.focus_lost.disconnect(save)
+        with contextlib.suppress(Exception):
+            editor.focus_lost.connect(flush)
+        with contextlib.suppress(Exception):
+            editor.focus_lost.connect(save)
 
     def apply_font_settings(self):
         """Apply default font settings from settings.json to editors and terminal."""

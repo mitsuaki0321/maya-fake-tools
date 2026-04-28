@@ -3,9 +3,10 @@ Session management for Code Editor UI.
 Handles saving and restoring session state including open tabs and their content.
 """
 
+from logging import getLogger
 import os
 
-from .....lib_ui.qt_compat import QTimer
+logger = getLogger(__name__)
 
 
 class UISessionManager:
@@ -18,9 +19,12 @@ class UISessionManager:
             main_window: The main MayaCodeEditor window instance
         """
         self.main_window = main_window
-
-        # Timer for throttled session saves
-        self._session_save_timer = None
+        # Re-entrancy guard: ``restore_session_state`` calls ``new_file`` /
+        # ``open_file_preview``, which themselves trigger ``save_session_state``
+        # via the tab-state hooks. Saving mid-restore would freeze a partially
+        # populated tab into session.json. The flag suppresses those nested
+        # saves; restore explicitly fires one save at the end.
+        self._restoring = False
 
     @property
     def code_editor(self):
@@ -38,7 +42,11 @@ class UISessionManager:
         return self.main_window.autosave_manager
 
     def on_editor_text_changed(self):
-        """Handle code editor text changes for auto-save."""
+        """Bridge text edits to the autosave manager (for the .bak backup stream).
+
+        Session.json itself is no longer touched on every keystroke — it is
+        persisted on focus-out, tab-state changes, and window close instead.
+        """
         if not self.code_editor:
             return
 
@@ -48,33 +56,15 @@ class UISessionManager:
 
         content = current_editor.toPlainText()
 
-        # Check if there's a current file path
         file_path = self.code_editor.get_current_file_path()
         if file_path:
             self.autosave_manager.update_file_content(file_path, content)
         else:
-            # Handle unsaved file - create temp ID if not already tracked
+            # Unsaved file — create a temp ID the first time, then keep updating it.
             if not hasattr(self.main_window, "_current_unsaved_id"):
                 self.main_window._current_unsaved_id = self.autosave_manager.register_unsaved_file(content)
             else:
                 self.autosave_manager.update_file_content(self.main_window._current_unsaved_id, content)
-
-        # Schedule session state save (throttled)
-        self.schedule_session_save()
-
-    def schedule_session_save(self):
-        """Schedule session save with throttling to avoid excessive saves."""
-        if not self._session_save_timer:
-            # Parent the timer to the main window so it's destroyed with it —
-            # otherwise a pending throttle can fire after the window is gone
-            # and blow up on the dead CodeEditorWidget C++ object.
-            self._session_save_timer = QTimer(self.main_window)
-            self._session_save_timer.setSingleShot(True)
-            self._session_save_timer.timeout.connect(self.save_session_state)
-
-        # Restart timer (throttle to 2 seconds)
-        self._session_save_timer.stop()
-        self._session_save_timer.start(2000)
 
     def save_session_state(self):
         """Save current session state (open tabs).
@@ -85,6 +75,8 @@ class UISessionManager:
         ``RuntimeError`` rather than spam the Script Editor — there's nothing
         left to persist at that point anyway.
         """
+        if self._restoring:
+            return
         if not self.code_editor:
             return
 
@@ -126,52 +118,56 @@ class UISessionManager:
         self.settings_manager.save_session_state(open_tabs)
         self.settings_manager.set("draft_content", draft_content)
         self.settings_manager.save_settings()
+        logger.debug("session saved: %d tab(s), draft=%d chars", len(open_tabs), len(draft_content))
 
     def restore_session_state(self):
         """Restore session state (open tabs)."""
-        # Check if code_editor is available
         if not self.code_editor:
             return
 
-        # Always restore Draft tab content regardless of session settings
-        self._restore_draft_content()
+        self._restoring = True
+        try:
+            # Always restore Draft tab content regardless of session settings
+            self._restore_draft_content()
 
-        if not self.settings_manager.should_restore_session():
-            return
+            if not self.settings_manager.should_restore_session():
+                return
 
-        saved_tabs = self.settings_manager.get_session_state()
-        if not saved_tabs:
-            return
+            saved_tabs = self.settings_manager.get_session_state()
+            if not saved_tabs:
+                return
 
-        # Clear default empty tab if it exists (but keep Draft tab)
-        if self.code_editor.count() == 1:
-            editor = self.code_editor.widget(0)
-            if (
-                editor
-                and not getattr(editor, "file_path", None)
-                and not editor.toPlainText().strip()
-                and not (hasattr(editor, "is_draft") and editor.is_draft)
-            ):
-                self.code_editor.removeTab(0)
+            # Clear default empty tab if it exists (but keep Draft tab)
+            if self.code_editor.count() == 1:
+                editor = self.code_editor.widget(0)
+                if (
+                    editor
+                    and not getattr(editor, "file_path", None)
+                    and not editor.toPlainText().strip()
+                    and not (hasattr(editor, "is_draft") and editor.is_draft)
+                ):
+                    self.code_editor.removeTab(0)
 
-        # Check for preview tabs and ensure only one is restored
-        preview_tabs = [tab for tab in saved_tabs if tab.get("tab_name", "").startswith("[Preview]") or " (Preview)" in tab.get("tab_name", "")]
-        non_preview_tabs = [tab for tab in saved_tabs if tab not in preview_tabs]
+            # Check for preview tabs and ensure only one is restored
+            preview_tabs = [tab for tab in saved_tabs if tab.get("tab_name", "").startswith("[Preview]") or " (Preview)" in tab.get("tab_name", "")]
+            non_preview_tabs = [tab for tab in saved_tabs if tab not in preview_tabs]
 
-        # Restore non-preview tabs first
-        for tab_info in non_preview_tabs:
-            self.restore_tab(tab_info)
+            # Restore non-preview tabs first
+            for tab_info in non_preview_tabs:
+                self.restore_tab(tab_info)
 
-        # Restore only the last preview tab (if any)
-        if preview_tabs:
-            # Only restore the most recent preview tab to avoid duplicates
-            self.restore_tab(preview_tabs[-1])
+            # Restore only the last preview tab (if any)
+            if preview_tabs:
+                self.restore_tab(preview_tabs[-1])
 
-        # Ensure we have at least a Draft tab
-        if self.code_editor.count() == 0:
-            self.code_editor.new_file(is_draft=True)
+            # Ensure we have at least a Draft tab
+            if self.code_editor.count() == 0:
+                self.code_editor.new_file(is_draft=True)
+        finally:
+            self._restoring = False
 
-        # Tab visual states are handled by asterisk in titles
+        # One explicit save so session.json reflects the final restored state.
+        self.save_session_state()
 
     def _restore_draft_content(self):
         """Restore Draft tab content."""
