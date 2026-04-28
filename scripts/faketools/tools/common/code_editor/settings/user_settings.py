@@ -122,14 +122,6 @@ class UserSettings:
         # Set the final value
         setting_dict[keys[-1]] = value
 
-    def get_editor_font_size(self) -> int:
-        """Get editor font size."""
-        return self.get("editor.font_size", 10)
-
-    def get_terminal_font_size(self) -> int:
-        """Get terminal font size."""
-        return self.get("terminal.font_size", 9)
-
     def get_search_settings(self) -> dict[str, Any]:
         """Get search dialog settings."""
         return self.get("search", {})

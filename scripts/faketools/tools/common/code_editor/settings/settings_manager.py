@@ -9,8 +9,6 @@ from logging import getLogger
 import os
 from typing import Any
 
-from .....lib_ui.qt_compat import QFont
-from ..themes import AppTheme
 from .session_manager import SessionManager
 from .user_settings import UserSettings
 from .workspace_manager import WorkspaceManager
@@ -234,22 +232,6 @@ class SettingsManager:
     def set_splitter_sizes(self, splitter_name: str, sizes: list[int]):
         """Set splitter sizes."""
         self.session_manager.set_splitter_sizes(splitter_name, sizes)
-
-    def get_editor_font(self) -> QFont:  # type: ignore
-        """Get editor font settings as QFont object."""
-        return self._build_monospace_font(self.user_settings.get_editor_font_size())
-
-    def get_terminal_font(self) -> QFont:  # type: ignore
-        """Get terminal font settings as QFont object."""
-        return self._build_monospace_font(self.user_settings.get_terminal_font_size())
-
-    @staticmethod
-    def _build_monospace_font(size: int) -> QFont:  # type: ignore
-        """Build a QFont for a monospace family with platform-fallback."""
-        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
-        if not font.exactMatch():
-            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
-        return font
 
     def add_recent_file(self, file_path: str):
         """Add a file to the recent files list."""

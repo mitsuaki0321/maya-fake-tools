@@ -19,6 +19,8 @@ Touching a palette token cascades through every role that aliases it; that
 is the point of the split.
 """
 
+from .....lib_ui.qt_compat import QFont
+
 
 class _Palette:
     """Raw colour tokens (dark theme). Names describe the value, not the use."""
@@ -153,8 +155,17 @@ class AppTheme:
     EXPLORER_RUN_BUTTON_PLAY = (115, 185, 0)
 
     # ===== Fonts =====
-    MONOSPACE_FONT_FAMILY = "Consolas"
-    MONOSPACE_FONT_FALLBACK = "Courier New"
+    MONOSPACE_FONT_FAMILY = "Cascadia Code"
+    MONOSPACE_FONT_FALLBACK = "Consolas"
+    LINE_HEIGHT_PERCENT = 160  # proportional, matches VSCode's default editor.lineHeight
+
+    @classmethod
+    def make_monospace_font(cls, size: int) -> "QFont":
+        """Build a ``QFont`` for the editor's monospace family with platform fallback."""
+        font = QFont(cls.MONOSPACE_FONT_FAMILY, size)
+        if not font.exactMatch():
+            font = QFont(cls.MONOSPACE_FONT_FALLBACK, size)
+        return font
 
     # ----- Stylesheet getters --------------------------------------------------
 

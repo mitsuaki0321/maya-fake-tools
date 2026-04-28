@@ -4,7 +4,7 @@ Provides Script Editor-like output display functionality.
 Supports both Maya native terminal and fallback QTextEdit.
 """
 
-from ......lib_ui.qt_compat import QApplication, QColor, QFont, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
+from ......lib_ui.qt_compat import QApplication, QColor, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
 from ...themes import AppTheme
 
 # Terminal constants
@@ -69,11 +69,7 @@ class OutputTerminal(QWidget):
         self.output_display.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.output_display.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Set font for terminal-like appearance
-        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, self.default_font_size)
-        if not font.exactMatch():
-            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, self.default_font_size)
-        self.output_display.setFont(font)
+        self.output_display.setFont(AppTheme.make_monospace_font(self.default_font_size))
 
         # Set colors for terminal appearance with scrollbar styling
         scrollbar_style = AppTheme.get_scrollbar_stylesheet()
@@ -231,10 +227,7 @@ class OutputTerminal(QWidget):
 
         # Update terminal font
         if self.output_display:
-            font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
-            if not font.exactMatch():
-                font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
-            self.output_display.setFont(font)
+            self.output_display.setFont(AppTheme.make_monospace_font(size))
 
     def reset_font_size(self):
         """Reset font size to default."""

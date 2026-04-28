@@ -7,10 +7,10 @@ from logging import getLogger
 import os
 
 from .....lib_ui.qt_compat import (
-    QFont,
     QPainter,
     QPlainTextEdit,
     Qt,
+    QTextBlockFormat,
     QTextCursor,
     Signal,
 )
@@ -126,11 +126,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     def init_editor(self):
         """Initialize editor settings."""
-        # Set font using current font size
-        font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, self.current_font_size)
-        if not font.exactMatch():
-            font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, self.current_font_size)
-        self.setFont(font)
+        self.setFont(AppTheme.make_monospace_font(self.current_font_size))
 
         # Set tab width (4 spaces * 10 pixels = 40)
         tab_stop_distance = DEFAULT_TAB_SIZE * 10
@@ -145,6 +141,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         # rectangle's 1px border (e.g. cursor at ``)|``).
         self.setCursorWidth(2)
 
+        self._apply_line_height()
+
         # Word wrap enabled by default
         self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -156,6 +154,33 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     def setup_syntax_highlighting(self):
         """Setup Python syntax highlighting."""
         self.highlighter = PythonHighlighter(self.document())
+
+    def setPlainText(self, text):
+        """Override to (re-)apply our proportional line height after every reset.
+
+        ``setPlainText`` rebuilds the document from scratch, which loses any
+        block format we applied earlier — so every external caller (file load,
+        session restore, tab restore, …) would otherwise revert to Qt's default
+        tight line spacing. Applying here keeps callers simple.
+        """
+        super().setPlainText(text)
+        self._apply_line_height()
+
+    def _apply_line_height(self):
+        """Apply ``AppTheme.LINE_HEIGHT_PERCENT`` to every block in the document.
+
+        Qt's default line spacing follows the font's natural metrics, which is
+        noticeably tighter than VSCode at the same font. Setting a proportional
+        line height on every block — including the cursor's current block, so
+        new blocks inherit it on Enter — gives VSCode-equivalent breathing room.
+        """
+        cursor = QTextCursor(self.document())
+        cursor.select(QTextCursor.Document)
+        block_format = QTextBlockFormat()
+        # PySide6 expects (float, int); the enum value 1 is ``ProportionalHeight``.
+        # Hardcoded int avoids ``LineHeightTypes`` not accepted by the strict overload.
+        block_format.setLineHeight(float(AppTheme.LINE_HEIGHT_PERCENT), 1)
+        cursor.mergeBlockFormat(block_format)
 
     def setup_line_numbers(self):
         """Setup line number area."""
@@ -294,22 +319,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     def set_font_size(self, size):
         """Set font size for the editor."""
-        # Set editor font size
         self.current_font_size = size
-
-        # Get current font to preserve family
-        current_font = self.font()
-
-        # Create new font with same family but new size
-        font = QFont(current_font.family(), size)
-
-        # If no font family set yet, use defaults
-        if not font.family() or font.family() == "":
-            font = QFont(AppTheme.MONOSPACE_FONT_FAMILY, size)
-            if not font.exactMatch():
-                font = QFont(AppTheme.MONOSPACE_FONT_FALLBACK, size)
-
-        self.setFont(font)
+        self.setFont(AppTheme.make_monospace_font(size))
 
         # Update line number area width and force repaint with new font size
         if hasattr(self, "line_number_area"):
