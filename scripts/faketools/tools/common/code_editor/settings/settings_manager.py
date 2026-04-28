@@ -148,7 +148,7 @@ class SettingsManager:
     def _migrate_to_user_settings(self, legacy_settings: dict[str, Any]):
         """Migrate user preferences to UserSettings."""
         user_data = {}
-        for key in ["editor", "terminal", "search", "maya", "autosave"]:
+        for key in ["editor", "terminal", "search", "maya"]:
             if key in legacy_settings:
                 user_data[key] = legacy_settings[key]
 

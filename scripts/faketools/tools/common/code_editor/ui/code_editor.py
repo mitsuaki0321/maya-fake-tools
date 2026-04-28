@@ -40,7 +40,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     # Signal for object inspection
     inspect_object = Signal(str, str)  # (object_name, inspection_type)
-    # Signal for focus lost (triggers backup flush for network HDD performance)
+    # Signal for focus lost (triggers session.json save)
     focus_lost = Signal()
 
     def __init__(self, parent=None):
@@ -176,7 +176,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             self.autocomplete.on_text_changed()
 
     def focusOutEvent(self, event):
-        """Handle focus out - trigger backup flush for network HDD performance."""
+        """Emit ``focus_lost`` so session.json can be saved."""
         super().focusOutEvent(event)
         self.focus_lost.emit()
 

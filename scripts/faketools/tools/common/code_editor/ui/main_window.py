@@ -10,7 +10,6 @@ from .....lib_ui.qt_compat import QWidget
 from ..command import maya_shelf, os_launcher
 from ..command.execution import build_exec_globals
 from ..settings import SettingsManager
-from ..utils.autosave_manager import AutoSaveManager  # Direct import to avoid circular dependency
 from .dialog_base import CodeEditorMessageBox
 from .execution_manager import ExecutionManager
 from .file_operations_controller import FileOperationsController
@@ -33,9 +32,6 @@ class MayaCodeEditor(QWidget):
 
         # Initialize settings manager
         self.settings_manager = SettingsManager()
-
-        # Initialize auto-save manager
-        self.autosave_manager = AutoSaveManager(self.settings_manager, self)
 
         # Persistent execution environment (like Maya Script Editor)
         self.exec_globals = build_exec_globals()
@@ -171,12 +167,6 @@ class MayaCodeEditor(QWidget):
 
     def closeEvent(self, event):
         """Handle main window close event."""
-        # Save current content to auto-save before closing
-        if self.autosave_manager:
-            self.autosave_manager.flush_backups()  # Flush any pending backups first
-            self.autosave_manager.auto_save_all()
-            self.autosave_manager.stop_auto_save()
-
         # Save current session state
         self.session_manager.save_session_state()
 

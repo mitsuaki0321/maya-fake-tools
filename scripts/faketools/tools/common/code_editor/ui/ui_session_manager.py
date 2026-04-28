@@ -10,7 +10,7 @@ logger = getLogger(__name__)
 
 
 class UISessionManager:
-    """Manages UI session state including tab restoration and auto-save integration."""
+    """Saves and restores tab state (open tabs and their content) via session.json."""
 
     def __init__(self, main_window):
         """Initialize session manager with reference to main window.
@@ -36,44 +36,14 @@ class UISessionManager:
         """Get settings manager from main window."""
         return self.main_window.settings_manager
 
-    @property
-    def autosave_manager(self):
-        """Get autosave manager from main window."""
-        return self.main_window.autosave_manager
-
-    def on_editor_text_changed(self):
-        """Bridge text edits to the autosave manager (for the .bak backup stream).
-
-        Session.json itself is no longer touched on every keystroke — it is
-        persisted on focus-out, tab-state changes, and window close instead.
-        """
-        if not self.code_editor:
-            return
-
-        current_editor = self.code_editor.get_current_editor()
-        if not current_editor:
-            return
-
-        content = current_editor.toPlainText()
-
-        file_path = self.code_editor.get_current_file_path()
-        if file_path:
-            self.autosave_manager.update_file_content(file_path, content)
-        else:
-            # Unsaved file — create a temp ID the first time, then keep updating it.
-            if not hasattr(self.main_window, "_current_unsaved_id"):
-                self.main_window._current_unsaved_id = self.autosave_manager.register_unsaved_file(content)
-            else:
-                self.autosave_manager.update_file_content(self.main_window._current_unsaved_id, content)
-
     def save_session_state(self):
         """Save current session state (open tabs).
 
-        Tolerant of the window being partially torn down: Qt can fire the
-        throttled save timer after the underlying C++ widget has already been
-        deleted (Maya workspace close, tool reload). Swallow the resulting
-        ``RuntimeError`` rather than spam the Script Editor — there's nothing
-        left to persist at that point anyway.
+        Tolerant of the window being partially torn down: Qt can fire this
+        save after the underlying C++ widget has already been deleted (Maya
+        workspace close, tool reload). Swallow the resulting ``RuntimeError``
+        rather than spam the Script Editor — there's nothing left to persist
+        at that point anyway.
         """
         if self._restoring:
             return

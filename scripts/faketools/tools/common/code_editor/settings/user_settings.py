@@ -42,12 +42,6 @@ class UserSettings:
                 "use_regex": False,
                 "search_direction": "down",
             },
-            # Auto-save settings
-            "autosave": {
-                "enabled": True,
-                "interval_seconds": 60,
-                "backup_on_change": True,
-            },
             # Layout settings
             "layout": {
                 "terminal_at_bottom": True,  # True: editor top/terminal bottom, False: terminal top/editor bottom

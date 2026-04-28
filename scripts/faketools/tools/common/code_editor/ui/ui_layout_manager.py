@@ -174,19 +174,16 @@ class UILayoutManager:
 
         if self.main_window.code_editor:
             self.main_window.code_editor.inspect_object.connect(self.main_window.execution_manager.handle_object_inspection)
-            self.main_window.code_editor.textChanged.connect(self.main_window.session_manager.on_editor_text_changed)
-
-            # Connect focus_lost signal from editors to flush backups (network HDD performance)
             self._connect_editor_focus_signals()
 
     def _connect_editor_focus_signals(self):
-        """Wire ``focus_lost`` on every editor to backup flush + session save.
+        """Wire ``focus_lost`` on every editor to ``save_session_state``.
 
-        Focus-out is the primary trigger for session.json persistence in the
-        new design: a session save fires whenever the user moves focus away
-        from the code area (other tab, explorer, terminal, another window).
+        Focus-out is the primary trigger for session.json persistence: a save
+        fires whenever the user moves focus away from the code area (other
+        tab, explorer, terminal, another window).
         """
-        if not self.main_window.code_editor or not self.main_window.autosave_manager:
+        if not self.main_window.code_editor:
             return
 
         for i in range(self.main_window.code_editor.count()):
@@ -199,7 +196,7 @@ class UILayoutManager:
 
     def _on_tab_changed_connect_focus(self, index):
         """Re-wire ``focus_lost`` when the active tab changes."""
-        if index < 0 or not self.main_window.code_editor or not self.main_window.autosave_manager:
+        if index < 0 or not self.main_window.code_editor:
             return
 
         editor = self.main_window.code_editor.widget(index)
@@ -207,16 +204,11 @@ class UILayoutManager:
             self._wire_focus_lost(editor)
 
     def _wire_focus_lost(self, editor):
-        """Connect ``focus_lost`` to backup flush + session save (idempotent)."""
-        flush = self.main_window.autosave_manager.flush_backups
+        """Connect ``focus_lost`` to session save (idempotent)."""
         save = self.main_window.session_manager.save_session_state
 
         with contextlib.suppress(Exception):
-            editor.focus_lost.disconnect(flush)
-        with contextlib.suppress(Exception):
             editor.focus_lost.disconnect(save)
-        with contextlib.suppress(Exception):
-            editor.focus_lost.connect(flush)
         with contextlib.suppress(Exception):
             editor.focus_lost.connect(save)
 

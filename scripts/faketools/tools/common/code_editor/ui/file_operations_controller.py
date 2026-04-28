@@ -3,15 +3,14 @@
 Owns the multi-step recipes triggered by toolbar buttons, file-explorer
 signals, and shortcut keys: open / save / save-all / new / rename /
 delete / execute-without-opening. Each recipe wires up the same
-side-effects (tab updates, autosave registration, recent-files list,
-terminal status messages) that used to be duplicated across
-``MayaCodeEditor``.
+side-effects (tab updates, recent-files list, terminal status messages)
+that used to be duplicated across ``MayaCodeEditor``.
 
 The controller holds a back-reference to the main window so it can
 reach ``code_editor`` (tab widget), ``output_terminal``,
-``autosave_manager``, ``settings_manager``, ``file_explorer``, and
-``execution_manager``. Filesystem reads/writes go through
-:mod:`...command.file_io` rather than raw ``open()``.
+``settings_manager``, ``file_explorer``, and ``execution_manager``.
+Filesystem reads/writes go through :mod:`...command.file_io` rather
+than raw ``open()``.
 """
 
 from __future__ import annotations
@@ -47,10 +46,6 @@ class FileOperationsController:
 
         mw.settings_manager.add_recent_file(file_path)
         mw.settings_manager.save_settings()
-
-        current_editor = mw.code_editor.get_current_editor()
-        if current_editor is not None:
-            mw.autosave_manager.register_file(file_path, current_editor.toPlainText())
 
     def open_file_preview(self, file_path: str) -> None:
         """Open ``file_path`` in a preview tab."""
@@ -106,7 +101,6 @@ class FileOperationsController:
                 continue
 
             saved_count += 1
-            mw.autosave_manager.register_file(file_path, content)
             editor.is_modified = False
             editor.document().setModified(False)
             mw.code_editor.update_tab_title(editor)
@@ -161,7 +155,7 @@ class FileOperationsController:
     # -------------------- Rename / Delete (file_explorer signals) --------------------
 
     def handle_file_renamed(self, old_path: str, new_path: str) -> None:
-        """Update tabs / autosave / recent-files for a renamed file."""
+        """Update tabs / recent-files for a renamed file."""
         mw = self.main_window
         if not mw.code_editor:
             return
@@ -185,9 +179,6 @@ class FileOperationsController:
             else:
                 mw.code_editor.setTabText(i, new_filename)
 
-            content = editor.toPlainText()
-            mw.autosave_manager.unregister_file(old_path)
-            mw.autosave_manager.register_file(new_path, content)
             tabs_updated += 1
 
         if tabs_updated > 0:
@@ -197,7 +188,7 @@ class FileOperationsController:
             mw.session_manager.save_session_state()
 
     def handle_folder_renamed(self, old_folder_path: str, new_folder_path: str) -> None:
-        """Update tabs / autosave / recent-files for files inside a renamed folder."""
+        """Update tabs / recent-files for files inside a renamed folder."""
         mw = self.main_window
         if not mw.code_editor:
             return
@@ -217,9 +208,6 @@ class FileOperationsController:
             editor.file_path = new_file_path
             mw.code_editor.setTabText(i, os.path.basename(new_file_path))
 
-            content = editor.toPlainText()
-            mw.autosave_manager.unregister_file(old_file_path)
-            mw.autosave_manager.register_file(new_file_path, content)
             mw.settings_manager.update_recent_file_path(old_file_path, new_file_path)
             updated_count += 1
 
@@ -241,7 +229,6 @@ class FileOperationsController:
                 continue
 
             mw.code_editor.removeTab(i)
-            mw.autosave_manager.unregister_file(deleted_file_path)
 
             recent_files = mw.settings_manager.get("recent_files", [])
             if deleted_file_path in recent_files:
@@ -275,7 +262,6 @@ class FileOperationsController:
         # Reverse order to keep earlier indices stable while removing.
         for i, file_path in reversed(tabs_to_remove):
             mw.code_editor.removeTab(i)
-            mw.autosave_manager.unregister_file(file_path)
             recent_files = mw.settings_manager.get("recent_files", [])
             if file_path in recent_files:
                 recent_files.remove(file_path)

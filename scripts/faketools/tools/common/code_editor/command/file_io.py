@@ -1,9 +1,9 @@
 """
 Plain-text file I/O for the Code Editor.
 
-Tiny UTF-8 read/write helpers shared between editor tabs and the autosave
-manager. Errors are returned rather than raised so the UI layer can surface
-them with whatever message box it prefers.
+Tiny UTF-8 read/write helpers used by editor tabs. Errors are returned
+rather than raised so the UI layer can surface them with whatever
+message box it prefers.
 """
 
 from __future__ import annotations
