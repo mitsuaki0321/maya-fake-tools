@@ -24,45 +24,45 @@ class _Palette:
     """Raw colour tokens (dark theme). Names describe the value, not the use."""
 
     # Surfaces — main backgrounds, ordered roughly by elevation.
-    SURFACE_PRIMARY = "#1e1e1e"      # editor / window root
-    SURFACE_SECONDARY = "#242424"    # tab bar, inactive tabs
-    SURFACE_TERTIARY = "#252526"     # sidebar, menus
-    SURFACE_SCROLL = "#2b2b2b"       # scrollbar track
-    SURFACE_TOOLBAR = "#2d2d30"      # toolbar
-    SURFACE_HIGHLIGHT = "#2a2a2a"    # current-line / row highlight
-    SURFACE_LIST_HOVER = "#2a2d2e"   # VSCode list.hoverBackground
-    SURFACE_HOVER = "#37373d"        # tab / list hover
+    SURFACE_PRIMARY = "#1e1e1e"  # editor / window root
+    SURFACE_SECONDARY = "#242424"  # tab bar, inactive tabs
+    SURFACE_TERTIARY = "#252526"  # sidebar, menus
+    SURFACE_SCROLL = "#2b2b2b"  # scrollbar track
+    SURFACE_TOOLBAR = "#2d2d30"  # toolbar
+    SURFACE_HIGHLIGHT = "#2a2a2a"  # current-line / row highlight
+    SURFACE_LIST_HOVER = "#2a2d2e"  # VSCode list.hoverBackground
+    SURFACE_HOVER = "#37373d"  # tab / list hover
 
     # Borders / separators (dark → bright).
-    BORDER_SUBTLE = "#0a0a0a"        # near-black underline
-    BORDER_DEFAULT = "#3c3c3c"       # tab + toolbar borders
-    BORDER_STRONG = "#3e3e42"        # widget borders, indent guide
+    BORDER_SUBTLE = "#0a0a0a"  # near-black underline
+    BORDER_DEFAULT = "#3c3c3c"  # tab + toolbar borders
+    BORDER_STRONG = "#3e3e42"  # widget borders, indent guide
 
     # Interactive backgrounds.
-    BUTTON_HOVER = "#484848"         # generic VSCode-style button hover
-    BUTTON_RUN_PRESSED = "#5a504a"   # run button pressed (warm tint)
+    BUTTON_HOVER = "#484848"  # generic VSCode-style button hover
+    BUTTON_RUN_PRESSED = "#5a504a"  # run button pressed (warm tint)
 
     # Scrollbar handle.
     SCROLLBAR_HANDLE = "#565656"
     SCROLLBAR_HANDLE_HOVER = "#6a6a6a"
 
     # Text / icons (dim → brightest).
-    TEXT_DIMMER = "#6a6a6a"          # fold placeholder
-    TEXT_DIM = "#858585"             # inactive line numbers, fold indicators
-    TEXT_NORMAL = "#cccccc"          # chrome text + active accents (active line, fold hover)
-    TEXT_BRIGHTER = "#d4d4d4"        # editor foreground / output text
-    TEXT_BRIGHTEST = "#ffffff"       # selected tab text
+    TEXT_DIMMER = "#6a6a6a"  # fold placeholder
+    TEXT_DIM = "#858585"  # inactive line numbers, fold indicators
+    TEXT_NORMAL = "#cccccc"  # chrome text + active accents (active line, fold hover)
+    TEXT_BRIGHTER = "#d4d4d4"  # editor foreground / output text
+    TEXT_BRIGHTEST = "#ffffff"  # selected tab text
 
     # Icon SVG recolouring.
-    ICON_SOURCE = "#808080"          # in-file SVG colour, replaced at runtime
+    ICON_SOURCE = "#808080"  # in-file SVG colour, replaced at runtime
     ICON_NORMAL = "#a0a0a0"
     ICON_HOVER = "#d0d0d0"
     ICON_PRESSED = "#888888"
 
     # Accent (VSCode blue family).
-    ACCENT = "#007acc"               # focus / selected-tab indicator
-    ACCENT_BG_SUBTLE = "#264f78"     # text-selection background
-    ACCENT_BG_STRONG = "#094771"     # list / menu hover & pressed background
+    ACCENT = "#007acc"  # focus / selected-tab indicator
+    ACCENT_BG_SUBTLE = "#264f78"  # text-selection background
+    ACCENT_BG_STRONG = "#094771"  # list / menu hover & pressed background
 
     # Status colours (output terminal).
     STATUS_ERROR = "#ff6b6b"
@@ -115,8 +115,9 @@ class AppTheme:
     HOVER_BACKGROUND = _Palette.ACCENT_BG_STRONG
 
     # ===== Editor decorations =====
-    CURRENT_LINE_HIGHLIGHT = _Palette.SURFACE_HIGHLIGHT  # editor caret line
+    CURRENT_LINE_BORDER = "#282828"  # rules above/below caret line
     INDENT_GUIDE_COLOR = _Palette.BORDER_STRONG
+    BRACKET_MATCH_BORDER = "#666666"  # 1px rectangle around the matched bracket char
 
     # ===== Line numbers =====
     LINE_NUMBER_BACKGROUND = _Palette.SURFACE_PRIMARY

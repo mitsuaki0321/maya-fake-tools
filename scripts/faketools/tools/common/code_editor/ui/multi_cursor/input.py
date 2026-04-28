@@ -99,11 +99,7 @@ class MultiCursorInputHandler:
             self.controller.update_rectangle_selection(event)
             return True
 
-        if (
-            getattr(editor, "is_ctrl_dragging", False)
-            and event.modifiers() & Qt.ControlModifier
-            and event.buttons() & Qt.LeftButton
-        ):
+        if getattr(editor, "is_ctrl_dragging", False) and event.modifiers() & Qt.ControlModifier and event.buttons() & Qt.LeftButton:
             try:
                 current_pos = event.position().toPoint()  # PySide6
             except AttributeError:
@@ -126,11 +122,7 @@ class MultiCursorInputHandler:
             self.controller.finalize_rectangle_selection(event)
             return True
 
-        if not (
-            event.button() == Qt.LeftButton
-            and event.modifiers() & Qt.ControlModifier
-            and getattr(editor, "is_ctrl_dragging", False)
-        ):
+        if not (event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier and getattr(editor, "is_ctrl_dragging", False)):
             return False
 
         if editor.ctrl_drag_cursor is not None:
@@ -155,9 +147,7 @@ class MultiCursorInputHandler:
                     editor.all_cursors.append(first_cursor)
                     editor.setCursorWidth(0)
 
-                already_present = any(
-                    existing.position() == cursor.position() and not existing.hasSelection() for existing in editor.all_cursors
-                )
+                already_present = any(existing.position() == cursor.position() and not existing.hasSelection() for existing in editor.all_cursors)
                 if not already_present:
                     new_cursor = QTextCursor(editor.document())
                     new_cursor.setPosition(cursor.position())

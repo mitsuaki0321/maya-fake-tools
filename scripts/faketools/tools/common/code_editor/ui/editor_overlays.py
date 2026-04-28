@@ -73,6 +73,34 @@ def paint_fold_placeholders(editor, event) -> None:
     painter.end()
 
 
+def paint_current_line_border(editor, event) -> None:
+    """Draw thin 1px rules at the top and bottom of the cursor's line.
+
+    Aligned to ``cursorRect`` rather than ``blockBoundingGeometry`` so the
+    rules touch the caret's visible top/bottom — the block geometry includes
+    line-leading padding, leaving a 1–2px gap above/below the caret otherwise.
+    Suppressed while a selection is active — the selection itself signals
+    where the cursor is, so an extra decoration would be visual noise.
+    """
+    cursor = editor.textCursor()
+    if cursor.hasSelection():
+        return
+
+    rect = editor.cursorRect()
+    top = rect.top()
+    bottom = rect.top() + rect.height() - 1
+
+    if bottom < event.rect().top() or top > event.rect().bottom():
+        return
+
+    painter = QPainter(editor.viewport())
+    painter.setPen(QPen(QColor(AppTheme.CURRENT_LINE_BORDER), 1))
+    width = editor.viewport().width()
+    painter.drawLine(0, top, width, top)
+    painter.drawLine(0, bottom, width, bottom)
+    painter.end()
+
+
 def paint_indent_guides(editor, event) -> None:
     """Draw a vertical guide line at each indent level on every visible block."""
     tab_width = _cached_indent_step(editor)

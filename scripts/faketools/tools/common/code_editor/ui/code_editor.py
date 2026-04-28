@@ -7,14 +7,11 @@ from logging import getLogger
 import os
 
 from .....lib_ui.qt_compat import (
-    QColor,
     QFont,
     QPainter,
     QPlainTextEdit,
     Qt,
-    QTextCharFormat,
     QTextCursor,
-    QTextEdit,
     Signal,
 )
 from ..command import file_io
@@ -22,6 +19,7 @@ from ..highlighting.python_highlighter import PythonHighlighter
 from ..themes import AppTheme
 from . import auto_indent, editor_context_menu, editor_overlays
 from .autocomplete import AutocompleteController, get_shared_engine
+from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
 from .editor_shortcuts import EditorShortcuts
@@ -74,6 +72,8 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         # Initialize code folding
         self.fold_manager = CodeFoldingManager(self)
+
+        self.bracket_match_highlighter = BracketMatchHighlighter(self)
 
         # Autocomplete controller (jedi-backed). Silently inert if jedi is missing.
         self.autocomplete = AutocompleteController(
@@ -140,6 +140,10 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         except AttributeError:
             # PySide2/Qt5 fallback
             self.setTabStopWidth(tab_stop_distance)
+
+        # Wider caret so it stays visible when sitting on the bracket-match
+        # rectangle's 1px border (e.g. cursor at ``)|``).
+        self.setCursorWidth(2)
 
         # Word wrap enabled by default
         self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
@@ -369,39 +373,22 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.line_number_area.setGeometry(cr.left(), cr.top(), self.line_number_area.calculate_width(), cr.height())
 
     def highlight_current_line(self):
-        """Highlight the current line.
+        """Repaint the viewport when the caret's line or selection state flips.
 
-        Hot path: ``cursorPositionChanged`` fires on every keystroke and arrow
-        press. The current-line band only needs to move when the cursor lands
-        on a different block, so we short-circuit when the line number hasn't
-        changed (intra-line cursor moves repaint the same band).
+        The actual decoration is drawn in
+        :func:`editor_overlays.paint_current_line_border` (top/bottom rules) —
+        this hook just invalidates the viewport so the rules move with the
+        caret. Short-circuited when neither the line nor the selection state
+        changed, since intra-line cursor moves don't need a full repaint.
         """
-        cursor_line = self.textCursor().blockNumber()
-        if not self.isReadOnly() and getattr(self, "_last_highlight_line", -1) == cursor_line:
+        cursor = self.textCursor()
+        cursor_line = cursor.blockNumber()
+        has_selection = cursor.hasSelection()
+        if cursor_line == getattr(self, "_last_highlight_line", -1) and has_selection == getattr(self, "_last_had_selection", False):
             return
         self._last_highlight_line = cursor_line
-
-        # Get existing extra selections (including error highlights)
-        existing_selections = self.extraSelections()
-
-        # Filter out previous current line selections
-        filtered_selections = []
-        for selection in existing_selections:
-            # Keep selections that are not current line highlights
-            if not (hasattr(selection.format, "background") and selection.format.property(QTextCharFormat.FullWidthSelection)):
-                filtered_selections.append(selection)
-
-        if not self.isReadOnly():
-            selection = QTextEdit.ExtraSelection()
-
-            line_color = QColor(AppTheme.CURRENT_LINE_HIGHLIGHT)
-            selection.format.setBackground(line_color)
-            selection.format.setProperty(QTextCharFormat.FullWidthSelection, True)
-            selection.cursor = self.textCursor()
-            selection.cursor.clearSelection()
-            filtered_selections.append(selection)
-
-        self.setExtraSelections(filtered_selections)
+        self._last_had_selection = has_selection
+        self.viewport().update()
 
     def insertFromMimeData(self, source):
         """Override to ensure plain text paste only."""
@@ -490,10 +477,19 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().mouseReleaseEvent(event)
 
     def paintEvent(self, event):
-        """Paint text, then editor overlays, then multi-cursor indicators."""
+        """Paint text, then editor overlays, then multi-cursor indicators.
+
+        ``paint_current_line_border`` runs *before* ``super()`` so the row's
+        top/bottom rules sit behind the text and caret — otherwise Qt's text
+        painter (which fires inside ``super()``) would render glyph descenders
+        on top of the lines while the lines would themselves clip the caret's
+        first/last pixel.
+        """
+        editor_overlays.paint_current_line_border(self, event)
         super().paintEvent(event)
         editor_overlays.paint_indent_guides(self, event)
         editor_overlays.paint_fold_placeholders(self, event)
+        self.bracket_match_highlighter.paint(event)
 
         painter = QPainter(self.viewport())
         self.paint_multi_cursors(painter)
