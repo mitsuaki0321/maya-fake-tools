@@ -42,6 +42,11 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     inspect_object = Signal(str, str)  # (object_name, inspection_type)
     # Signal for focus lost (triggers session.json save)
     focus_lost = Signal()
+    # Real content change — fires only when characters actually changed.
+    # Use this instead of ``textChanged`` for anything that should NOT react to
+    # QSyntaxHighlighter format reapplication (which also fires textChanged via
+    # markContentsDirty and would otherwise flip is_modified back on after save).
+    contentChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -108,7 +113,11 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             import __main__
 
             main_dict = getattr(__main__, "__dict__", None)
-            if isinstance(main_dict, dict) and main_dict not in namespaces:
+            # Identity check, not ``in`` — value comparison would compare every
+            # key/value pair across exec_globals and __main__.__dict__, which
+            # both can be large in a Maya session and which gets called on every
+            # autocomplete dispatch.
+            if isinstance(main_dict, dict) and all(d is not main_dict for d in namespaces):
                 namespaces.append(main_dict)
         except Exception as exc:
             logger.debug(f"failed to attach __main__ to namespaces: {exc}")
@@ -154,24 +163,25 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.highlight_current_line()
 
     def connect_signals(self):
-        """Connect editor signals."""
-        self.textChanged.connect(self.on_text_changed)
-        # Route *actual* content edits (not pure formatting repaints) to the
-        # autocomplete controller via ``contentsChange``. ``textChanged`` also
-        # fires when QSyntaxHighlighter reapplies formats via
-        # ``markContentsDirty``, which would otherwise feedback-loop into jedi
-        # once the popup is up.
+        """Connect editor signals.
+
+        All content-change tracking (modified flag, autocomplete, the
+        ``contentChanged`` re-emission) goes through ``contentsChange`` rather
+        than ``textChanged``. The latter also fires when QSyntaxHighlighter
+        reapplies formats via ``markContentsDirty``, which would otherwise
+        flip ``is_modified`` back to True right after save (visible as the
+        tab "*" briefly disappearing then re-appearing on a saved file with
+        any highlightable content) and feedback-loop into jedi.
+        """
         self.document().contentsChange.connect(self._on_contents_change)
 
-    def on_text_changed(self):
-        """Handle text changes — bookkeeping only (modified flag)."""
-        if not self.is_modified:
-            self.is_modified = True
-
     def _on_contents_change(self, position: int, removed: int, added: int):
-        """Bridge to autocomplete: fires only when characters actually changed."""
+        """Bookkeeping for real edits; format-only notifications are filtered."""
         if removed == 0 and added == 0:
             return  # Formatting-only notification from the syntax highlighter.
+        if not self.is_modified:
+            self.is_modified = True
+        self.contentChanged.emit()
         if getattr(self, "autocomplete", None) is not None:
             self.autocomplete.on_text_changed()
 
@@ -359,7 +369,18 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.line_number_area.setGeometry(cr.left(), cr.top(), self.line_number_area.calculate_width(), cr.height())
 
     def highlight_current_line(self):
-        """Highlight the current line."""
+        """Highlight the current line.
+
+        Hot path: ``cursorPositionChanged`` fires on every keystroke and arrow
+        press. The current-line band only needs to move when the cursor lands
+        on a different block, so we short-circuit when the line number hasn't
+        changed (intra-line cursor moves repaint the same band).
+        """
+        cursor_line = self.textCursor().blockNumber()
+        if not self.isReadOnly() and getattr(self, "_last_highlight_line", -1) == cursor_line:
+            return
+        self._last_highlight_line = cursor_line
+
         # Get existing extra selections (including error highlights)
         existing_selections = self.extraSelections()
 

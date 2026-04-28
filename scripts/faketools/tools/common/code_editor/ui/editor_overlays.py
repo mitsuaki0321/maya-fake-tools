@@ -19,6 +19,22 @@ from ..themes import AppTheme
 _INDENT_SIZE = 4
 
 
+def _cached_indent_step(editor) -> int:
+    """Return ``_INDENT_SIZE * char_width`` cached against the editor's font.
+
+    paintEvent fires on every cursor blink / scroll / keystroke, so reaching
+    into ``fontMetrics().horizontalAdvance(' ')`` each time is wasteful — the
+    value only changes when the font does (Ctrl+wheel zoom, theme reload).
+    """
+    font_key = (editor.font().family(), editor.font().pointSizeF(), editor.font().pixelSize())
+    cached = getattr(editor, "_indent_guide_step_cache", None)
+    if cached is not None and cached[0] == font_key:
+        return cached[1]
+    step = editor.fontMetrics().horizontalAdvance(" ") * _INDENT_SIZE
+    editor._indent_guide_step_cache = (font_key, step)
+    return step
+
+
 def paint_fold_placeholders(editor, event) -> None:
     """Draw ``...`` placeholders after every folded header on screen.
 
@@ -59,28 +75,36 @@ def paint_fold_placeholders(editor, event) -> None:
 
 def paint_indent_guides(editor, event) -> None:
     """Draw a vertical guide line at each indent level on every visible block."""
+    tab_width = _cached_indent_step(editor)
+    event_bottom = event.rect().bottom()
+    content_offset = editor.contentOffset()
+
     painter = QPainter(editor.viewport())
     painter.setPen(QPen(QColor(AppTheme.INDENT_GUIDE_COLOR), 1))
 
-    char_width = editor.fontMetrics().horizontalAdvance(" ")
-    tab_width = char_width * _INDENT_SIZE
-
     block = editor.firstVisibleBlock()
     while block.isValid():
-        geometry = editor.blockBoundingGeometry(block).translated(editor.contentOffset())
-        if geometry.top() > event.rect().bottom():
+        geometry = editor.blockBoundingGeometry(block).translated(content_offset)
+        if geometry.top() > event_bottom:
             break
 
         text = block.text()
         if text.strip():
-            indent = len(text) - len(text.lstrip())
-            indent_levels = indent // _INDENT_SIZE
+            stripped_len = len(text.lstrip())
+            if stripped_len == len(text):
+                # Non-empty but no leading whitespace — no guides on this row.
+                block = block.next()
+                continue
+            indent_levels = (len(text) - stripped_len) // _INDENT_SIZE
         else:
             indent_levels = _next_block_indent_level(block)
 
-        for level in range(indent_levels):
-            x = int(level * tab_width)
-            painter.drawLine(x, int(geometry.top()), x, int(geometry.bottom()))
+        if indent_levels:
+            top = int(geometry.top())
+            bottom = int(geometry.bottom())
+            for level in range(indent_levels):
+                x = int(level * tab_width)
+                painter.drawLine(x, top, x, bottom)
 
         block = block.next()
 

@@ -408,6 +408,8 @@ class PythonHighlighter(QSyntaxHighlighter):
         elif block_count != self._last_block_count:
             # Line count shifted: block-indexed spans would misalign against the new
             # layout, so rebuild synchronously to avoid a visible mis-coloring frame.
+            # (Tried debouncing this — the new line painted briefly uncolored until
+            # the next keystroke, which is more jarring than the rebuild itself.)
             self._rebuild_now()
         elif rev != self._rev and not self._rebuild_timer.isActive():
             # Character-only edit: keep using stale spans for now and coalesce

@@ -99,8 +99,8 @@ class CodeEditorWidget(QTabWidget):
         editor.set_word_wrap(self._word_wrap_enabled)
         self._apply_autocomplete(editor)
 
-        editor.textChanged.connect(lambda: self.update_tab_title(editor))
-        editor.textChanged.connect(self.textChanged.emit)
+        editor.contentChanged.connect(lambda: self.update_tab_title(editor))
+        editor.contentChanged.connect(self.textChanged.emit)
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
@@ -116,7 +116,7 @@ class CodeEditorWidget(QTabWidget):
                 # Temporarily drop listeners so the setPlainText doesn't flip
                 # the modified flag and convert the tab to a regular one.
                 with contextlib.suppress(Exception):
-                    editor.textChanged.disconnect()
+                    editor.contentChanged.disconnect()
 
                 editor.setPlainText(content)
                 editor.is_modified = False
@@ -125,8 +125,8 @@ class CodeEditorWidget(QTabWidget):
                 self.setTabText(self.preview_tab_index, f"[Preview] {title}")
                 self.setCurrentIndex(self.preview_tab_index)
 
-                editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
-                editor.textChanged.connect(self.textChanged.emit)
+                editor.contentChanged.connect(lambda: self.on_preview_text_changed(editor))
+                editor.contentChanged.connect(self.textChanged.emit)
 
                 return editor
 
@@ -150,8 +150,8 @@ class CodeEditorWidget(QTabWidget):
         editor.set_word_wrap(self._word_wrap_enabled)
         self._apply_autocomplete(editor)
 
-        editor.textChanged.connect(lambda: self.on_preview_text_changed(editor))
-        editor.textChanged.connect(self.textChanged.emit)
+        editor.contentChanged.connect(lambda: self.on_preview_text_changed(editor))
+        editor.contentChanged.connect(self.textChanged.emit)
         editor.inspect_object.connect(self.inspect_object.emit)
 
         self.style_preview_tab(index)
@@ -254,8 +254,8 @@ class CodeEditorWidget(QTabWidget):
         editor.set_word_wrap(self._word_wrap_enabled)
         self._apply_autocomplete(editor)
 
-        editor.textChanged.connect(lambda: self.update_tab_title(editor))
-        editor.textChanged.connect(self.textChanged.emit)
+        editor.contentChanged.connect(lambda: self.update_tab_title(editor))
+        editor.contentChanged.connect(self.textChanged.emit)
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
@@ -307,8 +307,8 @@ class CodeEditorWidget(QTabWidget):
         editor.set_word_wrap(self._word_wrap_enabled)
         self._apply_autocomplete(editor)
 
-        editor.textChanged.connect(lambda: self.update_tab_title(editor))
-        editor.textChanged.connect(self.textChanged.emit)
+        editor.contentChanged.connect(lambda: self.update_tab_title(editor))
+        editor.contentChanged.connect(self.textChanged.emit)
         editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
@@ -476,13 +476,25 @@ class CodeEditorWidget(QTabWidget):
         return success
 
     def update_tab_title(self, editor: PythonEditor):
-        """Refresh the tab text for ``editor`` (skip preview tabs)."""
+        """Refresh the tab text for ``editor`` (skip preview tabs).
+
+        Hot path: ``contentChanged`` fires this on every keystroke. After the
+        first edit the title gains an asterisk and stops changing until save,
+        so we short-circuit when the existing tab text already matches the
+        target name (preserving the active-tab "● " prefix).
+        """
         if hasattr(editor, "is_preview") and editor.is_preview:
             return
 
+        new_name = editor.get_display_name()
         for i in range(self.count()):
             if self.widget(i) == editor:
-                self.setTabText(i, editor.get_display_name())
+                current = self.tabText(i)
+                has_active_prefix = current.startswith("● ")
+                stripped = current[2:] if has_active_prefix else current
+                if stripped == new_name:
+                    return
+                self.setTabText(i, f"● {new_name}" if has_active_prefix else new_name)
                 break
 
     def save_session_if_available(self):

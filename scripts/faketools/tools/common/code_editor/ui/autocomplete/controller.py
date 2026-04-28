@@ -374,7 +374,11 @@ class AutocompleteController:
             return
 
         if trigger == "dot":
-            self._timer.start(0)
+            # A small debounce even on dot — typing ``a.b.c`` would otherwise
+            # fire three back-to-back jedi dispatches; coalescing them costs no
+            # perceivable popup latency and avoids namespace snapshotting on
+            # every character.
+            self._timer.start(min(30, self._debounce_ms))
             return
 
         # trigger == "word": only refresh an already-open popup. Typing a bare
