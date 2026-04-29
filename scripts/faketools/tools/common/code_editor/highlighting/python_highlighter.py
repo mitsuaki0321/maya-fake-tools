@@ -20,7 +20,7 @@ import keyword
 import token as _token
 import tokenize as _tokenize
 
-from .....lib_ui.qt_compat import QSyntaxHighlighter, QTimer
+from .....lib_ui.qt_compat import QFont, QSyntaxHighlighter, QTextCharFormat, QTimer
 from .syntax_config_loader import SyntaxConfigLoader
 
 
@@ -78,10 +78,14 @@ class PythonHighlighter(QSyntaxHighlighter):
         "method": "method",  # Method/function calls & bare calls
     }
 
+    # Kinds rendered in bold. Style attributes live here so the loader stays
+    # a pure colour-table reader.
+    _BOLD_KINDS = frozenset({"kw", "defk", "const", "classname", "decorator"})
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._cfg = SyntaxConfigLoader()
-        self._fmt = {k: self._cfg.get_format(v) for k, v in self._KIND_TO_FMTKEY.items()}
+        self._fmt = {k: self._build_fmt(k, v) for k, v in self._KIND_TO_FMTKEY.items()}
         # Per-depth bracket formats (kind name: "br_d{i}" for cycle index i).
         for i, key in enumerate(self._BRACKET_DEPTH_KEYS):
             self._fmt[f"br_d{i}"] = self._cfg.get_format(key)
@@ -93,6 +97,19 @@ class PythonHighlighter(QSyntaxHighlighter):
         self._rebuild_timer = QTimer(self)
         self._rebuild_timer.setSingleShot(True)
         self._rebuild_timer.timeout.connect(self._on_rebuild_timer)
+
+    def _build_fmt(self, kind: str, fmt_key: str) -> "QTextCharFormat":
+        """Resolve a colour from the loader and apply local style flags.
+
+        ``QTextCharFormat`` is copied before mutation so the loader's
+        cached entry stays unmodified — relevant if the loader is ever
+        reloaded or shared.
+        """
+        fmt = self._cfg.get_format(fmt_key)
+        if kind in self._BOLD_KINDS:
+            fmt = QTextCharFormat(fmt)
+            fmt.setFontWeight(QFont.Bold)
+        return fmt
 
     # -------------------- Safe tokenization (handles incomplete code) --------------------
 
