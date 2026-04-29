@@ -154,13 +154,8 @@ class CodeEditorWidget(QTabWidget):
         editor.contentChanged.connect(self.textChanged.emit)
         editor.inspect_object.connect(self.inspect_object.emit)
 
-        self.style_preview_tab(index)
-
         # Preview tabs are intentionally excluded from session persistence.
         return editor
-
-    def style_preview_tab(self, index):
-        """Apply italic styling to preview tab (no-op: caused Maya crashes)."""
 
     def on_preview_text_changed(self, editor):
         """If the user edits a preview tab, promote it to a regular tab."""

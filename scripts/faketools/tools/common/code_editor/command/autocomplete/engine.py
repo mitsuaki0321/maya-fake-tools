@@ -380,34 +380,6 @@ class JediEngine:
         items.sort(key=_completion_sort_key)
         return items
 
-    def signatures(
-        self,
-        code: str,
-        line: int,
-        column: int,
-        namespaces: Optional[Sequence[dict]] = None,
-        path: Optional[str] = None,
-    ) -> list[str]:
-        """Return callable signatures near the cursor as plain display strings.
-
-        Used for the parameter-hint popup (optional Phase B5). Each string is
-        the function name with its parameter list — e.g. ``polyCube(width,
-        height, ...)``. Returns ``[]`` on any error or when jedi is missing.
-        """
-        if not JEDI_AVAILABLE:
-            return []
-        if not code or len(code) > self.max_file_bytes:
-            return []
-
-        try:
-            script, effective_line = self._make_script(code, line, column, namespaces, path)
-            sigs = script.get_signatures(effective_line, column)
-        except Exception as exc:
-            logger.debug(f"jedi.get_signatures failed at {line}:{column}: {exc}")
-            return []
-
-        return [_format_signature(sig) for sig in sigs]
-
     def get_docstring(
         self,
         code: str,
@@ -645,15 +617,6 @@ def _completion_sort_key(item: CompletionItem) -> tuple:
     # Hide dunders unless explicitly typed (they're noisy in autocomplete).
     dunder = 1 if item.name.startswith("_") else 0
     return (dunder, rank, item.name.lower())
-
-
-def _format_signature(sig) -> str:
-    """Stringify a jedi ``Signature`` as ``name(param1, param2, ...)``."""
-    try:
-        params = ", ".join(p.to_string() for p in sig.params)
-    except Exception:
-        params = ""
-    return f"{sig.name}({params})"
 
 
 def _try_live_doc(full_name: str) -> str:

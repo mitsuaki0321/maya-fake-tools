@@ -143,11 +143,10 @@ class AppTheme:
     OUTPUT_SUCCESS = _Palette.STATUS_SUCCESS
     OUTPUT_COMMAND = _Palette.STATUS_COMMAND
 
-    # ===== Multi-cursor / find overlays (RGBA tuples for QColor) =====
+    # ===== Multi-cursor overlays (RGBA tuples for QColor) =====
     MULTI_CURSOR_COLOR = (255, 255, 255, 200)
     MULTI_SELECTION_COLOR = (60, 120, 200, 100)
     RECT_SELECTION_COLOR = (100, 150, 255, 80)
-    FIND_HIGHLIGHT_COLOR = (255, 255, 0, 80)
 
     # ===== File-explorer hover-run button (RGB tuples) =====
     EXPLORER_RUN_BUTTON_BACKGROUND = (45, 45, 45)
