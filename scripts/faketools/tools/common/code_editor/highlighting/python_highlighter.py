@@ -56,6 +56,9 @@ class PythonHighlighter(QSyntaxHighlighter):
     ENABLE_METHOD_TAIL = True  # Color obj.method() / pkg.mod.Func() / bare call 'name()'
     ENABLE_CAPITAL_CALL = True  # Color bare 'Name(' as class
 
+    # Bracket depth colors cycle through these theme keys (rainbow brackets).
+    _BRACKET_DEPTH_KEYS = ("bracket_1", "bracket_2", "bracket_3")
+
     # Token type -> theme key mapping (colors retrieved from SyntaxConfigLoader)
     _KIND_TO_FMTKEY = {
         # Core features
@@ -66,7 +69,6 @@ class PythonHighlighter(QSyntaxHighlighter):
         "str": "string",
         "cmt": "comment",
         "num": "number",
-        "br": "bracket",
         "op": "operator",
         # Extended features
         "decorator": "decorator",
@@ -80,6 +82,9 @@ class PythonHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
         self._cfg = SyntaxConfigLoader()
         self._fmt = {k: self._cfg.get_format(v) for k, v in self._KIND_TO_FMTKEY.items()}
+        # Per-depth bracket formats (kind name: "br_d{i}" for cycle index i).
+        for i, key in enumerate(self._BRACKET_DEPTH_KEYS):
+            self._fmt[f"br_d{i}"] = self._cfg.get_format(key)
         self._spans = {}
         self._rev = -1
         self._last_block_count = 0
@@ -96,8 +101,7 @@ class PythonHighlighter(QSyntaxHighlighter):
         patched = text
         if not patched.endswith("\n"):
             patched += "\n"
-        patched = self._balance_brackets(patched)
-        patched = self._close_unfinished_triple_quotes(patched)
+        patched = self._close_unfinished_structures(patched)
         try:
             rd = io.StringIO(patched).readline
             return list(_tokenize.generate_tokens(rd))
@@ -105,28 +109,77 @@ class PythonHighlighter(QSyntaxHighlighter):
             # Handle tokenization errors gracefully
             return []
 
-    def _balance_brackets(self, text: str) -> str:
-        """Add closing brackets to match unbalanced opening brackets."""
+    def _close_unfinished_structures(self, text: str) -> str:
+        """Append closing brackets and triple quotes for any unfinished structures.
+
+        Walks the text with a small state machine so brackets and quote chars
+        inside comments or strings are ignored — naive char counting was wrong
+        for cases like ``# foo'''`` (unbalanced ``'''`` inside a comment) which
+        used to make ``tokenize`` fail and leave the document uncolored.
+        """
         opens = {"(": ")", "[": "]", "{": "}"}
         closes = {")": "(", "]": "[", "}": "{"}
-        stack = []
-        for ch in text:
-            if ch in opens:
-                stack.append(ch)
-            elif ch in closes and stack and stack[-1] == closes[ch]:
-                stack.pop()
-        suffix = "".join(opens[ch] for ch in reversed(stack))
-        return text + suffix
+        NORMAL, LCOMMENT, S_STR, D_STR, S_TRI, D_TRI = range(6)
+        state = NORMAL
+        stack: list[str] = []
+        i = 0
+        n = len(text)
+        while i < n:
+            c = text[i]
+            if state == NORMAL:
+                if c == "'" and text.startswith("'''", i):
+                    state = S_TRI
+                    i += 3
+                    continue
+                if c == '"' and text.startswith('"""', i):
+                    state = D_TRI
+                    i += 3
+                    continue
+                if c == "'":
+                    state = S_STR
+                elif c == '"':
+                    state = D_STR
+                elif c == "#":
+                    state = LCOMMENT
+                elif c in opens:
+                    stack.append(c)
+                elif c in closes and stack and stack[-1] == closes[c]:
+                    stack.pop()
+                i += 1
+            elif state == LCOMMENT:
+                if c == "\n":
+                    state = NORMAL
+                i += 1
+            elif state in (S_STR, D_STR):
+                if c == "\\" and i + 1 < n:
+                    i += 2
+                    continue
+                quote = "'" if state == S_STR else '"'
+                if c == quote or c == "\n":
+                    state = NORMAL
+                i += 1
+            elif state == S_TRI:
+                if text.startswith("'''", i):
+                    state = NORMAL
+                    i += 3
+                    continue
+                i += 1
+            elif state == D_TRI:
+                if text.startswith('"""', i):
+                    state = NORMAL
+                    i += 3
+                    continue
+                i += 1
 
-    def _close_unfinished_triple_quotes(self, text: str) -> str:
-        """Close unfinished triple quotes."""
-        dq = text.count('"""')
-        sq = text.count("'''")
-        if dq % 2 == 1:
-            text += '"""'
-        if sq % 2 == 1:
-            text += "'''"
-        return text
+        # Close unfinished triple quote first — bracket completion belongs
+        # outside the (now-closed) string, not inside it.
+        suffix_parts: list[str] = []
+        if state == S_TRI:
+            suffix_parts.append("'''")
+        elif state == D_TRI:
+            suffix_parts.append('"""')
+        suffix_parts.extend(opens[c] for c in reversed(stack))
+        return text + "".join(suffix_parts)
 
     # -------------------- Token utilities --------------------
 
@@ -194,6 +247,9 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         in_def_signature = False  # Inside def header (until ':')
         in_import_stmt = False  # Inside import/from statement (until newline)
+
+        bracket_depth = 0  # Combined nesting depth across (), [], {} for rainbow brackets
+        n_bracket_colors = len(self._BRACKET_DEPTH_KEYS)
 
         i = 0
         while i < n:
@@ -356,9 +412,14 @@ class PythonHighlighter(QSyntaxHighlighter):
                         # Return type annotation only in function header
                         pending_type_after_arrow = True
 
-                # Brackets get bracket color, punctuation stays uncolored, rest get operator color
-                if exact in (_token.LPAR, _token.RPAR, _token.LSQB, _token.RSQB, _token.LBRACE, _token.RBRACE):
-                    add_token(tok, "br")
+                # Brackets get depth-cycled color, punctuation stays uncolored, rest get operator color
+                if exact in (_token.LPAR, _token.LSQB, _token.LBRACE):
+                    add_token(tok, f"br_d{bracket_depth % n_bracket_colors}")
+                    bracket_depth += 1
+                elif exact in (_token.RPAR, _token.RSQB, _token.RBRACE):
+                    if bracket_depth > 0:
+                        bracket_depth -= 1
+                    add_token(tok, f"br_d{bracket_depth % n_bracket_colors}")
                 elif tstr in (":", ",", ".", ";"):
                     pass
                 else:
