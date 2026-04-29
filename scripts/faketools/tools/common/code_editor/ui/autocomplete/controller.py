@@ -622,13 +622,64 @@ class AutocompleteController:
             # not an attribute access — popping the completer here is noise.
             if position >= 2 and doc.characterAt(position - 2).isdigit():
                 return None
+            if self._is_in_comment_or_string():
+                return None
             return "dot"
         if char.isalnum() or char == "_":
+            if self._is_in_comment_or_string():
+                return None
             return "word"
         if char in _IDENT_TERMINATORS:
             return None
         # Anything exotic (multibyte punctuation etc.) — safest to skip.
         return None
+
+    def _is_in_comment_or_string(self) -> bool:
+        """True if the caret sits inside a Python comment or string literal.
+
+        Suppresses popups for cases like ``# I'm ok.|`` or ``"a.b"|`` where
+        attribute completion makes no sense. Single-line comments and
+        line-local strings are detected by scanning the current line; the
+        triple-quoted multi-line case falls through to the highlighter's
+        cached ``cmt``/``str`` spans, which already cover every row of the
+        literal.
+        """
+        cursor = self.editor.textCursor()
+        block = cursor.block()
+        pos_in_block = cursor.positionInBlock()
+        prefix = block.text()[:pos_in_block]
+
+        in_single = False
+        in_double = False
+        i = 0
+        n = len(prefix)
+        while i < n:
+            ch = prefix[i]
+            if (in_single or in_double) and ch == "\\" and i + 1 < n:
+                i += 2
+                continue
+            if in_single:
+                if ch == "'":
+                    in_single = False
+            elif in_double:
+                if ch == '"':
+                    in_double = False
+            elif ch == "'":
+                in_single = True
+            elif ch == '"':
+                in_double = True
+            elif ch == "#":
+                return True
+            i += 1
+        if in_single or in_double:
+            return True
+
+        highlighter = getattr(self.editor, "highlighter", None)
+        spans_by_row = getattr(highlighter, "_spans", None) if highlighter is not None else None
+        if spans_by_row is None:
+            return False
+        target_col = pos_in_block - 1
+        return any(kind in ("cmt", "str") and c1 <= target_col < c2 for c1, c2, kind in spans_by_row.get(block.blockNumber(), ()))
 
     def _dispatch_completion(self):
         """Take a snapshot of cursor state and submit a jedi request."""
