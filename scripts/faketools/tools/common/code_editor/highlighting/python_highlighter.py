@@ -478,7 +478,15 @@ class PythonHighlighter(QSyntaxHighlighter):
             self._rebuild_timer.start(self._REBUILD_DELAY_MS)
 
         row = self.currentBlock().blockNumber()
+        n = len(text)
         for c1, c2, kind in self._spans.get(row, ()):
             fmt = self._fmt.get(kind)
-            if fmt is not None and 0 <= c1 < c2 <= len(text):
-                self.setFormat(c1, c2 - c1, fmt)
+            if fmt is None or c1 < 0 or c1 >= n:
+                continue
+            # Clip stale spans to the current line length: when the user
+            # backspaces inside a comment, the cached span still ends past the
+            # now-shorter line and used to be dropped entirely, flashing the
+            # line uncolored until the debounce-driven rebuild caught up.
+            end = c2 if c2 <= n else n
+            if end > c1:
+                self.setFormat(c1, end - c1, fmt)
