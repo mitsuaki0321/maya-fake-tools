@@ -243,13 +243,6 @@ class MayaHelpDetector:
         # MColor -> m_color, MFnMesh -> m_fn_mesh, MDagPath -> m_dag_path
         return re.sub(r"(?<!^)(?=[A-Z])", "_", class_name).lower()
 
-    def _convert_class_name_to_url_format(self, class_name: str) -> Optional[str]:
-        """
-        Convert Maya class name to URL format (legacy method for backward compatibility).
-        Now delegates to the algorithmic approach.
-        """
-        return self._convert_class_name_to_url_format_algorithmic(class_name)
-
     def get_fallback_search_url(self, alias: str, command: str) -> str:
         """
         Generate fallback search URL if specific documentation is not found.

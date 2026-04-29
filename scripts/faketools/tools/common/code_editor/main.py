@@ -172,51 +172,6 @@ def _setup_maya_callbacks(editor_instance):
         logger.error(f"Failed to setup Maya callbacks: {e}")
 
 
-def hide_editor():
-    """Hide the Maya Code Editor."""
-    global _dock_instance
-
-    if _dock_instance:
-        _dock_instance.hide()
-
-
-def close_editor():
-    """Close the Maya Code Editor."""
-    global _editor_instance, _dock_instance
-
-    if _dock_instance:
-        _dock_instance.close()
-
-    _editor_instance = None
-    _dock_instance = None
-
-
-def get_editor():
-    """Get the current editor instance."""
-    return _editor_instance
-
-
-def reload_editor_dev():
-    """
-    Reload the editor for development purposes.
-
-    This function clears all maya_code_editor modules from memory
-    and reloads the editor. Useful during development to apply changes
-    without restarting Maya.
-    """
-    try:
-        # Use the module cleaner to clean up
-        from . import module_cleaner
-
-        module_cleaner.cleanup()
-
-        # Reload editor (show_editor is defined in this module)
-        show_editor()
-        logger.info("Maya Code Editor reloaded successfully!")
-    except Exception as e:
-        logger.error(f"Failed to reload editor: {str(e)}")
-
-
 def show_ui():
     """Show the Code Editor UI.
 

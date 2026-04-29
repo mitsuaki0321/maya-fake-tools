@@ -3,7 +3,7 @@ Shortcut handler for Code Editor.
 Manages all keyboard shortcuts and their associated functionality.
 """
 
-from .....lib_ui.qt_compat import QApplication, QKeySequence, QShortcut, Qt, QTextCursor
+from .....lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
 from .find_replace_dialog import FindReplaceDialog
 
 
@@ -14,45 +14,6 @@ class ShortcutHandler:
         """Initialize the shortcut handler with reference to main window."""
         self.main_window = main_window
         self.find_replace_dialog = None
-
-    def _is_code_editor_tab_focused(self):
-        """Check if one of the code editor tabs (not explorer or other areas) has focus."""
-        try:
-            if not self.main_window.code_editor:
-                return False
-
-            focused_widget = QApplication.focusWidget()
-            if not focused_widget:
-                return False
-
-            # Check if focus is on any of the editor tabs (actual editor widgets)
-            code_editor = self.main_window.code_editor
-
-            # Check if focus is on any of the editor tabs
-            for i in range(code_editor.count()):
-                editor = code_editor.widget(i)
-                if editor and (focused_widget == editor):
-                    return True
-
-                # Check if focused widget is a child of this specific editor
-                try:
-                    if editor:
-                        parent = focused_widget.parent()
-                        while parent:
-                            if parent == editor:
-                                return True
-                            try:
-                                parent = parent.parent()
-                            except RuntimeError:
-                                break
-                except RuntimeError:
-                    continue
-
-            return False
-
-        except RuntimeError:
-            # Any widget access failed, assume not focused
-            return False
 
     def setup_shortcuts(self):
         """Setup global keyboard shortcuts (VSCode-like)."""

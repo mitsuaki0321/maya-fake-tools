@@ -192,15 +192,6 @@ class JediEngine:
         self._cached_project = None
         self._root_completion_cache.clear()
 
-    def clear_completion_cache(self) -> None:
-        """Drop the Maya-root completion cache.
-
-        Intended for the rare case where cached stubs go stale within a
-        session — e.g. after a Maya plugin load that registers new ``cmds.*``
-        commands. Also useful as a manual escape hatch while debugging.
-        """
-        self._root_completion_cache.clear()
-
     @property
     def available(self) -> bool:
         """True iff jedi was importable at module load time."""

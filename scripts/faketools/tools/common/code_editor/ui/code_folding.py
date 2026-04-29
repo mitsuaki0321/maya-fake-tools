@@ -68,10 +68,6 @@ class CodeFoldingManager:
             return (block_number, self._fold_regions[block_number])
         return None
 
-    def get_fold_regions(self):
-        """Return a copy of the current fold regions dict."""
-        return dict(self._fold_regions)
-
     # ------------------------------------------------------------------
     # Public API — fold operations
     # ------------------------------------------------------------------

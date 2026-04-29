@@ -229,10 +229,6 @@ class OutputTerminal(QWidget):
         if self.output_display:
             self.output_display.setFont(AppTheme.make_monospace_font(size))
 
-    def reset_font_size(self):
-        """Reset font size to default."""
-        self.set_font_size(self.default_font_size)
-
     def set_default_font_size(self, size):
         """Set default font size from settings."""
         self.default_font_size = size

@@ -364,11 +364,3 @@ class ToolBar(QWidget):
         self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
         self.add_to_shelf_button.clicked.connect(self.add_to_shelf_clicked.emit)
         self.autocomplete_button.clicked.connect(lambda: self.autocomplete_toggled.emit(self.autocomplete_button.is_active()))
-
-    def set_run_enabled(self, enabled: bool):
-        """Enable or disable the run button."""
-        self.run_button.setEnabled(enabled)
-
-    def set_save_enabled(self, enabled: bool):
-        """Enable or disable the save button."""
-        self.save_button.setEnabled(enabled)

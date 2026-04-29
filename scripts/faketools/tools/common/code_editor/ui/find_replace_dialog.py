@@ -9,7 +9,6 @@ UI layer only: builds the dialog, translates checkbox state into a
 from .....lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
-    QColor,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -20,7 +19,6 @@ from .....lib_ui.qt_compat import (
     QRadioButton,
     QShortcut,
     QTextCursor,
-    QTextEdit,
     QVBoxLayout,
 )
 from ..command.search import InvalidRegexError, SearchEngine, SearchOptions
@@ -39,7 +37,6 @@ class FindReplaceDialog(CodeEditorDialog):
         self.last_match_case = False
         self.last_whole_words = False
         self.last_use_regex = False
-        self.highlighted_matches = []  # Store highlighted matches
 
         self.init_ui()
         self.connect_signals()
@@ -236,11 +233,6 @@ class FindReplaceDialog(CodeEditorDialog):
         self.replace_btn.clicked.connect(self.replace_current)
         self.replace_all_btn.clicked.connect(self.replace_all)
 
-        # Options signals
-        self.match_case_cb.toggled.connect(self.on_options_changed)
-        self.whole_words_cb.toggled.connect(self.on_options_changed)
-        self.use_regex_cb.toggled.connect(self.on_options_changed)
-
     def setup_shortcuts(self):
         """Setup keyboard shortcuts."""
         # Escape to close
@@ -292,11 +284,6 @@ class FindReplaceDialog(CodeEditorDialog):
         self.replace_btn.setEnabled(has_text)
         self.replace_all_btn.setEnabled(has_text)
 
-    def on_options_changed(self):
-        """Handle search options changes."""
-        # Clear any existing search highlights when options change
-        self.clear_highlights()
-
     # -------------------- Find actions --------------------
 
     def find_next(self):
@@ -321,7 +308,6 @@ class FindReplaceDialog(CodeEditorDialog):
         if not search_text:
             return 0
 
-        self.clear_highlights()
         count = self.select_all_matches(search_text)
         if count == 0:
             CodeEditorMessageBox.information(self, "Find All Results", f"'{search_text}' not found")
@@ -438,30 +424,6 @@ class FindReplaceDialog(CodeEditorDialog):
         self.editor.viewport().update()
         return len(match_cursors)
 
-    def highlight_all_matches(self, search_text: str) -> int:
-        """Apply yellow ``ExtraSelection`` highlights to every forward match."""
-        options = self.get_options()
-        try:
-            match_cursors = list(self._engine.iter_matches(search_text, options))
-        except InvalidRegexError as exc:
-            CodeEditorMessageBox.warning(self, "Regex Error", f"Invalid regular expression: {exc}")
-            return 0
-
-        if not match_cursors:
-            return 0
-
-        highlight_color = QColor(*AppTheme.FIND_HIGHLIGHT_COLOR)
-        extra_selections = []
-        for match_cursor in match_cursors:
-            selection = QTextEdit.ExtraSelection()
-            selection.cursor = match_cursor
-            selection.format.setBackground(highlight_color)
-            extra_selections.append(selection)
-
-        self.editor.setExtraSelections(extra_selections)
-        self.highlighted_matches = extra_selections
-        return len(match_cursors)
-
     def count_matches(self, search_text: str) -> int:
         """Return the total number of forward matches (0 for invalid regex)."""
         options = self.get_options()
@@ -477,16 +439,8 @@ class FindReplaceDialog(CodeEditorDialog):
             self.editor.search_text = ""
             self.editor.viewport().update()
 
-    def clear_highlights(self):
-        """Clear search result highlights."""
-        # Clear any existing extra selections
-        if hasattr(self, "highlighted_matches") and self.highlighted_matches:
-            self.editor.setExtraSelections([])
-            self.highlighted_matches = []
-
     def closeEvent(self, event):
         """Handle dialog close event."""
-        self.clear_highlights()
         self.save_search_settings()
         super().closeEvent(event)
 

@@ -51,7 +51,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         self.file_path = None
         self.is_modified = False
-        self.custom_name = None  # For renamed tabs
         self.highlighter = None
 
         # Font size management
@@ -256,10 +255,7 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
                 return self.preview_title
             return "Preview"
 
-        # Use custom name if set, otherwise use file name
-        if self.custom_name:
-            name = self.custom_name
-        elif hasattr(self, "is_draft") and self.is_draft:
+        if hasattr(self, "is_draft") and self.is_draft:
             name = "Draft"  # Draft tab never shows asterisk
         elif self.file_path:
             name = os.path.basename(self.file_path)
@@ -273,14 +269,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             name += "*"
 
         return name
-
-    def set_custom_name(self, name: str):
-        """Set custom name for this editor tab."""
-        self.custom_name = name
-
-    def clear_custom_name(self):
-        """Clear custom name and use file name."""
-        self.custom_name = None
 
     def wheelEvent(self, event):
         """Handle mouse wheel events for font size changes."""
@@ -351,10 +339,6 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         else:
             self.setLineWrapMode(QPlainTextEdit.NoWrap)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-
-    def reset_font_size(self):
-        """Reset font size to default."""
-        self.set_font_size(self.default_font_size)
 
     def set_default_font_size(self, size):
         """Set default font size from settings."""

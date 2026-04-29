@@ -6,7 +6,6 @@ inspection snippets, and routes execution through the command-layer
 ``NativeExecutionBridge``. All Maya API calls live in ``command.execution``.
 """
 
-import ast
 import contextlib
 from logging import getLogger
 
@@ -141,51 +140,6 @@ class ExecutionManager:
             # Reset execution flags
             self.is_selection_execution = False
             self.is_full_execution = False
-
-    def is_single_expression(self, code: str) -> bool:
-        """Check if code is a single expression that should return a result."""
-        try:
-            # Strip whitespace and check if empty
-            code = code.strip()
-            if not code:
-                return False
-
-            # Parse the code
-            parsed = ast.parse(code, mode="eval")
-            return True
-        except SyntaxError:
-            # If it can't be parsed as an expression, it's likely a statement
-            try:
-                # Check if it's a simple statement like variable assignment
-                parsed = ast.parse(code, mode="exec")
-                if len(parsed.body) == 1:
-                    stmt = parsed.body[0]
-                    # Don't treat assignments, imports, function/class definitions as expressions
-                    if isinstance(
-                        stmt,
-                        (
-                            ast.Assign,
-                            ast.AugAssign,
-                            ast.Import,
-                            ast.ImportFrom,
-                            ast.FunctionDef,
-                            ast.ClassDef,
-                            ast.For,
-                            ast.While,
-                            ast.If,
-                            ast.With,
-                            ast.Try,
-                        ),
-                    ):
-                        return False
-                    # Single expression statements (like just "variable_name")
-                    if isinstance(stmt, ast.Expr):
-                        return True
-                return False
-            except SyntaxError:
-                return False
-        except Exception:
-            return False
 
     def handle_object_inspection(self, object_name: str, inspection_type: str):
         """Handle object inspection requests."""
