@@ -74,11 +74,39 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
 class _ExplorerTreeView(QTreeView):
     """``QTreeView`` subclass for the file explorer.
 
-    Created so paint hooks (``drawBranches``, ``drawRow``, ...) can be
-    overridden to tweak how the indent / branch column interacts with the
-    selection visuals — see :meth:`drawBranches` for the planned use case.
-    The class is kept intentionally minimal until each behaviour is needed.
+    Owns the paint customisations that QSS alone can't express — currently
+    the VSCode-style vertical indent guides drawn over the branch column.
     """
+
+    def drawBranches(self, painter, rect, index):
+        """Default Qt branches + a thin vertical guide for each ancestor level.
+
+        For an item at depth ``N`` (relative to the view's root index),
+        ``N`` vertical 1 px lines are stamped at ``i * indentation`` so the
+        eye can follow a child row back to its parent. The chevron itself
+        sits at column ``N`` and is left to the base implementation.
+        """
+        super().drawBranches(painter, rect, index)
+
+        depth = 0
+        parent = index.parent()
+        root = self.rootIndex()
+        while parent.isValid() and parent != root:
+            depth += 1
+            parent = parent.parent()
+        if depth == 0:
+            return
+
+        indent = self.indentation()
+        if indent <= 0:
+            return
+
+        painter.save()
+        painter.setPen(QPen(QColor(AppTheme.INDENT_GUIDE_COLOR), 1))
+        for level in range(depth):
+            x = rect.left() + level * indent + indent // 2
+            painter.drawLine(x, rect.top(), x, rect.bottom())
+        painter.restore()
 
 
 class FileExplorerDelegate(QStyledItemDelegate):
