@@ -16,6 +16,7 @@ from ......lib_ui.qt_compat import (
     QEvent,
     QFileInfo,
     QFileSystemModel,
+    QIcon,
     QLineEdit,
     QMenu,
     QModelIndex,
@@ -25,6 +26,7 @@ from ......lib_ui.qt_compat import (
     QPointF,
     QPolygonF,
     QRect,
+    QSize,
     QSortFilterProxyModel,
     QStyledItemDelegate,
     Qt,
@@ -42,10 +44,38 @@ logger = getLogger(__name__)
 
 
 class HiddenFileFilterModel(QSortFilterProxyModel):
-    """Proxy model to filter out hidden files and folders."""
+    """Proxy model that filters hidden entries and pipes folder chevrons through DecorationRole.
+
+    Showing the chevron via the model's ``DecorationRole`` (instead of Qt's
+    default branch indicator) puts it in the same x slot as a file's
+    type icon — matching VSCode's explorer where the chevron *is* the
+    folder's leading glyph rather than sitting in a separate column.
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Wired up via :meth:`setup_chevrons` once the view exists.
+        self._tree_view = None
+        self._chevron_right = None
+        self._chevron_down = None
+
+    def setup_chevrons(self, tree_view, chevron_right_path: str, chevron_down_path: str) -> None:
+        """Bind the proxy to the view so folder rows can render their own chevron.
+
+        ``data(DecorationRole)`` looks up ``isExpanded`` on the view, so we
+        also need to hear about expand/collapse to re-emit ``dataChanged``
+        and force the row to repaint with the flipped chevron.
+        """
+        self._tree_view = tree_view
+        self._chevron_right = QIcon(chevron_right_path)
+        self._chevron_down = QIcon(chevron_down_path)
+        tree_view.expanded.connect(self._on_expansion_changed)
+        tree_view.collapsed.connect(self._on_expansion_changed)
+
+    def _on_expansion_changed(self, index):
+        """Re-emit DecorationRole change so the icon flips on expand/collapse."""
+        if index.isValid():
+            self.dataChanged.emit(index, index, [Qt.DecorationRole])
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Filter out hidden files and folders."""
@@ -70,6 +100,21 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
 
         return all(pattern not in file_name for pattern in hidden_patterns)
 
+    def data(self, index, role=Qt.DisplayRole):
+        """Return the chevron icon for folder rows; defer to the source for everything else."""
+        if role == Qt.DecorationRole and self._tree_view is not None and self._chevron_right is not None:
+            source_index = self.mapToSource(index)
+            if source_index.isValid():
+                source_model = self.sourceModel()
+                if source_model is not None and source_model.fileInfo(source_index).isDir():
+                    return self._chevron_down if self._tree_view.isExpanded(index) else self._chevron_right
+        return super().data(index, role)
+
+
+def _icons_dir() -> str:
+    """Absolute path to the explorer / toolbar shared SVG directory."""
+    return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "icons"))
+
 
 class _ExplorerTreeView(QTreeView):
     """``QTreeView`` subclass for the file explorer.
@@ -79,15 +124,15 @@ class _ExplorerTreeView(QTreeView):
     """
 
     def drawBranches(self, painter, rect, index):
-        """Default Qt branches + a thin vertical guide for each ancestor level.
+        """Indent guides only — no default chevron.
 
-        For an item at depth ``N`` (relative to the view's root index),
-        ``N`` vertical 1 px lines are stamped at ``i * indentation`` so the
-        eye can follow a child row back to its parent. The chevron itself
-        sits at column ``N`` and is left to the base implementation.
+        ``HiddenFileFilterModel`` returns the expand chevron through
+        ``DecorationRole`` so it lands in the same x column as a file's
+        type icon. Calling ``super().drawBranches`` would also paint Qt's
+        own chevron in the branch column, leaving us with two duplicates
+        at different x positions; we deliberately skip the base call and
+        stamp only the vertical guide lines for ancestor levels.
         """
-        super().drawBranches(painter, rect, index)
-
         depth = 0
         parent = index.parent()
         root = self.rootIndex()
@@ -117,6 +162,10 @@ class FileExplorerDelegate(QStyledItemDelegate):
     BUTTON_MARGIN = 4
     CLICK_AREA_MULTIPLIER = 1.5
 
+    # Extra horizontal space inserted between the file/folder icon and the
+    # name. Qt's default delegate packs them tighter than VSCode reads.
+    ICON_TEXT_GAP = 4
+
     def __init__(self, file_explorer, parent=None):
         super().__init__(parent)
         self.file_explorer = file_explorer
@@ -126,6 +175,16 @@ class FileExplorerDelegate(QStyledItemDelegate):
         # later (e.g. ``visualRect``) crashes Maya.
         self.hovered_index = None  # QPersistentModelIndex when set
         self.run_button_rect = None
+
+    def initStyleOption(self, option, index):
+        """Widen the icon's reserved rect so the name renders with breathing room.
+
+        Inflating ``decorationSize`` keeps the icon centred at its natural
+        pixel size while pushing the text start position by the extra width.
+        """
+        super().initStyleOption(option, index)
+        size = option.decorationSize
+        option.decorationSize = QSize(size.width() + self.ICON_TEXT_GAP, size.height())
 
     def paint(self, painter, option, index):
         """Paint the item with optional run button."""
@@ -316,6 +375,16 @@ class FileExplorer(QWidget):
 
         # Set the proxy model to tree view
         self.tree_view.setModel(self.proxy_model)
+
+        # Wire folder chevrons through DecorationRole now that the view and
+        # model are attached. Has to come after ``setModel`` so the model
+        # can observe ``expanded`` / ``collapsed`` from the live view.
+        icon_dir = _icons_dir()
+        self.proxy_model.setup_chevrons(
+            self.tree_view,
+            os.path.join(icon_dir, "chevron_right.svg"),
+            os.path.join(icon_dir, "chevron_down.svg"),
+        )
 
         # Establish a stable initial sort order *before* enabling interactive
         # sort. Doing this against an attached model keeps row insertion (which
