@@ -268,6 +268,7 @@ class AppTheme:
             outline: 0;
             font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
             font-size: 13px;
+            padding-top: 8px;
         }}
         QTreeView::item {{
             padding: 2px;
