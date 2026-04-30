@@ -266,6 +266,8 @@ class AppTheme:
             border: 1px solid {cls.BORDER};
             selection-background-color: {cls.HOVER_BACKGROUND};
             outline: 0;
+            font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+            font-size: 13px;
         }}
         QTreeView::item {{
             padding: 2px;
