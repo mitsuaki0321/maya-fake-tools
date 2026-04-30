@@ -142,7 +142,7 @@ class FileOperationsController:
             if reply != CodeEditorMessageBox.Yes:
                 return
 
-        error = file_io.write_text(file_path, "# New Python script\n\n")
+        error = file_io.write_text(file_path, "")
         if error:
             CodeEditorMessageBox.critical(mw, "Error", f"Failed to create file: {error}")
             return
