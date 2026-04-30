@@ -21,6 +21,7 @@ from ......lib_ui.qt_compat import (
     QModelIndex,
     QPainter,
     QPen,
+    QPersistentModelIndex,
     QPointF,
     QPolygonF,
     QRect,
@@ -70,6 +71,16 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
         return all(pattern not in file_name for pattern in hidden_patterns)
 
 
+class _ExplorerTreeView(QTreeView):
+    """``QTreeView`` subclass for the file explorer.
+
+    Created so paint hooks (``drawBranches``, ``drawRow``, ...) can be
+    overridden to tweak how the indent / branch column interacts with the
+    selection visuals — see :meth:`drawBranches` for the planned use case.
+    The class is kept intentionally minimal until each behaviour is needed.
+    """
+
+
 class FileExplorerDelegate(QStyledItemDelegate):
     """Custom delegate to show run button on hover for Python files."""
 
@@ -81,7 +92,11 @@ class FileExplorerDelegate(QStyledItemDelegate):
     def __init__(self, file_explorer, parent=None):
         super().__init__(parent)
         self.file_explorer = file_explorer
-        self.hovered_index = None
+        # ``QPersistentModelIndex`` survives layoutChanged / row insertions
+        # under the proxy + QFileSystemModel — a plain ``QModelIndex`` goes
+        # silently invalid after a folder expansion and dereferencing it
+        # later (e.g. ``visualRect``) crashes Maya.
+        self.hovered_index = None  # QPersistentModelIndex when set
         self.run_button_rect = None
 
     def paint(self, painter, option, index):
@@ -89,8 +104,9 @@ class FileExplorerDelegate(QStyledItemDelegate):
         # Call parent paint first
         super().paint(painter, option, index)
 
-        # Only show button for hovered Python files
-        if index == self.hovered_index:
+        # Only show button for hovered Python files. Compare against the
+        # persistent index by lifting the incoming volatile QModelIndex.
+        if self.hovered_index is not None and self.hovered_index.isValid() and QPersistentModelIndex(index) == self.hovered_index:
             # Get file info
             source_index = self.file_explorer.proxy_model.mapToSource(index)
             file_path = self.file_explorer.file_model.filePath(source_index)
@@ -133,16 +149,24 @@ class FileExplorerDelegate(QStyledItemDelegate):
         painter.restore()
 
     def set_hovered_index(self, index):
-        """Update the hovered index."""
+        """Update the hovered index.
+
+        ``index`` is the volatile ``QModelIndex`` from ``indexAt`` (or
+        ``None``); we keep a ``QPersistentModelIndex`` so a later folder
+        expand / sort doesn't leave us pointing at freed memory.
+        """
         old_index = self.hovered_index
-        self.hovered_index = index
+        self.hovered_index = QPersistentModelIndex(index) if index is not None and index.isValid() else None
         self.run_button_rect = None
 
-        # Request repaint for both old and new indices
-        if old_index and old_index.isValid():
-            self.parent().viewport().update(self.parent().visualRect(old_index))
-        if index and index.isValid():
-            self.parent().viewport().update(self.parent().visualRect(index))
+        # Request repaint for both old and new indices. ``visualRect`` accepts
+        # ``QPersistentModelIndex`` directly in PySide; convert to a
+        # ``QModelIndex`` to be explicit about which API contract we expect.
+        view = self.parent()
+        if old_index is not None and old_index.isValid():
+            view.viewport().update(view.visualRect(QModelIndex(old_index)))
+        if self.hovered_index is not None and self.hovered_index.isValid():
+            view.viewport().update(view.visualRect(QModelIndex(self.hovered_index)))
 
     def get_run_button_rect(self):
         """Get the current run button rect."""
@@ -205,12 +229,17 @@ class FileExplorer(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Create tree view
-        self.tree_view = QTreeView()
+        self.tree_view = _ExplorerTreeView()
         self.tree_view.setHeaderHidden(True)
         self.tree_view.setAlternatingRowColors(False)
         self.tree_view.setSelectionMode(QTreeView.ExtendedSelection)  # Enable multi-selection
-        self.tree_view.setSortingEnabled(True)
         self.tree_view.setMouseTracking(True)  # Enable mouse tracking for hover
+        # NOTE: ``setSortingEnabled(True)`` is intentionally deferred to
+        # ``setup_file_model``. With QFileSystemModel + QSortFilterProxyModel,
+        # enabling sort *before* the model is attached and then expanding a
+        # folder triggers a row-insert / sort / repaint race that has
+        # historically crashed Maya. Order is: setModel -> sortByColumn ->
+        # setSortingEnabled.
 
         # Enable editing only through F2 or context menu
         self.tree_view.setEditTriggers(QTreeView.EditKeyPressed)
@@ -259,6 +288,13 @@ class FileExplorer(QWidget):
 
         # Set the proxy model to tree view
         self.tree_view.setModel(self.proxy_model)
+
+        # Establish a stable initial sort order *before* enabling interactive
+        # sort. Doing this against an attached model keeps row insertion (which
+        # QFileSystemModel does asynchronously while users expand folders) from
+        # racing with the sort/repaint pipeline.
+        self.tree_view.sortByColumn(0, Qt.AscendingOrder)
+        self.tree_view.setSortingEnabled(True)
 
         # Hide size, type, and date columns - only show name
         header = self.tree_view.header()
@@ -792,7 +828,8 @@ class FileExplorer(QWidget):
             # Check if click is on run button
             if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
                 index = self.tree_view.indexAt(event.pos())
-                if index.isValid() and index == self.delegate.hovered_index:
+                hovered = self.delegate.hovered_index
+                if index.isValid() and hovered is not None and hovered.isValid() and QPersistentModelIndex(index) == hovered:
                     button_rect = self.delegate.get_run_button_rect()
                     if button_rect and button_rect.contains(event.pos()):
                         # Execute the file

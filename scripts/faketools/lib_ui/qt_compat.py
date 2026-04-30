@@ -26,6 +26,7 @@ try:
         QMimeData,  # noqa: F401
         QModelIndex,
         QObject,
+        QPersistentModelIndex,
         QPoint,
         QPointF,
         QRect,
@@ -193,6 +194,7 @@ except ImportError:
         QMimeData,  # noqa: F401
         QModelIndex,
         QObject,
+        QPersistentModelIndex,
         QPoint,
         QPointF,
         QRect,
@@ -556,6 +558,7 @@ __all__ = [
     "QFileInfo",
     "QDateTime",
     "QModelIndex",
+    "QPersistentModelIndex",
     "QFileSystemWatcher",
     "QUrl",
     # GUI classes
