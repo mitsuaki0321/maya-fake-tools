@@ -58,17 +58,31 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
         self._tree_view = None
         self._chevron_right = None
         self._chevron_down = None
+        # Material-Icon-Theme glyphs for known file extensions / names.
+        # Populated by :meth:`setup_chevrons` when a ``files_icon_dir`` is
+        # supplied — kept on the proxy so ``data(DecorationRole)`` can hand
+        # them back without rebuilding ``QIcon``s on every paint.
+        self._file_icons = {}
 
-    def setup_chevrons(self, tree_view, chevron_right_path: str, chevron_down_path: str) -> None:
+    def setup_chevrons(self, tree_view, chevron_right_path, chevron_down_path, files_icon_dir=None):
         """Bind the proxy to the view so folder rows can render their own chevron.
 
         ``data(DecorationRole)`` looks up ``isExpanded`` on the view, so we
         also need to hear about expand/collapse to re-emit ``dataChanged``
-        and force the row to repaint with the flipped chevron.
+        and force the row to repaint with the flipped chevron. When
+        ``files_icon_dir`` is provided, the per-extension Material Icon
+        Theme SVGs in that folder are loaded into a small cache for the
+        file rows.
         """
         self._tree_view = tree_view
         self._chevron_right = QIcon(chevron_right_path)
         self._chevron_down = QIcon(chevron_down_path)
+        if files_icon_dir is not None:
+            unique_glyphs = set(_FILE_EXTENSION_ICONS.values()) | set(_FILE_NAME_ICONS.values())
+            for glyph in unique_glyphs:
+                path = os.path.join(files_icon_dir, f"{glyph}.svg")
+                if os.path.exists(path):
+                    self._file_icons[glyph] = QIcon(path)
         tree_view.expanded.connect(self._on_expansion_changed)
         tree_view.collapsed.connect(self._on_expansion_changed)
 
@@ -101,19 +115,92 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
         return all(pattern not in file_name for pattern in hidden_patterns)
 
     def data(self, index, role=Qt.DisplayRole):
-        """Return the chevron icon for folder rows; defer to the source for everything else."""
+        """Custom decorations: chevron for folders, Material glyph for known files."""
         if role == Qt.DecorationRole and self._tree_view is not None and self._chevron_right is not None:
             source_index = self.mapToSource(index)
             if source_index.isValid():
                 source_model = self.sourceModel()
-                if source_model is not None and source_model.fileInfo(source_index).isDir():
-                    return self._chevron_down if self._tree_view.isExpanded(index) else self._chevron_right
+                if source_model is not None:
+                    file_info = source_model.fileInfo(source_index)
+                    if file_info.isDir():
+                        return self._chevron_down if self._tree_view.isExpanded(index) else self._chevron_right
+                    file_icon = self._lookup_file_icon(file_info)
+                    if file_icon is not None:
+                        return file_icon
         return super().data(index, role)
+
+    def _lookup_file_icon(self, file_info):
+        """Return a bundled file-type ``QIcon`` for ``file_info`` or None.
+
+        Whole-name matches (``LICENSE``, ``CMakeLists.txt``, ``.gitignore``)
+        win over extension matches so files that double as configuration
+        get the more specific glyph. Anything not in either map falls
+        through to the source model's default decoration.
+        """
+        if not self._file_icons:
+            return None
+        name_key = file_info.fileName().lower()
+        glyph = _FILE_NAME_ICONS.get(name_key)
+        if glyph is None:
+            ext = file_info.suffix().lower()
+            glyph = _FILE_EXTENSION_ICONS.get(ext)
+        if glyph is None:
+            return None
+        return self._file_icons.get(glyph)
 
 
 def _icons_dir() -> str:
     """Absolute path to the explorer / toolbar shared SVG directory."""
     return os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "icons"))
+
+
+# Map a lower-cased file extension (without dot) to one of the bundled
+# Material Icon Theme SVGs in ``ui/icons/files/``. Anything missing here
+# falls through to ``QFileSystemModel``'s default decoration provider so
+# the OS-registered icon still shows.
+_FILE_EXTENSION_ICONS = {
+    "py": "python",
+    "md": "markdown",
+    "json": "json",
+    "yml": "yaml",
+    "yaml": "yaml",
+    "toml": "toml",
+    "txt": "document",
+    "ini": "settings",
+    "cfg": "settings",
+    "conf": "settings",
+    "cpp": "cpp",
+    "cc": "cpp",
+    "cxx": "cpp",
+    "h": "h",
+    "hpp": "h",
+    "hh": "h",
+    "cmake": "cmake",
+    "bat": "console",
+    "sh": "console",
+    "cmd": "console",
+    "ps1": "console",
+    "png": "image",
+    "jpg": "image",
+    "jpeg": "image",
+    "gif": "image",
+    "svg": "image",
+    "bmp": "image",
+    "ico": "image",
+    "webp": "image",
+    "tiff": "image",
+    "log": "log",
+}
+
+# Whole-filename matches (case-insensitive). Wins over the extension map
+# so e.g. ``CMakeLists.txt`` is the cmake glyph rather than ``document``.
+_FILE_NAME_ICONS = {
+    "license": "certificate",
+    "cmakelists.txt": "cmake",
+    ".env": "tune",
+    ".gitignore": "git",
+    ".gitattributes": "git",
+}
 
 
 class _ExplorerTreeView(QTreeView):
@@ -400,6 +487,7 @@ class FileExplorer(QWidget):
             self.tree_view,
             os.path.join(icon_dir, "chevron_right.svg"),
             os.path.join(icon_dir, "chevron_down.svg"),
+            files_icon_dir=os.path.join(icon_dir, "files"),
         )
 
         # Establish a stable initial sort order *before* enabling interactive
