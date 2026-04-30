@@ -112,6 +112,10 @@ class AppTheme:
     # ===== Context menus =====
     MENU_BACKGROUND = _Palette.SURFACE_TERTIARY
     MENU_TEXT_COLOR = _Palette.TEXT_NORMAL
+    # Menu hover stays a flat charcoal grey (VSCode Dark Modern's
+    # ``menu.selectionBackground`` look), separate from the blue
+    # selection used in lists / file explorer.
+    MENU_HOVER_BACKGROUND = _Palette.SURFACE_HOVER
 
     # ===== List / menu hover & selection =====
     HOVER_BACKGROUND = _Palette.ACCENT_BG_STRONG
@@ -283,7 +287,12 @@ class AppTheme:
             padding: 5px 20px;
         }}
         QMenu::item:selected {{
-            background-color: {cls.HOVER_BACKGROUND};
+            background-color: {cls.MENU_HOVER_BACKGROUND};
+        }}
+        QMenu::separator {{
+            height: 1px;
+            background-color: {cls.BORDER};
+            margin: 2px 8px;
         }}
         """
 
