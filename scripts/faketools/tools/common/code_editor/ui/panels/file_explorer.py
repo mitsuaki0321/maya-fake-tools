@@ -92,27 +92,19 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
             self.dataChanged.emit(index, index, [Qt.DecorationRole])
 
     def filterAcceptsRow(self, source_row, source_parent):
-        """Filter out hidden files and folders."""
+        """Drop dot-prefixed entries plus a small list of platform/system noise."""
         source_model = self.sourceModel()
         if not source_model:
             return True
 
         index = source_model.index(source_row, 0, source_parent)
-        file_info = source_model.fileInfo(index)
+        file_name = source_model.fileInfo(index).fileName()
 
-        # Get the file/folder name
-        file_name = file_info.fileName()
-
-        # Hide files/folders that start with dot (Unix-style hidden files)
-        # This includes: .maya_code_editor_backups, .logs, .git, etc.
         if file_name.startswith("."):
             return False
-
-        # Snippets data folder filter removed - no longer needed
-        # Hide common system/temporary files
-        hidden_patterns = ["__pycache__", ".pyc", ".pyo", ".DS_Store", "Thumbs.db", ".gitignore", ".git"]
-
-        return all(pattern not in file_name for pattern in hidden_patterns)
+        # Substring match (not just suffix) so Python build artefacts like
+        # ``foo.pyc`` or stray ``.DS_Store`` files are hidden too.
+        return all(pattern not in file_name for pattern in _HIDDEN_PATTERNS)
 
     def data(self, index, role=Qt.DisplayRole):
         """Custom decorations: chevron for folders, Material glyph for known files."""
@@ -201,6 +193,13 @@ _FILE_NAME_ICONS = {
     ".gitignore": "git",
     ".gitattributes": "git",
 }
+
+# Patterns matched against the *full* filename (substring) by
+# ``HiddenFileFilterModel.filterAcceptsRow``. Dot-prefixed entries like
+# ``.gitignore`` are already dropped by the leading-dot rule, so this list
+# only carries the ones that wouldn't be caught by that — Python build
+# artefacts and platform noise.
+_HIDDEN_PATTERNS = ("__pycache__", ".pyc", ".pyo", ".DS_Store", "Thumbs.db")
 
 
 class _ExplorerTreeView(QTreeView):
@@ -600,8 +599,6 @@ class FileExplorer(QWidget):
 
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts for file operations."""
-        from ......lib_ui.qt_compat import Qt
-
         if event.modifiers() == Qt.ControlModifier:
             if event.key() == Qt.Key_C:
                 # Ctrl+C - Copy
@@ -691,7 +688,7 @@ class FileExplorer(QWidget):
         # Rename action (for files and folders)
         rename_action = QAction("Rename\tF2", self)
         if has_selection:
-            rename_action.triggered.connect(lambda: self.rename_item(file_path, file_info.isFile()))
+            rename_action.triggered.connect(self.start_rename)
         rename_action.setEnabled(has_selection)
         menu.addAction(rename_action)
 
@@ -752,14 +749,6 @@ class FileExplorer(QWidget):
 
     def start_rename(self):
         """Start inline rename for the selected item."""
-        indexes = self.tree_view.selectedIndexes()
-        if indexes:
-            # Start editing on the first selected item
-            self.tree_view.edit(indexes[0])
-
-    def rename_item(self, file_path: str, is_file: bool):
-        """Start inline rename for a specific item (called from context menu)."""
-        # Find the index for the file path
         indexes = self.tree_view.selectedIndexes()
         if indexes:
             # Start editing on the first selected item
@@ -837,22 +826,6 @@ class FileExplorer(QWidget):
             CodeEditorMessageBox.No,
         )
         return reply == CodeEditorMessageBox.Yes
-
-    def delete_item(self, file_path: str, is_file: bool):
-        """Single-item delete with confirmation (kept for context-menu callers)."""
-        if not self._confirm_delete([file_path]):
-            return
-
-        result = file_ops.delete_item(file_path)
-        if result.success:
-            if is_file:
-                self.file_deleted.emit(file_path)
-            else:
-                self.folder_deleted.emit(file_path)
-            self.refresh()
-        else:
-            item_type = "file" if is_file else "folder"
-            CodeEditorMessageBox.critical(self, "Error", f"Failed to delete {item_type}: {result.error}")
 
     def copy_selected(self):
         """Copy selected items to clipboard."""
