@@ -132,6 +132,14 @@ class _ExplorerTreeView(QTreeView):
         own chevron in the branch column, leaving us with two duplicates
         at different x positions; we deliberately skip the base call and
         stamp only the vertical guide lines for ancestor levels.
+
+        Each line sits at the centre of the column where an ancestor's
+        chevron (or file icon) is rendered — VSCode's "the guide threads
+        through the parent's expander" placement. When
+        ``rootIsDecorated`` is on, depth 0 has an empty branch slot at
+        ``x = 0..indent`` so the first chevron lives at ``x = indent``;
+        without it, depth 0 chevrons sit flush at ``x = 0``. We bake that
+        offset into ``base_indent`` so the formula stays a single line.
         """
         depth = 0
         parent = index.parent()
@@ -146,10 +154,14 @@ class _ExplorerTreeView(QTreeView):
         if indent <= 0:
             return
 
+        # The chevron / file icon is rendered at the left of the icon
+        # column with a 16 px pixmap, so half-icon = 8 px centres us.
+        icon_half = 8
+        base_indent = indent if self.rootIsDecorated() else 0
         painter.save()
         painter.setPen(QPen(QColor(AppTheme.INDENT_GUIDE_COLOR), 1))
         for level in range(depth):
-            x = rect.left() + level * indent + indent // 2
+            x = rect.left() + base_indent + level * indent + icon_half
             painter.drawLine(x, rect.top(), x, rect.bottom())
         painter.restore()
 
@@ -321,6 +333,10 @@ class FileExplorer(QWidget):
         self.tree_view.setAlternatingRowColors(False)
         self.tree_view.setSelectionMode(QTreeView.ExtendedSelection)  # Enable multi-selection
         self.tree_view.setMouseTracking(True)  # Enable mouse tracking for hover
+        # Drop the empty branch column at depth 0 — our chevrons are rendered
+        # via the model's DecorationRole in the icon column, so the default
+        # branch slot is just wasted left padding (~one indentation unit).
+        self.tree_view.setRootIsDecorated(False)
         # NOTE: ``setSortingEnabled(True)`` is intentionally deferred to
         # ``setup_file_model``. With QFileSystemModel + QSortFilterProxyModel,
         # enabling sort *before* the model is attached and then expanding a

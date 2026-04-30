@@ -119,9 +119,6 @@ class AppTheme:
 
     # ===== List / menu hover & selection =====
     HOVER_BACKGROUND = _Palette.ACCENT_BG_STRONG
-    # VSCode-style 1 px focus outline on the active list selection
-    # (matches ``focusBorder`` in the Dark Modern theme).
-    EXPLORER_SELECTION_BORDER = "#0078d4"
 
     # ===== Editor decorations =====
     CURRENT_LINE_BORDER = "#282828"  # rules above/below caret line
@@ -268,17 +265,18 @@ class AppTheme:
             outline: 0;
             font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
             font-size: 13px;
-            padding-top: 8px;
+            padding-top: 4px;
+            padding-left: 4px;
         }}
         QTreeView::item {{
             padding: 2px;
+            border: 1px solid transparent;
         }}
         QTreeView::item:hover {{
             background-color: {cls.EXPLORER_ROW_HOVER};
         }}
         QTreeView::item:selected {{
             background-color: {cls.HOVER_BACKGROUND};
-            border: 1px solid {cls.EXPLORER_SELECTION_BORDER};
         }}
         """
 
