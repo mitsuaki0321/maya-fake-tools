@@ -36,8 +36,13 @@ class CodeFoldingManager:
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._do_update)
 
-        # Connect to document changes
-        self.editor.document().contentsChanged.connect(self._schedule_update)
+        # Listen to ``contentsChange`` (positional) rather than ``contentsChanged``:
+        # the no-args variant also fires when QSyntaxHighlighter applies formats,
+        # which during file load can repeatedly reset our 300 ms debounce so
+        # ``_do_update`` never gets a quiet window. Filtering ``removed == 0 and
+        # added == 0`` lets format-only notifications through without restarting
+        # the timer, the same pattern ``code_editor._on_contents_change`` uses.
+        self.editor.document().contentsChange.connect(self._on_contents_change)
 
         # Initial calculation — use the editor-parented timer so it's cancelled
         # if the editor is closed before the first update fires.
@@ -220,8 +225,16 @@ class CodeFoldingManager:
     # Fold region detection
     # ------------------------------------------------------------------
 
-    def _schedule_update(self):
-        """Schedule a debounced fold region recalculation."""
+    def _on_contents_change(self, position: int, removed: int, added: int):
+        """Schedule a debounced fold rescan only on real content edits.
+
+        Filters out format-only notifications (the syntax highlighter's
+        ``setFormat`` calls fire with ``removed == 0 and added == 0``); without
+        this, the highlighter's own rehighlight pass during file load resets
+        the 300 ms debounce on every block, starving ``_do_update``.
+        """
+        if removed == 0 and added == 0:
+            return
         self._update_timer.start(self._UPDATE_DELAY_MS)
 
     def _do_update(self):
