@@ -64,7 +64,7 @@ class _Palette:
     # Accent (VSCode blue family).
     ACCENT = "#007acc"  # focus / selected-tab indicator
     ACCENT_BG_SUBTLE = "#264f78"  # text-selection background
-    ACCENT_BG_STRONG = "#094771"  # list / menu hover & pressed background
+    ACCENT_BG_STRONG = "#04395e"  # list / menu hover & pressed background (VSCode list.activeSelectionBackground)
 
     # Status colours (output terminal).
     STATUS_ERROR = "#ff6b6b"
@@ -119,6 +119,9 @@ class AppTheme:
 
     # ===== List / menu hover & selection =====
     HOVER_BACKGROUND = _Palette.ACCENT_BG_STRONG
+    # VSCode-style 1 px focus outline on the active list selection
+    # (matches ``focusBorder`` in the Dark Modern theme).
+    EXPLORER_SELECTION_BORDER = "#0078d4"
 
     # ===== Editor decorations =====
     CURRENT_LINE_BORDER = "#282828"  # rules above/below caret line
@@ -262,6 +265,7 @@ class AppTheme:
             color: {cls.SIDEBAR_TEXT_COLOR};
             border: 1px solid {cls.BORDER};
             selection-background-color: {cls.HOVER_BACKGROUND};
+            outline: 0;
         }}
         QTreeView::item {{
             padding: 2px;
@@ -271,6 +275,7 @@ class AppTheme:
         }}
         QTreeView::item:selected {{
             background-color: {cls.HOVER_BACKGROUND};
+            border: 1px solid {cls.EXPLORER_SELECTION_BORDER};
         }}
         """
 
