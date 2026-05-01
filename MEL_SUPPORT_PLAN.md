@@ -306,8 +306,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 > 各 commit のあとには **`uv run ruff check scripts/faketools/tools/common/code_editor` と `uv run mypy scripts/faketools/tools/common/code_editor` を流して PASS を確認** する。
 
 ### Phase 0
-- [x] **commit 1 (実装完了、コミット待ち)**: `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義。ruff PASS、smoke test PASS。`maya_terminal.py:24` の mypy エラーは**既存の無関係な問題** _(hash: 未コミット)_
-- [ ] **commit 2**: `CodeEditor` リネーム + alias、`language` 引数、`setup_syntax_highlighting` factory 化 _(hash: ____)_
+- [x] **commit 1**: `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義。ruff PASS、smoke test PASS。`maya_terminal.py:24` の mypy エラーは**既存の無関係な問題** _(hash: `30c26f2`)_
+- [x] **commit 2 (実装完了、コミット待ち)**: `PythonEditor` → `CodeEditor` リネーム + alias、`__init__` に `language: LanguageProfile = PYTHON` 引数追加、`setup_syntax_highlighting` を `language.highlighter_factory` 経由に。PYTHON 側に `_python_highlighter_factory`（遅延 import）を追加。ruff PASS、smoke test PASS。`languages/` パッケージは Qt 非依存を維持 _(hash: 未コミット)_
 - [ ] **commit 3**: `execution.py` / `execution_manager.py` profile 化 _(hash: ____)_
 - [ ] **commit 4**: `maya_shelf.py` profile 化 _(hash: ____)_
 - [ ] **commit 5**: ファイル操作系 profile 化 _(hash: ____)_
@@ -477,4 +477,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 1 実装完了、コミット待ち**: `languages/__init__.py` + `_types.py` + `python.py` 新設、ruff/smoke test PASS）
+**最終更新**: 2026-05-01（**commit 2 実装完了、コミット待ち**: `PythonEditor` → `CodeEditor` リネーム + alias、`language` 引数追加、`highlighter_factory` 経由化）

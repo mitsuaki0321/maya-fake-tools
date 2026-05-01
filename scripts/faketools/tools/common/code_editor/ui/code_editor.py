@@ -1,6 +1,10 @@
-"""
-Code editor widget with tab support.
-Provides tabbed interface for editing multiple Python files.
+"""Per-tab code editor widget.
+
+Hosts a single editor view inside a tab. Language behaviour (syntax
+highlighting, future indent / run / completion hooks) is driven by an
+injected :class:`~..languages.LanguageProfile`; tabs default to
+:data:`~..languages.PYTHON` so existing call sites keep their original
+behaviour.
 """
 
 from logging import getLogger
@@ -15,7 +19,7 @@ from .....lib_ui.qt_compat import (
     Signal,
 )
 from ..command import file_io
-from ..highlighting.python_highlighter import PythonHighlighter
+from ..languages import PYTHON, LanguageProfile
 from ..themes import AppTheme
 from . import auto_indent, editor_context_menu, editor_overlays
 from .autocomplete import AutocompleteController, get_shared_engine
@@ -33,8 +37,8 @@ logger = getLogger(__name__)
 DEFAULT_TAB_SIZE = 4
 
 
-class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
-    """Plain text editor optimized for Python code."""
+class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
+    """Plain text editor view driven by a :class:`LanguageProfile`."""
 
     # Signal for object inspection
     inspect_object = Signal(str, str)  # (object_name, inspection_type)
@@ -46,9 +50,10 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     # markContentsDirty and would otherwise flip is_modified back on after save).
     contentChanged = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, language: LanguageProfile = PYTHON):
         super().__init__(parent)
 
+        self.language = language
         self.file_path = None
         self.is_modified = False
         self.highlighter = None
@@ -151,8 +156,15 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.setPlaceholderText("# Start typing Python code...")
 
     def setup_syntax_highlighting(self):
-        """Setup Python syntax highlighting."""
-        self.highlighter = PythonHighlighter(self.document())
+        """Attach the language profile's highlighter, if any.
+
+        Profiles without a ``highlighter_factory`` leave ``self.highlighter``
+        at ``None`` so the editor falls back to plain unstyled text.
+        """
+        if self.language.highlighter_factory is None:
+            self.highlighter = None
+            return
+        self.highlighter = self.language.highlighter_factory(self.document())
 
     def setPlainText(self, text):
         """Override to (re-)apply our proportional line height after every reset.
@@ -519,6 +531,10 @@ class PythonEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         new_indent = auto_indent.compute_new_indent(self.document(), block_number, current_line, text_before_cursor)
         self.insertPlainText("\n" + new_indent)
 
+
+# Deprecated alias kept while call sites continue to refer to ``PythonEditor`` —
+# every existing ``isinstance(editor, PythonEditor)`` check still succeeds.
+PythonEditor = CodeEditor
 
 # Re-exported from the new module so existing imports keep working.
 from .editor_tab_widget import CodeEditorWidget  # noqa: E402, F401

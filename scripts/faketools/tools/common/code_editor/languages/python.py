@@ -15,6 +15,17 @@ def _python_extra_indent_trigger(stripped_text_before_cursor: str) -> bool:
     return stripped_text_before_cursor.endswith(":") and not stripped_text_before_cursor.startswith("#")
 
 
+def _python_highlighter_factory(document):
+    """Construct the Python syntax highlighter on demand.
+
+    Imported lazily so that ``import faketools.tools.common.code_editor.languages``
+    does not pull Qt in non-editor contexts (smoke tests, lint runs).
+    """
+    from ..highlighting.python_highlighter import PythonHighlighter
+
+    return PythonHighlighter(document)
+
+
 PYTHON = LanguageProfile(
     id="python",
     display_name="Python",
@@ -28,6 +39,7 @@ PYTHON = LanguageProfile(
         label="Python",
         icon="pythonFamily.png",
     ),
+    highlighter_factory=_python_highlighter_factory,
 )
 
 
