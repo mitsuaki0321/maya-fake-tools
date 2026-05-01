@@ -37,10 +37,20 @@ from ......lib_ui.qt_compat import (
     Signal,
 )
 from ...command import file_ops
+from ...languages import DEFAULT_PROFILE, KNOWN_EXTENSIONS
 from ...themes import AppTheme
 from ..dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
+
+
+def _path_has_known_extension(path: str) -> bool:
+    """Return True when ``path``'s extension matches any registered :class:`LanguageProfile`.
+
+    Used as a single source of truth for "is this a file the editor knows
+    how to open?" — drives preview/run/double-click affordances.
+    """
+    return os.path.splitext(path)[1].lower() in KNOWN_EXTENSIONS
 
 
 class HiddenFileFilterModel(QSortFilterProxyModel):
@@ -289,15 +299,16 @@ class FileExplorerDelegate(QStyledItemDelegate):
         # Call parent paint first
         super().paint(painter, option, index)
 
-        # Only show button for hovered Python files. Compare against the
-        # persistent index by lifting the incoming volatile QModelIndex.
+        # Only show button for hovered source files in any registered language.
+        # Compare against the persistent index by lifting the incoming
+        # volatile QModelIndex.
         if self.hovered_index is not None and self.hovered_index.isValid() and QPersistentModelIndex(index) == self.hovered_index:
             # Get file info
             source_index = self.file_explorer.proxy_model.mapToSource(index)
             file_path = self.file_explorer.file_model.filePath(source_index)
             file_info = QFileInfo(file_path)
 
-            if file_info.isFile() and file_info.suffix().lower() == "py":
+            if file_info.isFile() and _path_has_known_extension(file_path):
                 # Calculate button position
                 button_x = option.rect.right() - self.BUTTON_SIZE - self.BUTTON_MARGIN
                 button_y = option.rect.center().y() - self.BUTTON_SIZE // 2
@@ -575,8 +586,8 @@ class FileExplorer(QWidget):
         file_path = self.file_model.filePath(source_index)
         file_info = QFileInfo(file_path)
 
-        if file_info.isFile() and file_info.suffix().lower() == "py":
-            # Emit signal for Python file preview mode
+        if file_info.isFile() and _path_has_known_extension(file_path):
+            # Emit preview signal for any source file the editor recognises.
             self.file_preview.emit(file_path)
         elif file_info.isDir():
             # Toggle folder expansion/collapse on single-click
@@ -592,8 +603,8 @@ class FileExplorer(QWidget):
         file_path = self.file_model.filePath(source_index)
         file_info = QFileInfo(file_path)
 
-        if file_info.isFile() and file_info.suffix().lower() == "py":
-            # Emit signal for Python file permanent tab
+        if file_info.isFile() and _path_has_known_extension(file_path):
+            # Emit signal for permanent-tab open of any registered source file.
             self.file_selected.emit(file_path)
         # Folders: expansion/collapse handled by single-click
 
@@ -640,15 +651,15 @@ class FileExplorer(QWidget):
         # Apply styling matching code editor context menu
         menu.setStyleSheet(AppTheme.get_menu_stylesheet())
 
-        # Open action for Python files
-        if has_selection and file_info.isFile() and file_info.suffix().lower() == "py":
+        # Open action for files in any registered language
+        if has_selection and file_info.isFile() and _path_has_known_extension(file_path):
             open_action = QAction("Open", self)
             open_action.triggered.connect(lambda: self.file_selected.emit(file_path))
             menu.addAction(open_action)
             menu.addSeparator()
 
-        # New file action
-        new_file_action = QAction("New Python File", self)
+        # New file action — defaults to the registry's default profile (Python today).
+        new_file_action = QAction(f"New {DEFAULT_PROFILE.display_name} File", self)
         if has_selection:
             new_file_action.triggered.connect(lambda: self.create_new_file(file_path, file_info.isDir()))
         else:
@@ -709,13 +720,19 @@ class FileExplorer(QWidget):
         menu.exec_(self.tree_view.mapToGlobal(position))
 
     def create_new_file(self, base_path: str, is_dir: bool):
-        """Prompt for a filename and create a new Python file next to it."""
+        """Prompt for a filename and create a new source file next to it.
+
+        Phase 0 always uses :data:`DEFAULT_PROFILE`; per-language entry points
+        are a UI/UX decision tracked in MEL_SUPPORT_PLAN.md §7.5.
+        """
         parent_dir = base_path if is_dir else os.path.dirname(base_path)
-        name, ok = CodeEditorInputDialog.getText(self, "New Python File", "Enter file name:", text="new_script.py")
+        profile = DEFAULT_PROFILE
+        default_name = f"new_script{profile.default_extension}"
+        name, ok = CodeEditorInputDialog.getText(self, f"New {profile.display_name} File", "Enter file name:", text=default_name)
         if not (ok and name):
             return
 
-        result = file_ops.create_python_file(parent_dir, name)
+        result = file_ops.create_source_file(parent_dir, name, language=profile)
         if result.success:
             self.file_selected.emit(result.destination)
         else:
@@ -1061,15 +1078,15 @@ class FileExplorer(QWidget):
             for url in event.mimeData().urls():
                 if url.isLocalFile():
                     local_path = url.toLocalFile()
-                    # Filter for Python files (.py) when dragging from external source
-                    if local_path.lower().endswith(".py"):
+                    # Accept any file whose extension matches a registered language
+                    if _path_has_known_extension(local_path):
                         dragged_paths.append(local_path)
             is_external_drag = True
 
         if not dragged_paths:
             if is_external_drag and event.mimeData().hasUrls():
-                # Inform user that only Python files are accepted
-                logger.warning("Only Python (.py) files can be dropped into the explorer")
+                accepted = ", ".join(sorted(KNOWN_EXTENSIONS))
+                logger.warning(f"Only registered source files ({accepted}) can be dropped into the explorer")
             event.ignore()
             return
 

@@ -19,6 +19,7 @@ from logging import getLogger
 import os
 
 from ..command import file_io
+from ..languages import DEFAULT_PROFILE
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
@@ -122,13 +123,14 @@ class FileOperationsController:
             CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
             return
 
-        filename, ok = CodeEditorInputDialog.getText(mw, "New File", "Enter filename (with .py extension):", text="new_script.py")
+        ext = DEFAULT_PROFILE.default_extension
+        filename, ok = CodeEditorInputDialog.getText(mw, "New File", f"Enter filename (with {ext} extension):", text=f"new_script{ext}")
         if not ok or not filename.strip():
             return
 
         filename = filename.strip()
-        if not filename.endswith(".py"):
-            filename += ".py"
+        if not filename.endswith(ext):
+            filename += ext
 
         file_path = os.path.join(workspace_dir, filename)
         if os.path.exists(file_path):

@@ -20,6 +20,7 @@ from .....lib_ui.qt_compat import (
     QTimer,
     Signal,
 )
+from ..languages import DEFAULT_PROFILE, LanguageProfile
 from ..themes import AppTheme
 from .code_editor import PythonEditor
 from .dialog_base import CodeEditorMessageBox
@@ -76,16 +77,20 @@ class CodeEditorWidget(QTabWidget):
         # the bar has finished moving, so the new index order is already in place.
         self.tabBar().tabMoved.connect(lambda *_: self.save_session_if_available())
 
-    def new_file(self, is_draft=False) -> PythonEditor:
-        """Create a new file tab (or the Draft tab on first launch)."""
-        editor = PythonEditor(self)
+    def new_file(self, is_draft: bool = False, language: LanguageProfile = DEFAULT_PROFILE) -> PythonEditor:
+        """Create a new file tab (or the Draft tab on first launch).
+
+        ``language`` selects the :class:`LanguageProfile` for the new tab and
+        drives the placeholder filename's extension.
+        """
+        editor = PythonEditor(self, language=language)
 
         if is_draft:
             tab_name = "Draft"
             editor.is_draft = True
             editor.is_modified = False
         else:
-            tab_name = f"Untitled{self.untitled_counter}.py"
+            tab_name = f"Untitled{self.untitled_counter}{language.default_extension}"
             self.untitled_counter += 1
             editor.is_draft = False
             editor.is_modified = True
@@ -172,9 +177,10 @@ class CodeEditorWidget(QTabWidget):
         if index < 0:
             return
 
+        language = getattr(editor, "language", DEFAULT_PROFILE)
         title = editor.preview_title if hasattr(editor, "preview_title") else "Untitled"
-        if not title.endswith(".py"):
-            title = f"{title}.py"
+        if not title.endswith(language.default_extension):
+            title = f"{title}{language.default_extension}"
         if index == self.currentIndex():
             self.setTabText(index, f"● {title}")
         else:
@@ -393,8 +399,11 @@ class CodeEditorWidget(QTabWidget):
             CodeEditorMessageBox.information(self, "Cannot Save Draft", "The Draft tab cannot be saved to file.")
             return False
 
+        language = getattr(editor, "language", DEFAULT_PROFILE)
+        save_dialog_title = f"Save {language.display_name} File"
+
         if editor.file_path is None:
-            file_path, _ = QFileDialog.getSaveFileName(self, "Save Python File", "", "Python Files (*.py)")
+            file_path, _ = QFileDialog.getSaveFileName(self, save_dialog_title, "", language.file_filter)
             if not file_path:
                 return False
         elif not os.path.exists(editor.file_path):
@@ -406,7 +415,7 @@ class CodeEditorWidget(QTabWidget):
                 try:
                     os.makedirs(parent_dir, exist_ok=True)
                 except OSError:
-                    file_path, _ = QFileDialog.getSaveFileName(self, "Save Python File", editor.file_path, "Python Files (*.py)")
+                    file_path, _ = QFileDialog.getSaveFileName(self, save_dialog_title, editor.file_path, language.file_filter)
                     if not file_path:
                         return False
         else:
