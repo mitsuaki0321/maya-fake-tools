@@ -93,7 +93,9 @@ code_editor/
 └── languages/
     ├── __init__.py        # 再エクスポート + ALL_PROFILES, DEFAULT_PROFILE, get_profile_for_path()
     ├── types.py           # LanguageProfile, ShelfConfig（型定義のみ、循環インポート回避のため分離）
-    └── python.py          # PYTHON profile の定義
+    ├── helpers.py         # cross-language ヘルパ（find_execution_manager 等）
+    ├── python_actions.py  # Python のメニュー extender / inspection snippets / reload 実装
+    └── python.py          # PYTHON profile の組み立てのみ（slim）
 ```
 
 ### 4.2 `LanguageProfile` / `ShelfConfig` データクラス
@@ -316,6 +318,9 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 8**: `code_editor/__init__.py` の package docstring と `TOOL_CONFIG.description` を Python 限定から多言語化前提の文言に更新（"Multi-language code editor ..."）。`ui/code_editor.py` の placeholder text "# Start typing Python code..." は §4.4 に従い据え置き（Phase 0 スコープ外）。Phase 0 全体で `ruff check` クリーン、最終 smoke test PASS（全 profile フィールド・autoderived properties・全 consumer module の Qt 非依存 import） _(hash: `e684ff6`)_
 - [x] **Phase 0 動作確認**: ユーザー確認済み（2026-05-01）。Maya 上で既存挙動の回帰なし
 - [x] **commit 9**: `LanguageProfile.identifier_validator` フィールドを削除。`languages/python.py` から `_is_valid_identifier` / `_is_valid_module_name` を削除し、`_python_context_menu_extender` は Reload Module を **常に** 追加（実行側の try/except が無効識別子を graceful に処理するため、文法バリデーションを extender 側でゲートしない方針）。`editor_context_menu.build_context_menu` から validator チェックを削除（選択語非空ガードのみ残す）。プロファイル API スリム化（11 → 10 Optional）。ruff PASS、smoke test PASS _(hash: `cc797f7`)_
+- [x] **commit 10**: デッドコード削除。`ExecutionManager.handle_object_inspection` 内の `"Syntax Errors:"` 分岐（emit する側が存在せず到達不可）と `MayaCodeEditor.show_syntax_errors_in_terminal()` メソッド（呼出元なし）を削除。`inspect_object` シグナルが純粋に inspection 用途のみとなる _(hash: `604a5e5`)_
+- [x] **types.py リネーム**: `_types.py` → `types.py`（プロジェクト多数派の慣習に揃える、`_` プレフィックスなし）_(hash: `af7d8bc`)_
+- [x] **commit 11 (実装完了、コミット待ち)**: ファイル分割（振る舞い不変）。`languages/helpers.py` を新設し `find_execution_manager` を移動（cross-language ヘルパとして将来 MEL でも再利用）。`languages/python_actions.py` を新設し `_PYTHON_DIR_TEMPLATE` / `_PYTHON_HELP_TEMPLATE` / `_build_reload_code` / `_reload_module` / `_python_inspection_snippets` / `_python_context_menu_extender` を全部移動。`languages/python.py` は 210 行 → 50 行に slim 化（PYTHON 組み立て + extra_indent_trigger + highlighter_factory のみ）。cross-module 参照される関数は `_` プレフィックスを外す（`python_context_menu_extender` / `python_inspection_snippets` / `find_execution_manager`）。ruff PASS、smoke test PASS _(hash: 未コミット)_
 
 ### Phase 1
 > **着手前にユーザーと再相談**: MEL に含める機能 / 含めない機能を確定させる（§1.5.1, §1.5.3 参照）。
@@ -480,4 +485,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 9 完了** `cc797f7`: `identifier_validator` 削除 — プロファイル API 簡素化）
+**最終更新**: 2026-05-01（**commit 11 実装完了、コミット待ち**: ファイル分割 — `helpers.py` / `python_actions.py` 新設、`python.py` を 210 行 → 50 行に slim 化、振る舞い不変）
