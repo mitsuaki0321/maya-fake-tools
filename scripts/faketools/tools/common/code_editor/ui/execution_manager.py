@@ -208,15 +208,8 @@ class ExecutionManager:
             return
 
         try:
-            # Header — printed before the early-exit checks so the
-            # "Syntax Errors" overload still surfaces in the terminal.
             if inspection_type == "dir":
                 self.output_terminal.append_output("\n=== " + object_name + " ===")
-                # The ``inspect_object`` signal is reused to display syntax errors;
-                # short-circuit before generating any inspection code.
-                if object_name.startswith("Syntax Errors:"):
-                    self.output_terminal.append_error(object_name.replace("Syntax Errors:\n", ""))
-                    return
             elif inspection_type == "help":
                 self.output_terminal.append_output("\n=== Help: " + object_name + " ===")
 

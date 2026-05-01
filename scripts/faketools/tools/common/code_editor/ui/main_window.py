@@ -112,18 +112,6 @@ class MayaCodeEditor(QWidget):
         else:
             self.output_terminal.append_error(error)
 
-    def show_syntax_errors_in_terminal(self, errors):
-        """Show syntax errors in the output terminal."""
-        if not self.output_terminal:
-            return
-
-        self.output_terminal.append_output("=== Syntax Errors ===")
-        for error in errors:
-            error_msg = "Line " + str(error.line) + ", Column " + str(error.column) + ": " + error.message
-            self.output_terminal.append_error(error_msg)
-
-        self.output_terminal.append_output("=" * 30)
-
     def set_working_directory(self, path: str):
         """Set the working directory for the file explorer."""
         if self.file_explorer:
