@@ -9,6 +9,7 @@ import os
 from .....lib_ui.qt_compat import QWidget
 from ..command import maya_shelf, os_launcher
 from ..command.execution import build_exec_globals
+from ..languages import PYTHON
 from ..settings import SettingsManager
 from .dialog_base import CodeEditorMessageBox
 from .execution_manager import ExecutionManager
@@ -92,8 +93,9 @@ class MayaCodeEditor(QWidget):
 
         # QTextCursor uses Unicode paragraph separator (U+2029) for line breaks
         code = selected_text.replace("\u2029", "\n")
+        language = getattr(editor, "language", PYTHON)
 
-        ok, info = maya_shelf.add_to_active_shelf(code)
+        ok, info = maya_shelf.add_to_active_shelf(code, language=language)
         if not ok:
             CodeEditorMessageBox.warning(self, "Add to Shelf", f"Failed to add code to shelf:\n{info}")
 
