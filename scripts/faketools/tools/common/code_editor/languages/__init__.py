@@ -17,8 +17,8 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from ._types import LanguageProfile, ShelfConfig
 from .python import PYTHON
+from .types import LanguageProfile, ShelfConfig
 
 ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON,)
 DEFAULT_PROFILE: LanguageProfile = PYTHON

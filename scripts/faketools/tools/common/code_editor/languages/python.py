@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ._types import LanguageProfile, ShelfConfig
+from .types import LanguageProfile, ShelfConfig
 
 
 def _python_extra_indent_trigger(stripped_text_before_cursor: str) -> bool:

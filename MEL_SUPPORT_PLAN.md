@@ -92,7 +92,7 @@
 code_editor/
 └── languages/
     ├── __init__.py        # 再エクスポート + ALL_PROFILES, DEFAULT_PROFILE, get_profile_for_path()
-    ├── _types.py          # LanguageProfile, ShelfConfig（型定義のみ、循環インポート回避のため分離）
+    ├── types.py           # LanguageProfile, ShelfConfig（型定義のみ、循環インポート回避のため分離）
     └── python.py          # PYTHON profile の定義
 ```
 
@@ -287,7 +287,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 | # | 内容 | 触るファイル |
 |---|---|---|
-| 1 | `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義のみ（誰も使わない） | `languages/__init__.py`, `languages/_types.py`, `languages/python.py` |
+| 1 | `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義のみ（誰も使わない） | `languages/__init__.py`, `languages/types.py`, `languages/python.py` |
 | 2 | `CodeEditor` リネーム + alias、`language` 引数追加、`setup_syntax_highlighting` を factory 経由に | `ui/code_editor.py` |
 | 3 | `execution.py` / `execution_manager.py` を profile 化 | `command/execution.py`, `ui/execution_manager.py` |
 | 4 | `maya_shelf.py` を profile 化 + 呼出側 `main_window.add_to_shelf` で active editor の language を渡す | `command/maya_shelf.py`, `ui/main_window.py` |
@@ -315,7 +315,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 7**: Python 専用ヘルパ（`_is_valid_identifier` / `_is_valid_module_name` / `_reload_module` / `_build_reload_code` / `_find_execution_manager` / dir & help テンプレート）を `editor_context_menu.py` と `execution_manager.py` から `languages/python.py` に集約。新規 `_python_context_menu_extender(menu, editor, identifier)` と `_python_inspection_snippets(inspection_type, object_name)` を追加（Qt は extender 内部で遅延 import）。PYTHON プロファイルに `context_menu_extender` / `identifier_validator` / `inspection_snippets` を設定。`build_context_menu` を「validator → extender 呼出」のジェネリックフローに、`handle_object_inspection` を「ヘッダ表示 → `language.inspection_snippets` 経由でコード生成 → execute」に置換。ruff PASS、smoke test PASS（profile fields / validator / snippets / Qt 非依存維持） _(hash: `1fead95`)_
 - [x] **commit 8**: `code_editor/__init__.py` の package docstring と `TOOL_CONFIG.description` を Python 限定から多言語化前提の文言に更新（"Multi-language code editor ..."）。`ui/code_editor.py` の placeholder text "# Start typing Python code..." は §4.4 に従い据え置き（Phase 0 スコープ外）。Phase 0 全体で `ruff check` クリーン、最終 smoke test PASS（全 profile フィールド・autoderived properties・全 consumer module の Qt 非依存 import） _(hash: `e684ff6`)_
 - [x] **Phase 0 動作確認**: ユーザー確認済み（2026-05-01）。Maya 上で既存挙動の回帰なし
-- [x] **commit 9 (Phase 0 後追加、コミット待ち)**: `LanguageProfile.identifier_validator` フィールドを削除。`languages/python.py` から `_is_valid_identifier` / `_is_valid_module_name` を削除し、`_python_context_menu_extender` は Reload Module を **常に** 追加（実行側の try/except が無効識別子を graceful に処理するため、文法バリデーションを extender 側でゲートしない方針）。`editor_context_menu.build_context_menu` から validator チェックを削除（選択語非空ガードのみ残す）。プロファイル API スリム化（11 → 10 Optional）。ruff PASS、smoke test PASS _(hash: 未コミット)_
+- [x] **commit 9**: `LanguageProfile.identifier_validator` フィールドを削除。`languages/python.py` から `_is_valid_identifier` / `_is_valid_module_name` を削除し、`_python_context_menu_extender` は Reload Module を **常に** 追加（実行側の try/except が無効識別子を graceful に処理するため、文法バリデーションを extender 側でゲートしない方針）。`editor_context_menu.build_context_menu` から validator チェックを削除（選択語非空ガードのみ残す）。プロファイル API スリム化（11 → 10 Optional）。ruff PASS、smoke test PASS _(hash: `cc797f7`)_
 
 ### Phase 1
 > **着手前にユーザーと再相談**: MEL に含める機能 / 含めない機能を確定させる（§1.5.1, §1.5.3 参照）。
@@ -357,7 +357,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | `LanguageProfile` を全 Optional 設計に再構成 | §1.5 opt-in 原則と整合。必須は `id` / `display_name` / `extensions` / `default_extension` の 4 項目のみ。`file_filter` と `line_comment_with_space` は自動生成プロパティ化。`shelf_*` 3 フィールドは `ShelfConfig` データクラスに集約しまるごと Optional 化 |
 | 2026-05-01 | `block_open_chars: tuple[str, ...]` を `extra_indent_trigger: Callable[[str], bool]` に変更 | `auto_indent.py` の hanging indent 規則は既に `(`, `[`, `{` の未閉じを処理するため、ブラケット系言語（MEL 等）には追加トリガが不要。`block_open_chars` が必要なのは事実上 Python の `:` だけ。Callable 化で将来コメント除去・トークン解析等の複雑な条件にも拡張可能。MEL は `None` で済み、hanging indent と closing bracket alignment で完全カバー |
 | 2026-05-01 | `line_comment` / `block_comment` は文字列ベースのまま維持（Callable 化しない） | コメントトグルは「行頭プレフィックスの追加 / 除去」のみで、インデント判定のような行内コンテキスト解析を必要としない。Python / MEL とも単一文字列で完全表現可。複数形式が必要になれば後方互換的に `tuple[str, ...]` 化可能。Python の `"""..."""` を `block_comment` に入れない（文字列リテラルでコメントではない、linter 警告の原因）ため Python は `block_comment=None` |
-| 2026-05-01 | 型定義を `_types.py` に分離 | 当初 `__init__.py` に `LanguageProfile` / `ShelfConfig` を直接定義する計画だったが、`from .python import PYTHON` を classes 定義の後に置くと ruff E402（module-level import not at top）が発生。`_types.py` を分離することで `__init__.py` を純粋な再エクスポート + ファクトリ関数のみに保てる |
+| 2026-05-01 | 型定義を `types.py` に分離 | 当初 `__init__.py` に `LanguageProfile` / `ShelfConfig` を直接定義する計画だったが、`from .python import PYTHON` を classes 定義の後に置くと ruff E402（module-level import not at top）が発生。`types.py` を分離することで `__init__.py` を純粋な再エクスポート + ファクトリ関数のみに保てる（プロジェクト多数派に揃え `_` プレフィックスは付けない方針） |
 
 ## 7.5 UI/UX 検討事項（保留中、別途相談）
 
@@ -480,4 +480,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 9 実装完了、コミット待ち**: `identifier_validator` フィールド削除 — extender 側を無条件追加に統一）
+**最終更新**: 2026-05-01（**commit 9 完了** `cc797f7`: `identifier_validator` 削除 — プロファイル API 簡素化）
