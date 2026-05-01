@@ -125,7 +125,7 @@ class ExecutionManager:
             # For selected text, set execution mode
             self.is_selection_execution = True
             self.is_full_execution = False
-            self.execute_python_code(code)
+            self.execute_with_echo(code)
         else:
             # Execute full code
             code = self.main_window.code_editor.get_current_code()
@@ -135,7 +135,7 @@ class ExecutionManager:
 
             self.is_selection_execution = False
             self.is_full_execution = True
-            self.execute_python_code(code)
+            self.execute_with_echo(code)
 
     def execute_code(self, code: str, language: Optional[LanguageProfile] = None):
         """Execute code without showing it in terminal (for variable replacement).
@@ -151,8 +151,14 @@ class ExecutionManager:
         self.is_full_execution = True
         self._execute_code_internal(code, show_code=False, language_override=language)
 
-    def execute_python_code(self, code: str):
-        """Execute Python code and display results with undoChunk for single undo."""
+    def execute_with_echo(self, code: str):
+        """Execute the active tab's code, echoing it into the output terminal.
+
+        Despite its historical name (``execute_python_code``), the dispatch
+        is language-agnostic: the active tab's :class:`LanguageProfile`
+        decides which bridge runs the snippet, so a MEL tab's Run button
+        routes through the MEL executer.
+        """
         self._execute_code_internal(code, show_code=True)
 
     def _execute_code_internal(self, code: str, show_code: bool = True, language_override: Optional[LanguageProfile] = None):

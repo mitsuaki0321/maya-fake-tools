@@ -290,7 +290,7 @@ class ShortcutHandler:
             if selected_text.strip():
                 self.main_window.execution_manager.is_selection_execution = True
                 self.main_window.execution_manager.is_full_execution = False
-                self.main_window.execution_manager.execute_python_code(selected_text)
+                self.main_window.execution_manager.execute_with_echo(selected_text)
         else:
             # Execute current line
             cursor.select(QTextCursor.LineUnderCursor)
@@ -298,7 +298,7 @@ class ShortcutHandler:
             if line_text:
                 self.main_window.execution_manager.is_selection_execution = True
                 self.main_window.execution_manager.is_full_execution = False
-                self.main_window.execution_manager.execute_python_code(line_text)
+                self.main_window.execution_manager.execute_with_echo(line_text)
             else:
                 self.main_window.output_terminal.append_warning("Current line is empty")
 
@@ -312,7 +312,7 @@ class ShortcutHandler:
         if code.strip():
             self.main_window.execution_manager.is_selection_execution = False
             self.main_window.execution_manager.is_full_execution = True
-            self.main_window.execution_manager.execute_python_code(code)
+            self.main_window.execution_manager.execute_with_echo(code)
         else:
             self.main_window.output_terminal.append_warning("File is empty")
 
