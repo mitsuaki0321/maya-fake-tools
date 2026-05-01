@@ -17,10 +17,11 @@ from __future__ import annotations
 import os
 from typing import Optional
 
+from .mel import MEL
 from .python import PYTHON
 from .types import LanguageProfile, ShelfConfig
 
-ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON,)
+ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)
 DEFAULT_PROFILE: LanguageProfile = PYTHON
 KNOWN_EXTENSIONS: frozenset[str] = frozenset(ext for profile in ALL_PROFILES for ext in profile.extensions)
 
@@ -50,6 +51,7 @@ __all__ = [
     "ALL_PROFILES",
     "DEFAULT_PROFILE",
     "KNOWN_EXTENSIONS",
+    "MEL",
     "PYTHON",
     "LanguageProfile",
     "ShelfConfig",
