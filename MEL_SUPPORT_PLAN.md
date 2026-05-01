@@ -362,13 +362,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 - [x] **着手前確認**: MEL に含める機能セットをユーザーと確定（§7 決定ログ参照）
 - [x] **着手前確認**: UI/UX 方針をユーザーと確定（§7.5 参照）
-- [ ] **commit P1-1**: `MEL` プロファイル追加 — `languages/mel.py` 新設、`ALL_PROFILES = (PYTHON, MEL)` 登録。これだけで以下が自動的に動作するはず（既存の profile 駆動ロジックが MEL を拾う）:
-  - `.mel` ファイルが file_explorer で開けるようになる（`KNOWN_EXTENSIONS` に `.mel` が追加される）
-  - 保存ダイアログ filter に `MEL Files (*.mel)` が出る
-  - コメントトグル `Ctrl+/` が `//` で動く
-  - Run（`cmdScrollFieldExecuter` の `sourceType="mel"` 経由、bridge は遅延生成）
-  - Add to Shelf が MEL ボタン化される
-  - 右クリックは extender 未指定なので whatIs 等は出ない（Add to Shelf のみ）
+- [x] **commit P1-1**: `MEL` プロファイル追加 — `languages/mel.py` 新設（最小骨格、機能セットは §7 確定通り `id` / `display_name` / `extensions` / `default_extension` / `line_comment="//"` / `block_comment=("/*", "*/")` / `source_type="mel"` / `shelf_config` のみ、それ以外の Optional フィールドはすべて `None`）、`languages/__init__.py` に `MEL` import 追加 + `ALL_PROFILES = (PYTHON, MEL)` + `__all__` に `"MEL"` 追加。`KNOWN_EXTENSIONS` が `{".py", ".mel"}` に自動拡張。ruff PASS、smoke test PASS（profile フィールド / `file_filter` / `line_comment_with_space` / `get_profile_for_path` 解決を確認）。Maya 上の動作確認は P1-2/P1-3 で UI が整ってからまとめて実施 _(hash: `ef84050`)_
 - [ ] **commit P1-2**: 新規ファイル UI を並列化 — `file_explorer.show_context_menu` / `file_explorer.create_new_file` / `file_operations_controller.new_file` / toolbar の New File ボタン周辺を `ALL_PROFILES` 反復ベースに変更。各 profile につき 1 つメニュー項目 / 1 つボタンを生成。MEL ボタンアイコンは Python 用と同じものを暫定流用
 - [ ] **commit P1-3**: placeholder text を profile 駆動に — `code_editor.py:151` の `setPlaceholderText("# Start typing Python code...")` を `setPlaceholderText(f"{line_comment_with_space}Start typing {display_name} code...")` に。`line_comment is None` の言語ではプレフィックスなしにフォールバック
 - [ ] **Phase 1 動作確認**: Maya 起動 → 以下を確認:
@@ -563,4 +557,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 1 詳細プラン確定、実装着手準備完了**。MEL 機能セット / UI/UX 方針すべて確定済（§7・§7.5）、commit 粒度 P1-1〜P1-3 確定（§6）、新セッション開始後 commit P1-1 から着手）
+**最終更新**: 2026-05-02（**commit P1-1 完了**: MEL プロファイル骨格を追加。`KNOWN_EXTENSIONS` が `.mel` を含むようになり、既存の profile 駆動ロジックが MEL を拾い始める。動作確認は UI が整う P1-3 完了後に Maya 上で一括実施。次は P1-2 の新規ファイル UI 並列化）
