@@ -4,8 +4,11 @@ Execution command layer for the Code Editor.
 Owns the Maya-side execution primitives:
 - ``build_exec_globals`` constructs the persistent globals dict (with Maya
   modules merged in when available) used by the editor's exec sandbox.
+  Currently Python-specific; generalising for non-Python languages is a
+  Phase 1 concern.
 - ``NativeExecutionBridge`` drives Maya's hidden ``cmdScrollFieldExecuter`` so
   executed code integrates with Maya's native output and undo behaviour.
+  The ``sourceType`` is supplied by the bound :class:`LanguageProfile`.
 
 UI code should never import ``maya.cmds`` directly; it should go through this
 module so that non-Maya environments (tests, linting) remain importable.
@@ -15,6 +18,8 @@ from __future__ import annotations
 
 from logging import getLogger
 from typing import Optional
+
+from ..languages import PYTHON, LanguageProfile
 
 logger = getLogger(__name__)
 
@@ -28,11 +33,13 @@ except ImportError:
     logger.debug("Maya commands not available")
 
 
-_HIDDEN_WINDOW_NAME = "hiddenNativeExecuter"
-
-
 def build_exec_globals(base: Optional[dict] = None) -> dict:
     """Build the persistent execution globals dict used by the editor.
+
+    Currently Python-specific: layers ``cmds`` / ``om2`` / ``om`` into the dict
+    so that Python execution and jedi see them. Non-Python languages don't
+    use the returned dict (Maya's MEL executer maintains its own state).
+    Generalising this is a Phase 1 concern.
 
     Starts from ``base`` (or a fresh dict with ``__name__`` set to ``__main__``)
     and layers in Maya modules when Maya is importable. Safe to call in a
@@ -83,32 +90,40 @@ def _sync_globals_to_main(exec_globals: dict) -> None:
 
 
 class NativeExecutionBridge:
-    """Executes Python via Maya's hidden ``cmdScrollFieldExecuter``.
+    """Executes a single language through Maya's hidden ``cmdScrollFieldExecuter``.
 
-    Using the native executer (rather than ``exec``) makes printed output, undo
-    chunks, and error traceback formatting match Maya's built-in Script Editor.
+    The bridge is bound to one :class:`LanguageProfile` for its lifetime; the
+    profile's ``source_type`` chooses the executer's ``sourceType`` (``"python"``,
+    ``"mel"``, ...). Using the native executer (rather than ``exec``) makes printed
+    output, undo chunks, and error traceback formatting match Maya's built-in
+    Script Editor.
     """
 
-    def __init__(self):
+    def __init__(self, language: LanguageProfile = PYTHON):
+        self.language = language
         self.hidden_window = None
-        self.python_executer = None
+        self.executer = None
         self._setup_executer()
 
     def _setup_executer(self):
-        if not MAYA_AVAILABLE:
+        if not MAYA_AVAILABLE or not self.language.source_type:
             return
 
-        if cmds.window(_HIDDEN_WINDOW_NAME, exists=True):
-            cmds.deleteUI(_HIDDEN_WINDOW_NAME)
+        # Per-language window name so multiple bridges (one per language) can
+        # coexist without colliding on the global Maya UI namespace.
+        window_name = f"hiddenNativeExecuter_{self.language.id}"
 
-        self.hidden_window = cmds.window(_HIDDEN_WINDOW_NAME, visible=False, retain=True)
+        if cmds.window(window_name, exists=True):
+            cmds.deleteUI(window_name)
+
+        self.hidden_window = cmds.window(window_name, visible=False, retain=True)
 
         cmds.setParent(self.hidden_window)
         layout = cmds.columnLayout()
 
-        self.python_executer = cmds.cmdScrollFieldExecuter(
+        self.executer = cmds.cmdScrollFieldExecuter(
             parent=layout,
-            sourceType="python",
+            sourceType=self.language.source_type,
             width=100,
             height=100,
         )
@@ -117,13 +132,15 @@ class NativeExecutionBridge:
         """Execute ``code`` through the native executer.
 
         Args:
-            code: Python code to execute.
+            code: Source code to execute (in this bridge's bound language).
             mode: ``"all"``, ``"selected"``, or ``"range"``.
             selection_range: ``(start, end)`` character offsets when ``mode == "range"``.
             exec_globals: Optional shared globals dict; synced to/from ``__main__``
                 around execution so the editor sees Maya-side state changes.
+                Currently only meaningful for Python; non-Python source types
+                ignore the dict.
         """
-        if not MAYA_AVAILABLE or not self.python_executer:
+        if not MAYA_AVAILABLE or not self.executer:
             return False
 
         try:
@@ -131,16 +148,16 @@ class NativeExecutionBridge:
                 _sync_main_to_globals(exec_globals)
                 _sync_globals_to_main(exec_globals)
 
-            cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, text=code)
+            cmds.cmdScrollFieldExecuter(self.executer, edit=True, text=code)
 
             if mode == "all":
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, executeAll=True)
+                cmds.cmdScrollFieldExecuter(self.executer, edit=True, executeAll=True)
             elif mode == "range" and selection_range:
                 start, end = selection_range
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, select=[start, end])
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, execute=True)
+                cmds.cmdScrollFieldExecuter(self.executer, edit=True, select=[start, end])
+                cmds.cmdScrollFieldExecuter(self.executer, edit=True, execute=True)
             else:  # "selected" or unknown → execute selected/current line
-                cmds.cmdScrollFieldExecuter(self.python_executer, edit=True, execute=True)
+                cmds.cmdScrollFieldExecuter(self.executer, edit=True, execute=True)
 
             if exec_globals is not None:
                 _sync_main_to_globals(exec_globals)
@@ -153,9 +170,13 @@ class NativeExecutionBridge:
     def execute_silent(self, code: str, exec_globals: Optional[dict] = None) -> bool:
         """Execute ``code`` via ``cmds.python`` without echoing it to Maya's terminal.
 
-        Used for introspection helpers (dir/help) where the user shouldn't see
-        the wrapping code. Falls back to ``execute_code`` if ``cmds.python``
-        isn't usable, and finally to a plain ``exec`` outside of Maya.
+        Python-specific by design — used for ``dir()`` / ``help()`` inspection
+        which are Python concepts. Non-Python languages should route through
+        their own ``inspection_snippets`` + :meth:`execute_code` instead.
+        Generalising this method (e.g. ``mel.eval`` for MEL) is a Phase 1 concern.
+
+        Falls back to :meth:`execute_code` if ``cmds.python`` isn't usable, and
+        finally to a plain ``exec`` outside of Maya.
         """
         if MAYA_AVAILABLE:
             try:
@@ -169,7 +190,7 @@ class NativeExecutionBridge:
                 return True
             except Exception as e:
                 logger.debug(f"Maya python command failed: {e}, falling back to native bridge")
-                if self.python_executer:
+                if self.executer:
                     return self.execute_code(code, mode="all", exec_globals=exec_globals)
 
         try:

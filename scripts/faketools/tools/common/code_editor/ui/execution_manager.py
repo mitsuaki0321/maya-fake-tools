@@ -4,12 +4,17 @@ Execution Manager for Code Editor.
 UI-layer coordinator: reads the active editor's selection/content, formats
 inspection snippets, and routes execution through the command-layer
 ``NativeExecutionBridge``. All Maya API calls live in ``command.execution``.
+
+Bridges are cached per language id so a tab switch between languages reuses
+the previously created hidden executer instead of tearing it down.
 """
 
 import contextlib
 from logging import getLogger
+from typing import Optional
 
 from ..command.execution import MAYA_AVAILABLE, NativeExecutionBridge
+from ..languages import PYTHON, LanguageProfile
 
 logger = getLogger(__name__)
 
@@ -24,7 +29,10 @@ class ExecutionManager:
             main_window: The main MayaCodeEditor window instance
         """
         self.main_window = main_window
-        self.native_bridge = None
+        self.native_bridge: Optional[NativeExecutionBridge] = None
+        # One bridge per language id, kept around so switching tabs between
+        # Python and other languages doesn't recreate the hidden executer.
+        self._bridges: dict[str, NativeExecutionBridge] = {}
         self.is_selection_execution = False
         self.is_full_execution = False
 
@@ -42,6 +50,58 @@ class ExecutionManager:
     def code_editor(self):
         """Get code editor from main window."""
         return self.main_window.code_editor
+
+    def _active_editor_language(self) -> LanguageProfile:
+        """Resolve the language profile of the currently focused tab.
+
+        Falls back to :data:`PYTHON` when the tab widget or active editor isn't
+        ready yet (e.g. during early window construction).
+        """
+        editor_widget = getattr(self.main_window, "code_editor", None)
+        if editor_widget is None:
+            return PYTHON
+        current = editor_widget.currentWidget()
+        if current is None:
+            return PYTHON
+        return getattr(current, "language", PYTHON)
+
+    def cleanup_bridges(self):
+        """Tear down every cached :class:`NativeExecutionBridge`.
+
+        Called on window close so each language's hidden Maya window is
+        deleted. Safe to call when no bridges exist.
+        """
+        for bridge in self._bridges.values():
+            with contextlib.suppress(Exception):
+                bridge.cleanup()
+        self._bridges.clear()
+        self.native_bridge = None
+
+    def _refresh_active_bridge(self):
+        """Point :attr:`native_bridge` at the bridge for the active editor's language.
+
+        Bridges are created lazily and cached in :attr:`_bridges`. Languages
+        whose profile has no ``source_type`` (i.e. don't support execution at
+        all) leave :attr:`native_bridge` at ``None`` and consumers fall back to
+        the plain ``exec`` path or skip execution entirely.
+        """
+        if not MAYA_AVAILABLE:
+            self.native_bridge = None
+            return
+        language = self._active_editor_language()
+        if language.source_type is None:
+            self.native_bridge = None
+            return
+        bridge = self._bridges.get(language.id)
+        if bridge is None:
+            try:
+                bridge = NativeExecutionBridge(language=language)
+            except Exception as e:
+                logger.warning(f"Failed to create NativeExecutionBridge for {language.id}: {e}")
+                self.native_bridge = None
+                return
+            self._bridges[language.id] = bridge
+        self.native_bridge = bridge
 
     def run_current_script(self):
         """Execute the current script or selected text in Maya."""
@@ -86,14 +146,7 @@ class ExecutionManager:
 
     def _execute_code_internal(self, code: str, show_code: bool = True):
         """Internal method to execute Python code."""
-        # Initialize native bridge if needed
-        if MAYA_AVAILABLE and self.native_bridge is None:
-            try:
-                self.native_bridge = NativeExecutionBridge()
-            except Exception as e:
-                # Fallback if bridge creation fails
-                logger.warning(f"Failed to create NativeExecutionBridge: {e}")
-                self.native_bridge = None
+        self._refresh_active_bridge()
 
         # Check if Maya cmds is available for undoChunk
         maya_available = "cmds" in self.exec_globals
@@ -208,9 +261,7 @@ except Exception as _help_err:
 
     def execute_inspection_code(self, code: str):
         """Execute inspection code silently (code text itself is not echoed)."""
-        if MAYA_AVAILABLE and self.native_bridge is None:
-            with contextlib.suppress(Exception):
-                self.native_bridge = NativeExecutionBridge()
+        self._refresh_active_bridge()
 
         if self.native_bridge:
             self.native_bridge.execute_silent(code, exec_globals=self.exec_globals)

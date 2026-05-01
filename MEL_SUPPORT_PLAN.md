@@ -307,8 +307,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ### Phase 0
 - [x] **commit 1**: `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義。ruff PASS、smoke test PASS。`maya_terminal.py:24` の mypy エラーは**既存の無関係な問題** _(hash: `30c26f2`)_
-- [x] **commit 2 (実装完了、コミット待ち)**: `PythonEditor` → `CodeEditor` リネーム + alias、`__init__` に `language: LanguageProfile = PYTHON` 引数追加、`setup_syntax_highlighting` を `language.highlighter_factory` 経由に。PYTHON 側に `_python_highlighter_factory`（遅延 import）を追加。ruff PASS、smoke test PASS。`languages/` パッケージは Qt 非依存を維持 _(hash: 未コミット)_
-- [ ] **commit 3**: `execution.py` / `execution_manager.py` profile 化 _(hash: ____)_
+- [x] **commit 2**: `PythonEditor` → `CodeEditor` リネーム + alias、`__init__` に `language: LanguageProfile = PYTHON` 引数追加、`setup_syntax_highlighting` を `language.highlighter_factory` 経由に。PYTHON 側に `_python_highlighter_factory`（遅延 import）を追加。ruff PASS、smoke test PASS。`languages/` パッケージは Qt 非依存を維持 _(hash: `d0ac3ea`)_
+- [x] **commit 3 (実装完了、コミット待ち)**: `NativeExecutionBridge` に `language: LanguageProfile = PYTHON` 引数追加、`sourceType` を `language.source_type` から取得、hidden window 名を per-language 化（`hiddenNativeExecuter_{id}`）、`python_executer` → `executer` rename。`ExecutionManager` に `_bridges: dict` キャッシュと `_active_editor_language()` / `_refresh_active_bridge()` / `cleanup_bridges()` を追加、執行/inspection 両メソッドで `_refresh_active_bridge` 呼出に置換。`main_window.closeEvent` を `cleanup_bridges()` 呼出に変更。`execute_silent` / `build_exec_globals` の Python 固有性は docstring 明記、変更は Phase 1 持ち越し。ruff PASS、smoke test PASS _(hash: 未コミット)_
 - [ ] **commit 4**: `maya_shelf.py` profile 化 _(hash: ____)_
 - [ ] **commit 5**: ファイル操作系 profile 化 _(hash: ____)_
 - [ ] **commit 6**: コメントトグル profile 化 _(hash: ____)_
@@ -477,4 +477,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 2 実装完了、コミット待ち**: `PythonEditor` → `CodeEditor` リネーム + alias、`language` 引数追加、`highlighter_factory` 経由化）
+**最終更新**: 2026-05-01（**commit 3 実装完了、コミット待ち**: 実行ブリッジを言語切替対応に — bridges キャッシュ + アクティブエディタ言語追従）

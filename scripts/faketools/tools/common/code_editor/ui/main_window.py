@@ -177,9 +177,10 @@ class MayaCodeEditor(QWidget):
         if hasattr(self, "shortcut_handler") and self.shortcut_handler.find_replace_dialog:
             self.shortcut_handler.find_replace_dialog.close()
 
-        # Cleanup native execution bridge if exists
-        if hasattr(self, "execution_manager") and self.execution_manager.native_bridge:
-            self.execution_manager.native_bridge.cleanup()
+        # Cleanup every cached execution bridge (one per language) so each
+        # hidden Maya window is deleted.
+        if hasattr(self, "execution_manager"):
+            self.execution_manager.cleanup_bridges()
 
         super().closeEvent(event)
 
