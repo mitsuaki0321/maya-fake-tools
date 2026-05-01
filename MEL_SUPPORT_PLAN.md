@@ -318,7 +318,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 10**: デッドコード削除。`ExecutionManager.handle_object_inspection` 内の `"Syntax Errors:"` 分岐（emit する側が存在せず到達不可）と `MayaCodeEditor.show_syntax_errors_in_terminal()` メソッド（呼出元なし）を削除。`inspect_object` シグナルが純粋に inspection 用途のみとなる _(hash: `604a5e5`)_
 - [x] **types.py リネーム**: `_types.py` → `types.py`（プロジェクト多数派の慣習に揃える、`_` プレフィックスなし）_(hash: `af7d8bc`)_
 - [x] **commit 11**: ファイル分割（振る舞い不変）。`languages/helpers.py` を新設し `find_execution_manager` を移動（cross-language ヘルパとして将来 MEL でも再利用）。`languages/python_actions.py` を新設し `_PYTHON_DIR_TEMPLATE` / `_PYTHON_HELP_TEMPLATE` / `_build_reload_code` / `_reload_module` / `_python_inspection_snippets` / `_python_context_menu_extender` を全部移動。`languages/python.py` は 210 行 → 50 行に slim 化（PYTHON 組み立て + extra_indent_trigger + highlighter_factory のみ）。cross-module 参照される関数は `_` プレフィックスを外す（`python_context_menu_extender` / `python_inspection_snippets` / `find_execution_manager`）。ruff PASS、smoke test PASS _(hash: `9307c59`)_
-- [x] **commit 12 (実装完了、コミット待ち)**: コンテキストメニューと inspection を統合。`helpers.py` に `dispatch_inspection(editor, header, code)` を追加（cross-language ヘルパ）。`python_actions.py` に `python_inspect_dir` / `python_inspect_help` ファサードを追加し `dispatch_inspection` 経由で実行、`_reload_module` も同ヘルパ経由にリファクタ（`hasattr` フォールバック撤廃）。`python_context_menu_extender` の lambda がシグナル経由ではなく直接ファサードを呼ぶように変更。`LanguageProfile.inspection_snippets` フィールド削除（10 → 9 Optional）。`python_inspection_snippets` 関数削除。`code_editor.py` / `editor_tab_widget.py` から `inspect_object` シグナル定義 + 4 connect 削除、`ui_layout_manager.py` から該当 connect 削除、`execution_manager.handle_object_inspection` メソッド削除。シグナル経路 4 ホップを直接呼出 1 ホップに圧縮。ruff PASS、smoke test PASS _(hash: 未コミット)_
+- [x] **commit 12**: コンテキストメニューと inspection を統合。`helpers.py` に `dispatch_inspection(editor, header, code)` を追加（cross-language ヘルパ）。`python_actions.py` に `python_inspect_dir` / `python_inspect_help` ファサードを追加し `dispatch_inspection` 経由で実行、`_reload_module` も同ヘルパ経由にリファクタ（`hasattr` フォールバック撤廃）。`python_context_menu_extender` の lambda がシグナル経由ではなく直接ファサードを呼ぶように変更。`LanguageProfile.inspection_snippets` フィールド削除（10 → 9 Optional）。`python_inspection_snippets` 関数削除。`code_editor.py` / `editor_tab_widget.py` から `inspect_object` シグナル定義 + 4 connect 削除、`ui_layout_manager.py` から該当 connect 削除、`execution_manager.handle_object_inspection` メソッド削除。シグナル経路 4 ホップを直接呼出 1 ホップに圧縮。ruff PASS、smoke test PASS _(hash: `4179139`)_
 
 ### Phase 1
 > **着手前にユーザーと再相談**: MEL に含める機能 / 含めない機能を確定させる（§1.5.1, §1.5.3 参照）。
@@ -484,4 +484,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 12 実装完了、コミット待ち**: コンテキストメニューと inspection を統合 — `inspection_snippets` フィールド削除、シグナル経路撤廃、extender が action 実行まで一手に所有）
+**最終更新**: 2026-05-01（**commit 12 完了** `4179139`: コンテキストメニューと inspection を統合。Phase 1 着手前のクリーンアップ完了、次は MEL 機能セット / UI/UX 方針確定）
