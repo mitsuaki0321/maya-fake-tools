@@ -19,7 +19,7 @@ from logging import getLogger
 import os
 
 from ..command import file_io
-from ..languages import DEFAULT_PROFILE
+from ..languages import DEFAULT_PROFILE, get_profile_for_path
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
@@ -278,7 +278,12 @@ class FileOperationsController:
     # -------------------- Execute without opening --------------------
 
     def execute_file_directly(self, file_path: str) -> None:
-        """Run ``file_path`` through the execution manager without opening a tab."""
+        """Run ``file_path`` through the execution manager without opening a tab.
+
+        The file's own language profile (resolved from its extension) drives
+        execution, so a ``foo.mel`` clicked while a Python tab is focused still
+        runs through the MEL executer rather than the active tab's bridge.
+        """
         mw = self.main_window
         if not os.path.exists(file_path):
             CodeEditorMessageBox.warning(mw, "File Not Found", f"File does not exist: {file_path}")
@@ -294,4 +299,4 @@ class FileOperationsController:
         mw.output_terminal.append_output("-" * 40)
 
         if mw.execution_manager:
-            mw.execution_manager.execute_code(content)
+            mw.execution_manager.execute_code(content, language=get_profile_for_path(file_path))

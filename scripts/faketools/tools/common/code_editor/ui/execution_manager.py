@@ -77,8 +77,13 @@ class ExecutionManager:
         self._bridges.clear()
         self.native_bridge = None
 
-    def _refresh_active_bridge(self):
-        """Point :attr:`native_bridge` at the bridge for the active editor's language.
+    def _refresh_active_bridge(self, language_override: Optional[LanguageProfile] = None):
+        """Point :attr:`native_bridge` at the bridge for the relevant language.
+
+        Uses ``language_override`` when supplied — file-explorer Run on a
+        ``foo.mel`` while a Python tab is focused needs the MEL bridge, not
+        the active tab's. Otherwise falls back to the active editor's
+        language.
 
         Bridges are created lazily and cached in :attr:`_bridges`. Languages
         whose profile has no ``source_type`` (i.e. don't support execution at
@@ -88,7 +93,7 @@ class ExecutionManager:
         if not MAYA_AVAILABLE:
             self.native_bridge = None
             return
-        language = self._active_editor_language()
+        language = language_override or self._active_editor_language()
         if language.source_type is None:
             self.native_bridge = None
             return
@@ -132,21 +137,27 @@ class ExecutionManager:
             self.is_full_execution = True
             self.execute_python_code(code)
 
-    def execute_code(self, code: str):
-        """Execute code without showing it in terminal (for variable replacement)."""
+    def execute_code(self, code: str, language: Optional[LanguageProfile] = None):
+        """Execute code without showing it in terminal (for variable replacement).
+
+        ``language`` overrides the active-tab dispatch when caller has a
+        better source of truth — e.g. the file-explorer Run button passes
+        the file's own language so a ``foo.mel`` runs through the MEL
+        executer regardless of which tab is focused.
+        """
         # This is called when executing with variables
         # The replaced code has already been shown in terminal
         self.is_selection_execution = False
         self.is_full_execution = True
-        self._execute_code_internal(code, show_code=False)
+        self._execute_code_internal(code, show_code=False, language_override=language)
 
     def execute_python_code(self, code: str):
         """Execute Python code and display results with undoChunk for single undo."""
         self._execute_code_internal(code, show_code=True)
 
-    def _execute_code_internal(self, code: str, show_code: bool = True):
-        """Internal method to execute Python code."""
-        self._refresh_active_bridge()
+    def _execute_code_internal(self, code: str, show_code: bool = True, language_override: Optional[LanguageProfile] = None):
+        """Internal method to execute code through the appropriate bridge."""
+        self._refresh_active_bridge(language_override)
 
         # Check if Maya cmds is available for undoChunk
         maya_available = "cmds" in self.exec_globals
