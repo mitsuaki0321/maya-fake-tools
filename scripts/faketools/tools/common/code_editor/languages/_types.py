@@ -57,10 +57,10 @@ class LanguageProfile:
             disables the "Add to Shelf" menu item.
         context_menu_extender (Optional[Callable]): Callback that adds
             language-specific entries to the right-click menu. ``None``
-            skips the language-specific section.
-        identifier_validator (Optional[Callable[[str], bool]]): Predicate on
-            a candidate identifier. ``None`` disables identifier-based menu
-            items entirely.
+            skips the language-specific section. The extender receives the
+            raw selected text and is responsible for any sanity checks; the
+            execution side already surfaces NameError-style failures
+            gracefully so we don't gate menu items on identifier syntax.
         inspection_snippets (Optional[Callable]): Maps an inspection type
             (e.g. ``"dir"`` / ``"help"``) to executable code. ``None``
             disables Inspect Object / Help.
@@ -87,7 +87,6 @@ class LanguageProfile:
     shelf_config: Optional[ShelfConfig] = None
 
     context_menu_extender: Optional[Callable] = None
-    identifier_validator: Optional[Callable[[str], bool]] = None
     inspection_snippets: Optional[Callable] = None
 
     highlighter_factory: Optional[Callable] = None

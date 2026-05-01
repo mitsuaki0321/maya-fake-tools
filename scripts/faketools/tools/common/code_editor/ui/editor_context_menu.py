@@ -46,9 +46,10 @@ def build_context_menu(editor, event):
 
     extender = editor.language.context_menu_extender
     if selected_text and extender is not None:
-        validator = editor.language.identifier_validator
-        if validator is None or validator(selected_text):
-            extender(menu, editor, selected_text)
+        # The extender (and the executer it dispatches to) handles invalid
+        # identifiers by surfacing a friendly message in the terminal, so
+        # we don't gate on syntax here.
+        extender(menu, editor, selected_text)
 
     if editor.textCursor().hasSelection():
         menu.addSeparator()

@@ -150,14 +150,13 @@ class LanguageProfile:
 
     # ===== コンテキストメニュー =====
     context_menu_extender: Optional[Callable] = None
-    """選択中 identifier に対し言語固有メニュー項目を追加。
-    引数: (menu, editor, selected_identifier)。None なら追加項目なし。
+    """選択中テキストに対し言語固有メニュー項目を追加。
+    引数: (menu, editor, selected_text)。None なら追加項目なし。
+    extender は無条件にメニュー項目を追加してよい — 実行側 (Inspect / Reload) の
+    try/except が無効な選択にも graceful に対応するため、ここで識別子文法の
+    バリデーションは不要。
     Python: Inspect Object / Inspect Help / Reload Module
     MEL:    whatIs / Source File（採用するかは Phase 1 着手時に再相談）"""
-
-    identifier_validator: Optional[Callable[[str], bool]] = None
-    """その言語の識別子として valid か判定。Python は英数+`_`、MEL は先頭 `$` を許容など。
-    None なら identifier ベースのメニュー項目（Inspect 等）を出さない。"""
 
     inspection_snippets: Optional[Callable] = None
     """inspection_type ('dir' | 'help') → 実行コード文字列を返す関数。
@@ -196,7 +195,7 @@ class LanguageProfile:
 | `extensions` | パスから profile 解決 + `file_filter` 生成元 |
 | `default_extension` | 新規ファイル名生成 |
 
-**Optional（11 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
+**Optional（10 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
 | フィールド | None で無効化される機能 |
 |---|---|
 | `line_comment` | コメントトグル（`Ctrl+/`） |
@@ -205,7 +204,6 @@ class LanguageProfile:
 | `source_type` | Run / 実行関連すべて |
 | `shelf_config` | "Add to Shelf" メニュー項目 |
 | `context_menu_extender` | 言語固有右クリック項目 |
-| `identifier_validator` | 識別子ベースのアクション全般 |
 | `inspection_snippets` | Inspect Object / Help |
 | `highlighter_factory` | シンタックスハイライト（プレーン表示にフォールバック） |
 | `completion_engine_factory` | autocomplete |
@@ -236,7 +234,7 @@ PYTHON = LanguageProfile(
         label="Python",
         icon="pythonFamily.png",
     ),
-    # context_menu_extender, inspection_snippets, identifier_validator は commit 7 で設定
+    # context_menu_extender, inspection_snippets は commit 7 で設定
     # highlighter_factory は commit 2 で設定
     # completion_engine_factory, folding_strategy は将来追加分
 )
@@ -317,6 +315,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 7**: Python 専用ヘルパ（`_is_valid_identifier` / `_is_valid_module_name` / `_reload_module` / `_build_reload_code` / `_find_execution_manager` / dir & help テンプレート）を `editor_context_menu.py` と `execution_manager.py` から `languages/python.py` に集約。新規 `_python_context_menu_extender(menu, editor, identifier)` と `_python_inspection_snippets(inspection_type, object_name)` を追加（Qt は extender 内部で遅延 import）。PYTHON プロファイルに `context_menu_extender` / `identifier_validator` / `inspection_snippets` を設定。`build_context_menu` を「validator → extender 呼出」のジェネリックフローに、`handle_object_inspection` を「ヘッダ表示 → `language.inspection_snippets` 経由でコード生成 → execute」に置換。ruff PASS、smoke test PASS（profile fields / validator / snippets / Qt 非依存維持） _(hash: `1fead95`)_
 - [x] **commit 8**: `code_editor/__init__.py` の package docstring と `TOOL_CONFIG.description` を Python 限定から多言語化前提の文言に更新（"Multi-language code editor ..."）。`ui/code_editor.py` の placeholder text "# Start typing Python code..." は §4.4 に従い据え置き（Phase 0 スコープ外）。Phase 0 全体で `ruff check` クリーン、最終 smoke test PASS（全 profile フィールド・autoderived properties・全 consumer module の Qt 非依存 import） _(hash: `e684ff6`)_
 - [x] **Phase 0 動作確認**: ユーザー確認済み（2026-05-01）。Maya 上で既存挙動の回帰なし
+- [x] **commit 9 (Phase 0 後追加、コミット待ち)**: `LanguageProfile.identifier_validator` フィールドを削除。`languages/python.py` から `_is_valid_identifier` / `_is_valid_module_name` を削除し、`_python_context_menu_extender` は Reload Module を **常に** 追加（実行側の try/except が無効識別子を graceful に処理するため、文法バリデーションを extender 側でゲートしない方針）。`editor_context_menu.build_context_menu` から validator チェックを削除（選択語非空ガードのみ残す）。プロファイル API スリム化（11 → 10 Optional）。ruff PASS、smoke test PASS _(hash: 未コミット)_
 
 ### Phase 1
 > **着手前にユーザーと再相談**: MEL に含める機能 / 含めない機能を確定させる（§1.5.1, §1.5.3 参照）。
@@ -354,6 +353,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | ヘルプポップアップ レンダラ（`ui/help/renderer/`）は Phase 0 では触らず、Phase 4 で対応 | Maya help 分岐は既に言語非依存で動作。Python 専用パス（`structured` / `syntax.PythonLexer` / `detect.SIGNATURE_RE`）の改修は MEL autocomplete 実装と一体で進めた方が依存関係を整理できる |
 | 2026-05-01 | **言語ごとの機能セットは opt-in 方式とする** | Python 全機能を他言語に強制しない。MEL は autocomplete 不要かもしれない等、含む/含まないは各言語の本格追加時に再判断。`LanguageProfile` の Optional フィールドを `None` のまま残せばその機能は無効になる消費側設計（グレースフル・デグラデーション）。詳細 §1.5 |
 | 2026-05-01 | UI/UX 詳細は後で別途相談 | タブヘッダー言語表示、ツールバー状態切替、新規ファイルダイアログのフォーマット、設定 UI など。決まった時点で本ファイルに追記 |
+| 2026-05-01 | `identifier_validator` フィールドを削除（commit 9） | コンテキストメニュー extender の責務をシンプルに保ち、文法チェックは実行側 (Inspect / Reload の try/except) に集約する方針。Python 識別子規則・MEL の `$var` 規則などを各言語が個別に書く必要がなくなる。ユーザーが無効識別子を Inspect/Reload しても terminal に親切なエラーが出るだけで graceful。プロファイル API が 11 → 10 Optional にスリム化 |
 | 2026-05-01 | `LanguageProfile` を全 Optional 設計に再構成 | §1.5 opt-in 原則と整合。必須は `id` / `display_name` / `extensions` / `default_extension` の 4 項目のみ。`file_filter` と `line_comment_with_space` は自動生成プロパティ化。`shelf_*` 3 フィールドは `ShelfConfig` データクラスに集約しまるごと Optional 化 |
 | 2026-05-01 | `block_open_chars: tuple[str, ...]` を `extra_indent_trigger: Callable[[str], bool]` に変更 | `auto_indent.py` の hanging indent 規則は既に `(`, `[`, `{` の未閉じを処理するため、ブラケット系言語（MEL 等）には追加トリガが不要。`block_open_chars` が必要なのは事実上 Python の `:` だけ。Callable 化で将来コメント除去・トークン解析等の複雑な条件にも拡張可能。MEL は `None` で済み、hanging indent と closing bracket alignment で完全カバー |
 | 2026-05-01 | `line_comment` / `block_comment` は文字列ベースのまま維持（Callable 化しない） | コメントトグルは「行頭プレフィックスの追加 / 除去」のみで、インデント判定のような行内コンテキスト解析を必要としない。Python / MEL とも単一文字列で完全表現可。複数形式が必要になれば後方互換的に `tuple[str, ...]` 化可能。Python の `"""..."""` を `block_comment` に入れない（文字列リテラルでコメントではない、linter 警告の原因）ため Python は `block_comment=None` |
@@ -480,4 +480,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**Phase 0 完了（動作確認済）**。Phase 1 着手前のユーザー再相談中 — MEL 機能セット確定 / UI/UX 方針確定後に実装開始）
+**最終更新**: 2026-05-01（**commit 9 実装完了、コミット待ち**: `identifier_validator` フィールド削除 — extender 側を無条件追加に統一）

@@ -28,27 +28,6 @@ def _python_highlighter_factory(document):
     return PythonHighlighter(document)
 
 
-def _is_valid_identifier(text: str) -> bool:
-    """Return True for a bare Python identifier (no dotted form)."""
-    if not text:
-        return False
-    return text.replace("_", "").replace(".", "").isalnum() and not text[0].isdigit()
-
-
-def _is_valid_module_name(text: str) -> bool:
-    """Return True for a dotted module path like ``pkg.sub.module``."""
-    if not text:
-        return False
-    if text.startswith(".") or text.endswith(".") or ".." in text:
-        return False
-    for part in text.split("."):
-        if not part:
-            return False
-        if not (part.replace("_", "").isalnum() and not part[0].isdigit()):
-            return False
-    return True
-
-
 def _find_execution_manager(widget):
     """Walk up from ``widget`` to the main window and return its execution_manager.
 
@@ -114,6 +93,11 @@ def _reload_module(editor, module_name: str) -> None:
 def _python_context_menu_extender(menu, editor, identifier: str) -> None:
     """Append Inspect Object / Inspect Help / Reload Module to the right-click menu.
 
+    Items are added unconditionally. The Inspect / Reload code runs through
+    Maya's executer with try/except wrappers (NameError, "not a module",
+    etc.), so invalid selections surface a friendly message in the terminal
+    instead of breaking the editor — no syntactic gating needed here.
+
     Qt classes are imported lazily so :mod:`languages.python` itself stays
     Qt-free at import time (smoke tests, lint runs).
     """
@@ -129,10 +113,9 @@ def _python_context_menu_extender(menu, editor, identifier: str) -> None:
     inspect_help_action.triggered.connect(lambda: editor.inspect_object.emit(identifier, "help"))
     menu.addAction(inspect_help_action)
 
-    if _is_valid_module_name(identifier):
-        reload_action = QAction(f"Reload Module '{identifier}'", editor)
-        reload_action.triggered.connect(lambda: _reload_module(editor, identifier))
-        menu.addAction(reload_action)
+    reload_action = QAction(f"Reload Module '{identifier}'", editor)
+    reload_action.triggered.connect(lambda: _reload_module(editor, identifier))
+    menu.addAction(reload_action)
 
 
 _PYTHON_DIR_TEMPLATE = """
@@ -200,7 +183,6 @@ PYTHON = LanguageProfile(
     ),
     highlighter_factory=_python_highlighter_factory,
     context_menu_extender=_python_context_menu_extender,
-    identifier_validator=_is_valid_identifier,
     inspection_snippets=_python_inspection_snippets,
 )
 
