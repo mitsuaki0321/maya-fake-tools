@@ -317,16 +317,21 @@ class ShortcutHandler:
             self.main_window.output_terminal.append_warning("File is empty")
 
     def toggle_line_comment(self):
-        """Toggle line comment (Ctrl+/)."""
-        # Toggle line comment
+        """Toggle line comment (Ctrl+/) using the active editor's language profile."""
         current_editor = self.main_window.get_current_editor()
         if not current_editor:
+            return
+
+        prefix = current_editor.language.line_comment
+        prefix_with_space = current_editor.language.line_comment_with_space
+        if prefix is None or prefix_with_space is None:
+            # Language doesn't define a line comment — graceful no-op.
             return
 
         # Check if we have multi-cursors
         if hasattr(current_editor, "all_cursors") and current_editor.all_cursors:
             # Handle multi-cursor comment toggle
-            self._toggle_comment_multi_cursor(current_editor)
+            self._toggle_comment_multi_cursor(current_editor, prefix, prefix_with_space)
             return
 
         cursor = current_editor.textCursor()
@@ -362,7 +367,7 @@ class ShortcutHandler:
                 cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
                 line_text = cursor.selectedText().lstrip()
 
-                if line_text and not line_text.startswith("#"):
+                if line_text and not line_text.startswith(prefix):
                     all_commented = False
                     break
 
@@ -381,31 +386,29 @@ class ShortcutHandler:
                 cursor.movePosition(QTextCursor.StartOfLine)
 
                 if all_commented:
-                    # Remove comment
+                    # Remove the prefix (with space variant first, else bare prefix).
                     stripped = line_text.lstrip()
-                    if stripped.startswith("# "):
-                        # Find position of '# '
-                        comment_pos = line_text.find("# ")
+                    if stripped.startswith(prefix_with_space):
+                        comment_pos = line_text.find(prefix_with_space)
                         cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, comment_pos)
-                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, 2)  # Select '# '
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(prefix_with_space))
                         cursor.removeSelectedText()
-                    elif stripped.startswith("#"):
-                        # Find position of '#'
-                        comment_pos = line_text.find("#")
+                    elif stripped.startswith(prefix):
+                        comment_pos = line_text.find(prefix)
                         cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, comment_pos)
-                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, 1)  # Select '#'
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(prefix))
                         cursor.removeSelectedText()
                 else:
                     # Add comment
                     first_non_space = len(line_text) - len(line_text.lstrip())
                     cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, first_non_space)
-                    cursor.insertText("# ")
+                    cursor.insertText(prefix_with_space)
 
         finally:
             cursor.endEditBlock()
 
-    def _toggle_comment_multi_cursor(self, editor):
-        """Toggle comments for multi-cursor lines."""
+    def _toggle_comment_multi_cursor(self, editor, prefix: str, prefix_with_space: str):
+        """Toggle comments for multi-cursor lines using the supplied language prefixes."""
         doc = editor.document()
         cursor = QTextCursor(doc)
         cursor.beginEditBlock()
@@ -422,7 +425,7 @@ class ShortcutHandler:
             for _ in range(line_num):
                 cursor.movePosition(QTextCursor.NextBlock)
             line_text = cursor.block().text().lstrip()
-            if line_text and not line_text.startswith("#"):
+            if line_text and not line_text.startswith(prefix):
                 all_commented = False
                 break
 
@@ -444,18 +447,19 @@ class ShortcutHandler:
 
             # Toggle comment
             if all_commented:
-                # Remove comment
-                if line_text.lstrip().startswith("#"):
+                if line_text.lstrip().startswith(prefix):
                     spaces = len(line_text) - len(line_text.lstrip())
                     cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, spaces)
-                    cursor.deleteChar()
+                    # Delete the prefix (one char per `prefix` codepoint).
+                    for _ in range(len(prefix)):
+                        cursor.deleteChar()
                     if cursor.block().text() and cursor.block().text()[0] == " ":
                         cursor.deleteChar()
             else:
                 # Add comment
                 leading_spaces = len(line_text) - len(line_text.lstrip())
                 cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, leading_spaces)
-                cursor.insertText("# ")
+                cursor.insertText(prefix_with_space)
 
         cursor.endEditBlock()
 

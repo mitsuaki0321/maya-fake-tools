@@ -312,8 +312,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 3**: `NativeExecutionBridge` に `language: LanguageProfile = PYTHON` 引数追加、`sourceType` を `language.source_type` から取得、hidden window 名を per-language 化（`hiddenNativeExecuter_{id}`）、`python_executer` → `executer` rename。`ExecutionManager` に `_bridges: dict` キャッシュと `_active_editor_language()` / `_refresh_active_bridge()` / `cleanup_bridges()` を追加、執行/inspection 両メソッドで `_refresh_active_bridge` 呼出に置換。`main_window.closeEvent` を `cleanup_bridges()` 呼出に変更。`execute_silent` / `build_exec_globals` の Python 固有性は docstring 明記、変更は Phase 1 持ち越し。ruff PASS、smoke test PASS _(hash: `85d1b1c`)_
 - [x] **commit 4**: `maya_shelf.add_to_active_shelf` に `language: LanguageProfile = PYTHON` 引数追加、`-stp` / `-l` / `-i1` を `language.shelf_config` から取得、`shelf_config is None` で `(False, "Shelf-add not supported for ...")` を即返却。`main_window.add_to_shelf` で active editor の language を渡すよう修正。ruff PASS、smoke test PASS（Maya 不在環境 / `shelf_config=None` 両パス確認） _(hash: `56fdc95`)_
 - [x] **commit 5a**: `languages/__init__.py` に `KNOWN_EXTENSIONS` frozenset 追加。`file_ops.create_python_file` を `create_source_file(parent_dir, name, language=PYTHON, initial_content=None)` にリネーム + 言語の `default_extension` / `line_comment_with_space` から自動生成、旧名 `create_python_file` を deprecated alias として保持。`session_manager` / `ui_session_manager` の `"Untitled.py"` フォールバックを `f"Untitled{DEFAULT_PROFILE.default_extension}"` に。`workspace_manager._copy_startup_files` の `endswith(".py")` を `KNOWN_EXTENSIONS` 判定に。ruff PASS、smoke test PASS _(hash: `119f0e4`)_
-- [x] **commit 5b (実装完了、コミット待ち)**: `file_operations_controller.new_file` の `.py` 拡張子を `DEFAULT_PROFILE.default_extension` 経由に。`editor_tab_widget.new_file` に `language: LanguageProfile = DEFAULT_PROFILE` 引数追加、`Untitled{n}.py` を `language.default_extension` 経由に、preview 昇格と save dialog（タイトル / フィルタ）を editor の language 経由に。`file_explorer.py` に `_path_has_known_extension(path)` ヘルパ追加し 4 箇所の `suffix().lower() == "py"` ゲートを置換、外部ドラッグフィルタも置換、メニュー文言 / ダイアログタイトルを `DEFAULT_PROFILE.display_name` 経由に、`create_python_file` を `create_source_file(language=DEFAULT_PROFILE)` に切替。ruff PASS、smoke test PASS _(hash: 未コミット)_
-- [ ] **commit 6**: コメントトグル profile 化 _(hash: ____)_
+- [x] **commit 5b**: `file_operations_controller.new_file` の `.py` 拡張子を `DEFAULT_PROFILE.default_extension` 経由に。`editor_tab_widget.new_file` に `language: LanguageProfile = DEFAULT_PROFILE` 引数追加、`Untitled{n}.py` を `language.default_extension` 経由に、preview 昇格と save dialog（タイトル / フィルタ）を editor の language 経由に。`file_explorer.py` に `_path_has_known_extension(path)` ヘルパ追加し 4 箇所の `suffix().lower() == "py"` ゲートを置換、外部ドラッグフィルタも置換、メニュー文言 / ダイアログタイトルを `DEFAULT_PROFILE.display_name` 経由に、`create_python_file` を `create_source_file(language=DEFAULT_PROFILE)` に切替。ruff PASS、smoke test PASS _(hash: `31fa1aa`)_
+- [x] **commit 6 (実装完了、コミット待ち)**: `shortcut_handler.toggle_line_comment` で `editor.language.line_comment` / `line_comment_with_space` を参照、`line_comment is None` で no-op（graceful degradation）。`#` / `# ` リテラルを `prefix` / `prefix_with_space` 経由に、`KeepAnchor, 1/2` を `len(prefix)` / `len(prefix_with_space)` 経由に。`_toggle_comment_multi_cursor` を `(editor, prefix, prefix_with_space)` 受取に変更、`deleteChar()` 単呼びを `for _ in range(len(prefix))` ループに（複数文字 prefix 対応）。`cursor.block().text()[0] == " "` の trailing-space 検出ロジックは既存挙動（軽微なバグ含む）保持。ruff PASS、構造検証 PASS _(hash: 未コミット)_
 - [ ] **commit 7**: コンテキストメニュー / Inspect profile 化（Python extender を `languages/python.py` に集約） _(hash: ____)_
 - [ ] **commit 8**: docstring / 説明文修正 _(hash: ____)_
 - [ ] **Phase 0 動作確認**: Maya 起動 → 既存 `.py` ファイル開閉 / 新規 Untitled / 保存ダイアログ / コメントトグル / Run / Add to Shelf / ファイルエクスプローラ操作 / preview 昇格 / セッション復元 / 右クリック Inspect Object / Inspect Help / Reload Module がすべて従来通り動く
@@ -380,6 +380,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - stdout キャプチャは Maya のレポーターを共有する現アーキで透過のはずだが要確認
 - ヘルプポップアップ syntax renderer（`renderer/syntax.py`）の Pygments `PythonLexer` は MEL 例にも当たる → cosmetic、deprioritize
 - **MEL ブロックコメント `/* */` のネスト破綻**: トグル対象の選択範囲内に既存の `/* */` があると壊れる。これは MEL の言語仕様（ネスト非サポート）に起因し、`block_comment` のデータ構造設計では解決しない。Phase 1 で MEL を本格追加するときに「既存コメント検出 → トグルキャンセル / ユーザー通知」を消費側（`shortcut_handler.py`）に実装するか判断
+- **既存の trailing-space 検出ロジック（`_toggle_comment_multi_cursor`）の軽微なバグ**: `cursor.block().text()[0] == " "` は行頭文字を見ているだけで、削除位置の文字を見ていない。`    #foo`（インデント + space なしコメント）のような edge case でアンコメント時に `f` を巻き込み削除する可能性。Phase 0 では既存挙動を保持。修正は Phase 1+ で `cursor.block().text()[spaces] == " "` に変える等で対応可能
 
 ## 9. 制約・ルール（CLAUDE.md より抜粋）
 
@@ -479,4 +480,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 5b 実装完了、コミット待ち**: UI レベルファイル操作を language 駆動に — new_file 拡張子・preview 昇格・save dialog・file_explorer の 4 ゲート + 外部ドラッグ + 新規ファイルメニュー）
+**最終更新**: 2026-05-01（**commit 6 実装完了、コミット待ち**: コメントトグルを language の `line_comment` / `line_comment_with_space` 経由に、複数文字 prefix 対応）
