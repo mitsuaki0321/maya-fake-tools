@@ -22,6 +22,7 @@ from .python import PYTHON
 
 ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON,)
 DEFAULT_PROFILE: LanguageProfile = PYTHON
+KNOWN_EXTENSIONS: frozenset[str] = frozenset(ext for profile in ALL_PROFILES for ext in profile.extensions)
 
 
 def get_profile_for_path(path: Optional[str]) -> LanguageProfile:
@@ -48,6 +49,7 @@ def get_profile_for_path(path: Optional[str]) -> LanguageProfile:
 __all__ = [
     "ALL_PROFILES",
     "DEFAULT_PROFILE",
+    "KNOWN_EXTENSIONS",
     "PYTHON",
     "LanguageProfile",
     "ShelfConfig",

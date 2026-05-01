@@ -6,6 +6,8 @@ Handles saving and restoring session state including open tabs and their content
 from logging import getLogger
 import os
 
+from ..languages import DEFAULT_PROFILE
+
 logger = getLogger(__name__)
 
 
@@ -161,7 +163,7 @@ class UISessionManager:
         file_path = tab_info.get("file_path")
         saved_content = tab_info.get("content", "")
         cursor_position = tab_info.get("cursor_position", 0)
-        tab_name = tab_info.get("tab_name", "Untitled.py")
+        tab_name = tab_info.get("tab_name", f"Untitled{DEFAULT_PROFILE.default_extension}")
 
         # Check if this is a file preview tab (from explorer)
         is_file_preview = tab_name.startswith("[Preview]") and file_path

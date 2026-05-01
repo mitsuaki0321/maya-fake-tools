@@ -293,7 +293,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2 | `CodeEditor` リネーム + alias、`language` 引数追加、`setup_syntax_highlighting` を factory 経由に | `ui/code_editor.py` |
 | 3 | `execution.py` / `execution_manager.py` を profile 化 | `command/execution.py`, `ui/execution_manager.py` |
 | 4 | `maya_shelf.py` を profile 化 + 呼出側 `main_window.add_to_shelf` で active editor の language を渡す | `command/maya_shelf.py`, `ui/main_window.py` |
-| 5 | ファイル操作系を profile 化 | `command/file_ops.py`, `ui/file_operations_controller.py`, `ui/editor_tab_widget.py`, `ui/panels/file_explorer.py`, `settings/session_manager.py`, `ui/ui_session_manager.py`, `settings/workspace_manager.py` |
+| 5a | ファイル操作系（低レベル）を profile 化 | `command/file_ops.py`, `settings/session_manager.py`, `ui/ui_session_manager.py`, `settings/workspace_manager.py`, `languages/__init__.py`（`KNOWN_EXTENSIONS` 追加） |
+| 5b | ファイル操作系（UI レベル）を profile 化 | `ui/file_operations_controller.py`, `ui/editor_tab_widget.py`, `ui/panels/file_explorer.py` |
 | 6 | コメントトグルを profile 化 | `ui/shortcut_handler.py` |
 | 7 | コンテキストメニュー / Inspect を profile 化 | `ui/editor_context_menu.py`, `ui/execution_manager.py`, `languages/python.py` |
 | 8 | docstring / `__init__.py` の説明文修正 | `code_editor/__init__.py` |
@@ -309,8 +310,9 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 1**: `languages/` 新設、`LanguageProfile` / `ShelfConfig` / `PYTHON` 定義。ruff PASS、smoke test PASS。`maya_terminal.py:24` の mypy エラーは**既存の無関係な問題** _(hash: `30c26f2`)_
 - [x] **commit 2**: `PythonEditor` → `CodeEditor` リネーム + alias、`__init__` に `language: LanguageProfile = PYTHON` 引数追加、`setup_syntax_highlighting` を `language.highlighter_factory` 経由に。PYTHON 側に `_python_highlighter_factory`（遅延 import）を追加。ruff PASS、smoke test PASS。`languages/` パッケージは Qt 非依存を維持 _(hash: `d0ac3ea`)_
 - [x] **commit 3**: `NativeExecutionBridge` に `language: LanguageProfile = PYTHON` 引数追加、`sourceType` を `language.source_type` から取得、hidden window 名を per-language 化（`hiddenNativeExecuter_{id}`）、`python_executer` → `executer` rename。`ExecutionManager` に `_bridges: dict` キャッシュと `_active_editor_language()` / `_refresh_active_bridge()` / `cleanup_bridges()` を追加、執行/inspection 両メソッドで `_refresh_active_bridge` 呼出に置換。`main_window.closeEvent` を `cleanup_bridges()` 呼出に変更。`execute_silent` / `build_exec_globals` の Python 固有性は docstring 明記、変更は Phase 1 持ち越し。ruff PASS、smoke test PASS _(hash: `85d1b1c`)_
-- [x] **commit 4 (実装完了、コミット待ち)**: `maya_shelf.add_to_active_shelf` に `language: LanguageProfile = PYTHON` 引数追加、`-stp` / `-l` / `-i1` を `language.shelf_config` から取得、`shelf_config is None` で `(False, "Shelf-add not supported for ...")` を即返却。`main_window.add_to_shelf` で active editor の language を渡すよう修正。ruff PASS、smoke test PASS（Maya 不在環境 / `shelf_config=None` 両パス確認） _(hash: 未コミット)_
-- [ ] **commit 5**: ファイル操作系 profile 化 _(hash: ____)_
+- [x] **commit 4**: `maya_shelf.add_to_active_shelf` に `language: LanguageProfile = PYTHON` 引数追加、`-stp` / `-l` / `-i1` を `language.shelf_config` から取得、`shelf_config is None` で `(False, "Shelf-add not supported for ...")` を即返却。`main_window.add_to_shelf` で active editor の language を渡すよう修正。ruff PASS、smoke test PASS（Maya 不在環境 / `shelf_config=None` 両パス確認） _(hash: `56fdc95`)_
+- [x] **commit 5a (実装完了、コミット待ち)**: `languages/__init__.py` に `KNOWN_EXTENSIONS` frozenset 追加。`file_ops.create_python_file` を `create_source_file(parent_dir, name, language=PYTHON, initial_content=None)` にリネーム + 言語の `default_extension` / `line_comment_with_space` から自動生成、旧名 `create_python_file` を deprecated alias として保持。`session_manager` / `ui_session_manager` の `"Untitled.py"` フォールバックを `f"Untitled{DEFAULT_PROFILE.default_extension}"` に。`workspace_manager._copy_startup_files` の `endswith(".py")` を `KNOWN_EXTENSIONS` 判定に。ruff PASS、smoke test PASS _(hash: 未コミット)_
+- [ ] **commit 5b**: ファイル操作系（UI レベル）profile 化 _(hash: ____)_
 - [ ] **commit 6**: コメントトグル profile 化 _(hash: ____)_
 - [ ] **commit 7**: コンテキストメニュー / Inspect profile 化（Python extender を `languages/python.py` に集約） _(hash: ____)_
 - [ ] **commit 8**: docstring / 説明文修正 _(hash: ____)_
@@ -477,4 +479,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 4 実装完了、コミット待ち**: `maya_shelf` を language の `shelf_config` 経由に。`shelf_config=None` で graceful 失敗）
+**最終更新**: 2026-05-01（**commit 5a 実装完了、コミット待ち**: `KNOWN_EXTENSIONS` 追加、`create_source_file` リネーム + alias、`Untitled.py` フォールバックと startup ファイルフィルタを language 駆動に。コミット粒度を 5a/5b に分割）

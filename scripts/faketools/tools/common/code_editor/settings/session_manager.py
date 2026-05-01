@@ -8,6 +8,8 @@ from logging import getLogger
 import os
 from typing import Any
 
+from ..languages import DEFAULT_PROFILE
+
 logger = getLogger(__name__)
 
 # Constants
@@ -267,7 +269,7 @@ class SessionManager:
             "content": content,
             "cursor_position": cursor_position,
             "is_modified": is_modified,
-            "tab_name": tab_name or (os.path.basename(file_path) if file_path else "Untitled.py"),
+            "tab_name": tab_name or (os.path.basename(file_path) if file_path else f"Untitled{DEFAULT_PROFILE.default_extension}"),
         }
 
     def clear_session_state(self):

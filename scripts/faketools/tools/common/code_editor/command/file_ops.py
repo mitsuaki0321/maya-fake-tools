@@ -15,6 +15,9 @@ from dataclasses import dataclass
 from logging import getLogger
 import os
 import shutil
+from typing import Optional
+
+from ..languages import PYTHON, LanguageProfile
 
 logger = getLogger(__name__)
 
@@ -112,15 +115,30 @@ def delete_item(path: str) -> FileOpResult:
     return FileOpResult.ok(source=path, destination=path)
 
 
-def create_python_file(parent_dir: str, name: str, initial_content: str = "# New Python file\n") -> FileOpResult:
-    """Create a new ``.py`` file under ``parent_dir`` with starter content.
+def create_source_file(
+    parent_dir: str,
+    name: str,
+    language: LanguageProfile = PYTHON,
+    initial_content: Optional[str] = None,
+) -> FileOpResult:
+    """Create a new source file under ``parent_dir`` with starter content.
 
-    ``name`` is auto-suffixed with ``.py`` when missing so the UI can pass the
-    user-entered text verbatim.
+    ``name`` is auto-suffixed with ``language.default_extension`` when missing
+    so the UI can pass the user-entered text verbatim. When ``initial_content``
+    is ``None`` a one-line "New {language} file" header is generated using the
+    language's line-comment prefix; languages without ``line_comment`` get an
+    empty body.
     """
-    if not name.endswith(".py"):
-        name += ".py"
+    if not name.endswith(language.default_extension):
+        name += language.default_extension
     destination_path = os.path.join(parent_dir, name)
+
+    if initial_content is None:
+        comment_prefix = language.line_comment_with_space
+        if comment_prefix:
+            initial_content = f"{comment_prefix}New {language.display_name} file\n"
+        else:
+            initial_content = ""
 
     try:
         with open(destination_path, "w", encoding="utf-8") as f:
@@ -129,6 +147,15 @@ def create_python_file(parent_dir: str, name: str, initial_content: str = "# New
         logger.error(f"Create file failed: {destination_path}: {exc}")
         return FileOpResult.fail(str(exc), destination=destination_path)
     return FileOpResult.ok(destination=destination_path)
+
+
+def create_python_file(parent_dir: str, name: str, initial_content: str = "# New Python file\n") -> FileOpResult:
+    """Deprecated alias of :func:`create_source_file` pinned to the Python profile.
+
+    Kept so legacy callers keep working through Phase 0; new code should use
+    :func:`create_source_file` with an explicit :class:`LanguageProfile`.
+    """
+    return create_source_file(parent_dir, name, language=PYTHON, initial_content=initial_content)
 
 
 def create_folder(parent_dir: str, name: str) -> FileOpResult:
@@ -147,6 +174,7 @@ __all__ = [
     "copy_item",
     "create_folder",
     "create_python_file",
+    "create_source_file",
     "delete_item",
     "get_unique_name",
     "move_item",

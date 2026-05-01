@@ -8,6 +8,8 @@ from logging import getLogger
 import os
 from typing import Any
 
+from ..languages import KNOWN_EXTENSIONS
+
 logger = getLogger(__name__)
 
 
@@ -161,7 +163,7 @@ class WorkspaceManager:
         return workspace_dir
 
     def _copy_startup_files(self, workspace_dir: str):
-        """Copy all Python files from startup directory to workspace."""
+        """Copy all source files (any registered language) from startup directory to workspace."""
         # Get the startup directory path
         current_dir = os.path.dirname(os.path.abspath(__file__))
         startup_dir = os.path.join(current_dir, "startup")
@@ -170,11 +172,11 @@ class WorkspaceManager:
         if not os.path.exists(startup_dir):
             return
 
-        # Copy all Python files from startup directory
+        # Copy startup files in any extension known to the language registry
         import shutil
 
         for filename in os.listdir(startup_dir):
-            if filename.endswith(".py"):
+            if any(filename.endswith(ext) for ext in KNOWN_EXTENSIONS):
                 src_file = os.path.join(startup_dir, filename)
                 dst_file = os.path.join(workspace_dir, filename)
 
