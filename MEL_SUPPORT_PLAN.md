@@ -152,17 +152,15 @@ class LanguageProfile:
 
     # ===== コンテキストメニュー =====
     context_menu_extender: Optional[Callable] = None
-    """選択中テキストに対し言語固有メニュー項目を追加。
+    """選択中テキストに対し言語固有メニュー項目を追加し、
+    各項目のアクション実行（Inspect / Reload 等）まで一手に所有する。
     引数: (menu, editor, selected_text)。None なら追加項目なし。
     extender は無条件にメニュー項目を追加してよい — 実行側 (Inspect / Reload) の
     try/except が無効な選択にも graceful に対応するため、ここで識別子文法の
-    バリデーションは不要。
+    バリデーションは不要。インスペクションコード生成・dispatch も extender 内部の
+    実装詳細とし、別フィールド (旧 inspection_snippets) には分離しない。
     Python: Inspect Object / Inspect Help / Reload Module
     MEL:    whatIs / Source File（採用するかは Phase 1 着手時に再相談）"""
-
-    inspection_snippets: Optional[Callable] = None
-    """inspection_type ('dir' | 'help') → 実行コード文字列を返す関数。
-    None なら Inspect Object / Help を提供しない。"""
 
     # ===== 拡張ポイント =====
     highlighter_factory: Optional[Callable] = None
@@ -197,7 +195,7 @@ class LanguageProfile:
 | `extensions` | パスから profile 解決 + `file_filter` 生成元 |
 | `default_extension` | 新規ファイル名生成 |
 
-**Optional（10 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
+**Optional（9 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
 | フィールド | None で無効化される機能 |
 |---|---|
 | `line_comment` | コメントトグル（`Ctrl+/`） |
@@ -205,8 +203,7 @@ class LanguageProfile:
 | `extra_indent_trigger` | auto-indent の追加インデント発生条件（ブラケット系は既存の hanging indent で処理されるため不要） |
 | `source_type` | Run / 実行関連すべて |
 | `shelf_config` | "Add to Shelf" メニュー項目 |
-| `context_menu_extender` | 言語固有右クリック項目 |
-| `inspection_snippets` | Inspect Object / Help |
+| `context_menu_extender` | 言語固有右クリック項目 + 各項目のアクション実行（Inspect / Reload 等を一手に所有） |
 | `highlighter_factory` | シンタックスハイライト（プレーン表示にフォールバック） |
 | `completion_engine_factory` | autocomplete |
 | `folding_strategy` | コード折りたたみ |
@@ -236,7 +233,7 @@ PYTHON = LanguageProfile(
         label="Python",
         icon="pythonFamily.png",
     ),
-    # context_menu_extender, inspection_snippets は commit 7 で設定
+    # context_menu_extender は commit 7 で設定（commit 12 で inspection も内包）
     # highlighter_factory は commit 2 で設定
     # completion_engine_factory, folding_strategy は将来追加分
 )
@@ -320,7 +317,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit 9**: `LanguageProfile.identifier_validator` フィールドを削除。`languages/python.py` から `_is_valid_identifier` / `_is_valid_module_name` を削除し、`_python_context_menu_extender` は Reload Module を **常に** 追加（実行側の try/except が無効識別子を graceful に処理するため、文法バリデーションを extender 側でゲートしない方針）。`editor_context_menu.build_context_menu` から validator チェックを削除（選択語非空ガードのみ残す）。プロファイル API スリム化（11 → 10 Optional）。ruff PASS、smoke test PASS _(hash: `cc797f7`)_
 - [x] **commit 10**: デッドコード削除。`ExecutionManager.handle_object_inspection` 内の `"Syntax Errors:"` 分岐（emit する側が存在せず到達不可）と `MayaCodeEditor.show_syntax_errors_in_terminal()` メソッド（呼出元なし）を削除。`inspect_object` シグナルが純粋に inspection 用途のみとなる _(hash: `604a5e5`)_
 - [x] **types.py リネーム**: `_types.py` → `types.py`（プロジェクト多数派の慣習に揃える、`_` プレフィックスなし）_(hash: `af7d8bc`)_
-- [x] **commit 11 (実装完了、コミット待ち)**: ファイル分割（振る舞い不変）。`languages/helpers.py` を新設し `find_execution_manager` を移動（cross-language ヘルパとして将来 MEL でも再利用）。`languages/python_actions.py` を新設し `_PYTHON_DIR_TEMPLATE` / `_PYTHON_HELP_TEMPLATE` / `_build_reload_code` / `_reload_module` / `_python_inspection_snippets` / `_python_context_menu_extender` を全部移動。`languages/python.py` は 210 行 → 50 行に slim 化（PYTHON 組み立て + extra_indent_trigger + highlighter_factory のみ）。cross-module 参照される関数は `_` プレフィックスを外す（`python_context_menu_extender` / `python_inspection_snippets` / `find_execution_manager`）。ruff PASS、smoke test PASS _(hash: 未コミット)_
+- [x] **commit 11**: ファイル分割（振る舞い不変）。`languages/helpers.py` を新設し `find_execution_manager` を移動（cross-language ヘルパとして将来 MEL でも再利用）。`languages/python_actions.py` を新設し `_PYTHON_DIR_TEMPLATE` / `_PYTHON_HELP_TEMPLATE` / `_build_reload_code` / `_reload_module` / `_python_inspection_snippets` / `_python_context_menu_extender` を全部移動。`languages/python.py` は 210 行 → 50 行に slim 化（PYTHON 組み立て + extra_indent_trigger + highlighter_factory のみ）。cross-module 参照される関数は `_` プレフィックスを外す（`python_context_menu_extender` / `python_inspection_snippets` / `find_execution_manager`）。ruff PASS、smoke test PASS _(hash: `9307c59`)_
+- [x] **commit 12 (実装完了、コミット待ち)**: コンテキストメニューと inspection を統合。`helpers.py` に `dispatch_inspection(editor, header, code)` を追加（cross-language ヘルパ）。`python_actions.py` に `python_inspect_dir` / `python_inspect_help` ファサードを追加し `dispatch_inspection` 経由で実行、`_reload_module` も同ヘルパ経由にリファクタ（`hasattr` フォールバック撤廃）。`python_context_menu_extender` の lambda がシグナル経由ではなく直接ファサードを呼ぶように変更。`LanguageProfile.inspection_snippets` フィールド削除（10 → 9 Optional）。`python_inspection_snippets` 関数削除。`code_editor.py` / `editor_tab_widget.py` から `inspect_object` シグナル定義 + 4 connect 削除、`ui_layout_manager.py` から該当 connect 削除、`execution_manager.handle_object_inspection` メソッド削除。シグナル経路 4 ホップを直接呼出 1 ホップに圧縮。ruff PASS、smoke test PASS _(hash: 未コミット)_
 
 ### Phase 1
 > **着手前にユーザーと再相談**: MEL に含める機能 / 含めない機能を確定させる（§1.5.1, §1.5.3 参照）。
@@ -334,7 +332,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [ ] `maya_shelf.py` の `-stp` / ラベル / アイコン分岐
 - [ ] `file_explorer.py` で `.mel` ファイルの開封
 - [ ] 新規ファイルダイアログのタイトル / デフォルト名分岐
-- [ ] （MEL に含める場合のみ）MEL 用 `context_menu_extender` / `inspection_snippets` 実装
+- [ ] （MEL に含める場合のみ）MEL 用 `context_menu_extender` 実装（メニュー項目 + 各アクションのコード生成・実行を一手に所有）
 - [ ] Maya で MEL ファイル open / edit / save / run の smoke test
 
 ### Phase 2 以降
@@ -359,6 +357,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | **言語ごとの機能セットは opt-in 方式とする** | Python 全機能を他言語に強制しない。MEL は autocomplete 不要かもしれない等、含む/含まないは各言語の本格追加時に再判断。`LanguageProfile` の Optional フィールドを `None` のまま残せばその機能は無効になる消費側設計（グレースフル・デグラデーション）。詳細 §1.5 |
 | 2026-05-01 | UI/UX 詳細は後で別途相談 | タブヘッダー言語表示、ツールバー状態切替、新規ファイルダイアログのフォーマット、設定 UI など。決まった時点で本ファイルに追記 |
 | 2026-05-01 | `identifier_validator` フィールドを削除（commit 9） | コンテキストメニュー extender の責務をシンプルに保ち、文法チェックは実行側 (Inspect / Reload の try/except) に集約する方針。Python 識別子規則・MEL の `$var` 規則などを各言語が個別に書く必要がなくなる。ユーザーが無効識別子を Inspect/Reload しても terminal に親切なエラーが出るだけで graceful。プロファイル API が 11 → 10 Optional にスリム化 |
+| 2026-05-01 | `inspection_snippets` フィールドを削除し extender に統合（commit 12） | `context_menu_extender` と `inspection_snippets` は同じ言語固有機能（右クリックアクション）を 2 フィールドに分離していた。原因は editor → execution_manager 間のシグナル経路。直接呼出に切替えれば 1 フィールドで済む。シグナル 4 ホップを 1 ホップに、`handle_object_inspection` を撤廃、API が 10 → 9 Optional にさらにスリム化。MEL extender 実装時に「メニュー定義 + アクションコード」が 1 ファイル内で完結する見通しも良くなる |
 | 2026-05-01 | `LanguageProfile` を全 Optional 設計に再構成 | §1.5 opt-in 原則と整合。必須は `id` / `display_name` / `extensions` / `default_extension` の 4 項目のみ。`file_filter` と `line_comment_with_space` は自動生成プロパティ化。`shelf_*` 3 フィールドは `ShelfConfig` データクラスに集約しまるごと Optional 化 |
 | 2026-05-01 | `block_open_chars: tuple[str, ...]` を `extra_indent_trigger: Callable[[str], bool]` に変更 | `auto_indent.py` の hanging indent 規則は既に `(`, `[`, `{` の未閉じを処理するため、ブラケット系言語（MEL 等）には追加トリガが不要。`block_open_chars` が必要なのは事実上 Python の `:` だけ。Callable 化で将来コメント除去・トークン解析等の複雑な条件にも拡張可能。MEL は `None` で済み、hanging indent と closing bracket alignment で完全カバー |
 | 2026-05-01 | `line_comment` / `block_comment` は文字列ベースのまま維持（Callable 化しない） | コメントトグルは「行頭プレフィックスの追加 / 除去」のみで、インデント判定のような行内コンテキスト解析を必要としない。Python / MEL とも単一文字列で完全表現可。複数形式が必要になれば後方互換的に `tuple[str, ...]` 化可能。Python の `"""..."""` を `block_comment` に入れない（文字列リテラルでコメントではない、linter 警告の原因）ため Python は `block_comment=None` |
@@ -485,4 +484,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-01（**commit 11 実装完了、コミット待ち**: ファイル分割 — `helpers.py` / `python_actions.py` 新設、`python.py` を 210 行 → 50 行に slim 化、振る舞い不変）
+**最終更新**: 2026-05-01（**commit 12 実装完了、コミット待ち**: コンテキストメニューと inspection を統合 — `inspection_snippets` フィールド削除、シグナル経路撤廃、extender が action 実行まで一手に所有）

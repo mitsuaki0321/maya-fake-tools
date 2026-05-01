@@ -173,7 +173,6 @@ class UILayoutManager:
             mw.file_explorer.folder_deleted.connect(file_ops.handle_folder_deleted)
 
         if self.main_window.code_editor:
-            self.main_window.code_editor.inspect_object.connect(self.main_window.execution_manager.handle_object_inspection)
             self._connect_editor_focus_signals()
 
     def _connect_editor_focus_signals(self):

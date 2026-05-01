@@ -32,7 +32,6 @@ logger = getLogger(__name__)
 class CodeEditorWidget(QTabWidget):
     """Tabbed code editor widget."""
 
-    inspect_object = Signal(str, str)  # (object_name, inspection_type)
     textChanged = Signal()  # Emitted when any tab's text changes
 
     def __init__(self, parent=None):
@@ -106,7 +105,6 @@ class CodeEditorWidget(QTabWidget):
 
         editor.contentChanged.connect(lambda: self.update_tab_title(editor))
         editor.contentChanged.connect(self.textChanged.emit)
-        editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
         self.save_session_if_available()
@@ -157,7 +155,6 @@ class CodeEditorWidget(QTabWidget):
 
         editor.contentChanged.connect(lambda: self.on_preview_text_changed(editor))
         editor.contentChanged.connect(self.textChanged.emit)
-        editor.inspect_object.connect(self.inspect_object.emit)
 
         # Preview tabs are intentionally excluded from session persistence.
         return editor
@@ -257,7 +254,6 @@ class CodeEditorWidget(QTabWidget):
 
         editor.contentChanged.connect(lambda: self.update_tab_title(editor))
         editor.contentChanged.connect(self.textChanged.emit)
-        editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
         self.save_session_if_available()
@@ -310,7 +306,6 @@ class CodeEditorWidget(QTabWidget):
 
         editor.contentChanged.connect(lambda: self.update_tab_title(editor))
         editor.contentChanged.connect(self.textChanged.emit)
-        editor.inspect_object.connect(self.inspect_object.emit)
 
         QTimer.singleShot(0, self.update_active_tab_styling)
         self.save_session_if_available()

@@ -8,7 +8,7 @@ framework.
 
 from __future__ import annotations
 
-from .python_actions import python_context_menu_extender, python_inspection_snippets
+from .python_actions import python_context_menu_extender
 from .types import LanguageProfile, ShelfConfig
 
 
@@ -43,7 +43,6 @@ PYTHON = LanguageProfile(
     ),
     highlighter_factory=_python_highlighter_factory,
     context_menu_extender=python_context_menu_extender,
-    inspection_snippets=python_inspection_snippets,
 )
 
 

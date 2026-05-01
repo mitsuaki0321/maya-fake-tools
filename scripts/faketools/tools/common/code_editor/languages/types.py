@@ -1,6 +1,6 @@
 """Dataclasses for the language profile system.
 
-Kept in a private module so that ``__init__.py`` can re-export both the
+Kept separate from ``__init__.py`` so the module can re-export both the
 types and the concrete profile instances without running into circular
 imports between the two.
 """
@@ -56,14 +56,16 @@ class LanguageProfile:
         shelf_config (Optional[ShelfConfig]): Shelf-button settings. ``None``
             disables the "Add to Shelf" menu item.
         context_menu_extender (Optional[Callable]): Callback that adds
-            language-specific entries to the right-click menu. ``None``
-            skips the language-specific section. The extender receives the
-            raw selected text and is responsible for any sanity checks; the
+            language-specific entries to the right-click menu (Inspect /
+            Reload / etc.). The extender owns each entry's full lifecycle
+            — wiring the menu item, dispatching the action, and running
+            inspection snippets through the executer — so all the
+            language-specific code lives here rather than being split
+            across multiple profile fields. ``None`` skips the
+            language-specific section. The extender receives the raw
+            selected text and is responsible for any sanity checks; the
             execution side already surfaces NameError-style failures
             gracefully so we don't gate menu items on identifier syntax.
-        inspection_snippets (Optional[Callable]): Maps an inspection type
-            (e.g. ``"dir"`` / ``"help"``) to executable code. ``None``
-            disables Inspect Object / Help.
         highlighter_factory (Optional[Callable]): Factory returning a
             ``QSyntaxHighlighter``. ``None`` falls back to plain text.
         completion_engine_factory (Optional[Callable]): Factory returning a
@@ -87,7 +89,6 @@ class LanguageProfile:
     shelf_config: Optional[ShelfConfig] = None
 
     context_menu_extender: Optional[Callable] = None
-    inspection_snippets: Optional[Callable] = None
 
     highlighter_factory: Optional[Callable] = None
     completion_engine_factory: Optional[Callable] = None

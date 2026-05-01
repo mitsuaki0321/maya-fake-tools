@@ -24,4 +24,29 @@ def find_execution_manager(widget):
     return None
 
 
-__all__ = ["find_execution_manager"]
+def dispatch_inspection(editor, header: str, code: str) -> None:
+    """Run a language-specific inspection snippet against the editor's executer.
+
+    Resolves the host window's ``execution_manager`` from ``editor``, prints
+    ``header`` to its output terminal (when set), and feeds ``code`` to
+    ``execute_inspection_code`` so the snippet runs silently in Maya without
+    echoing into the user-visible code stream.
+
+    Args:
+        editor: The :class:`CodeEditor` whose ancestor chain hosts the
+            execution manager.
+        header (str): Line written verbatim to the output terminal before the
+            snippet runs (e.g. ``"\\n=== myObj ==="``). Pass an empty string
+            to skip the header.
+        code (str): Source to execute through
+            :meth:`ExecutionManager.execute_inspection_code`.
+    """
+    exec_manager = find_execution_manager(editor)
+    if exec_manager is None:
+        return
+    if header and exec_manager.output_terminal:
+        exec_manager.output_terminal.append_output(header)
+    exec_manager.execute_inspection_code(code)
+
+
+__all__ = ["dispatch_inspection", "find_execution_manager"]

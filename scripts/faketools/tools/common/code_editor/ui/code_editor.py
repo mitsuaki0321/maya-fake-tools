@@ -40,8 +40,6 @@ DEFAULT_TAB_SIZE = 4
 class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     """Plain text editor view driven by a :class:`LanguageProfile`."""
 
-    # Signal for object inspection
-    inspect_object = Signal(str, str)  # (object_name, inspection_type)
     # Signal for focus lost (triggers session.json save)
     focus_lost = Signal()
     # Real content change — fires only when characters actually changed.
