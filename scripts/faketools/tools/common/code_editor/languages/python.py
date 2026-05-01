@@ -28,6 +28,9 @@ def _python_highlighter_factory(document):
     return PythonHighlighter(document)
 
 
+# block_comment is intentionally omitted: Python has no true block comments.
+# `"""..."""` is a string literal (often a docstring), not a comment —
+# toggling it would corrupt code and trip linter rule B018.
 PYTHON = LanguageProfile(
     id="python",
     display_name="Python",
