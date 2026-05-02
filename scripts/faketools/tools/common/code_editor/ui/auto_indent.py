@@ -13,8 +13,12 @@ The algorithm:
 2. **Closing bracket alignment** — if the current line begins (after
    whitespace) with ``)`` / ``]`` / ``}``, look back for the matching
    opener and reuse the leading whitespace of its line.
-3. **Block opener** — if the text before the cursor ends in ``:`` (and
-   isn't a comment), keep the current indent and add four spaces.
+3. **Block opener** — language-driven via
+   :attr:`LanguageProfile.extra_indent_trigger`. If the predicate returns
+   ``True`` for the text before the cursor, keep the current indent and
+   add four spaces. Languages that don't supply a predicate (or that
+   leave it ``None`` because brackets cover all their block syntax, e.g.
+   MEL) skip this rule entirely.
 4. Otherwise reuse the current line's leading whitespace.
 """
 
@@ -23,6 +27,8 @@ from __future__ import annotations
 from collections.abc import Iterator
 import re
 from typing import Optional
+
+from ..languages import LanguageProfile
 
 
 def iter_code_brackets(text: str) -> Iterator[tuple[int, str]]:
@@ -135,7 +141,13 @@ def find_closing_bracket_alignment(document, current_block_number: int, current_
     return match.group(1) if match else ""
 
 
-def compute_new_indent(document, block_number: int, current_line: str, text_before_cursor: str) -> str:
+def compute_new_indent(
+    document,
+    block_number: int,
+    current_line: str,
+    text_before_cursor: str,
+    language: Optional[LanguageProfile] = None,
+) -> str:
     """Decide the indent string for a new line inserted at the cursor.
 
     Args:
@@ -144,6 +156,10 @@ def compute_new_indent(document, block_number: int, current_line: str, text_befo
         current_line (str): Full text of the current line.
         text_before_cursor (str): Text from the start of the current line
             up to the cursor.
+        language (Optional[LanguageProfile]): Profile whose
+            ``extra_indent_trigger`` decides whether Rule 3 fires. ``None``
+            (or a profile with no predicate) skips Rule 3 — Rules 1, 2, and
+            4 still apply.
 
     Returns:
         str: Whitespace to insert after the newline.
@@ -159,8 +175,8 @@ def compute_new_indent(document, block_number: int, current_line: str, text_befo
     indent_match = re.match(r"^(\s*)", current_line)
     current_indent = indent_match.group(1) if indent_match else ""
 
-    stripped_before = text_before_cursor.strip()
-    needs_extra_indent = stripped_before.endswith(":") and not stripped_before.startswith("#")
-    if needs_extra_indent:
-        return current_indent + "    "
+    if language is not None and language.extra_indent_trigger is not None:
+        stripped_before = text_before_cursor.strip()
+        if language.extra_indent_trigger(stripped_before):
+            return current_indent + "    "
     return current_indent
