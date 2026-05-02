@@ -96,7 +96,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **0** | `LanguageProfile` 導入、`PythonEditor` → `CodeEditor` リネーム、Python 定数の集約。挙動は変えない | **完了**（2026-05-01 動作確認済） |
 | **1** | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイル・placeholder を分岐 + open/restore 時の language 解決バグ修正 | **完了**（2026-05-02 動作確認済） |
 | **2** | `mel_highlighter.py`（per-block 正規表現ステートマシン） | **完了**（2026-05-02 動作確認済） |
-| 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | 未着手 |
+| 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **進行中**（P3-1 + リファクタ完了、P3-2/P3-3 残り） |
 | 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
 | 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
 | 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
@@ -376,15 +376,19 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 - [x] **commit P2-1**: `MelHighlighter` 実装（`highlighting/mel_highlighter.py` 新設、~245 行、per-block 正規表現ステートマシン）+ `highlighting/__init__.py` に export 追加 + `languages/mel.py` に `_mel_highlighter_factory`（遅延 import）配線。**新規 JSON キーは追加せず**、既存 `escape_sequence` キーを初有効化（文字列内 `\.` の着色）。トークン: `// /* */` コメント / 文字列 + エスケープ / 数値（hex / 指数 / サフィックス対応）/ `$var` / 制御・型・def・boolean キーワード / `proc [type] name(` の name を function 色 / `name(` 形式呼出を method 色 / rainbow brackets（per-block depth）/ 多文字演算子。VSCode `MEL.tmLanguage` 準拠で Maya コマンド名 / ノード型名のハードコードリストはスコープ外（Phase 4 autocomplete と統合予定）。multi-line `proc` 宣言（rare）の name 着色は per-line 制限。ruff PASS、smoke test PASS（10 サンプル）、Maya 上の動作確認済 _(hash: `b957205`)_
 
-### Phase 3 以降
-未着手
+### Phase 3（auto_indent 汎用化 + ブレース折りたたみ）
 
-#### Phase 3 で対応する auto_indent 汎用化（事前メモ）
-- `auto_indent.py:163` の Rule 3（`endswith(":")` ハードコード）を `language.extra_indent_trigger(stripped)` 経由に
-- コメント除外（`startswith("#")`）も `language.line_comment` 経由に汎化
-- `_python_extra_indent_trigger` 述語の中身も同タイミングで見直し
-- フィールド名 `extra_indent_trigger` → `indent_on_enter` 等にリネーム検討（§7 決定ログ）
-- ブレース折りたたみ戦略追加（`folding_strategy` field）
+- [x] **commit P3-1**: `auto_indent.compute_new_indent` に `language` 引数を追加し、Rule 3 を `language.extra_indent_trigger(stripped)` 経由に。Python predicate（`_python_extra_indent_trigger`）はコメント除外を内部で持つため、`auto_indent` 側に Python 固有ロジックは残らない。`language=None` または `extra_indent_trigger=None` で Rule 3 を gracefully スキップ。ruff PASS、smoke test PASS（9 ケース） _(hash: `b61dd87`)_
+- [x] **commit P3-1 リファクタ**: bool predicate を **class-based `IndentResolver` 階層**に置き換え。動機: ユーザーレビューで「single bool predicate は Python/MEL/Markdown の差を吸収できない」と指摘、特に MEL は `{` で `+4` インデント希望（hanging indent でなく）+ `//` コメント認識が必要、Markdown は将来 `_iter_code_brackets` の完全 override（コードブロック検出 / バレット継承）が必要。
+  - **新設**: `languages/indent_resolver.py` — `IndentResolver` 基底クラスが Rule 0 (`_indent_on_enter` hook) + Rule 1/2/4 + ヘルパー (`_iter_code_brackets`, `_find_*`, `_current_indent`) を全部メソッドとして所有。
+  - **置換**: `LanguageProfile.extra_indent_trigger: Callable` → `indent_resolver: IndentResolver`
+  - **Python**: `PythonIndentResolver(IndentResolver)._indent_on_enter` で従来挙動維持（`:` で `+4`、`#` コメント除外）
+  - **MEL**: `MelIndentResolver(IndentResolver)._indent_on_enter` で `{` または `:` 末尾を判定して `+4`（`//` 行コメント除外）。さらに `_iter_code_brackets` を override して MEL の `//` / `/* */` / `"..."` を理解（コメント内の `{` が Rule 1 に漏れない）
+  - **エンジン**: `ui/auto_indent.py` を 5 行のディスパッチに縮小（旧 `iter_code_brackets` / `find_*` 関数群は IndentResolver メソッドに移管、ユーザー要望の `_` プレフィックス化は class 内 private 化で自然に解消）+ `compute_new_indent` → `compute_indent` リネーム
+  - 18 ケース smoke test PASS、Maya 動作確認はユーザー判断 _(hash: `51464ee`)_
+- [ ] **commit P3-2**: `LanguageProfile.folding_strategy` を活用 — 既存 `CodeFoldingManager._detect_fold_regions` を `language.folding_strategy(document)` 経由に分岐、Python 側の検出ロジックを `languages/python_folding.py` に移動して PYTHON プロファイルから提供。`folding_strategy is None` の言語では折りたたみ機能を完全に無効化（graceful degradation）
+- [ ] **commit P3-3**: MEL brace-based 折りたたみを `languages/mel_folding.py` に新設、MEL プロファイルに `folding_strategy` 配線。`{` 行を fold header、対応する `}` の前行を end とする。文字列・コメント内の `{` `}` はスキップ
+- [ ] **Phase 3 動作確認**: Maya 上で Python の Rule 3 / MEL の `{` `case:` 後 +4 インデント / 折りたたみ（Python 既存挙動 + MEL の brace 折りたたみ）を確認
 
 #### Phase 4 で対応するヘルプレンダラ関連（事前メモ）
 - `LanguageProfile.signature_highlighter` フィールドを追加し、`syntax.highlight_python` 直呼びを profile 経由に
@@ -421,6 +425,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-02 | ファイル open / セッション復元時の editor.language 解決バグを **Phase 1 動作確認の前に P1-4 として修正** | Phase 0 リファクタの取りこぼし（§6 P1-4 参照）。Phase 1 動作確認の前提（`.mel` を開けば MEL bridge で実行される）が成り立たないため、commit 順序を「P1-2 → P1-3 → **P1-4（バグ修正）** → 動作確認」に確定。P1-2 / P1-3 を先に進めるのは plan の commit 順序を尊重する判断 |
 | 2026-05-02 | Phase 1 後 follow-up を再編 — **Phase 6 = コンテキストメニュー実装** / **Phase 7 = 最終的な UI/UX 修正** を新設 | Phase 1 follow-up に並んでいた「MEL `context_menu_extender`」「ツールバー MEL ボタン専用アイコン」を、それぞれ独立フェーズに格上げ（コンテキストメニュー側は将来 Python の whatIs 等価機能や Inspect 系の汎化が絡む可能性があり Phase 単位で扱った方が見通しが良い、UI/UX は Phase 1 完了後に他の改善とまとめて議論できる方が良い）。`.mel` ファイルアイコンは現状の自動表示で問題ないとユーザー判断（不要扱い）。Phase 1 内で残した follow-up は `/* */` ネスト破綻対策のみ |
 | 2026-05-02 | Phase 2 設計を VSCode `MEL.tmLanguage` (D:\claude\vscode-mel-syntax-heighlight\Visual-Studio-Code-MEL-Language) 調査結果で改訂 | 当初 `flag`（`-flag`）/ `variable_dollar` キーを新規追加する案だったが、参照実装（VSCode 拡張）にも `flag` 着色は無く、`$var` も既存 `variable` と同色にする方が一貫性が高い。代わりに `void`, `null`, `undefined`, `catch`, `alias` を Phase 1 案から追加。**新規 JSON キーゼロ**で実装可能となり、既存未使用 `escape_sequence` を MEL 文字列内エスケープで初有効化。Maya コマンド名 / ノード型名のハードコードリスト（VSCode 拡張は ~500 + ~500 を持つ）は Phase 2 ではスコープ外、Phase 4 autocomplete で `cmds.help("-list", "*")` を構築する際に highlighter にも共有する方針 |
+| 2026-05-02 | Phase 3 P3-1 を **bool predicate → class-based `IndentResolver` 階層** に再設計 | 当初 `LanguageProfile.extra_indent_trigger: Callable[[str], bool]` で実装し commit `b61dd87` 済だったが、ユーザーレビューで「Markdown を含む将来言語を考えると bool predicate は表現力不足」「auto-indent はクラスで設計すべき」と指摘。MEL の `{` 末尾は hanging indent (Rule 1) ではなく `+4` インデントが期待値で、bool predicate の上に Rule 1 が走ると挙動が混在する問題も顕在化。class 設計なら各言語が `_indent_on_enter` だけでなく `_iter_code_brackets` 等の任意ルールを override 可能（Markdown はブラケット規則を完全無効化、MEL は `//` `/* */` `"..."` を理解する scanner に差し替え、等）。`compute_new_indent` → `compute_indent` リネームも同 commit で実施。`extra_indent_trigger` フィールドは `indent_resolver: Optional[IndentResolver]` に置換 |
 | 2026-05-02 | **`block_comment` フィールド自体を削除**（ブロックコメントトグル機能は実装しない） | `block_comment` プロファイルフィールドはあったが消費側ゼロ、ショートカットも未実装。`/* */` ネスト破綻の対策を入れる前にトグル本体の実装範囲を相談したところ、ユーザー判断で「現在の line comment トグル（`Ctrl+/`）で十分、ブロックコメントトグル機能自体不要」となった。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の説明コメントを撤去。Optional フィールド数 9 → 8。§8 の MEL `/* */` ネスト破綻エントリも撤去（実装しない以上の対策不要） |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
@@ -546,4 +551,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 2 完了**: MEL シンタックスハイライト実装済 + Maya 上で動作確認済。次は Phase 3（ブレース折りたたみ + `auto_indent` 汎用化）— プラン §6 順序通り）
+**最終更新**: 2026-05-02（**Phase 3 進行中** — P3-1 完了 + class-based `IndentResolver` への再設計完了。次は P3-2（Python 折りたたみ検出ロジックを `languages/python_folding.py` に分離 + `LanguageProfile.folding_strategy` を活用）→ P3-3（MEL brace-based 折りたたみ）→ Phase 3 動作確認）
