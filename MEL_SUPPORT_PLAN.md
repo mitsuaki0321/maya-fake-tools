@@ -363,8 +363,12 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **着手前確認**: MEL に含める機能セットをユーザーと確定（§7 決定ログ参照）
 - [x] **着手前確認**: UI/UX 方針をユーザーと確定（§7.5 参照）
 - [x] **commit P1-1**: `MEL` プロファイル追加 — `languages/mel.py` 新設（最小骨格、機能セットは §7 確定通り `id` / `display_name` / `extensions` / `default_extension` / `line_comment="//"` / `block_comment=("/*", "*/")` / `source_type="mel"` / `shelf_config` のみ、それ以外の Optional フィールドはすべて `None`）、`languages/__init__.py` に `MEL` import 追加 + `ALL_PROFILES = (PYTHON, MEL)` + `__all__` に `"MEL"` 追加。`KNOWN_EXTENSIONS` が `{".py", ".mel"}` に自動拡張。ruff PASS、smoke test PASS（profile フィールド / `file_filter` / `line_comment_with_space` / `get_profile_for_path` 解決を確認）。Maya 上の動作確認は P1-2/P1-3 で UI が整ってからまとめて実施 _(hash: `ef84050`)_
-- [ ] **commit P1-2**: 新規ファイル UI を並列化 — `file_explorer.show_context_menu` / `file_explorer.create_new_file` / `file_operations_controller.new_file` / toolbar の New File ボタン周辺を `ALL_PROFILES` 反復ベースに変更。各 profile につき 1 つメニュー項目 / 1 つボタンを生成。MEL ボタンアイコンは Python 用と同じものを暫定流用
+- [x] **commit P1-2**: 新規ファイル UI を並列化 — `file_explorer.show_context_menu` の "New X File" を `ALL_PROFILES` 反復で並列メニュー化（`create_new_file` に `language: LanguageProfile = DEFAULT_PROFILE` 引数追加）。`file_operations_controller.new_file` も `language` 引数受取に変更（タイトル / 拡張子は profile 経由）。`toolbar.py` の単一 `new_button` を `new_buttons: dict[str, VSCodeButton]` に分解、`ALL_PROFILES` 反復で並列ボタン生成、`new_clicked = Signal(object)` 化（profile を運ぶ）、Ctrl+N ヒントは DEFAULT_PROFILE のボタンのみ。MEL ボタンアイコンは Python 用 (`new`) を暫定流用。`ui_layout_manager.connect_signals` は `signal.connect(file_ops.new_file)` のままで動作（Signal(object) → 第一位置引数 language）。ruff PASS、smoke test PASS（AST parse + 反復生成される menu/button 文字列の確認） _(hash: `fab0f82`)_
 - [ ] **commit P1-3**: placeholder text を profile 駆動に — `code_editor.py:151` の `setPlaceholderText("# Start typing Python code...")` を `setPlaceholderText(f"{line_comment_with_space}Start typing {display_name} code...")` に。`line_comment is None` の言語ではプレフィックスなしにフォールバック
+- [ ] **commit P1-4**（追加）: ファイル open / セッション復元時に editor.language を解決するバグ修正。**Phase 0 リファクタの取りこぼし** — `code_editor.py:CodeEditor.__init__` の `language` 引数はあるが、`open_file_permanent` / `open_file_preview` (`editor_tab_widget.py:243, 286, 294`) と `restore_tab` (`ui_session_manager.py:191`) のいずれも language 未指定で `PythonEditor(self)` / `new_file()` を呼んでいる。さらに `load_file` (`code_editor.py:231`) は `file_path` を更新するが `self.language` を更新しない。結果、`.mel` を開いても editor.language は PYTHON のまま → Run が Python bridge に流れて `// ...` で SyntaxError。**Phase 1 で MEL 実装後に Maya 動作確認した時点で顕在化（2026-05-02 ユーザー報告）**。修正方針:
+  - `code_editor.py:load_file`: 読み込み成功後に `get_profile_for_path(file_path)` で language を解決し、変わっていれば `self.language` を更新 + `setup_syntax_highlighting()` を再呼出（将来 Phase 2 の MEL highlighter にも自動アタッチ）
+  - `ui_session_manager.py:restore_tab`: `new_file()` に `language=get_profile_for_path(file_path)` を渡す（こちらは `load_file` を通らず手動で `setPlainText` + `file_path` 設定するため別途必要）
+  - `editor_tab_widget.py` 側は `load_file` 修正で自動対応（事前 language 指定は不要）
 - [ ] **Phase 1 動作確認**: Maya 起動 → 以下を確認:
   - `.mel` ファイルを explorer から開ける（プレビュー / 永続タブ両方）
   - 新規 "New MEL File" メニュー / ボタンで `.mel` 新規作成、placeholder が `// ...` 表示
@@ -432,6 +436,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | 新規ファイル UI は並列メニュー / 並列ボタンで実装 | ファイルエクスプローラ右クリック・ツールバー両方で「New Python File」「New MEL File」を並列。`ALL_PROFILES` を反復して自動生成（言語追加時の拡張性） |
 | 2026-05-01 | ツールバーの MEL 用 New File ボタンアイコンは Phase 1 では Python 用と同じアイコンを流用 | 視覚デザインは Phase 1 後に再検討（UI/UX 議論として独立） |
 | 2026-05-01 | placeholder text を profile 駆動に変更（Phase 1 で対応） | Phase 0 §4.4 では「触らない」としていたが、Phase 1 で MEL タブが "# Start typing Python code..." と表示されると明確に誤りになるため、`f"{line_comment_with_space}Start typing {display_name} code..."` で動的生成 |
+| 2026-05-02 | ファイル open / セッション復元時の editor.language 解決バグを **Phase 1 動作確認の前に P1-4 として修正** | Phase 0 リファクタの取りこぼし（§6 P1-4 参照）。Phase 1 動作確認の前提（`.mel` を開けば MEL bridge で実行される）が成り立たないため、commit 順序を「P1-2 → P1-3 → **P1-4（バグ修正）** → 動作確認」に確定。P1-2 / P1-3 を先に進めるのは plan の commit 順序を尊重する判断 |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
 
@@ -557,4 +562,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**commit P1-1 完了**: MEL プロファイル骨格を追加。`KNOWN_EXTENSIONS` が `.mel` を含むようになり、既存の profile 駆動ロジックが MEL を拾い始める。動作確認は UI が整う P1-3 完了後に Maya 上で一括実施。次は P1-2 の新規ファイル UI 並列化）
+**最終更新**: 2026-05-02（**commit P1-2 完了**: 新規ファイル UI を `ALL_PROFILES` 反復ベースに並列化。次は P1-3（placeholder text の profile 駆動化）→ P1-4（ファイル open / セッション復元時の language 解決バグ修正、Phase 0 取りこぼし）→ Phase 1 動作確認）
