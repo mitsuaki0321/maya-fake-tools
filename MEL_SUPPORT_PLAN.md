@@ -95,7 +95,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 |---|---|---|
 | **0** | `LanguageProfile` 導入、`PythonEditor` → `CodeEditor` リネーム、Python 定数の集約。挙動は変えない | **完了**（2026-05-01 動作確認済） |
 | **1** | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイル・placeholder を分岐 + open/restore 時の language 解決バグ修正 | **完了**（2026-05-02 動作確認済） |
-| 2 | `mel_highlighter.py`（正規表現ステートマシン）+ `syntax_colors.json` キー追加 | 未着手 |
+| **2** | `mel_highlighter.py`（per-block 正規表現ステートマシン） | **完了**（2026-05-02 動作確認済） |
 | 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | 未着手 |
 | 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
 | 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
@@ -373,13 +373,8 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - **保留**（任意 / 別の機会に検討）: `extra_indent_trigger` のリネーム検討（`indent_on_enter` 等への変更、§7 決定ログでユーザー指摘済）
 
 ### Phase 2（MEL シンタックスハイライト）
-未着手（Phase 1 完了後に詳細化）
 
-事前メモ:
-- `highlighting/mel_highlighter.py` 新設、`MelHighlighter(QSyntaxHighlighter)` クラス（正規表現ステートマシン）
-- `themes/syntax_colors.json` に MEL 固有トークン（`flag` / `variable_dollar` 等）を追加
-- `languages/mel.py` の `MEL.highlighter_factory = _mel_highlighter_factory`（遅延 import）
-- `syntax_config_loader.py` は無変更（既に汎用）
+- [x] **commit P2-1**: `MelHighlighter` 実装（`highlighting/mel_highlighter.py` 新設、~245 行、per-block 正規表現ステートマシン）+ `highlighting/__init__.py` に export 追加 + `languages/mel.py` に `_mel_highlighter_factory`（遅延 import）配線。**新規 JSON キーは追加せず**、既存 `escape_sequence` キーを初有効化（文字列内 `\.` の着色）。トークン: `// /* */` コメント / 文字列 + エスケープ / 数値（hex / 指数 / サフィックス対応）/ `$var` / 制御・型・def・boolean キーワード / `proc [type] name(` の name を function 色 / `name(` 形式呼出を method 色 / rainbow brackets（per-block depth）/ 多文字演算子。VSCode `MEL.tmLanguage` 準拠で Maya コマンド名 / ノード型名のハードコードリストはスコープ外（Phase 4 autocomplete と統合予定）。multi-line `proc` 宣言（rare）の name 着色は per-line 制限。ruff PASS、smoke test PASS（10 サンプル）、Maya 上の動作確認済 _(hash: `b957205`)_
 
 ### Phase 3 以降
 未着手
@@ -425,6 +420,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | placeholder text を profile 駆動に変更（Phase 1 で対応） | Phase 0 §4.4 では「触らない」としていたが、Phase 1 で MEL タブが "# Start typing Python code..." と表示されると明確に誤りになるため、`f"{line_comment_with_space}Start typing {display_name} code..."` で動的生成 |
 | 2026-05-02 | ファイル open / セッション復元時の editor.language 解決バグを **Phase 1 動作確認の前に P1-4 として修正** | Phase 0 リファクタの取りこぼし（§6 P1-4 参照）。Phase 1 動作確認の前提（`.mel` を開けば MEL bridge で実行される）が成り立たないため、commit 順序を「P1-2 → P1-3 → **P1-4（バグ修正）** → 動作確認」に確定。P1-2 / P1-3 を先に進めるのは plan の commit 順序を尊重する判断 |
 | 2026-05-02 | Phase 1 後 follow-up を再編 — **Phase 6 = コンテキストメニュー実装** / **Phase 7 = 最終的な UI/UX 修正** を新設 | Phase 1 follow-up に並んでいた「MEL `context_menu_extender`」「ツールバー MEL ボタン専用アイコン」を、それぞれ独立フェーズに格上げ（コンテキストメニュー側は将来 Python の whatIs 等価機能や Inspect 系の汎化が絡む可能性があり Phase 単位で扱った方が見通しが良い、UI/UX は Phase 1 完了後に他の改善とまとめて議論できる方が良い）。`.mel` ファイルアイコンは現状の自動表示で問題ないとユーザー判断（不要扱い）。Phase 1 内で残した follow-up は `/* */` ネスト破綻対策のみ |
+| 2026-05-02 | Phase 2 設計を VSCode `MEL.tmLanguage` (D:\claude\vscode-mel-syntax-heighlight\Visual-Studio-Code-MEL-Language) 調査結果で改訂 | 当初 `flag`（`-flag`）/ `variable_dollar` キーを新規追加する案だったが、参照実装（VSCode 拡張）にも `flag` 着色は無く、`$var` も既存 `variable` と同色にする方が一貫性が高い。代わりに `void`, `null`, `undefined`, `catch`, `alias` を Phase 1 案から追加。**新規 JSON キーゼロ**で実装可能となり、既存未使用 `escape_sequence` を MEL 文字列内エスケープで初有効化。Maya コマンド名 / ノード型名のハードコードリスト（VSCode 拡張は ~500 + ~500 を持つ）は Phase 2 ではスコープ外、Phase 4 autocomplete で `cmds.help("-list", "*")` を構築する際に highlighter にも共有する方針 |
 | 2026-05-02 | **`block_comment` フィールド自体を削除**（ブロックコメントトグル機能は実装しない） | `block_comment` プロファイルフィールドはあったが消費側ゼロ、ショートカットも未実装。`/* */` ネスト破綻の対策を入れる前にトグル本体の実装範囲を相談したところ、ユーザー判断で「現在の line comment トグル（`Ctrl+/`）で十分、ブロックコメントトグル機能自体不要」となった。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の説明コメントを撤去。Optional フィールド数 9 → 8。§8 の MEL `/* */` ネスト破綻エントリも撤去（実装しない以上の対策不要） |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
@@ -550,4 +546,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 1 完了 + ロードマップ再編 + `block_comment` フィールド撤去**。Phase 6（コンテキストメニュー）/ Phase 7（最終 UI/UX 修正）を新設。block comment toggle 自体は実装しない方針となり、`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` を削除（Optional 9 → 8）、§8 の `/* */` ネスト破綻エントリも撤去。Phase 1 follow-up はすべて消化済。次フェーズはユーザー判断、候補は Phase 2 から 7 のいずれか）
+**最終更新**: 2026-05-02（**Phase 2 完了**: MEL シンタックスハイライト実装済 + Maya 上で動作確認済。次は Phase 3（ブレース折りたたみ + `auto_indent` 汎用化）— プラン §6 順序通り）
