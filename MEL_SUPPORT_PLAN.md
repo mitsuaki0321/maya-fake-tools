@@ -33,7 +33,6 @@ MEL = LanguageProfile(
     extensions=(".mel",),
     default_extension=".mel",
     line_comment="//",
-    block_comment=("/*", "*/"),
     source_type="mel",
     shelf_config=ShelfConfig(
         source_type="mel",
@@ -168,8 +167,6 @@ class LanguageProfile:
     # ===== コメント =====
     line_comment: Optional[str] = None
     """行コメント記号。None ならコメントトグルキーバインド無効。"""
-    block_comment: Optional[tuple[str, str]] = None
-    """ブロックコメント開始/終了。None ならブロックコメント機能無効。"""
 
     # ===== オートインデント =====
     extra_indent_trigger: Optional[Callable[[str], bool]] = None
@@ -235,11 +232,10 @@ class LanguageProfile:
 | `extensions` | パスから profile 解決 + `file_filter` 生成元 |
 | `default_extension` | 新規ファイル名生成 |
 
-**Optional（9 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
+**Optional（8 項目、すべて `None` がデフォルト）** — `None` のとき該当機能を消費側で無効化:
 | フィールド | None で無効化される機能 |
 |---|---|
 | `line_comment` | コメントトグル（`Ctrl+/`） |
-| `block_comment` | ブロックコメントトグル |
 | `extra_indent_trigger` | auto-indent の追加インデント発生条件（ブラケット系は既存の hanging indent で処理されるため不要） |
 | `source_type` | Run / 実行関連すべて |
 | `shelf_config` | "Add to Shelf" メニュー項目 |
@@ -291,7 +287,6 @@ MEL = LanguageProfile(
     extensions=(".mel",),
     default_extension=".mel",
     line_comment="//",
-    block_comment=("/*", "*/"),
     # extra_indent_trigger=None  ← `{` はブラケットなので hanging indent で処理、述語不要
     source_type="mel",
     shelf_config=ShelfConfig(
@@ -371,7 +366,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **Phase 1 動作確認**: ユーザー確認済み（2026-05-02）。`.mel` の open / 新規作成 / placeholder / コメントトグル / Run / Add to Shelf / file_explorer Run / Python 側回帰なし、すべて問題なし
 
 ### Phase 1 後の follow-up（このフェーズ内で対応 / 別フェーズに移管）
-- [ ] **このフェーズ内で対応**: MEL ブロックコメント `/* */` のネスト破綻対策（§8）
+- [x] **このフェーズ内で対応**: MEL ブロックコメント `/* */` のネスト破綻対策 — **block_comment フィールド自体を削除**（line comment トグルだけで十分とユーザー判断 2026-05-02）。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の関連コメントを撤去。Optional フィールド数 9 → 8
 - **Phase 6 へ移管**: MEL 用 `context_menu_extender`（whatIs のみ、Source File は対象外）
 - **Phase 7 へ移管**: ツールバー MEL ボタンの専用アイコンデザイン
 - **不要判断**: ファイルエクスプローラの `.mel` アイコン（現状の自動表示で問題なし、ユーザー判断 2026-05-02）
@@ -418,7 +413,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | `inspection_snippets` フィールドを削除し extender に統合（commit 12） | `context_menu_extender` と `inspection_snippets` は同じ言語固有機能（右クリックアクション）を 2 フィールドに分離していた。原因は editor → execution_manager 間のシグナル経路。直接呼出に切替えれば 1 フィールドで済む。シグナル 4 ホップを 1 ホップに、`handle_object_inspection` を撤廃、API が 10 → 9 Optional にさらにスリム化。MEL extender 実装時に「メニュー定義 + アクションコード」が 1 ファイル内で完結する見通しも良くなる |
 | 2026-05-01 | `LanguageProfile` を全 Optional 設計に再構成 | §1.5 opt-in 原則と整合。必須は `id` / `display_name` / `extensions` / `default_extension` の 4 項目のみ。`file_filter` と `line_comment_with_space` は自動生成プロパティ化。`shelf_*` 3 フィールドは `ShelfConfig` データクラスに集約しまるごと Optional 化 |
 | 2026-05-01 | `block_open_chars: tuple[str, ...]` を `extra_indent_trigger: Callable[[str], bool]` に変更 | `auto_indent.py` の hanging indent 規則は既に `(`, `[`, `{` の未閉じを処理するため、ブラケット系言語（MEL 等）には追加トリガが不要。`block_open_chars` が必要なのは事実上 Python の `:` だけ。Callable 化で将来コメント除去・トークン解析等の複雑な条件にも拡張可能。MEL は `None` で済み、hanging indent と closing bracket alignment で完全カバー |
-| 2026-05-01 | `line_comment` / `block_comment` は文字列ベースのまま維持（Callable 化しない） | コメントトグルは「行頭プレフィックスの追加 / 除去」のみで、インデント判定のような行内コンテキスト解析を必要としない。Python / MEL とも単一文字列で完全表現可。複数形式が必要になれば後方互換的に `tuple[str, ...]` 化可能。Python の `"""..."""` を `block_comment` に入れない（文字列リテラルでコメントではない、linter 警告の原因）ため Python は `block_comment=None` |
+| 2026-05-01 | `line_comment` / `block_comment` は文字列ベースのまま維持（Callable 化しない） | コメントトグルは「行頭プレフィックスの追加 / 除去」のみで、インデント判定のような行内コンテキスト解析を必要としない。Python / MEL とも単一文字列で完全表現可。複数形式が必要になれば後方互換的に `tuple[str, ...]` 化可能。Python の `"""..."""` を `block_comment` に入れない（文字列リテラルでコメントではない、linter 警告の原因）ため Python は `block_comment=None`（**追記 2026-05-02: `block_comment` フィールド自体を後日撤去**）|
 | 2026-05-01 | 型定義を `types.py` に分離 | 当初 `__init__.py` に `LanguageProfile` / `ShelfConfig` を直接定義する計画だったが、`from .python import PYTHON` を classes 定義の後に置くと ruff E402（module-level import not at top）が発生。`types.py` を分離することで `__init__.py` を純粋な再エクスポート + ファクトリ関数のみに保てる（プロジェクト多数派に揃え `_` プレフィックスは付けない方針） |
 | 2026-05-01 | ファイルエクスプローラ Run でアクティブタブの language を使うバグを修正 | `execute_file_directly` がファイル拡張子から profile を解決し `execute_code(content, language=...)` 経由で正しい bridge を選ぶように。`execute_code` / `_execute_code_internal` / `_refresh_active_bridge` に `language_override` 引数を追加。Phase 0 では Python のみのため顕在化しないが、Phase 1 で MEL ファイルを Python タブから実行する経路が確実に踏むバグ |
 | 2026-05-01 | `execute_python_code` を `execute_with_echo` にリネーム | Phase 0 リファクタの取りこぼし。実体は active editor の language でディスパッチする言語非依存メソッドだが、名前が "python" を残していて誤読の元。`shortcut_handler` の 3 箇所も合わせて切替 |
@@ -430,6 +425,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | placeholder text を profile 駆動に変更（Phase 1 で対応） | Phase 0 §4.4 では「触らない」としていたが、Phase 1 で MEL タブが "# Start typing Python code..." と表示されると明確に誤りになるため、`f"{line_comment_with_space}Start typing {display_name} code..."` で動的生成 |
 | 2026-05-02 | ファイル open / セッション復元時の editor.language 解決バグを **Phase 1 動作確認の前に P1-4 として修正** | Phase 0 リファクタの取りこぼし（§6 P1-4 参照）。Phase 1 動作確認の前提（`.mel` を開けば MEL bridge で実行される）が成り立たないため、commit 順序を「P1-2 → P1-3 → **P1-4（バグ修正）** → 動作確認」に確定。P1-2 / P1-3 を先に進めるのは plan の commit 順序を尊重する判断 |
 | 2026-05-02 | Phase 1 後 follow-up を再編 — **Phase 6 = コンテキストメニュー実装** / **Phase 7 = 最終的な UI/UX 修正** を新設 | Phase 1 follow-up に並んでいた「MEL `context_menu_extender`」「ツールバー MEL ボタン専用アイコン」を、それぞれ独立フェーズに格上げ（コンテキストメニュー側は将来 Python の whatIs 等価機能や Inspect 系の汎化が絡む可能性があり Phase 単位で扱った方が見通しが良い、UI/UX は Phase 1 完了後に他の改善とまとめて議論できる方が良い）。`.mel` ファイルアイコンは現状の自動表示で問題ないとユーザー判断（不要扱い）。Phase 1 内で残した follow-up は `/* */` ネスト破綻対策のみ |
+| 2026-05-02 | **`block_comment` フィールド自体を削除**（ブロックコメントトグル機能は実装しない） | `block_comment` プロファイルフィールドはあったが消費側ゼロ、ショートカットも未実装。`/* */` ネスト破綻の対策を入れる前にトグル本体の実装範囲を相談したところ、ユーザー判断で「現在の line comment トグル（`Ctrl+/`）で十分、ブロックコメントトグル機能自体不要」となった。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の説明コメントを撤去。Optional フィールド数 9 → 8。§8 の MEL `/* */` ネスト破綻エントリも撤去（実装しない以上の対策不要） |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
 
@@ -454,7 +450,6 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - 同一タブ内で Python/MEL 混在は **不可**（プロファイルはタブ単位）
 - stdout キャプチャは Maya のレポーターを共有する現アーキで透過のはずだが要確認
 - ヘルプポップアップ syntax renderer（`renderer/syntax.py`）の Pygments `PythonLexer` は MEL 例にも当たる → cosmetic、deprioritize
-- **MEL ブロックコメント `/* */` のネスト破綻**: トグル対象の選択範囲内に既存の `/* */` があると壊れる。これは MEL の言語仕様（ネスト非サポート）に起因し、`block_comment` のデータ構造設計では解決しない。Phase 1 で MEL を本格追加するときに「既存コメント検出 → トグルキャンセル / ユーザー通知」を消費側（`shortcut_handler.py`）に実装するか判断
 - **既存の trailing-space 検出ロジック（`_toggle_comment_multi_cursor`）の軽微なバグ**: `cursor.block().text()[0] == " "` は行頭文字を見ているだけで、削除位置の文字を見ていない。`    #foo`（インデント + space なしコメント）のような edge case でアンコメント時に `f` を巻き込み削除する可能性。Phase 0 では既存挙動を保持。修正は Phase 1+ で `cursor.block().text()[spaces] == " "` に変える等で対応可能
 
 ## 9. 制約・ルール（CLAUDE.md より抜粋）
@@ -555,4 +550,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 1 完了 + ロードマップ再編**: Phase 6（コンテキストメニュー）/ Phase 7（最終 UI/UX 修正）を新設、follow-up を整理。Phase 1 内に残した follow-up は **MEL ブロックコメント `/* */` ネスト破綻対策**（§8）のみ。ただし block comment toggle 自体が現状未実装のため、対策の前にトグル本体の実装範囲をユーザーと相談予定（A: トグル + ネスト検出 / B: トグルのみ / C: 後送り））
+**最終更新**: 2026-05-02（**Phase 1 完了 + ロードマップ再編 + `block_comment` フィールド撤去**。Phase 6（コンテキストメニュー）/ Phase 7（最終 UI/UX 修正）を新設。block comment toggle 自体は実装しない方針となり、`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` を削除（Optional 9 → 8）、§8 の `/* */` ネスト破綻エントリも撤去。Phase 1 follow-up はすべて消化済。次フェーズはユーザー判断、候補は Phase 2 から 7 のいずれか）

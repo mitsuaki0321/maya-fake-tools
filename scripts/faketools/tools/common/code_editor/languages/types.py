@@ -44,8 +44,6 @@ class LanguageProfile:
         default_extension (str): Extension applied when creating new files.
         line_comment (Optional[str]): Line-comment prefix. ``None`` disables
             the comment toggle keybinding.
-        block_comment (Optional[tuple[str, str]]): ``(opener, closer)`` pair.
-            ``None`` disables block comment toggle.
         extra_indent_trigger (Optional[Callable[[str], bool]]): Predicate on
             the stripped text before the cursor; returning ``True`` adds an
             extra indent on the next line. Most bracket-based languages can
@@ -80,7 +78,6 @@ class LanguageProfile:
     default_extension: str
 
     line_comment: Optional[str] = None
-    block_comment: Optional[tuple[str, str]] = None
 
     extra_indent_trigger: Optional[Callable[[str], bool]] = None
 

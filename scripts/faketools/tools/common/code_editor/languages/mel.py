@@ -16,7 +16,6 @@ MEL = LanguageProfile(
     extensions=(".mel",),
     default_extension=".mel",
     line_comment="//",
-    block_comment=("/*", "*/"),
     source_type="mel",
     shelf_config=ShelfConfig(
         source_type="mel",
