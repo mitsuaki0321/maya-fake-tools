@@ -150,8 +150,11 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Set placeholder text
-        self.setPlaceholderText("# Start typing Python code...")
+        # Set placeholder text — driven by the bound profile so MEL tabs show
+        # "// Start typing MEL code..." etc. Languages without a line_comment
+        # fall back to no prefix.
+        prefix = self.language.line_comment_with_space or ""
+        self.setPlaceholderText(f"{prefix}Start typing {self.language.display_name} code...")
 
     def setup_syntax_highlighting(self):
         """Attach the language profile's highlighter, if any.
