@@ -12,6 +12,7 @@ from typing import Optional
 
 from .indent_resolver import IndentResolver
 from .python_actions import python_context_menu_extender
+from .python_folding import PythonFoldingStrategy
 from .types import LanguageProfile, ShelfConfig
 
 
@@ -53,6 +54,7 @@ PYTHON = LanguageProfile(
     ),
     highlighter_factory=_python_highlighter_factory,
     context_menu_extender=python_context_menu_extender,
+    folding_strategy=PythonFoldingStrategy(),
 )
 
 

@@ -1,6 +1,11 @@
-"""
-Code folding manager for the Python code editor.
-Provides indent-based fold detection and fold/unfold operations.
+"""Code folding state manager for the editor.
+
+Owns the per-tab fold state (which regions are detected, which are
+currently collapsed, debounce timer, layout-change notifications) and
+delegates the per-language detection to
+:attr:`LanguageProfile.folding_strategy`. Languages whose profile leaves
+``folding_strategy=None`` get graceful no-folding behaviour -- the
+manager keeps an empty region map and every public op short-circuits.
 """
 
 from logging import getLogger
@@ -11,10 +16,12 @@ logger = getLogger(__name__)
 
 
 class CodeFoldingManager:
-    """Manages code folding state and operations for a PythonEditor instance.
+    """Manages code folding state and operations for an editor instance.
 
-    Fold regions are detected by Python indent structure: any line ending with ':'
-    whose subsequent lines are indented deeper forms a foldable region.
+    Detection of foldable regions is delegated to
+    :attr:`LanguageProfile.folding_strategy` (a :class:`FoldingStrategy`
+    subclass). The manager owns the per-tab state -- which regions
+    exist, which are folded, debouncing, and layout notifications.
     """
 
     # Debounce delay for fold region recalculation (ms)
@@ -238,9 +245,17 @@ class CodeFoldingManager:
         self._update_timer.start(self._UPDATE_DELAY_MS)
 
     def _do_update(self):
-        """Recalculate fold regions from document content."""
+        """Recalculate fold regions by delegating to the language's strategy."""
+        strategy = self.editor.language.folding_strategy
+        if strategy is None:
+            # Language without a folding strategy — drop any stale regions and exit.
+            if self._fold_regions or self._folded_headers:
+                self._fold_regions = {}
+                self._folded_headers.clear()
+            return
+
         try:
-            new_regions = self._detect_fold_regions()
+            new_regions = strategy.detect(self.editor.document())
         except RuntimeError:
             # Editor's C++ object was deleted while a recalculation was pending.
             # Nothing to update — drop the stale state so later callbacks exit fast.
@@ -284,160 +299,6 @@ class CodeFoldingManager:
                         block.setVisible(False)
 
         self._fold_regions = new_regions
-
-    def _detect_fold_regions(self):
-        """Walk document blocks to detect Python fold regions.
-
-        Detects three types of foldable regions:
-        1. Colon blocks (def, class, if, for, while, try, with, etc.)
-        2. Multi-line triple-quoted strings (docstrings)
-        3. Consecutive import statements
-
-        Returns:
-            dict[int, int]: {header_block_number: end_block_number}
-        """
-        regions = {}
-        doc = self.editor.document()
-        block = doc.begin()
-        import_start = -1  # Track start of consecutive import block
-        import_end = -1
-        skip_until = -1  # Skip blocks inside a detected triple-quote region
-
-        while block.isValid():
-            text = block.text()
-            stripped = text.rstrip()
-            block_num = block.blockNumber()
-
-            # Skip lines inside an already-detected triple-quote region
-            if block_num <= skip_until:
-                block = block.next()
-                continue
-
-            if stripped:
-                lstripped = stripped.lstrip()
-
-                # --- Triple-quote docstring detection ---
-                triple = None
-                if '"""' in lstripped:
-                    triple = '"""'
-                elif "'''" in lstripped:
-                    triple = "'''"
-
-                if triple:
-                    # Count occurrences of the triple quote in this line
-                    count = lstripped.count(triple)
-                    if count == 1:
-                        # Opening triple quote without close on same line → find closing
-                        end_num = self._find_triple_quote_end(block_num, triple)
-                        if end_num > block_num:
-                            regions[block_num] = end_num
-                            skip_until = end_num  # Skip closing line
-
-                # --- Colon block detection ---
-                code_part = self._strip_comment(stripped)
-                if code_part.endswith(":"):
-                    header_indent = len(text) - len(text.lstrip())
-                    end_num = self._find_fold_end(block_num, header_indent)
-                    if end_num > block_num:
-                        regions[block_num] = end_num
-
-                # --- Consecutive import detection ---
-                if lstripped.startswith("import ") or lstripped.startswith("from "):
-                    if import_start < 0:
-                        import_start = block_num
-                    import_end = block_num
-                else:
-                    # Non-import line: flush any accumulated import block
-                    if import_start >= 0 and import_end > import_start:
-                        regions[import_start] = import_end
-                    import_start = -1
-                    import_end = -1
-            else:
-                # Empty line: flush import block (empty lines break import groups)
-                if import_start >= 0 and import_end > import_start:
-                    regions[import_start] = import_end
-                import_start = -1
-                import_end = -1
-
-            block = block.next()
-
-        # Flush any remaining import block at end of document
-        if import_start >= 0 and import_end > import_start:
-            regions[import_start] = import_end
-
-        return regions
-
-    def _find_triple_quote_end(self, start_num, triple):
-        """Find the closing line of a multi-line triple-quoted string.
-
-        Args:
-            start_num (int): Block number of the opening triple quote.
-            triple (str): The triple quote style ('\"\"\"' or \"'''\").
-
-        Returns:
-            int: Block number of the closing line, or start_num if not found.
-        """
-        doc = self.editor.document()
-        block = doc.findBlockByNumber(start_num + 1)
-
-        while block.isValid():
-            if triple in block.text():
-                return block.blockNumber()
-            block = block.next()
-
-        return start_num
-
-    def _find_fold_end(self, header_num, header_indent):
-        """Find the last block belonging to a fold region.
-
-        Args:
-            header_num (int): Block number of the fold header.
-            header_indent (int): Indent level (in spaces) of the header.
-
-        Returns:
-            int: Block number of the last line in the fold region.
-        """
-        doc = self.editor.document()
-        last_content = header_num
-        block = doc.findBlockByNumber(header_num + 1)
-
-        while block.isValid():
-            text = block.text()
-            if text.strip():  # Non-empty line
-                indent = len(text) - len(text.lstrip())
-                if indent <= header_indent:
-                    break  # Same or shallower indent → end of region
-                last_content = block.blockNumber()
-            block = block.next()
-
-        return last_content
-
-    @staticmethod
-    def _strip_comment(line):
-        """Remove trailing comment from a line, respecting strings.
-
-        Args:
-            line (str): Source line (already rstripped).
-
-        Returns:
-            str: Line with trailing comment removed, rstripped.
-        """
-        in_single = False
-        in_double = False
-        i = 0
-        while i < len(line):
-            ch = line[i]
-            if ch == "\\" and i + 1 < len(line):
-                i += 2
-                continue
-            if ch == "'" and not in_double:
-                in_single = not in_single
-            elif ch == '"' and not in_single:
-                in_double = not in_double
-            elif ch == "#" and not in_single and not in_double:
-                return line[:i].rstrip()
-            i += 1
-        return line
 
     # ------------------------------------------------------------------
     # Internal helpers

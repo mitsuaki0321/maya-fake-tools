@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from .folding_strategy import FoldingStrategy
 from .indent_resolver import IndentResolver
 
 
@@ -71,8 +72,10 @@ class LanguageProfile:
             ``QSyntaxHighlighter``. ``None`` falls back to plain text.
         completion_engine_factory (Optional[Callable]): Factory returning a
             completion engine. ``None`` disables autocomplete.
-        folding_strategy (Optional[Callable]): Code-folding region detector.
-            ``None`` disables folding.
+        folding_strategy (Optional[FoldingStrategy]): Per-language fold-region
+            detector. Subclass :class:`FoldingStrategy` and override
+            :meth:`detect`. ``None`` disables folding for the language;
+            ``CodeFoldingManager`` then keeps an empty region map.
     """
 
     id: str
@@ -92,7 +95,7 @@ class LanguageProfile:
 
     highlighter_factory: Optional[Callable] = None
     completion_engine_factory: Optional[Callable] = None
-    folding_strategy: Optional[Callable] = None
+    folding_strategy: Optional[FoldingStrategy] = None
 
     @property
     def file_filter(self) -> str:
