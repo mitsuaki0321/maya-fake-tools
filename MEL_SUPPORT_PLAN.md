@@ -94,8 +94,8 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 
 | Phase | 内容 | 状態 |
 |---|---|---|
-| **0** | `LanguageProfile` 導入、`PythonEditor` → `CodeEditor` リネーム、Python 定数の集約。挙動は変えない | 未着手 |
-| 1 | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイルを分岐 | 未着手 |
+| **0** | `LanguageProfile` 導入、`PythonEditor` → `CodeEditor` リネーム、Python 定数の集約。挙動は変えない | **完了**（2026-05-01 動作確認済） |
+| **1** | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイル・placeholder を分岐 + open/restore 時の language 解決バグ修正 | **完了**（2026-05-02 動作確認済） |
 | 2 | `mel_highlighter.py`（正規表現ステートマシン）+ `syntax_colors.json` キー追加 | 未着手 |
 | 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | 未着手 |
 | 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
@@ -366,14 +366,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit P1-2**: 新規ファイル UI を並列化 — `file_explorer.show_context_menu` の "New X File" を `ALL_PROFILES` 反復で並列メニュー化（`create_new_file` に `language: LanguageProfile = DEFAULT_PROFILE` 引数追加）。`file_operations_controller.new_file` も `language` 引数受取に変更（タイトル / 拡張子は profile 経由）。`toolbar.py` の単一 `new_button` を `new_buttons: dict[str, VSCodeButton]` に分解、`ALL_PROFILES` 反復で並列ボタン生成、`new_clicked = Signal(object)` 化（profile を運ぶ）、Ctrl+N ヒントは DEFAULT_PROFILE のボタンのみ。MEL ボタンアイコンは Python 用 (`new`) を暫定流用。`ui_layout_manager.connect_signals` は `signal.connect(file_ops.new_file)` のままで動作（Signal(object) → 第一位置引数 language）。ruff PASS、smoke test PASS（AST parse + 反復生成される menu/button 文字列の確認） _(hash: `fab0f82`)_
 - [x] **commit P1-3**: placeholder text を profile 駆動に — `code_editor.py:init_editor` のハードコード `"# Start typing Python code..."` を `editor.language.line_comment_with_space` + `display_name` から動的生成に。`line_comment is None` ならプレフィックスなしフォールバック。ruff PASS、smoke test PASS（PYTHON / MEL / line_comment=None の 3 パターン）。**ただし P1-4 のバグにより MEL タブの editor.language が PYTHON のままなので、Maya 上の見た目は P1-4 完了まで Python のまま** _(hash: `03cd0e1`)_
 - [x] **commit P1-4**: ファイル open / セッション復元時に editor.language を解決するバグ修正（**Phase 0 リファクタの取りこぼし**、Phase 1 で MEL 実装後に Maya 動作確認時点で顕在化、2026-05-02 ユーザー報告）。`code_editor.py` に `set_language(language)` メソッド新設（`self.language` 更新 + `setup_syntax_highlighting()` 再呼出 + `_apply_placeholder_text()` 再呼出）と `_apply_placeholder_text()` ヘルパ抽出（`init_editor` と `set_language` の DRY）。`load_file` で `get_profile_for_path(file_path)` から language を解決、現状と異なれば `set_language()` 呼出。`ui_session_manager.restore_tab` で `new_file(language=get_profile_for_path(file_path))` を渡す。これで `open_file_permanent` / `open_file_preview`（新規 / 既存 preview 再利用 両方）/ "New MEL File" 経由 / セッション復元 のすべてが正しい language にバインドされる。ruff PASS、smoke test PASS _(hash: `f51bf84`)_
-- [ ] **Phase 1 動作確認**: Maya 起動 → 以下を確認:
-  - `.mel` ファイルを explorer から開ける（プレビュー / 永続タブ両方）
-  - 新規 "New MEL File" メニュー / ボタンで `.mel` 新規作成、placeholder が `// ...` 表示
-  - MEL タブで `Ctrl+/` がコメントトグル（`//`）
-  - MEL タブで Run（簡単な `print "hello\\n";` 等）
-  - MEL タブの Add to Shelf がシェルフに MEL ボタン作成
-  - Python タブも引き続き従来通り全機能動作
-  - ファイルエクスプローラの Run ボタン（mel ファイル単体実行）が MEL bridge で動く
+- [x] **Phase 1 動作確認**: ユーザー確認済み（2026-05-02）。`.mel` の open / 新規作成 / placeholder / コメントトグル / Run / Add to Shelf / file_explorer Run / Python 側回帰なし、すべて問題なし
 
 ### Phase 1 後の follow-up（任意 / 別フェーズ判断）
 - [ ] MEL 用 `context_menu_extender` 実装（**whatIs のみ**、Source File は対象外）
@@ -559,4 +552,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 1 commits 完了**（P1-1 〜 P1-4）。MEL プロファイル骨格 + 新規ファイル UI 並列化 + placeholder profile 駆動化 + open/restore 時の language 解決バグ修正まで実装済。次は **Phase 1 動作確認**: Maya 起動して `.mel` の open / Run / コメントトグル / Add to Shelf / placeholder / 新規ファイル UI / Python 側回帰なし、を一通り確認）
+**最終更新**: 2026-05-02（**Phase 1 完了**（P1-1 〜 P1-4 + 動作確認）。MEL タブで open / 新規作成 / placeholder / コメントトグル / Run / Add to Shelf / file_explorer Run のすべてが動作、Python 側にも回帰なし。次フェーズ候補: Phase 2（MEL シンタックスハイライト）または Phase 1 後の follow-up（MEL whatIs 用 `context_menu_extender` / `extra_indent_trigger` リネーム検討 / `/* */` ネスト破綻対策 / 専用アイコン / `.mel` ファイルアイコン）。どこから着手するかはユーザー判断）
