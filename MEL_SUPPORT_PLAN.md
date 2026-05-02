@@ -100,6 +100,8 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | 未着手 |
 | 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
 | 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
+| 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
+| 7 | 最終的な UI/UX 修正（ツールバー MEL ボタン専用アイコンデザイン、その他 Phase 1 後に発見された UI/UX 改善） | 未着手 |
 
 ## 3. 調査結果サマリ（Python ハードコード分布）
 
@@ -368,12 +370,12 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit P1-4**: ファイル open / セッション復元時に editor.language を解決するバグ修正（**Phase 0 リファクタの取りこぼし**、Phase 1 で MEL 実装後に Maya 動作確認時点で顕在化、2026-05-02 ユーザー報告）。`code_editor.py` に `set_language(language)` メソッド新設（`self.language` 更新 + `setup_syntax_highlighting()` 再呼出 + `_apply_placeholder_text()` 再呼出）と `_apply_placeholder_text()` ヘルパ抽出（`init_editor` と `set_language` の DRY）。`load_file` で `get_profile_for_path(file_path)` から language を解決、現状と異なれば `set_language()` 呼出。`ui_session_manager.restore_tab` で `new_file(language=get_profile_for_path(file_path))` を渡す。これで `open_file_permanent` / `open_file_preview`（新規 / 既存 preview 再利用 両方）/ "New MEL File" 経由 / セッション復元 のすべてが正しい language にバインドされる。ruff PASS、smoke test PASS _(hash: `f51bf84`)_
 - [x] **Phase 1 動作確認**: ユーザー確認済み（2026-05-02）。`.mel` の open / 新規作成 / placeholder / コメントトグル / Run / Add to Shelf / file_explorer Run / Python 側回帰なし、すべて問題なし
 
-### Phase 1 後の follow-up（任意 / 別フェーズ判断）
-- [ ] MEL 用 `context_menu_extender` 実装（**whatIs のみ**、Source File は対象外）
-- [ ] `extra_indent_trigger` のリネーム検討（`indent_on_enter` 等への変更、§7 決定ログでユーザー指摘済）
-- [ ] MEL ブロックコメント `/* */` のネスト破綻対策（§8）
-- [ ] ツールバー MEL ボタンの専用アイコンデザイン
-- [ ] ファイルエクスプローラの `.mel` アイコン（`_FILE_EXTENSION_ICONS`）
+### Phase 1 後の follow-up（このフェーズ内で対応 / 別フェーズに移管）
+- [ ] **このフェーズ内で対応**: MEL ブロックコメント `/* */` のネスト破綻対策（§8）
+- **Phase 6 へ移管**: MEL 用 `context_menu_extender`（whatIs のみ、Source File は対象外）
+- **Phase 7 へ移管**: ツールバー MEL ボタンの専用アイコンデザイン
+- **不要判断**: ファイルエクスプローラの `.mel` アイコン（現状の自動表示で問題なし、ユーザー判断 2026-05-02）
+- **保留**（任意 / 別の機会に検討）: `extra_indent_trigger` のリネーム検討（`indent_on_enter` 等への変更、§7 決定ログでユーザー指摘済）
 
 ### Phase 2（MEL シンタックスハイライト）
 未着手（Phase 1 完了後に詳細化）
@@ -427,6 +429,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-01 | ツールバーの MEL 用 New File ボタンアイコンは Phase 1 では Python 用と同じアイコンを流用 | 視覚デザインは Phase 1 後に再検討（UI/UX 議論として独立） |
 | 2026-05-01 | placeholder text を profile 駆動に変更（Phase 1 で対応） | Phase 0 §4.4 では「触らない」としていたが、Phase 1 で MEL タブが "# Start typing Python code..." と表示されると明確に誤りになるため、`f"{line_comment_with_space}Start typing {display_name} code..."` で動的生成 |
 | 2026-05-02 | ファイル open / セッション復元時の editor.language 解決バグを **Phase 1 動作確認の前に P1-4 として修正** | Phase 0 リファクタの取りこぼし（§6 P1-4 参照）。Phase 1 動作確認の前提（`.mel` を開けば MEL bridge で実行される）が成り立たないため、commit 順序を「P1-2 → P1-3 → **P1-4（バグ修正）** → 動作確認」に確定。P1-2 / P1-3 を先に進めるのは plan の commit 順序を尊重する判断 |
+| 2026-05-02 | Phase 1 後 follow-up を再編 — **Phase 6 = コンテキストメニュー実装** / **Phase 7 = 最終的な UI/UX 修正** を新設 | Phase 1 follow-up に並んでいた「MEL `context_menu_extender`」「ツールバー MEL ボタン専用アイコン」を、それぞれ独立フェーズに格上げ（コンテキストメニュー側は将来 Python の whatIs 等価機能や Inspect 系の汎化が絡む可能性があり Phase 単位で扱った方が見通しが良い、UI/UX は Phase 1 完了後に他の改善とまとめて議論できる方が良い）。`.mel` ファイルアイコンは現状の自動表示で問題ないとユーザー判断（不要扱い）。Phase 1 内で残した follow-up は `/* */` ネスト破綻対策のみ |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
 
@@ -552,4 +555,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 1 完了**（P1-1 〜 P1-4 + 動作確認）。MEL タブで open / 新規作成 / placeholder / コメントトグル / Run / Add to Shelf / file_explorer Run のすべてが動作、Python 側にも回帰なし。次フェーズ候補: Phase 2（MEL シンタックスハイライト）または Phase 1 後の follow-up（MEL whatIs 用 `context_menu_extender` / `extra_indent_trigger` リネーム検討 / `/* */` ネスト破綻対策 / 専用アイコン / `.mel` ファイルアイコン）。どこから着手するかはユーザー判断）
+**最終更新**: 2026-05-02（**Phase 1 完了 + ロードマップ再編**: Phase 6（コンテキストメニュー）/ Phase 7（最終 UI/UX 修正）を新設、follow-up を整理。Phase 1 内に残した follow-up は **MEL ブロックコメント `/* */` ネスト破綻対策**（§8）のみ。ただし block comment toggle 自体が現状未実装のため、対策の前にトグル本体の実装範囲をユーザーと相談予定（A: トグル + ネスト検出 / B: トグルのみ / C: 後送り））
