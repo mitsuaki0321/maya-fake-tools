@@ -6,6 +6,7 @@ Provides quick access to common actions with proper icon states and styling.
 import os
 
 from .....lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
+from ..languages import ALL_PROFILES, DEFAULT_PROFILE
 from ..themes import AppTheme
 
 # Icon target colours per button state (applied via dynamic SVG recoloring).
@@ -245,7 +246,7 @@ class ToolBar(QWidget):
     run_clicked = Signal()
     save_clicked = Signal()
     save_all_clicked = Signal()
-    new_clicked = Signal()
+    new_clicked = Signal(object)  # Emits the LanguageProfile of the clicked button.
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
@@ -281,7 +282,14 @@ class ToolBar(QWidget):
         self.toggle_explorer_button = VSCodeButton("toggle", "Toggle File Explorer")
         self.refresh_explorer_button = VSCodeButton("refresh", "Refresh File Explorer")
         self.run_button = RunButton("run", "Run Code (Numpad Enter / Ctrl+Enter)")
-        self.new_button = VSCodeButton("new", "New File (Ctrl+N)")
+        # Per-language "new file" buttons. Phase 1 reuses the same "new" icon
+        # across languages; per-language icon design is deferred (§7.5).
+        # The DEFAULT_PROFILE button advertises Ctrl+N because the shortcut
+        # path always creates the default language.
+        self.new_buttons: dict[str, VSCodeButton] = {}
+        for profile in ALL_PROFILES:
+            shortcut_hint = " (Ctrl+N)" if profile is DEFAULT_PROFILE else ""
+            self.new_buttons[profile.id] = VSCodeButton("new", f"New {profile.display_name} File{shortcut_hint}")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
         self.save_all_button = VSCodeButton("saveall", "Save All Files (Ctrl+Shift+S)")
         self.workspace_button = VSCodeButton("folder", "Open Root Directory")
@@ -319,7 +327,8 @@ class ToolBar(QWidget):
         layout.addWidget(sep0)
         layout.addWidget(self.run_button)
         layout.addWidget(sep1)
-        layout.addWidget(self.new_button)
+        for profile in ALL_PROFILES:
+            layout.addWidget(self.new_buttons[profile.id])
         layout.addWidget(self.save_button)
         layout.addWidget(self.save_all_button)
         layout.addWidget(self.workspace_button)
@@ -353,7 +362,8 @@ class ToolBar(QWidget):
         self.run_button.clicked.connect(self.run_clicked.emit)
         self.save_button.clicked.connect(self.save_clicked.emit)
         self.save_all_button.clicked.connect(self.save_all_clicked.emit)
-        self.new_button.clicked.connect(self.new_clicked.emit)
+        for profile in ALL_PROFILES:
+            self.new_buttons[profile.id].clicked.connect(lambda checked=False, p=profile: self.new_clicked.emit(p))
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)

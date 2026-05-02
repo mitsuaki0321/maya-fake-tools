@@ -37,7 +37,7 @@ from ......lib_ui.qt_compat import (
     Signal,
 )
 from ...command import file_ops
-from ...languages import DEFAULT_PROFILE, KNOWN_EXTENSIONS
+from ...languages import ALL_PROFILES, DEFAULT_PROFILE, KNOWN_EXTENSIONS, LanguageProfile
 from ...themes import AppTheme
 from ..dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
@@ -658,13 +658,20 @@ class FileExplorer(QWidget):
             menu.addAction(open_action)
             menu.addSeparator()
 
-        # New file action — defaults to the registry's default profile (Python today).
-        new_file_action = QAction(f"New {DEFAULT_PROFILE.display_name} File", self)
+        # New file actions — one per registered language profile.
+        # Iterate ALL_PROFILES so adding a new language auto-extends the menu.
         if has_selection:
-            new_file_action.triggered.connect(lambda: self.create_new_file(file_path, file_info.isDir()))
+            target_path = file_path
+            target_is_dir = file_info.isDir()
         else:
-            new_file_action.triggered.connect(lambda: self.create_new_file(self.root_path, True))
-        menu.addAction(new_file_action)
+            target_path = self.root_path
+            target_is_dir = True
+        for profile in ALL_PROFILES:
+            new_file_action = QAction(f"New {profile.display_name} File", self)
+            new_file_action.triggered.connect(
+                lambda checked=False, p=profile, path=target_path, isdir=target_is_dir: self.create_new_file(path, isdir, language=p)
+            )
+            menu.addAction(new_file_action)
 
         # New folder action
         new_folder_action = QAction("New Folder", self)
@@ -719,20 +726,23 @@ class FileExplorer(QWidget):
         # Show menu
         menu.exec_(self.tree_view.mapToGlobal(position))
 
-    def create_new_file(self, base_path: str, is_dir: bool):
+    def create_new_file(self, base_path: str, is_dir: bool, language: LanguageProfile = DEFAULT_PROFILE):
         """Prompt for a filename and create a new source file next to it.
 
-        Phase 0 always uses :data:`DEFAULT_PROFILE`; per-language entry points
-        are a UI/UX decision tracked in MEL_SUPPORT_PLAN.md §7.5.
+        Args:
+            base_path (str): Path that anchors the creation directory; if it's
+                a file, the new file is created next to it.
+            is_dir (bool): Whether ``base_path`` itself is a directory.
+            language (LanguageProfile): Profile driving extension and dialog
+                wording. Per-language menu entries pass their own profile.
         """
         parent_dir = base_path if is_dir else os.path.dirname(base_path)
-        profile = DEFAULT_PROFILE
-        default_name = f"new_script{profile.default_extension}"
-        name, ok = CodeEditorInputDialog.getText(self, f"New {profile.display_name} File", "Enter file name:", text=default_name)
+        default_name = f"new_script{language.default_extension}"
+        name, ok = CodeEditorInputDialog.getText(self, f"New {language.display_name} File", "Enter file name:", text=default_name)
         if not (ok and name):
             return
 
-        result = file_ops.create_source_file(parent_dir, name, language=profile)
+        result = file_ops.create_source_file(parent_dir, name, language=language)
         if result.success:
             self.file_selected.emit(result.destination)
         else:

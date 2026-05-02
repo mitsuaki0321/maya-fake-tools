@@ -19,7 +19,7 @@ from logging import getLogger
 import os
 
 from ..command import file_io
-from ..languages import DEFAULT_PROFILE, get_profile_for_path
+from ..languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
 from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
@@ -115,16 +115,28 @@ class FileOperationsController:
 
     # -------------------- New --------------------
 
-    def new_file(self) -> None:
-        """Prompt for a filename, create it in the workspace, and open it."""
+    def new_file(self, language: LanguageProfile = DEFAULT_PROFILE) -> None:
+        """Prompt for a filename, create it in the workspace, and open it.
+
+        Args:
+            language (LanguageProfile): Profile that drives the default extension
+                and dialog wording. Defaults to :data:`DEFAULT_PROFILE`, which
+                is what the ``Ctrl+N`` shortcut path uses; per-language toolbar
+                buttons and file-explorer menu items pass their own profile.
+        """
         mw = self.main_window
         workspace_dir = mw.settings_manager.get_workspace_directory()
         if not workspace_dir or not os.path.exists(workspace_dir):
             CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
             return
 
-        ext = DEFAULT_PROFILE.default_extension
-        filename, ok = CodeEditorInputDialog.getText(mw, "New File", f"Enter filename (with {ext} extension):", text=f"new_script{ext}")
+        ext = language.default_extension
+        filename, ok = CodeEditorInputDialog.getText(
+            mw,
+            f"New {language.display_name} File",
+            f"Enter filename (with {ext} extension):",
+            text=f"new_script{ext}",
+        )
         if not ok or not filename.strip():
             return
 
