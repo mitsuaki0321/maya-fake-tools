@@ -555,7 +555,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         cursor.setPosition(current_position)
         self.setTextCursor(cursor)
 
-        new_indent = auto_indent.compute_new_indent(
+        new_indent = auto_indent.compute_indent(
             self.document(), block_number, current_line, text_before_cursor, self.language,
         )
         self.insertPlainText("\n" + new_indent)

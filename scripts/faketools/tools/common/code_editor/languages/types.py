@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable, Optional
 
+from .indent_resolver import IndentResolver
+
 
 @dataclass(frozen=True)
 class ShelfConfig:
@@ -44,11 +46,12 @@ class LanguageProfile:
         default_extension (str): Extension applied when creating new files.
         line_comment (Optional[str]): Line-comment prefix. ``None`` disables
             the comment toggle keybinding.
-        extra_indent_trigger (Optional[Callable[[str], bool]]): Predicate on
-            the stripped text before the cursor; returning ``True`` adds an
-            extra indent on the next line. Most bracket-based languages can
-            leave this ``None`` because the hanging-indent rule already covers
-            ``(`` ``[`` ``{``. Python uses it for ``:``.
+        indent_resolver (Optional[IndentResolver]): Language-specific
+            auto-indent strategy. Subclass :class:`IndentResolver` and
+            override :meth:`_indent_on_enter` (and optionally
+            :meth:`_iter_code_brackets` etc.). ``None`` falls back to a
+            default resolver that only applies the bracket-based Rules
+            (hanging indent / closing alignment / current-indent carry-over).
         source_type (Optional[str]): ``cmdScrollFieldExecuter`` ``sourceType``.
             ``None`` disables run-related actions.
         shelf_config (Optional[ShelfConfig]): Shelf-button settings. ``None``
@@ -79,7 +82,7 @@ class LanguageProfile:
 
     line_comment: Optional[str] = None
 
-    extra_indent_trigger: Optional[Callable[[str], bool]] = None
+    indent_resolver: Optional[IndentResolver] = None
 
     source_type: Optional[str] = None
 

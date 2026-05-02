@@ -8,13 +8,23 @@ framework.
 
 from __future__ import annotations
 
+from typing import Optional
+
+from .indent_resolver import IndentResolver
 from .python_actions import python_context_menu_extender
 from .types import LanguageProfile, ShelfConfig
 
 
-def _python_extra_indent_trigger(stripped_text_before_cursor: str) -> bool:
-    """Mirror the historic ``auto_indent.py`` rule: a non-comment line ending in ``:`` opens a block."""
-    return stripped_text_before_cursor.endswith(":") and not stripped_text_before_cursor.startswith("#")
+class PythonIndentResolver(IndentResolver):
+    """Add Rule 0: a non-comment line ending in ``:`` opens a 4-space block."""
+
+    def _indent_on_enter(self, *, text_before_cursor: str, current_indent: str, **_) -> Optional[str]:
+        stripped = text_before_cursor.strip()
+        if stripped.startswith("#"):
+            return None
+        if stripped.endswith(":"):
+            return current_indent + "    "
+        return None
 
 
 def _python_highlighter_factory(document):
@@ -34,7 +44,7 @@ PYTHON = LanguageProfile(
     extensions=(".py",),
     default_extension=".py",
     line_comment="#",
-    extra_indent_trigger=_python_extra_indent_trigger,
+    indent_resolver=PythonIndentResolver(),
     source_type="python",
     shelf_config=ShelfConfig(
         source_type="python",
