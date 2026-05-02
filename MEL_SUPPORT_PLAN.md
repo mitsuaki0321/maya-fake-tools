@@ -96,7 +96,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **0** | `LanguageProfile` 導入、`PythonEditor` → `CodeEditor` リネーム、Python 定数の集約。挙動は変えない | **完了**（2026-05-01 動作確認済） |
 | **1** | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイル・placeholder を分岐 + open/restore 時の language 解決バグ修正 | **完了**（2026-05-02 動作確認済） |
 | **2** | `mel_highlighter.py`（per-block 正規表現ステートマシン） | **完了**（2026-05-02 動作確認済） |
-| 3 | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **進行中**（P3-1 + リファクタ完了、P3-2/P3-3 残り） |
+| **3** | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **完了**（2026-05-03 動作確認済） |
 | 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
 | 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
 | 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
@@ -386,9 +386,9 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
   - **MEL**: `MelIndentResolver(IndentResolver)._indent_on_enter` で `{` または `:` 末尾を判定して `+4`（`//` 行コメント除外）。さらに `_iter_code_brackets` を override して MEL の `//` / `/* */` / `"..."` を理解（コメント内の `{` が Rule 1 に漏れない）
   - **エンジン**: `ui/auto_indent.py` を 5 行のディスパッチに縮小（旧 `iter_code_brackets` / `find_*` 関数群は IndentResolver メソッドに移管、ユーザー要望の `_` プレフィックス化は class 内 private 化で自然に解消）+ `compute_new_indent` → `compute_indent` リネーム
   - 18 ケース smoke test PASS、Maya 動作確認はユーザー判断 _(hash: `51464ee`)_
-- [ ] **commit P3-2**: `LanguageProfile.folding_strategy` を活用 — 既存 `CodeFoldingManager._detect_fold_regions` を `language.folding_strategy(document)` 経由に分岐、Python 側の検出ロジックを `languages/python_folding.py` に移動して PYTHON プロファイルから提供。`folding_strategy is None` の言語では折りたたみ機能を完全に無効化（graceful degradation）
-- [ ] **commit P3-3**: MEL brace-based 折りたたみを `languages/mel_folding.py` に新設、MEL プロファイルに `folding_strategy` 配線。`{` 行を fold header、対応する `}` の前行を end とする。文字列・コメント内の `{` `}` はスキップ
-- [ ] **Phase 3 動作確認**: Maya 上で Python の Rule 3 / MEL の `{` `case:` 後 +4 インデント / 折りたたみ（Python 既存挙動 + MEL の brace 折りたたみ）を確認
+- [x] **commit P3-2**: `LanguageProfile.folding_strategy` を `Optional[Callable]` から `Optional[FoldingStrategy]` 型に格上げし、IndentResolver と同じ class-based パターンに揃える。`languages/folding_strategy.py` に `FoldingStrategy` 基底クラス（`detect(document) -> dict[int, int]`、デフォルト no-op で空 dict 返却）。`languages/python_folding.py` に `PythonFoldingStrategy(FoldingStrategy)` を新設し既存の検出ロジック（`_detect_fold_regions`, `_find_triple_quote_end`, `_find_fold_end`, `_strip_comment` の 4 ヘルパー）を `CodeFoldingManager` から移植。`PYTHON.folding_strategy = PythonFoldingStrategy()`。`CodeFoldingManager._do_update` を `self.editor.language.folding_strategy.detect(doc)` 委譲に書き換え（getattr 連鎖は不要、直接アクセス）。445 → 309 行に縮小。**責務分離**: Strategy は stateless でルール所有、Manager は stateful で fold 状態 / debounce / layout 通知を所有。ruff PASS、9 ケース smoke test PASS（既存 Python 挙動完全維持） _(hash: `5d3142a`)_
+- [x] **commit P3-3**: MEL brace-based 折りたたみを `languages/mel_folding.py` に新設し `MelFoldingStrategy(FoldingStrategy)` を実装。MEL プロファイルに `folding_strategy=MelFoldingStrategy()` 配線。**VSCode 方式**: `{` 行を fold header、対応する `}` の **前の行** を end とする → 折りたたみ後も `{` と `}` 両方が visible。`//` 行コメント / `/* */` 複数行ブロックコメント / `"..."` 文字列内の `{` `}` はスキップ（per-block-comment 状態を行間で持ち越す）。`{ ... }` が同行 / 隣接行の場合は登録しない（隠す行がない）。不均衡 `}` は防御的に無視。ruff PASS、11 ケース smoke test PASS（基本 / ネスト / `} else {` チェーン / 配列リテラル / コメント内除外 / 文字列内除外 / 不均衡 / 複数行 proc）、Maya 上動作確認済 _(hash: `3413876`)_
+- [x] **Phase 3 動作確認**: ユーザー確認済（2026-05-03）。MEL の `{` / `:` 後 +4 インデント、`{ ... }` 折りたたみ（VSCode 方式）、Python の既存折りたたみ挙動の維持を確認
 
 #### Phase 4 で対応するヘルプレンダラ関連（事前メモ）
 - `LanguageProfile.signature_highlighter` フィールドを追加し、`syntax.highlight_python` 直呼びを profile 経由に
@@ -551,4 +551,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-02（**Phase 3 進行中** — P3-1 完了 + class-based `IndentResolver` への再設計完了。次は P3-2（Python 折りたたみ検出ロジックを `languages/python_folding.py` に分離 + `LanguageProfile.folding_strategy` を活用）→ P3-3（MEL brace-based 折りたたみ）→ Phase 3 動作確認）
+**最終更新**: 2026-05-03（**Phase 3 完了** — auto_indent / 折りたたみが per-language Strategy class 化、MEL の `{` インデント + brace 折りたたみが動作確認済。次は Phase 4（MEL autocomplete = `MelCompletionEngine` + `cmds.help` 経由のコマンド辞書 + `global proc` 静的パース））
