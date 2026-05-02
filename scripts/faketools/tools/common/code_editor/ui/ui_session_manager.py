@@ -6,7 +6,7 @@ Handles saving and restoring session state including open tabs and their content
 from logging import getLogger
 import os
 
-from ..languages import DEFAULT_PROFILE
+from ..languages import DEFAULT_PROFILE, get_profile_for_path
 
 logger = getLogger(__name__)
 
@@ -187,8 +187,11 @@ class UISessionManager:
         # Determine if tab should be marked as modified
         is_modified = self.determine_tab_modified_state(file_path, saved_content)
 
-        # Create new editor
-        editor = self.code_editor.new_file()
+        # Create new editor bound to the file's language. ``new_file`` creates
+        # the editor with the default profile; restored ``.mel`` tabs would
+        # otherwise dispatch Run / placeholder / highlighter to Python.
+        language = get_profile_for_path(file_path) if file_path else DEFAULT_PROFILE
+        editor = self.code_editor.new_file(language=language)
 
         # Set content
         editor.setPlainText(saved_content)

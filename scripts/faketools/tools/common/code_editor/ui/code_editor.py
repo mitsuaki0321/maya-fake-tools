@@ -19,7 +19,7 @@ from .....lib_ui.qt_compat import (
     Signal,
 )
 from ..command import file_io
-from ..languages import PYTHON, LanguageProfile
+from ..languages import PYTHON, LanguageProfile, get_profile_for_path
 from ..themes import AppTheme
 from . import auto_indent, editor_context_menu, editor_overlays
 from .autocomplete import AutocompleteController, get_shared_engine
@@ -150,11 +150,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
-        # Set placeholder text — driven by the bound profile so MEL tabs show
-        # "// Start typing MEL code..." etc. Languages without a line_comment
-        # fall back to no prefix.
-        prefix = self.language.line_comment_with_space or ""
-        self.setPlaceholderText(f"{prefix}Start typing {self.language.display_name} code...")
+        self._apply_placeholder_text()
 
     def setup_syntax_highlighting(self):
         """Attach the language profile's highlighter, if any.
@@ -232,15 +228,45 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.focus_lost.emit()
 
     def load_file(self, file_path: str) -> bool:
-        """Load ``file_path`` into the editor via the command-layer reader."""
+        """Load ``file_path`` into the editor via the command-layer reader.
+
+        Re-binds the editor to the language profile resolved from the file's
+        extension. The tab widget creates editors with the default profile and
+        only learns the file path here, so without this rebind a ``foo.mel``
+        loaded into a freshly-constructed editor would stay bound to Python
+        and dispatch Run / placeholder / highlighter to the wrong language.
+        """
         content, error = file_io.read_text(file_path)
         if content is None:
             CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {error}")
             return False
+        new_language = get_profile_for_path(file_path)
+        if new_language is not self.language:
+            self.set_language(new_language)
         self.setPlainText(content)
         self.file_path = file_path
         self.is_modified = False
         return True
+
+    def set_language(self, language: LanguageProfile) -> None:
+        """Rebind the editor to ``language`` and refresh language-driven UI.
+
+        Re-runs the highlighter factory and the placeholder text so a tab that
+        was created with one profile (e.g. the default) and later associated
+        with a file of another language picks up the new highlighter / hint.
+        """
+        self.language = language
+        self.setup_syntax_highlighting()
+        self._apply_placeholder_text()
+
+    def _apply_placeholder_text(self) -> None:
+        """Set the placeholder hint based on the bound :class:`LanguageProfile`.
+
+        Profiles without a ``line_comment`` skip the comment prefix so the hint
+        stays a plain sentence rather than a stray ``Start typing X code...``.
+        """
+        prefix = self.language.line_comment_with_space or ""
+        self.setPlaceholderText(f"{prefix}Start typing {self.language.display_name} code...")
 
     def save_file(self, file_path: str = None) -> bool:
         """Save the editor contents via the command-layer writer."""
