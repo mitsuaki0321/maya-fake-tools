@@ -13,6 +13,7 @@ from collections.abc import Iterator
 from typing import Optional
 
 from .indent_resolver import IndentResolver
+from .mel_folding import MelFoldingStrategy
 from .types import LanguageProfile, ShelfConfig
 
 
@@ -96,6 +97,7 @@ MEL = LanguageProfile(
         icon="commandButton.png",
     ),
     highlighter_factory=_mel_highlighter_factory,
+    folding_strategy=MelFoldingStrategy(),
 )
 
 
