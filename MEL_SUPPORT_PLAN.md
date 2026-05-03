@@ -97,7 +97,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **1** | `MEL` プロファイル追加。実行・保存・コメント・シェルフ・新規ファイル・placeholder を分岐 + open/restore 時の language 解決バグ修正 | **完了**（2026-05-02 動作確認済） |
 | **2** | `mel_highlighter.py`（per-block 正規表現ステートマシン） | **完了**（2026-05-02 動作確認済） |
 | **3** | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **完了**（2026-05-03 動作確認済） |
-| 4 | `MelCompletionEngine`（`cmds.help` 経由）、`global proc` 静的パース | 未着手 |
+| **4** | autocomplete は Python 専用と確定（`MelCompletionEngine` 等は実装しない、必要になったら別途検討） | **完了**（2026-05-04） |
 | 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
 | 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
 | 7 | 最終的な UI/UX 修正（ツールバー MEL ボタン専用アイコンデザイン、その他 Phase 1 後に発見された UI/UX 改善） | 未着手 |
@@ -390,11 +390,11 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 - [x] **commit P3-3**: MEL brace-based 折りたたみを `languages/mel_folding.py` に新設し `MelFoldingStrategy(FoldingStrategy)` を実装。MEL プロファイルに `folding_strategy=MelFoldingStrategy()` 配線。**VSCode 方式**: `{` 行を fold header、対応する `}` の **前の行** を end とする → 折りたたみ後も `{` と `}` 両方が visible。`//` 行コメント / `/* */` 複数行ブロックコメント / `"..."` 文字列内の `{` `}` はスキップ（per-block-comment 状態を行間で持ち越す）。`{ ... }` が同行 / 隣接行の場合は登録しない（隠す行がない）。不均衡 `}` は防御的に無視。ruff PASS、11 ケース smoke test PASS（基本 / ネスト / `} else {` チェーン / 配列リテラル / コメント内除外 / 文字列内除外 / 不均衡 / 複数行 proc）、Maya 上動作確認済 _(hash: `3413876`)_
 - [x] **Phase 3 動作確認**: ユーザー確認済（2026-05-03）。MEL の `{` / `:` 後 +4 インデント、`{ ... }` 折りたたみ（VSCode 方式）、Python の既存折りたたみ挙動の維持を確認
 
-#### Phase 4 で対応するヘルプレンダラ関連（事前メモ）
-- `LanguageProfile.signature_highlighter` フィールドを追加し、`syntax.highlight_python` 直呼びを profile 経由に
-- `detect.SIGNATURE_RE` を Python 用と MEL 用で分岐、もしくは profile に `signature_pattern` を持たせる
-- ユーザー定義 `global proc` のシグネチャ抽出パスを `structured` / `plain` の MEL 版として追加
-- Maya help 分岐（`maya.render`）はそのまま流用可能
+### Phase 4（autocomplete = Python 専用と確定）
+
+- [x] **commit P4**: `LanguageProfile.completion_engine_factory`（Phase 0 で定義のみで未使用だった hook）を **初めて実用**。`PYTHON.completion_engine_factory = _python_completion_engine_factory`（遅延 import で `get_shared_engine()` 返却）、MEL は未指定のまま `None`。`CodeEditor.__init__` で無条件構築していた `AutocompleteController` を `_reconfigure_autocomplete()` ヘルパー経由に。`set_language()` からも呼出 → タブが PYTHON 開始 → `.mel` ロードで MEL 切替時に controller を tear-down（`set_enabled(False)` で event filter uninstall → `self.autocomplete = None`）、MEL → Python に戻ったとき再構築。`code_editor.py` から `from .autocomplete import get_shared_engine` 削除（Python factory が遅延 import するため不要）。**副作用**: jedi `InterpreterEnvironment` の初期化が `languages/` import 時から「初の Python タブ open 時」に遅延 → MEL 専用ユーザーや Code Editor を開かないユーザーは jedi 初期化コストゼロ。ruff PASS、smoke test PASS（profile wiring + AST 構造検証）。Maya 動作確認済 _(hash: `cec0416`)_
+
+ヘルプレンダラ関連の改修（`signature_highlighter` profile field、`detect.SIGNATURE_RE` 分岐、`global proc` シグネチャ抽出）は **autocomplete を MEL に拡張する将来の Phase 4-bis** に持ち越し。autocomplete 不要であればこれらも不要なので、現状ヘルプポップアップは Python タブでのみ動作（Maya help は言語非依存に既に動く）。
 
 ## 7. 決定ログ
 
@@ -426,6 +426,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-02 | Phase 1 後 follow-up を再編 — **Phase 6 = コンテキストメニュー実装** / **Phase 7 = 最終的な UI/UX 修正** を新設 | Phase 1 follow-up に並んでいた「MEL `context_menu_extender`」「ツールバー MEL ボタン専用アイコン」を、それぞれ独立フェーズに格上げ（コンテキストメニュー側は将来 Python の whatIs 等価機能や Inspect 系の汎化が絡む可能性があり Phase 単位で扱った方が見通しが良い、UI/UX は Phase 1 完了後に他の改善とまとめて議論できる方が良い）。`.mel` ファイルアイコンは現状の自動表示で問題ないとユーザー判断（不要扱い）。Phase 1 内で残した follow-up は `/* */` ネスト破綻対策のみ |
 | 2026-05-02 | Phase 2 設計を VSCode `MEL.tmLanguage` (D:\claude\vscode-mel-syntax-heighlight\Visual-Studio-Code-MEL-Language) 調査結果で改訂 | 当初 `flag`（`-flag`）/ `variable_dollar` キーを新規追加する案だったが、参照実装（VSCode 拡張）にも `flag` 着色は無く、`$var` も既存 `variable` と同色にする方が一貫性が高い。代わりに `void`, `null`, `undefined`, `catch`, `alias` を Phase 1 案から追加。**新規 JSON キーゼロ**で実装可能となり、既存未使用 `escape_sequence` を MEL 文字列内エスケープで初有効化。Maya コマンド名 / ノード型名のハードコードリスト（VSCode 拡張は ~500 + ~500 を持つ）は Phase 2 ではスコープ外、Phase 4 autocomplete で `cmds.help("-list", "*")` を構築する際に highlighter にも共有する方針 |
 | 2026-05-02 | Phase 3 P3-1 を **bool predicate → class-based `IndentResolver` 階層** に再設計 | 当初 `LanguageProfile.extra_indent_trigger: Callable[[str], bool]` で実装し commit `b61dd87` 済だったが、ユーザーレビューで「Markdown を含む将来言語を考えると bool predicate は表現力不足」「auto-indent はクラスで設計すべき」と指摘。MEL の `{` 末尾は hanging indent (Rule 1) ではなく `+4` インデントが期待値で、bool predicate の上に Rule 1 が走ると挙動が混在する問題も顕在化。class 設計なら各言語が `_indent_on_enter` だけでなく `_iter_code_brackets` 等の任意ルールを override 可能（Markdown はブラケット規則を完全無効化、MEL は `//` `/* */` `"..."` を理解する scanner に差し替え、等）。`compute_new_indent` → `compute_indent` リネームも同 commit で実施。`extra_indent_trigger` フィールドは `indent_resolver: Optional[IndentResolver]` に置換 |
+| 2026-05-04 | Phase 4 を **「autocomplete は Python 専用と確定」軽量フェーズ** に変更 | 当初は `MelCompletionEngine` + `cmds.help` ベースの MEL autocomplete + ヘルプレンダラ MEL 化（~6 commits, ~1500-2000 行）を予定していたが、ユーザー判断で「Maya 標準 Script Editor も MEL 補完なし、MEL ユーザーの慣習として補完がなくても困らない、必要になったら別途検討」となった。Phase 0 で定義のみで放置されていた `LanguageProfile.completion_engine_factory` フィールドをここで初めて実用 — PYTHON のみ factory を設定、MEL は未指定で `AutocompleteController` 自体構築されない。差分は ~50 行の 1 commit で完結。`signature_highlighter` field 追加 / `SIGNATURE_RE` 分岐 / `global proc` 静的パース等の構想はすべて将来の Phase 4-bis 持ち越し |
 | 2026-05-02 | **`block_comment` フィールド自体を削除**（ブロックコメントトグル機能は実装しない） | `block_comment` プロファイルフィールドはあったが消費側ゼロ、ショートカットも未実装。`/* */` ネスト破綻の対策を入れる前にトグル本体の実装範囲を相談したところ、ユーザー判断で「現在の line comment トグル（`Ctrl+/`）で十分、ブロックコメントトグル機能自体不要」となった。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の説明コメントを撤去。Optional フィールド数 9 → 8。§8 の MEL `/* */` ネスト破綻エントリも撤去（実装しない以上の対策不要） |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
@@ -551,4 +552,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-03（**Phase 3 完了** — auto_indent / 折りたたみが per-language Strategy class 化、MEL の `{` インデント + brace 折りたたみが動作確認済。次は Phase 4（MEL autocomplete = `MelCompletionEngine` + `cmds.help` 経由のコマンド辞書 + `global proc` 静的パース））
+**最終更新**: 2026-05-04（**Phase 4 完了** — autocomplete は Python 専用と確定、`completion_engine_factory` hook を初実用、MEL タブでは jedi 一切呼ばれない設計に。次は Phase 5（`MayaHelpDetector` の MEL パターン追加 — 右クリック「Maya help on cmds.*」が MEL `polyCube ...` 形式でも機能するように））
