@@ -3,7 +3,8 @@
 Builds a ``QMenu`` populated with the editor's contextual actions:
 
 * **Maya help** — appended when the cursor is on a recognised ``cmds.*``
-  call. Language-agnostic.
+  call. Python-only: MEL has no equivalent ``cmds.X`` syntax and the
+  detector would always come up empty there, so we skip it outright.
 * **Language-specific section** — delegated to the active editor's
   :class:`LanguageProfile.context_menu_extender` (e.g. Inspect Object /
   Inspect Help / Reload Module for Python; whatIs / Source File for MEL
@@ -20,6 +21,7 @@ the actions are stateless beyond the editor reference they capture.
 from __future__ import annotations
 
 from .....lib_ui.qt_compat import QAction, QTextCursor
+from ..languages import PYTHON
 from ..themes import AppTheme
 
 
@@ -61,7 +63,15 @@ def build_context_menu(editor, event):
 
 
 def _maybe_add_maya_help(menu, editor):
-    """Append a Maya help action when a known ``cmds.*`` call is at the cursor."""
+    """Append a Maya help action when a known ``cmds.*`` call is at the cursor.
+
+    Skipped for non-Python tabs: MEL has no ``cmds.X`` form, so the
+    detector would scan the whole document for nothing on every right
+    click.
+    """
+    if editor.language is not PYTHON:
+        return
+
     # Lazy import: utils.maya_help_detector pulls Maya-aware helpers and
     # we want the menu code itself importable without that chain at load time.
     from ..utils.maya_help_detector import MayaHelpDetector
