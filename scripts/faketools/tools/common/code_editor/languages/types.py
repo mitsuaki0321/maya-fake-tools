@@ -71,7 +71,11 @@ class LanguageProfile:
         highlighter_factory (Optional[Callable]): Factory returning a
             ``QSyntaxHighlighter``. ``None`` falls back to plain text.
         completion_engine_factory (Optional[Callable]): Factory returning a
-            completion engine. ``None`` disables autocomplete.
+            completion engine compatible with ``AutocompleteController``
+            (currently a :class:`JediEngine` for Python). ``None``
+            disables autocomplete entirely for the language -- the
+            editor never builds an ``AutocompleteController`` for those
+            tabs, so jedi (or any other engine) is never invoked.
         folding_strategy (Optional[FoldingStrategy]): Per-language fold-region
             detector. Subclass :class:`FoldingStrategy` and override
             :meth:`detect`. ``None`` disables folding for the language;

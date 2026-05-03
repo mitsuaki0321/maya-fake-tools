@@ -39,6 +39,18 @@ def _python_highlighter_factory(document):
     return PythonHighlighter(document)
 
 
+def _python_completion_engine_factory():
+    """Return the process-wide :class:`JediEngine` for Python autocomplete.
+
+    Imported lazily so the languages package stays Qt- and jedi-free at
+    module import time. ``get_shared_engine`` configures Maya stub paths
+    on its first call and caches the engine for every subsequent caller.
+    """
+    from ..ui.autocomplete import get_shared_engine
+
+    return get_shared_engine()
+
+
 PYTHON = LanguageProfile(
     id="python",
     display_name="Python",
@@ -54,6 +66,7 @@ PYTHON = LanguageProfile(
     ),
     highlighter_factory=_python_highlighter_factory,
     context_menu_extender=python_context_menu_extender,
+    completion_engine_factory=_python_completion_engine_factory,
     folding_strategy=PythonFoldingStrategy(),
 )
 

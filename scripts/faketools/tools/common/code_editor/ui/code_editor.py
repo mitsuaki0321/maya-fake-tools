@@ -9,6 +9,7 @@ behaviour.
 
 from logging import getLogger
 import os
+from typing import Optional
 
 from .....lib_ui.qt_compat import (
     QPainter,
@@ -22,7 +23,7 @@ from ..command import file_io
 from ..languages import PYTHON, LanguageProfile, get_profile_for_path
 from ..themes import AppTheme
 from . import auto_indent, editor_context_menu, editor_overlays
-from .autocomplete import AutocompleteController, get_shared_engine
+from .autocomplete import AutocompleteController
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
 from .dialog_base import CodeEditorMessageBox
@@ -77,12 +78,12 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         self.bracket_match_highlighter = BracketMatchHighlighter(self)
 
-        # Autocomplete controller (jedi-backed). Silently inert if jedi is missing.
-        self.autocomplete = AutocompleteController(
-            self,
-            get_shared_engine(),
-            namespace_provider=self._get_exec_namespaces,
-        )
+        # Autocomplete controller is built only for languages whose profile
+        # supplies a completion_engine_factory. MEL and any future
+        # language without one get no controller at all -- jedi is never
+        # invoked on non-Python source.
+        self.autocomplete: Optional[AutocompleteController] = None
+        self._reconfigure_autocomplete()
 
         self.setup_line_numbers()
         self.connect_signals()
@@ -251,13 +252,16 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
     def set_language(self, language: LanguageProfile) -> None:
         """Rebind the editor to ``language`` and refresh language-driven UI.
 
-        Re-runs the highlighter factory and the placeholder text so a tab that
-        was created with one profile (e.g. the default) and later associated
-        with a file of another language picks up the new highlighter / hint.
+        Re-runs the highlighter factory, the placeholder text, and the
+        autocomplete controller so a tab that was created with one
+        profile (e.g. the default) and later associated with a file of
+        another language picks up the new highlighter / hint and stops
+        / starts pulling completions through the right engine.
         """
         self.language = language
         self.setup_syntax_highlighting()
         self._apply_placeholder_text()
+        self._reconfigure_autocomplete()
 
     def _apply_placeholder_text(self) -> None:
         """Set the placeholder hint based on the bound :class:`LanguageProfile`.
@@ -267,6 +271,32 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         """
         prefix = self.language.line_comment_with_space or ""
         self.setPlaceholderText(f"{prefix}Start typing {self.language.display_name} code...")
+
+    def _reconfigure_autocomplete(self) -> None:
+        """(Re)build the autocomplete controller for the current language.
+
+        Tears down any existing controller (uninstalls its event filters
+        via ``set_enabled(False)``) before consulting
+        ``language.completion_engine_factory``. A profile that leaves the
+        factory at ``None`` ends with ``self.autocomplete = None`` so
+        every consumer's existing ``getattr(editor, "autocomplete", None)``
+        guard short-circuits cleanly -- no popup, no jedi calls, no
+        cost on MEL tabs.
+        """
+        if self.autocomplete is not None:
+            self.autocomplete.set_enabled(False)
+            self.autocomplete = None
+
+        factory = self.language.completion_engine_factory
+        if factory is None:
+            return
+
+        engine = factory()
+        self.autocomplete = AutocompleteController(
+            self,
+            engine,
+            namespace_provider=self._get_exec_namespaces,
+        )
 
     def save_file(self, file_path: str = None) -> bool:
         """Save the editor contents via the command-layer writer."""
