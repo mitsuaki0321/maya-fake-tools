@@ -98,7 +98,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **2** | `mel_highlighter.py`（per-block 正規表現ステートマシン） | **完了**（2026-05-02 動作確認済） |
 | **3** | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **完了**（2026-05-03 動作確認済） |
 | **4** | autocomplete は Python 専用と確定（`MelCompletionEngine` 等は実装しない、必要になったら別途検討） | **完了**（2026-05-04） |
-| 5 | `MayaHelpDetector` の MEL パターン追加 | 未着手 |
+| **5** | `MayaHelpDetector` は Python 専用と確定（MEL パターンは追加しない、MEL タブでは guard で early return） | **完了**（2026-05-04） |
 | 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
 | 7 | 最終的な UI/UX 修正（ツールバー MEL ボタン専用アイコンデザイン、その他 Phase 1 後に発見された UI/UX 改善） | 未着手 |
 
@@ -396,6 +396,10 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ヘルプレンダラ関連の改修（`signature_highlighter` profile field、`detect.SIGNATURE_RE` 分岐、`global proc` シグネチャ抽出）は **autocomplete を MEL に拡張する将来の Phase 4-bis** に持ち越し。autocomplete 不要であればこれらも不要なので、現状ヘルプポップアップは Python タブでのみ動作（Maya help は言語非依存に既に動く）。
 
+### Phase 5（MayaHelpDetector = Python 専用と確定）
+
+- [x] **commit P5**: `editor_context_menu._maybe_add_maya_help` の冒頭に `if editor.language is not PYTHON: return` ガードを追加。MEL タブでは右クリック毎の document 全文スキャン + regex マッチが完全にスキップされる。MEL は `cmds.X` 形式を持たず、検出器を走らせても必ず `None` が返る（既に害はなかった）が、意図がコード上明示される + micro-perf 改善。MEL 用「Maya help URL を開く」機能は将来要望が出れば Phase 5-bis として `polyCube` 等の bare command パターン追加で実装可能、今回はスコープ外 _(hash: `2850e7b`)_
+
 ## 7. 決定ログ
 
 | 日付 | 決定事項 | 理由 |
@@ -427,6 +431,7 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 | 2026-05-02 | Phase 2 設計を VSCode `MEL.tmLanguage` (D:\claude\vscode-mel-syntax-heighlight\Visual-Studio-Code-MEL-Language) 調査結果で改訂 | 当初 `flag`（`-flag`）/ `variable_dollar` キーを新規追加する案だったが、参照実装（VSCode 拡張）にも `flag` 着色は無く、`$var` も既存 `variable` と同色にする方が一貫性が高い。代わりに `void`, `null`, `undefined`, `catch`, `alias` を Phase 1 案から追加。**新規 JSON キーゼロ**で実装可能となり、既存未使用 `escape_sequence` を MEL 文字列内エスケープで初有効化。Maya コマンド名 / ノード型名のハードコードリスト（VSCode 拡張は ~500 + ~500 を持つ）は Phase 2 ではスコープ外、Phase 4 autocomplete で `cmds.help("-list", "*")` を構築する際に highlighter にも共有する方針 |
 | 2026-05-02 | Phase 3 P3-1 を **bool predicate → class-based `IndentResolver` 階層** に再設計 | 当初 `LanguageProfile.extra_indent_trigger: Callable[[str], bool]` で実装し commit `b61dd87` 済だったが、ユーザーレビューで「Markdown を含む将来言語を考えると bool predicate は表現力不足」「auto-indent はクラスで設計すべき」と指摘。MEL の `{` 末尾は hanging indent (Rule 1) ではなく `+4` インデントが期待値で、bool predicate の上に Rule 1 が走ると挙動が混在する問題も顕在化。class 設計なら各言語が `_indent_on_enter` だけでなく `_iter_code_brackets` 等の任意ルールを override 可能（Markdown はブラケット規則を完全無効化、MEL は `//` `/* */` `"..."` を理解する scanner に差し替え、等）。`compute_new_indent` → `compute_indent` リネームも同 commit で実施。`extra_indent_trigger` フィールドは `indent_resolver: Optional[IndentResolver]` に置換 |
 | 2026-05-04 | Phase 4 を **「autocomplete は Python 専用と確定」軽量フェーズ** に変更 | 当初は `MelCompletionEngine` + `cmds.help` ベースの MEL autocomplete + ヘルプレンダラ MEL 化（~6 commits, ~1500-2000 行）を予定していたが、ユーザー判断で「Maya 標準 Script Editor も MEL 補完なし、MEL ユーザーの慣習として補完がなくても困らない、必要になったら別途検討」となった。Phase 0 で定義のみで放置されていた `LanguageProfile.completion_engine_factory` フィールドをここで初めて実用 — PYTHON のみ factory を設定、MEL は未指定で `AutocompleteController` 自体構築されない。差分は ~50 行の 1 commit で完結。`signature_highlighter` field 追加 / `SIGNATURE_RE` 分岐 / `global proc` 静的パース等の構想はすべて将来の Phase 4-bis 持ち越し |
+| 2026-05-04 | Phase 5 も **「MayaHelpDetector は Python 専用と確定」軽量フェーズ** に変更 | ユーザー判断で「MayaHelpDetector は MEL に必要ない」となった。実態調査の結果、検出器は MEL ソースに対しては既に空振り（`cmds.X` パターン未マッチ → メニュー項目追加なし）で害はなかったが、毎右クリック時の document 全文スキャン + regex マッチを節約する目的で `_maybe_add_maya_help` 冒頭に `if editor.language is not PYTHON: return` ガードを追加。MEL の bare command（`polyCube ...`）パターン拡張は将来 Phase 5-bis 持ち越し（要望出れば） |
 | 2026-05-02 | **`block_comment` フィールド自体を削除**（ブロックコメントトグル機能は実装しない） | `block_comment` プロファイルフィールドはあったが消費側ゼロ、ショートカットも未実装。`/* */` ネスト破綻の対策を入れる前にトグル本体の実装範囲を相談したところ、ユーザー判断で「現在の line comment トグル（`Ctrl+/`）で十分、ブロックコメントトグル機能自体不要」となった。`LanguageProfile.block_comment` / MEL の `block_comment=("/*", "*/")` / Python 側の説明コメントを撤去。Optional フィールド数 9 → 8。§8 の MEL `/* */` ネスト破綻エントリも撤去（実装しない以上の対策不要） |
 
 ## 7.5 UI/UX 決定事項（Phase 1 着手前に確定）
@@ -552,4 +557,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-04（**Phase 4 完了** — autocomplete は Python 専用と確定、`completion_engine_factory` hook を初実用、MEL タブでは jedi 一切呼ばれない設計に。次は Phase 5（`MayaHelpDetector` の MEL パターン追加 — 右クリック「Maya help on cmds.*」が MEL `polyCube ...` 形式でも機能するように））
+**最終更新**: 2026-05-04（**Phase 5 完了** — `MayaHelpDetector` も Python 専用と確定。MEL タブでは右クリック時の document スキャンを early return でスキップ。次は Phase 6（コンテキストメニュー = MEL `context_menu_extender` 実装、whatIs のみ））
