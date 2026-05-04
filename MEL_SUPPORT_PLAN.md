@@ -100,7 +100,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **4** | autocomplete は Python 専用と確定（`MelCompletionEngine` 等は実装しない、必要になったら別途検討） | **完了**（2026-05-04） |
 | **5** | `MayaHelpDetector` は Python 専用と確定（MEL パターンは追加しない、MEL タブでは guard で early return） | **完了**（2026-05-04） |
 | **6** | コンテキストメニュー（MEL `context_menu_extender` = What Is 系 2 アクション） | **完了**（2026-05-04 動作確認済） |
-| 7 | 最終的な UI/UX 修正（ツールバー MEL ボタン専用アイコンデザイン、その他 Phase 1 後に発見された UI/UX 改善） | 未着手 |
+| **7** | 最終 UI/UX 修正（ツールバー MEL ボタン専用アイコン + per-language accent_color + per-tab アクセントライン） | **完了**（2026-05-04 動作確認済） |
 
 ## 3. 調査結果サマリ（Python ハードコード分布）
 
@@ -400,6 +400,11 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 - [x] **commit P5**: `editor_context_menu._maybe_add_maya_help` の冒頭に `if editor.language is not PYTHON: return` ガードを追加。MEL タブでは右クリック毎の document 全文スキャン + regex マッチが完全にスキップされる。MEL は `cmds.X` 形式を持たず、検出器を走らせても必ず `None` が返る（既に害はなかった）が、意図がコード上明示される + micro-perf 改善。MEL 用「Maya help URL を開く」機能は将来要望が出れば Phase 5-bis として `polyCube` 等の bare command パターン追加で実装可能、今回はスコープ外 _(hash: `2850e7b`)_
 
+### Phase 7（最終 UI/UX 修正 — per-language accent カラー / アイコン）
+
+- [x] **commit P7-1**: ツールバー New ボタンを per-language アイコンに分離。`LanguageProfile.accent_color: Optional[str]` フィールドを新設し PYTHON = `#007acc`（既存 `ACCENT_BLUE` と同一）/ MEL = `#E67E22`（オレンジ、青系の Maya/Python と対比）。`ui/icons/new_{python,mel}_{normal,hover,pressed}.svg` 計 6 ファイル新設（`+` 記号 + 左上に `P` / `M` のレター、両方 accent カラー、normal/hover/pressed は明度シフト）。`VSCodeButton._load_icons` を「`<icon_name>_hover.svg` と `<icon_name>_pressed.svg` が両方存在すれば 3 ファイルそのまま読込、無ければ既存の placeholder recolor」に拡張（後方互換維持、他のツールバーアイコンに影響なし）。`toolbar.py` の new_buttons 構築を `VSCodeButton(f"new_{profile.id}", ...)` に。アイコンデザインはユーザー提供の参考デザイン（`x=0.5 y=9 font-size=8.5 font-weight=700` レター + `x=11 y=6.5-14` / `y=10.25 x=7.25-14.75` の `+`、`stroke-width=1.6 stroke-linecap=round`）に統一。Maya 動作確認済 _(hash: `41728bc`)_
+- [x] **commit P7-2**: タブの言語別アクセントライン。`EditableTabBar.paintEvent` を override し、各タブの上部 2px に `editor.language.accent_color` を描画（active / inactive 問わず常時表示で言語識別性向上）。`AppTheme.get_tab_widget_stylesheet` の `:selected` から `border-top: 2px solid ACCENT_BLUE` を削除（paintEvent が描画）+ 全タブに `border-top: 2px solid transparent` を追加（layout 安定化、tab activate/deactivate で行高さが変わらない）。`accent_color` 未設定の言語では描画スキップ（graceful fallback）。Maya 動作確認済 _(hash: `a08dca9`)_
+
 ### Phase 6（MEL コンテキストメニュー = What Is 系）
 
 - [x] **commit P6**: `languages/mel_actions.py` 新設し `mel_context_menu_extender` を実装。MEL タブの右クリックに **2 つのメニュー項目**を追加:
@@ -581,4 +586,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-04（**Phase 6 完了** — MEL タブの右クリックに `What Is 'X'` / `What Is 'X' (Open Source)` の 2 アクション追加。`maya.mel.eval` で `whatIs` 呼出 → 戻り値分類 → ターミナル表示 + 必要に応じて OS 標準テキストアプリで開く（Windows は notepad fallback あり）。次は Phase 7（最終 UI/UX 修正 — ツールバー MEL ボタン専用アイコン + Phase 1〜6 で発見された UI/UX 改善））
+**最終更新**: 2026-05-04（**Phase 7 完了 = 全 Phase 完了 🎉** — Phase 0〜7 すべて実装 + 動作確認済。`LanguageProfile` データクラス基盤の上に MEL を Python 並みに統合（実行 / コメント / 新規ファイル UI / シンタックスハイライト / auto-indent / 折りたたみ / コンテキストメニュー / 言語別アクセントカラー）、autocomplete と MayaHelpDetector は明示的に Python 専用と確定。`refactor/code-editor-language-profile` ブランチを main にマージ可能な状態）
