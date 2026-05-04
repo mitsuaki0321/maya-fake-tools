@@ -1,17 +1,26 @@
-"""
-Autocomplete controller for a single ``PythonEditor`` instance.
+"""Autocomplete controller for a single Python :class:`CodeEditor` instance.
+
+Phase 4 confirmed autocomplete as Python-only, so the controller is
+built only for editors whose :class:`LanguageProfile` supplies a
+``completion_engine_factory`` (currently just ``PYTHON``). Other
+languages -- MEL today -- never construct this controller, so the
+trigger heuristics below (``.`` / Python ``#`` comments / etc.) are
+free to be Python-flavoured without guarding for other syntaxes.
 
 Responsibilities:
 
-- Decide *when* to trigger a completion (dot or a printable keystroke while the popup is open)
-- Debounce word-triggered requests so fast typing doesn't thrash jedi
-- Dispatch requests through ``QThreadPool`` via :class:`CompletionRunnable`
-- Filter out stale responses once a newer request has superseded them
-- Drive the ``QCompleter`` popup and insert the chosen text on accept
+- Decide *when* to trigger a completion (dot or a printable keystroke
+  while the popup is open).
+- Debounce word-triggered requests so fast typing doesn't thrash jedi.
+- Dispatch requests through ``QThreadPool`` via
+  :class:`CompletionRunnable`.
+- Filter out stale responses once a newer request has superseded them.
+- Drive the ``QCompleter`` popup and insert the chosen text on accept.
 
-The controller holds no completion state beyond the latest request id and a
-cached "last popup was shown here" flag, so a single instance per editor tab
-is cheap. The ``JediEngine`` can be (and is) shared between controllers.
+The controller holds no completion state beyond the latest request id
+and a cached "last popup was shown here" flag, so a single instance
+per editor tab is cheap. The shared :class:`JediEngine` is reused
+across every controller in the process.
 """
 
 from __future__ import annotations
@@ -178,17 +187,21 @@ _DEFAULT_DEBOUNCE_MS = 100
 
 
 class AutocompleteController:
-    """Orchestrates jedi + popup + editor events for one editor widget.
+    """Orchestrates jedi + popup + editor events for one Python editor tab.
 
     Lifecycle:
-        1. Constructed by ``PythonEditor.setup_autocomplete()``.
+        1. Constructed by :meth:`CodeEditor._reconfigure_autocomplete`
+           when the editor's language has a ``completion_engine_factory``
+           (Python tabs only). Non-Python tabs leave
+           ``editor.autocomplete = None`` and never instantiate this
+           class.
         2. Editor forwards text-change / key-press hooks.
         3. Controller schedules async jedi calls via QThreadPool.
         4. On completion the popup opens; accept/cancel edits the document.
 
-    The controller is intentionally passive: it does nothing unless the editor
-    calls into it, so toggling it off is just ``set_enabled(False)`` and
-    forgetting about it.
+    The controller is intentionally passive: it does nothing unless the
+    editor calls into it, so toggling it off is just
+    ``set_enabled(False)`` and forgetting about it.
     """
 
     def __init__(
