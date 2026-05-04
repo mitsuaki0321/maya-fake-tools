@@ -149,15 +149,6 @@ def create_source_file(
     return FileOpResult.ok(destination=destination_path)
 
 
-def create_python_file(parent_dir: str, name: str, initial_content: str = "# New Python file\n") -> FileOpResult:
-    """Deprecated alias of :func:`create_source_file` pinned to the Python profile.
-
-    Kept so legacy callers keep working through Phase 0; new code should use
-    :func:`create_source_file` with an explicit :class:`LanguageProfile`.
-    """
-    return create_source_file(parent_dir, name, language=PYTHON, initial_content=initial_content)
-
-
 def create_folder(parent_dir: str, name: str) -> FileOpResult:
     """Create a new folder under ``parent_dir`` (idempotent via ``exist_ok``)."""
     destination_path = os.path.join(parent_dir, name)
@@ -173,7 +164,6 @@ __all__ = [
     "FileOpResult",
     "copy_item",
     "create_folder",
-    "create_python_file",
     "create_source_file",
     "delete_item",
     "get_unique_name",
