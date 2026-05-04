@@ -229,11 +229,11 @@ class AppTheme:
             padding: 8px 12px;
             border: 1px solid {cls.BORDER};
             border-bottom: none;
+            border-top: 2px solid transparent;
             margin-top: 0px;
         }}
         QTabBar::tab:selected {{
             background-color: {cls.TAB_ACTIVE_BACKGROUND};
-            border-top: 2px solid {cls.ACCENT_BLUE};
             color: {cls.TAB_TEXT_ACTIVE};
         }}
         QTabBar::tab:hover:!selected {{
