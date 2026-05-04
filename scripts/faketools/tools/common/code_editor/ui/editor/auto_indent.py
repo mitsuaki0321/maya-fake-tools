@@ -12,8 +12,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from ..languages import LanguageProfile
-from ..languages.indent_resolver import IndentResolver
+from ...languages import LanguageProfile
+from ...languages.indent_resolver import IndentResolver
 
 # Single shared fallback. Stateless, so reusing across calls is safe.
 _DEFAULT_RESOLVER = IndentResolver()

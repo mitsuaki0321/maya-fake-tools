@@ -10,7 +10,7 @@ manager keeps an empty region map and every public op short-circuits.
 
 from logging import getLogger
 
-from .....lib_ui.qt_compat import QTimer
+from ......lib_ui.qt_compat import QTimer
 
 logger = getLogger(__name__)
 

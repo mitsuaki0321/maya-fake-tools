@@ -8,7 +8,7 @@ selection overlays. Called from the editor's ``paintEvent``.
 
 from __future__ import annotations
 
-from ......lib_ui.qt_compat import QRect, Qt, QTextCursor
+from .......lib_ui.qt_compat import QRect, Qt, QTextCursor
 
 
 class MultiCursorPainter:

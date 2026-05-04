@@ -11,7 +11,7 @@ from logging import getLogger
 import os
 from typing import Optional
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QPainter,
     QPlainTextEdit,
     Qt,
@@ -19,18 +19,18 @@ from .....lib_ui.qt_compat import (
     QTextCursor,
     Signal,
 )
-from ..command import file_io
-from ..languages import PYTHON, LanguageProfile, get_profile_for_path
-from ..themes import AppTheme
-from . import auto_indent, editor_context_menu, editor_overlays
-from .autocomplete import AutocompleteController
+from ...command import file_io
+from ...languages import PYTHON, LanguageProfile, get_profile_for_path
+from ...themes import AppTheme
+from ..autocomplete import AutocompleteController
+from ..dialog_base import CodeEditorMessageBox
+from . import auto_indent, context_menu, overlays
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
-from .dialog_base import CodeEditorMessageBox
-from .editor_shortcuts import EditorShortcuts
-from .editor_text_operations import EditorTextOperationsMixin
 from .line_number_area import LineNumberArea
 from .multi_cursor import MultiCursorMixin
+from .shortcuts import EditorShortcuts
+from .text_operations import EditorTextOperationsMixin
 
 logger = getLogger(__name__)
 
@@ -440,7 +440,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         """Repaint the viewport when the caret's line or selection state flips.
 
         The actual decoration is drawn in
-        :func:`editor_overlays.paint_current_line_border` (top/bottom rules) —
+        :func:`overlays.paint_current_line_border` (top/bottom rules) —
         this hook just invalidates the viewport so the rules move with the
         caret. Short-circuited when neither the line nor the selection state
         changed, since intra-line cursor moves don't need a full repaint.
@@ -549,10 +549,10 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         on top of the lines while the lines would themselves clip the caret's
         first/last pixel.
         """
-        editor_overlays.paint_current_line_border(self, event)
+        overlays.paint_current_line_border(self, event)
         super().paintEvent(event)
-        editor_overlays.paint_indent_guides(self, event)
-        editor_overlays.paint_fold_placeholders(self, event)
+        overlays.paint_indent_guides(self, event)
+        overlays.paint_fold_placeholders(self, event)
         self.bracket_match_highlighter.paint(event)
 
         painter = QPainter(self.viewport())
@@ -561,7 +561,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
     def contextMenuEvent(self, event):
         """Show the editor's right-click menu."""
-        editor_context_menu.build_context_menu(self, event).exec_(event.globalPos())
+        context_menu.build_context_menu(self, event).exec_(event.globalPos())
 
     def handle_return_key(self):
         """Handle Return/Enter key press for auto-indentation."""
@@ -594,6 +594,3 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 # Deprecated alias kept while call sites continue to refer to ``PythonEditor`` —
 # every existing ``isinstance(editor, PythonEditor)`` check still succeeds.
 PythonEditor = CodeEditor
-
-# Re-exported from the new module so existing imports keep working.
-from .editor_tab_widget import CodeEditorWidget  # noqa: E402, F401

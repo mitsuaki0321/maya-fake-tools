@@ -6,7 +6,7 @@ line, the Smart Home helper, and Tab / Shift+Tab / Backspace indent editing.
 Multi-cursor equivalents live in the ``multi_cursor`` package.
 """
 
-from .....lib_ui.qt_compat import QTextCursor
+from ......lib_ui.qt_compat import QTextCursor
 
 
 class EditorTextOperationsMixin:

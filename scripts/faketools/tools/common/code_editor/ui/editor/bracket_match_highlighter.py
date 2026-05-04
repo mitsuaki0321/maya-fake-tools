@@ -13,14 +13,14 @@ cell needs direct painting.
 
 from logging import getLogger
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QColor,
     QPainter,
     QPen,
     QRect,
     QTextCursor,
 )
-from ..themes import AppTheme
+from ...themes import AppTheme
 
 logger = getLogger(__name__)
 

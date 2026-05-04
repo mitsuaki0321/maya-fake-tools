@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import contextlib
 
-from ......lib_ui.qt_compat import QApplication, Qt, QTextCursor
+from .......lib_ui.qt_compat import QApplication, Qt, QTextCursor
 
 
 class MultiCursorInputHandler:

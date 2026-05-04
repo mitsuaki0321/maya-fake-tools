@@ -22,8 +22,8 @@ from .....lib_ui.qt_compat import (
 )
 from ..languages import DEFAULT_PROFILE, LanguageProfile
 from ..themes import AppTheme
-from .code_editor import PythonEditor
 from .dialog_base import CodeEditorMessageBox
+from .editor import PythonEditor
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)

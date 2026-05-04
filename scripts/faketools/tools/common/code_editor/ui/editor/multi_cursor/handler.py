@@ -16,8 +16,8 @@ read, modified, and in future tested independently.
 
 from __future__ import annotations
 
-from ......lib_ui.qt_compat import QColor, QKeySequence, QShortcut, Signal
-from ...themes import AppTheme
+from .......lib_ui.qt_compat import QColor, QKeySequence, QShortcut, Signal
+from ....themes import AppTheme
 from .controller import MultiCursorController
 from .input import MultiCursorInputHandler
 from .painter import MultiCursorPainter

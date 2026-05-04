@@ -8,7 +8,7 @@ from logging import getLogger
 
 from .....lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
 from ..themes import AppTheme
-from .code_editor import CodeEditorWidget
+from .editor_tab_widget import CodeEditorWidget
 from .panels import FileExplorer, OutputTerminal
 from .toolbar import ToolBar
 

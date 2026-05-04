@@ -13,8 +13,8 @@ text and before the multi-cursor painter draws caret highlights.
 
 from __future__ import annotations
 
-from .....lib_ui.qt_compat import QColor, QPainter, QPen, Qt
-from ..themes import AppTheme
+from ......lib_ui.qt_compat import QColor, QPainter, QPen, Qt
+from ...themes import AppTheme
 
 _INDENT_SIZE = 4
 

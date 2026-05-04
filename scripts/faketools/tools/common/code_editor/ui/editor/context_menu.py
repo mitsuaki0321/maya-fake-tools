@@ -20,9 +20,9 @@ the actions are stateless beyond the editor reference they capture.
 
 from __future__ import annotations
 
-from .....lib_ui.qt_compat import QAction, QTextCursor
-from ..languages import PYTHON
-from ..themes import AppTheme
+from ......lib_ui.qt_compat import QAction, QTextCursor
+from ...languages import PYTHON
+from ...themes import AppTheme
 
 
 def build_context_menu(editor, event):
@@ -74,7 +74,7 @@ def _maybe_add_maya_help(menu, editor):
 
     # Lazy import: utils.maya_help_detector pulls Maya-aware helpers and
     # we want the menu code itself importable without that chain at load time.
-    from ..utils.maya_help_detector import MayaHelpDetector
+    from ...utils.maya_help_detector import MayaHelpDetector
 
     settings_manager = _find_attr_in_parents(editor, "settings_manager")
     detector = MayaHelpDetector(settings_manager)

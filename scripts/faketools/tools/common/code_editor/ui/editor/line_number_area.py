@@ -3,7 +3,7 @@ Line number area widget for the code editor.
 Displays line numbers and fold indicators alongside the code editor.
 """
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QColor,
     QPainter,
     QPen,
@@ -13,7 +13,7 @@ from .....lib_ui.qt_compat import (
     QTimer,
     QWidget,
 )
-from ..themes import AppTheme
+from ...themes import AppTheme
 
 # Fade animation settings
 _FADE_DURATION_MS = 150  # Total animation duration
