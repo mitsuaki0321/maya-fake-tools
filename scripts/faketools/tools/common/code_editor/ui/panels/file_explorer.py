@@ -39,7 +39,7 @@ from ......lib_ui.qt_compat import (
 from ...command import file_ops
 from ...languages import ALL_PROFILES, DEFAULT_PROFILE, KNOWN_EXTENSIONS, LanguageProfile
 from ...themes import AppTheme
-from ..dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
+from ..dialogs import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
 

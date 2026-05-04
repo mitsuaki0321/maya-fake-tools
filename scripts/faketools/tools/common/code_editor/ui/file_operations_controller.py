@@ -20,7 +20,7 @@ import os
 
 from ..command import file_io
 from ..languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
-from .dialog_base import CodeEditorInputDialog, CodeEditorMessageBox
+from .dialogs import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
 

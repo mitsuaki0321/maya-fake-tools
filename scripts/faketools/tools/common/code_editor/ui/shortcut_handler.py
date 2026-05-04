@@ -4,7 +4,7 @@ Manages all keyboard shortcuts and their associated functionality.
 """
 
 from .....lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
-from .find_replace_dialog import FindReplaceDialog
+from .dialogs import FindReplaceDialog
 
 
 class ShortcutHandler:

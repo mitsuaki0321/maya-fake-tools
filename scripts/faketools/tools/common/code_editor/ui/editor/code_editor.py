@@ -23,7 +23,7 @@ from ...command import file_io
 from ...languages import PYTHON, LanguageProfile, get_profile_for_path
 from ...themes import AppTheme
 from ..autocomplete import AutocompleteController
-from ..dialog_base import CodeEditorMessageBox
+from ..dialogs import CodeEditorMessageBox
 from . import auto_indent, context_menu, overlays
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager

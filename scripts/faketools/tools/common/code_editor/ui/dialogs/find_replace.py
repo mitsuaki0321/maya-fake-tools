@@ -6,7 +6,7 @@ UI layer only: builds the dialog, translates checkbox state into a
 ``command.search.SearchEngine``.
 """
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QButtonGroup,
     QCheckBox,
     QFrame,
@@ -21,9 +21,9 @@ from .....lib_ui.qt_compat import (
     QTextCursor,
     QVBoxLayout,
 )
-from ..command.search import InvalidRegexError, SearchEngine, SearchOptions
-from ..themes import AppTheme
-from .dialog_base import CodeEditorDialog, CodeEditorMessageBox
+from ...command.search import InvalidRegexError, SearchEngine, SearchOptions
+from ...themes import AppTheme
+from .base import CodeEditorDialog, CodeEditorMessageBox
 
 
 class FindReplaceDialog(CodeEditorDialog):
