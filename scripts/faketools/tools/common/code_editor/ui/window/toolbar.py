@@ -5,9 +5,9 @@ Provides quick access to common actions with proper icon states and styling.
 
 import os
 
-from .....lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
-from ..languages import ALL_PROFILES, DEFAULT_PROFILE
-from ..themes import AppTheme
+from ......lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
+from ...languages import ALL_PROFILES, DEFAULT_PROFILE
+from ...themes import AppTheme
 
 # Icon target colours per button state (applied via dynamic SVG recoloring).
 _ICON_STATE_COLORS = {
@@ -59,11 +59,14 @@ class VSCodeButton(QPushButton):
         self._set_normal_state()
 
     def _get_icon_path(self):
-        """Get the base path for icons."""
-        # Get the directory containing this file (ui directory)
+        """Get the base path for icons.
+
+        SVG assets live under ``ui/icons/``; this file moved into
+        ``ui/window/`` during the layout refactor, so we step one level
+        up to reach the icons directory.
+        """
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Icons are now in the ui/icons directory
-        return os.path.join(current_dir, "icons")
+        return os.path.normpath(os.path.join(current_dir, "..", "icons"))
 
     def _load_icons(self):
         """Load icon states.

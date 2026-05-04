@@ -6,16 +6,16 @@ Provides the primary UI layout and coordinates between components.
 from logging import getLogger
 import os
 
-from .....lib_ui.qt_compat import QWidget
-from ..command import maya_shelf, os_launcher
-from ..command.execution import build_exec_globals
-from ..languages import PYTHON
-from ..settings import SettingsManager
-from .dialogs import CodeEditorMessageBox
-from .operations import ExecutionManager, FileOperationsController
+from ......lib_ui.qt_compat import QWidget
+from ...command import maya_shelf, os_launcher
+from ...command.execution import build_exec_globals
+from ...languages import PYTHON
+from ...settings import SettingsManager
+from ..dialogs import CodeEditorMessageBox
+from ..operations import ExecutionManager, FileOperationsController
 from .shortcut_handler import ShortcutHandler
-from .tabs import UISessionManager
-from .ui_layout_manager import UILayoutManager
+from ..tabs import UISessionManager
+from .layout_manager import UILayoutManager
 
 logger = getLogger(__name__)
 
@@ -144,7 +144,7 @@ class MayaCodeEditor(QWidget):
 
     def _setup_fallback_directory(self):
         """Setup fallback directory when workspace is not available."""
-        from .....lib_ui.qt_compat import QDir
+        from ......lib_ui.qt_compat import QDir
 
         # Try home directory as fallback
         home_path = QDir.homePath()

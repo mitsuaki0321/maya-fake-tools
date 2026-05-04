@@ -3,8 +3,8 @@ Shortcut handler for Code Editor.
 Manages all keyboard shortcuts and their associated functionality.
 """
 
-from .....lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
-from .dialogs import FindReplaceDialog
+from ......lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
+from ..dialogs import FindReplaceDialog
 
 
 class ShortcutHandler:
@@ -196,7 +196,7 @@ class ShortcutHandler:
         if engine is None:
             return None
 
-        from .help.controller import HelpPopupController
+        from ..help.controller import HelpPopupController
 
         controller = HelpPopupController(self.main_window, engine)
         self.main_window._help_popup_controller = controller

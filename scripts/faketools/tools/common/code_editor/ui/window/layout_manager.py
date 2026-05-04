@@ -6,10 +6,10 @@ Handles UI initialization, theming, and layout management.
 import contextlib
 from logging import getLogger
 
-from .....lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
-from ..themes import AppTheme
-from .panels import FileExplorer, OutputTerminal
-from .tabs import CodeEditorWidget
+from ......lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
+from ...themes import AppTheme
+from ..panels import FileExplorer, OutputTerminal
+from ..tabs import CodeEditorWidget
 from .toolbar import ToolBar
 
 logger = getLogger(__name__)
@@ -239,7 +239,7 @@ class UILayoutManager:
         # Restore autocomplete setting. Auto-disable + gray out the toolbar
         # button when jedi isn't importable so the user can see why toggling
         # does nothing.
-        from ..command.autocomplete import JEDI_AVAILABLE
+        from ...command.autocomplete import JEDI_AVAILABLE
 
         autocomplete_enabled = self.main_window.settings_manager.get("autocomplete.enabled", True) and JEDI_AVAILABLE
         if self.main_window.code_editor and hasattr(self.main_window.code_editor, "set_autocomplete_enabled"):

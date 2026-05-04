@@ -20,7 +20,7 @@ except ImportError:
     logger.info("Maya not available - running in standalone mode")
 
 from .integration.maya_dock import MayaDock  # noqa: E402
-from .ui.main_window import MayaCodeEditor  # noqa: E402
+from .ui.window import MayaCodeEditor  # noqa: E402
 
 # Global reference to keep the editor alive
 _editor_instance = None
