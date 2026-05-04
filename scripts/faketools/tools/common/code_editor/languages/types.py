@@ -80,6 +80,11 @@ class LanguageProfile:
             detector. Subclass :class:`FoldingStrategy` and override
             :meth:`detect`. ``None`` disables folding for the language;
             ``CodeFoldingManager`` then keeps an empty region map.
+        accent_color (Optional[str]): Hex colour string used as the
+            language's UI accent -- the active tab's top indicator and
+            the toolbar "New {language} File" button colour. ``None``
+            falls back to the editor's default theme accent and skips
+            the per-tab indicator line.
     """
 
     id: str
@@ -100,6 +105,8 @@ class LanguageProfile:
     highlighter_factory: Optional[Callable] = None
     completion_engine_factory: Optional[Callable] = None
     folding_strategy: Optional[FoldingStrategy] = None
+
+    accent_color: Optional[str] = None
 
     @property
     def file_filter(self) -> str:

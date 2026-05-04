@@ -66,11 +66,29 @@ class VSCodeButton(QPushButton):
         return os.path.join(current_dir, "icons")
 
     def _load_icons(self):
-        """Load icon states with dynamic color replacement from the normal SVG template."""
+        """Load icon states.
+
+        When ``<icon_name>_hover.svg`` and ``<icon_name>_pressed.svg``
+        exist alongside ``_normal.svg``, all three are loaded as-is so an
+        icon set can carry per-state colours (used by per-language new
+        buttons whose accent colour differs from the standard theme).
+        Otherwise the normal SVG is used as a template and recoloured
+        per state via the placeholder colour replacement, the original
+        VSCode-style behaviour.
+        """
         self.icons = {}
         normal_path = os.path.join(self.icon_base_path, f"{self.icon_name}_normal.svg")
         if not os.path.exists(normal_path):
             return
+
+        hover_path = os.path.join(self.icon_base_path, f"{self.icon_name}_hover.svg")
+        pressed_path = os.path.join(self.icon_base_path, f"{self.icon_name}_pressed.svg")
+        if os.path.exists(hover_path) and os.path.exists(pressed_path):
+            self.icons["normal"] = QIcon(normal_path)
+            self.icons["hover"] = QIcon(hover_path)
+            self.icons["pressed"] = QIcon(pressed_path)
+            return
+
         with open(normal_path, encoding="utf-8") as f:
             svg_template = f.read()
         for state, color in _ICON_STATE_COLORS.items():
@@ -282,14 +300,16 @@ class ToolBar(QWidget):
         self.toggle_explorer_button = VSCodeButton("toggle", "Toggle File Explorer")
         self.refresh_explorer_button = VSCodeButton("refresh", "Refresh File Explorer")
         self.run_button = RunButton("run", "Run Code (Numpad Enter / Ctrl+Enter)")
-        # Per-language "new file" buttons. Phase 1 reuses the same "new" icon
-        # across languages; per-language icon design is deferred (§7.5).
-        # The DEFAULT_PROFILE button advertises Ctrl+N because the shortcut
-        # path always creates the default language.
+        # Per-language "new file" buttons. Each profile owns an icon
+        # named ``new_<id>_normal.svg`` (so ``new_python_normal.svg`` /
+        # ``new_mel_normal.svg``) carrying the language letter and the
+        # profile's accent_color. The DEFAULT_PROFILE button advertises
+        # Ctrl+N because the shortcut path always creates the default
+        # language.
         self.new_buttons: dict[str, VSCodeButton] = {}
         for profile in ALL_PROFILES:
             shortcut_hint = " (Ctrl+N)" if profile is DEFAULT_PROFILE else ""
-            self.new_buttons[profile.id] = VSCodeButton("new", f"New {profile.display_name} File{shortcut_hint}")
+            self.new_buttons[profile.id] = VSCodeButton(f"new_{profile.id}", f"New {profile.display_name} File{shortcut_hint}")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
         self.save_all_button = VSCodeButton("saveall", "Save All Files (Ctrl+Shift+S)")
         self.workspace_button = VSCodeButton("folder", "Open Root Directory")

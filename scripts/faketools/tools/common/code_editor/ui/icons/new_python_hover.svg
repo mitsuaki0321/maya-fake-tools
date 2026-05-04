@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <text x="0.5" y="9" font-family="Arial, sans-serif" font-size="8.5" font-weight="700" fill="#1e9ee0">P</text>
+  <g stroke="#1e9ee0" stroke-width="1.6" stroke-linecap="round" fill="none">
+    <line x1="11" y1="6.5" x2="11" y2="14"/>
+    <line x1="7.25" y1="10.25" x2="14.75" y2="10.25"/>
+  </g>
+</svg>

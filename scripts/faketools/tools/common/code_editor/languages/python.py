@@ -68,6 +68,7 @@ PYTHON = LanguageProfile(
     context_menu_extender=python_context_menu_extender,
     completion_engine_factory=_python_completion_engine_factory,
     folding_strategy=PythonFoldingStrategy(),
+    accent_color="#007acc",
 )
 
 

@@ -100,6 +100,7 @@ MEL = LanguageProfile(
     highlighter_factory=_mel_highlighter_factory,
     context_menu_extender=mel_context_menu_extender,
     folding_strategy=MelFoldingStrategy(),
+    accent_color="#E67E22",
 )
 
 
