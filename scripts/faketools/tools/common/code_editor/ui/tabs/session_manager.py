@@ -6,7 +6,7 @@ Handles saving and restoring session state including open tabs and their content
 from logging import getLogger
 import os
 
-from ..languages import DEFAULT_PROFILE, get_profile_for_path
+from ...languages import DEFAULT_PROFILE, get_profile_for_path
 
 logger = getLogger(__name__)
 

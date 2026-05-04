@@ -12,7 +12,7 @@ import contextlib
 from logging import getLogger
 import os
 
-from .....lib_ui.qt_compat import (
+from ......lib_ui.qt_compat import (
     QFileDialog,
     Qt,
     QTabWidget,
@@ -20,10 +20,10 @@ from .....lib_ui.qt_compat import (
     QTimer,
     Signal,
 )
-from ..languages import DEFAULT_PROFILE, LanguageProfile
-from ..themes import AppTheme
-from .dialogs import CodeEditorMessageBox
-from .editor import PythonEditor
+from ...languages import DEFAULT_PROFILE, LanguageProfile
+from ...themes import AppTheme
+from ..dialogs import CodeEditorMessageBox
+from ..editor import PythonEditor
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
@@ -367,7 +367,7 @@ class CodeEditorWidget(QTabWidget):
         """Middle-click on the tab bar → close the hovered tab."""
         try:
             if obj == self.tabBar() and hasattr(event, "type"):
-                from .....lib_ui.qt_compat import QtCore
+                from ......lib_ui.qt_compat import QtCore
 
                 if event.type() == QtCore.QEvent.MouseButtonPress and hasattr(event, "button") and event.button() == Qt.MiddleButton:
                     tab_index = self.tabBar().tabAt(event.pos())

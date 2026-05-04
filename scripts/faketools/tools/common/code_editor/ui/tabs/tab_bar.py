@@ -3,7 +3,7 @@ Custom tab bar for the code editor.
 Handles tab-specific behaviors and per-language accent colour drawing.
 """
 
-from .....lib_ui.qt_compat import QColor, QPainter, Qt, QTabBar
+from ......lib_ui.qt_compat import QColor, QPainter, Qt, QTabBar
 
 
 class EditableTabBar(QTabBar):

@@ -8,8 +8,8 @@ from logging import getLogger
 
 from .....lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
 from ..themes import AppTheme
-from .editor_tab_widget import CodeEditorWidget
 from .panels import FileExplorer, OutputTerminal
+from .tabs import CodeEditorWidget
 from .toolbar import ToolBar
 
 logger = getLogger(__name__)
