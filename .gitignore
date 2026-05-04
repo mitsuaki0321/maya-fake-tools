@@ -231,6 +231,7 @@ uv.lock
 scripts/faketools/tools/common/snapshot_capture/sample_ui.py
 annotation-refactoring-plan.md
 REFACTORING_MEMO.md
+MEL_SUPPORT_PLAN.md
 
 # Documentation output files
 docs/output/
