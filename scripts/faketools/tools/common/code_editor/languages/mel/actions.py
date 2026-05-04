@@ -27,7 +27,7 @@ import re
 import sys
 from typing import Optional
 
-from .helpers import find_execution_manager
+from ..editor_helpers import find_execution_manager
 
 logger = getLogger(__name__)
 
@@ -231,7 +231,7 @@ def mel_context_menu_extender(menu, editor, identifier: str) -> None:
     every identifier shape (commands, procedures, variables, unknowns)
     so no pre-validation is needed here.
     """
-    from .....lib_ui.qt_compat import QAction
+    from ......lib_ui.qt_compat import QAction
 
     menu.addSeparator()
 

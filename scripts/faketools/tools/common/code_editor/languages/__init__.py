@@ -1,15 +1,27 @@
 """Language profile system for the code editor.
 
-The :class:`LanguageProfile` dataclass centralizes everything that varies
-between languages — file extensions, comment characters, execution
-``sourceType``, syntax highlighter, autocomplete engine, etc. Required
-fields (``id`` / ``display_name`` / ``extensions`` / ``default_extension``)
-identify the language and its file association; everything else is opt-in
-per language and ``None`` means the feature is disabled.
+Public API of the package. The :class:`LanguageProfile` dataclass
+(defined in :mod:`.profile`) centralizes everything that varies between
+languages — file extensions, comment characters, execution
+``sourceType``, syntax highlighter, indent / folding strategies,
+right-click extender, etc. Required fields (``id`` / ``display_name`` /
+``extensions`` / ``default_extension``) identify the language and its
+file association; everything else is opt-in per language and ``None``
+means the feature is disabled.
 
 Consumers should resolve a profile via :func:`get_profile_for_path` (or
-hold the profile attached to an editor tab) and skip / hide / grey out any
-feature whose corresponding profile field is ``None``.
+hold the profile attached to an editor tab) and skip / hide / grey out
+any feature whose corresponding profile field is ``None``.
+
+Layout:
+
+* :mod:`.profile` -- :class:`LanguageProfile` + :class:`ShelfConfig`
+* :mod:`.indent_resolver` -- :class:`IndentResolver` base class
+* :mod:`.folding_strategy` -- :class:`FoldingStrategy` base class
+* :mod:`.editor_helpers` -- cross-language editor plumbing
+  (``find_execution_manager`` / ``dispatch_inspection``)
+* :mod:`.python` -- Python implementation subpackage; exports ``PYTHON``
+* :mod:`.mel` -- MEL implementation subpackage; exports ``MEL``
 """
 
 from __future__ import annotations
@@ -18,8 +30,8 @@ import os
 from typing import Optional
 
 from .mel import MEL
+from .profile import LanguageProfile, ShelfConfig
 from .python import PYTHON
-from .types import LanguageProfile, ShelfConfig
 
 ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)
 DEFAULT_PROFILE: LanguageProfile = PYTHON

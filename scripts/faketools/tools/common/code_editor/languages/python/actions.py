@@ -20,7 +20,7 @@ Qt-free at import time (smoke tests, lint runs).
 
 from __future__ import annotations
 
-from .helpers import dispatch_inspection
+from ..editor_helpers import dispatch_inspection
 
 _PYTHON_DIR_TEMPLATE = """
 try:
@@ -118,7 +118,7 @@ def python_context_menu_extender(menu, editor, identifier: str) -> None:
     Qt classes are imported lazily so :mod:`languages.python_actions` itself
     stays Qt-free at import time (smoke tests, lint runs).
     """
-    from .....lib_ui.qt_compat import QAction
+    from ......lib_ui.qt_compat import QAction
 
     menu.addSeparator()
 

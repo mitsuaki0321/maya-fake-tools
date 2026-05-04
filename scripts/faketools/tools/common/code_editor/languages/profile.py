@@ -1,8 +1,8 @@
-"""Dataclasses for the language profile system.
+"""Profile dataclasses (:class:`LanguageProfile`, :class:`ShelfConfig`).
 
 Kept separate from ``__init__.py`` so the module can re-export both the
-types and the concrete profile instances without running into circular
-imports between the two.
+profile types and the concrete profile instances without running into
+circular imports between the two.
 """
 
 from __future__ import annotations
