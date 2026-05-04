@@ -1,17 +1,20 @@
-"""
-Execution command layer for the Code Editor.
+"""Execution command layer for the Code Editor.
 
 Owns the Maya-side execution primitives:
-- ``build_exec_globals`` constructs the persistent globals dict (with Maya
-  modules merged in when available) used by the editor's exec sandbox.
-  Currently Python-specific; generalising for non-Python languages is a
-  Phase 1 concern.
-- ``NativeExecutionBridge`` drives Maya's hidden ``cmdScrollFieldExecuter`` so
-  executed code integrates with Maya's native output and undo behaviour.
-  The ``sourceType`` is supplied by the bound :class:`LanguageProfile`.
 
-UI code should never import ``maya.cmds`` directly; it should go through this
-module so that non-Maya environments (tests, linting) remain importable.
+* :func:`build_exec_globals` constructs the persistent globals dict used
+  by the Python execution path and jedi. Python-specific by design --
+  see the function docstring.
+* :class:`NativeExecutionBridge` drives Maya's hidden
+  ``cmdScrollFieldExecuter`` so executed code integrates with Maya's
+  native output and undo behaviour. ``sourceType`` is supplied by the
+  bound :class:`LanguageProfile`, so the bridge itself is
+  language-agnostic; one bridge instance per language id is cached by
+  :class:`ExecutionManager`.
+
+UI code should never import ``maya.cmds`` directly; it should go through
+this module so that non-Maya environments (tests, linting) remain
+importable.
 """
 
 from __future__ import annotations
@@ -34,12 +37,13 @@ except ImportError:
 
 
 def build_exec_globals(base: Optional[dict] = None) -> dict:
-    """Build the persistent execution globals dict used by the editor.
+    """Build the persistent execution globals dict used by the Python editor.
 
-    Currently Python-specific: layers ``cmds`` / ``om2`` / ``om`` into the dict
-    so that Python execution and jedi see them. Non-Python languages don't
-    use the returned dict (Maya's MEL executer maintains its own state).
-    Generalising this is a Phase 1 concern.
+    Python-specific by design. Layers ``cmds`` / ``om2`` / ``om`` into the
+    dict so the Python execution path and jedi (autocomplete) see them.
+    MEL goes through Maya's MEL executer which keeps its own state -- it
+    doesn't need or use this dict. Phase 4 confirmed autocomplete as
+    Python-only, so there's no plan to generalise further.
 
     Starts from ``base`` (or a fresh dict with ``__name__`` set to ``__main__``)
     and layers in Maya modules when Maya is importable. Safe to call in a
@@ -170,10 +174,11 @@ class NativeExecutionBridge:
     def execute_silent(self, code: str, exec_globals: Optional[dict] = None) -> bool:
         """Execute ``code`` via ``cmds.python`` without echoing it to Maya's terminal.
 
-        Python-specific by design — used for ``dir()`` / ``help()`` inspection
-        which are Python concepts. Non-Python languages should route through
-        their own ``inspection_snippets`` + :meth:`execute_code` instead.
-        Generalising this method (e.g. ``mel.eval`` for MEL) is a Phase 1 concern.
+        Python-specific by design. Used by the Python ``context_menu_extender``
+        for Inspect Object / Inspect Help / Reload Module snippets. MEL's
+        ``What Is`` action takes a different route entirely
+        (:func:`maya.mel.eval` from ``languages/mel/actions.py``) and never
+        touches this method, so there's no need to generalise it.
 
         Falls back to :meth:`execute_code` if ``cmds.python`` isn't usable, and
         finally to a plain ``exec`` outside of Maya.
