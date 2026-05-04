@@ -12,8 +12,7 @@ from ..command.execution import build_exec_globals
 from ..languages import PYTHON
 from ..settings import SettingsManager
 from .dialogs import CodeEditorMessageBox
-from .execution_manager import ExecutionManager
-from .file_operations_controller import FileOperationsController
+from .operations import ExecutionManager, FileOperationsController
 from .shortcut_handler import ShortcutHandler
 from .tabs import UISessionManager
 from .ui_layout_manager import UILayoutManager

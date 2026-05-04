@@ -13,8 +13,8 @@ import contextlib
 from logging import getLogger
 from typing import Optional
 
-from ..command.execution import MAYA_AVAILABLE, NativeExecutionBridge
-from ..languages import PYTHON, LanguageProfile
+from ...command.execution import MAYA_AVAILABLE, NativeExecutionBridge
+from ...languages import PYTHON, LanguageProfile
 
 logger = getLogger(__name__)
 

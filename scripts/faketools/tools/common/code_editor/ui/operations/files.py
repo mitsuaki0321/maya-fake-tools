@@ -18,9 +18,9 @@ from __future__ import annotations
 from logging import getLogger
 import os
 
-from ..command import file_io
-from ..languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
-from .dialogs import CodeEditorInputDialog, CodeEditorMessageBox
+from ...command import file_io
+from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
+from ..dialogs import CodeEditorInputDialog, CodeEditorMessageBox
 
 logger = getLogger(__name__)
 
