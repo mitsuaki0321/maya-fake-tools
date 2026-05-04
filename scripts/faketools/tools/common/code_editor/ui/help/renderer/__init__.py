@@ -1,13 +1,23 @@
 """Docstring → HTML rendering for the help popup. Qt-independent.
 
+The help popup is reached only from the autocomplete path, which Phase
+4 confirmed as Python-only. Everything in this subpackage therefore
+assumes Python source / docstring shapes (``def`` signatures,
+numpydoc / Google / RST docstring layouts, Pygments ``PythonLexer``).
+The one exception is :mod:`.maya`, which renders ``cmds.help(name)``
+output -- that text is language-agnostic since Maya's help format
+doesn't depend on the calling language.
+
 Modules:
-- :mod:`.theme`      — palette & sizing
-- :mod:`.syntax`     — Pygments highlighter
-- :mod:`.detect`     — format detection + signature / section extraction
-- :mod:`.blocks`     — shared HTML primitives
-- :mod:`.structured` — numpydoc / Google / RST via ``docstring_parser``
-- :mod:`.maya`       — ``cmds.help()`` output
-- :mod:`.plain`      — fallback
+
+* :mod:`.theme`      — palette & sizing
+* :mod:`.syntax`     — Pygments-backed Python highlighter
+* :mod:`.detect`     — format detection + signature / section extraction
+                       (``SIGNATURE_RE`` is Python-shaped)
+* :mod:`.blocks`     — shared HTML primitives
+* :mod:`.structured` — numpydoc / Google / RST via ``docstring_parser``
+* :mod:`.maya`       — ``cmds.help()`` output (language-agnostic)
+* :mod:`.plain`      — fallback
 """
 
 from __future__ import annotations

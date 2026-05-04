@@ -1,5 +1,7 @@
 """Pygments-backed Python highlighting matched to the editor palette.
 
+Used by the help popup, which Phase 4 confirmed is Python-only -- so
+the lexer is hardcoded to ``PythonLexer`` rather than language-driven.
 Falls back to ``html.escape`` when Pygments is unavailable.
 """
 

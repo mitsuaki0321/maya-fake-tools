@@ -1,4 +1,10 @@
-"""Format detection and text extraction helpers (plain strings / dicts only, no HTML)."""
+"""Format detection and text extraction helpers (plain strings / dicts only, no HTML).
+
+The only Maya-help heuristic (:func:`looks_like_maya_help`) is
+language-agnostic; everything else assumes Python source / docstring
+shapes because the help popup is Python-only (see
+:mod:`..__init__` for context).
+"""
 
 from __future__ import annotations
 
