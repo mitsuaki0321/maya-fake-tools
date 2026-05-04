@@ -99,7 +99,7 @@ ALL_PROFILES: tuple[LanguageProfile, ...] = (PYTHON, MEL)   # MEL を追加
 | **3** | ブレース折りたたみ戦略追加、`auto_indent` の汎用化 | **完了**（2026-05-03 動作確認済） |
 | **4** | autocomplete は Python 専用と確定（`MelCompletionEngine` 等は実装しない、必要になったら別途検討） | **完了**（2026-05-04） |
 | **5** | `MayaHelpDetector` は Python 専用と確定（MEL パターンは追加しない、MEL タブでは guard で early return） | **完了**（2026-05-04） |
-| 6 | コンテキストメニュー（MEL `context_menu_extender` 実装、whatIs のみ。Source File は対象外） | 未着手 |
+| **6** | コンテキストメニュー（MEL `context_menu_extender` = What Is 系 2 アクション） | **完了**（2026-05-04 動作確認済） |
 | 7 | 最終的な UI/UX 修正（ツールバー MEL ボタン専用アイコンデザイン、その他 Phase 1 後に発見された UI/UX 改善） | 未着手 |
 
 ## 3. 調査結果サマリ（Python ハードコード分布）
@@ -400,6 +400,30 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 - [x] **commit P5**: `editor_context_menu._maybe_add_maya_help` の冒頭に `if editor.language is not PYTHON: return` ガードを追加。MEL タブでは右クリック毎の document 全文スキャン + regex マッチが完全にスキップされる。MEL は `cmds.X` 形式を持たず、検出器を走らせても必ず `None` が返る（既に害はなかった）が、意図がコード上明示される + micro-perf 改善。MEL 用「Maya help URL を開く」機能は将来要望が出れば Phase 5-bis として `polyCube` 等の bare command パターン追加で実装可能、今回はスコープ外 _(hash: `2850e7b`)_
 
+### Phase 6（MEL コンテキストメニュー = What Is 系）
+
+- [x] **commit P6**: `languages/mel_actions.py` 新設し `mel_context_menu_extender` を実装。MEL タブの右クリックに **2 つのメニュー項目**を追加:
+  - `What Is 'X'` (read-only): `maya.mel.eval('whatIs "X";')` で識別子を分類してターミナルに `// What Is 'X': ...` 形式でメッセージ表示。エディタ状態は不変
+  - `What Is 'X' (Open Source)`: 同じ分類 + パスが取れた場合は **OS 標準テキストアプリで開く**（コードエディタの編集タブには load しない — Maya bundled scripts 等を上書きする事故を防ぐため）
+  
+  **分類対応**:
+  | `whatIs` 戻り値 | メッセージ |
+  |---|---|
+  | `Command` | Built-in Maya command（C++ 実装、ソースなし）|
+  | `Run Time Command` | Runtime command + `cmds.runTimeCommand(name, q=True, command=True)` で本体取得して表示 |
+  | `Mel procedure found in: <path>` | MEL procedure + パス + `(Open Source)` 案内 |
+  | `Script found in: <path>` | MEL script (uncompiled) + パス + 案内 |
+  | `Mel procedure` (パスなし) | inline 定義（ソース未記録）|
+  | `<type> variable` | MEL variable (type: ...) |
+  | `Unknown` | 未知識別子 |
+  | 想定外文字列 | 戻り値そのまま raw 表示（フォールバック）|
+  
+  **OS 標準アプリ起動**: Windows は `os.startfile` → 失敗時 `notepad.exe` フォールバック（`.mel` は標準で関連付けされておらず `WinError -2147221003` を返すため）、macOS は `open -t`（テキストエディタ強制）、Linux は `xdg-open`。
+  
+  **`whatIs` 呼出**: Python wrapper `cmds.whatIs` は存在しないため `maya.mel.eval()` 経由。識別子の `\` / `"` をエスケープ。
+  
+  ruff PASS、smoke test PASS（11 ケース全分類パターン）、Maya 動作確認済 _(hash: `eb4cc9c`)_
+
 ## 7. 決定ログ
 
 | 日付 | 決定事項 | 理由 |
@@ -557,4 +581,4 @@ PythonEditor = CodeEditor   # deprecated: kept for one release
 
 ---
 
-**最終更新**: 2026-05-04（**Phase 5 完了** — `MayaHelpDetector` も Python 専用と確定。MEL タブでは右クリック時の document スキャンを early return でスキップ。次は Phase 6（コンテキストメニュー = MEL `context_menu_extender` 実装、whatIs のみ））
+**最終更新**: 2026-05-04（**Phase 6 完了** — MEL タブの右クリックに `What Is 'X'` / `What Is 'X' (Open Source)` の 2 アクション追加。`maya.mel.eval` で `whatIs` 呼出 → 戻り値分類 → ターミナル表示 + 必要に応じて OS 標準テキストアプリで開く（Windows は notepad fallback あり）。次は Phase 7（最終 UI/UX 修正 — ツールバー MEL ボタン専用アイコン + Phase 1〜6 で発見された UI/UX 改善））
