@@ -436,3 +436,89 @@ class EditorTextOperationsMixin:
 
         cursor = self.textCursor()
         cursor.deletePreviousChar()
+
+    # -------------------- Comment toggle (Ctrl+/) --------------------
+
+    def toggle_line_comment(self):
+        """Toggle line comments using the editor's :class:`LanguageProfile`.
+
+        Graceful no-op for languages whose profile leaves
+        ``line_comment`` / ``line_comment_with_space`` at ``None``. Dispatches
+        to :func:`multi_cursor.comment.toggle_line_comment_multi_cursor` when
+        extra cursors are active so multi-cursor edits stay synchronized.
+        """
+        prefix = self.language.line_comment
+        prefix_with_space = self.language.line_comment_with_space
+        if prefix is None or prefix_with_space is None:
+            return
+
+        if getattr(self, "all_cursors", None):
+            from .multi_cursor.comment import toggle_line_comment_multi_cursor
+
+            toggle_line_comment_multi_cursor(self, prefix, prefix_with_space)
+            return
+
+        cursor = self.textCursor()
+
+        if cursor.hasSelection():
+            start_pos = cursor.selectionStart()
+            end_pos = cursor.selectionEnd()
+        else:
+            start_pos = cursor.position()
+            end_pos = cursor.position()
+
+        cursor.setPosition(start_pos)
+        cursor.movePosition(QTextCursor.StartOfLine)
+        start_line = cursor.blockNumber()
+
+        cursor.setPosition(end_pos)
+        end_line = cursor.blockNumber()
+
+        cursor.beginEditBlock()
+
+        try:
+            all_commented = True
+            for line_num in range(start_line, end_line + 1):
+                cursor.movePosition(QTextCursor.Start)
+                for _ in range(line_num):
+                    cursor.movePosition(QTextCursor.NextBlock)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                line_text = cursor.selectedText().lstrip()
+
+                if line_text and not line_text.startswith(prefix):
+                    all_commented = False
+                    break
+
+            for line_num in range(start_line, end_line + 1):
+                cursor.movePosition(QTextCursor.Start)
+                for _ in range(line_num):
+                    cursor.movePosition(QTextCursor.NextBlock)
+                cursor.movePosition(QTextCursor.StartOfLine)
+                cursor.movePosition(QTextCursor.EndOfLine, QTextCursor.KeepAnchor)
+                line_text = cursor.selectedText()
+
+                if not line_text.strip():
+                    continue
+
+                cursor.movePosition(QTextCursor.StartOfLine)
+
+                if all_commented:
+                    stripped = line_text.lstrip()
+                    if stripped.startswith(prefix_with_space):
+                        comment_pos = line_text.find(prefix_with_space)
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, comment_pos)
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(prefix_with_space))
+                        cursor.removeSelectedText()
+                    elif stripped.startswith(prefix):
+                        comment_pos = line_text.find(prefix)
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, comment_pos)
+                        cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, len(prefix))
+                        cursor.removeSelectedText()
+                else:
+                    first_non_space = len(line_text) - len(line_text.lstrip())
+                    cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, first_non_space)
+                    cursor.insertText(prefix_with_space)
+
+        finally:
+            cursor.endEditBlock()
