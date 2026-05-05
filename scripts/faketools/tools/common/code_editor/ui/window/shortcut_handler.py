@@ -3,7 +3,7 @@ Shortcut handler for Code Editor.
 Manages all keyboard shortcuts and their associated functionality.
 """
 
-from ......lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
+from ......lib_ui.qt_compat import QKeySequence, QShortcut, Qt
 from ..dialogs import (
     find_next as _find_next_in_dialog,
     find_previous as _find_previous_in_dialog,
@@ -120,12 +120,12 @@ class ShortcutHandler:
             editor.toggle_line_comment()
 
     def _handle_run_current_line_or_selection(self):
-        """Handle run current line or selection shortcut - only when code editor widget has focus."""
-        self.run_current_line_or_selection()
+        """Forward Ctrl+Enter to ExecutionManager."""
+        self.main_window.execution_manager.run_current_line_or_selection()
 
     def _handle_run_entire_file(self):
-        """Handle run entire file shortcut - only when code editor widget has focus."""
-        self.run_entire_file()
+        """Forward Ctrl+Shift+Enter to ExecutionManager."""
+        self.main_window.execution_manager.run_entire_file()
 
     def _handle_show_find_dialog(self):
         """Forward Ctrl+F to the dialogs package (lazy-creates the dialog)."""
@@ -183,44 +183,3 @@ class ShortcutHandler:
         from ..help.controller import toggle_help_popup
 
         toggle_help_popup(self.main_window)
-
-    def run_current_line_or_selection(self):
-        """Run current line or selected text (Ctrl+Enter)."""
-        # Run current line or selection
-        current_editor = self.main_window.get_current_editor()
-        if not current_editor:
-            return
-
-        cursor = current_editor.textCursor()
-
-        if cursor.hasSelection():
-            # Execute selected text
-            selected_text = cursor.selectedText().replace("\u2029", "\n")  # Handle paragraph separators
-            if selected_text.strip():
-                self.main_window.execution_manager.is_selection_execution = True
-                self.main_window.execution_manager.is_full_execution = False
-                self.main_window.execution_manager.execute_with_echo(selected_text)
-        else:
-            # Execute current line
-            cursor.select(QTextCursor.LineUnderCursor)
-            line_text = cursor.selectedText().strip()
-            if line_text:
-                self.main_window.execution_manager.is_selection_execution = True
-                self.main_window.execution_manager.is_full_execution = False
-                self.main_window.execution_manager.execute_with_echo(line_text)
-            else:
-                self.main_window.output_terminal.append_warning("Current line is empty")
-
-    def run_entire_file(self):
-        """Run entire file (Ctrl+Shift+Enter)."""
-        # Run entire file
-        if not self.main_window.code_editor:
-            return
-
-        code = self.main_window.code_editor.get_current_code()
-        if code.strip():
-            self.main_window.execution_manager.is_selection_execution = False
-            self.main_window.execution_manager.is_full_execution = True
-            self.main_window.execution_manager.execute_with_echo(code)
-        else:
-            self.main_window.output_terminal.append_warning("File is empty")

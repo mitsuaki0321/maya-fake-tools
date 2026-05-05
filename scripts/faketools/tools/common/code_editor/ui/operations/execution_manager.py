@@ -13,6 +13,7 @@ import contextlib
 from logging import getLogger
 from typing import Optional
 
+from ......lib_ui.qt_compat import QTextCursor
 from ...command.execution import MAYA_AVAILABLE, NativeExecutionBridge
 from ...languages import PYTHON, LanguageProfile
 
@@ -136,6 +137,52 @@ class ExecutionManager:
             self.is_selection_execution = False
             self.is_full_execution = True
             self.execute_with_echo(code)
+
+    def run_current_line_or_selection(self):
+        """Execute the selection if any, otherwise the line under the caret (Ctrl+Enter).
+
+        Differs from :meth:`run_current_script` in the no-selection branch:
+        ``run_current_script`` falls back to the full file, this one to a
+        single line. Empty lines / empty selections produce a terminal
+        warning rather than a silent no-op.
+        """
+        current_editor = self.main_window.get_current_editor()
+        if not current_editor:
+            return
+
+        cursor = current_editor.textCursor()
+
+        if cursor.hasSelection():
+            # ``selectedText`` returns U+2029 between visual lines; the bridge
+            # expects real newlines.
+            selected_text = cursor.selectedText().replace(chr(0x2029), "\n")
+            if selected_text.strip():
+                self.is_selection_execution = True
+                self.is_full_execution = False
+                self.execute_with_echo(selected_text)
+            return
+
+        cursor.select(QTextCursor.LineUnderCursor)
+        line_text = cursor.selectedText().strip()
+        if line_text:
+            self.is_selection_execution = True
+            self.is_full_execution = False
+            self.execute_with_echo(line_text)
+        else:
+            self.output_terminal.append_warning("Current line is empty")
+
+    def run_entire_file(self):
+        """Execute the entire active tab regardless of the current selection (Ctrl+Shift+Enter)."""
+        if not self.main_window.code_editor:
+            return
+
+        code = self.main_window.code_editor.get_current_code()
+        if code.strip():
+            self.is_selection_execution = False
+            self.is_full_execution = True
+            self.execute_with_echo(code)
+        else:
+            self.output_terminal.append_warning("File is empty")
 
     def execute_code(self, code: str, language: Optional[LanguageProfile] = None):
         """Execute code without showing it in terminal (for variable replacement).
