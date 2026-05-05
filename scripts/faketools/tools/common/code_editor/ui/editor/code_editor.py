@@ -604,8 +604,3 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             self.language,
         )
         self.insertPlainText("\n" + new_indent)
-
-
-# Deprecated alias kept while call sites continue to refer to ``PythonEditor`` —
-# every existing ``isinstance(editor, PythonEditor)`` check still succeeds.
-PythonEditor = CodeEditor

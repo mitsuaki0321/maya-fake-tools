@@ -264,7 +264,7 @@ class EditorTextOperationsMixin:
 
     def select_next_occurrence(self):
         """Ctrl+D — thin alias that forwards to the multi-cursor implementation."""
-        # PythonEditor always inherits from MultiCursorMixin, so add_next_occurrence
+        # CodeEditor always inherits from MultiCursorMixin, so add_next_occurrence
         # is defined. Kept as a separate method purely because ``editor_shortcuts``
         # binds Ctrl+D to this name and we don't want to touch the shortcut table.
         self.add_next_occurrence()

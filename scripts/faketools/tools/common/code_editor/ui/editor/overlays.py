@@ -39,7 +39,7 @@ def paint_fold_placeholders(editor, event) -> None:
     """Draw ``...`` placeholders after every folded header on screen.
 
     Args:
-        editor: The ``PythonEditor`` instance whose ``viewport`` to paint.
+        editor: The ``CodeEditor`` instance whose ``viewport`` to paint.
         event: The Qt ``QPaintEvent`` that triggered the parent paint.
     """
     fold_manager = editor.fold_manager

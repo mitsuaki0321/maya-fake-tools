@@ -1,5 +1,5 @@
 """
-Tabbed container that hosts one ``PythonEditor`` per open file.
+Tabbed container that hosts one ``CodeEditor`` per open file.
 
 Split from ``code_editor.py`` so the editor widget and the tab widget can be
 read independently. The tab widget owns preview-tab lifecycle, session
@@ -23,7 +23,7 @@ from ......lib_ui.qt_compat import (
 from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
 from ...themes import AppTheme
 from ..dialogs import CodeEditorMessageBox
-from ..editor import PythonEditor
+from ..editor import CodeEditor
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
@@ -76,13 +76,13 @@ class CodeEditorWidget(QTabWidget):
         # the bar has finished moving, so the new index order is already in place.
         self.tabBar().tabMoved.connect(lambda *_: self.save_session_if_available())
 
-    def new_file(self, is_draft: bool = False, language: LanguageProfile = DEFAULT_PROFILE) -> PythonEditor:
+    def new_file(self, is_draft: bool = False, language: LanguageProfile = DEFAULT_PROFILE) -> CodeEditor:
         """Create a new file tab (or the Draft tab on first launch).
 
         ``language`` selects the :class:`LanguageProfile` for the new tab and
         drives the placeholder filename's extension.
         """
-        editor = PythonEditor(self, language=language)
+        editor = CodeEditor(self, language=language)
 
         if is_draft:
             tab_name = "Draft"
@@ -111,7 +111,7 @@ class CodeEditorWidget(QTabWidget):
 
         return editor
 
-    def open_preview(self, content: str, title: str = "Preview") -> PythonEditor:
+    def open_preview(self, content: str, title: str = "Preview") -> CodeEditor:
         """Open ``content`` in a preview tab, reusing the existing one if present."""
         if self.preview_tab_index >= 0 and self.preview_tab_index < self.count():
             editor = self.widget(self.preview_tab_index)
@@ -133,7 +133,7 @@ class CodeEditorWidget(QTabWidget):
 
                 return editor
 
-        editor = PythonEditor(self)
+        editor = CodeEditor(self)
         editor.is_preview = True
         editor.is_modified = False
         editor.preview_title = title
@@ -197,7 +197,7 @@ class CodeEditorWidget(QTabWidget):
         self._word_wrap_enabled = enabled
         for i in range(self.count()):
             editor = self.widget(i)
-            if isinstance(editor, PythonEditor):
+            if isinstance(editor, CodeEditor):
                 editor.set_word_wrap(enabled)
 
     def set_autocomplete_enabled(self, enabled: bool):
@@ -209,7 +209,7 @@ class CodeEditorWidget(QTabWidget):
         self._autocomplete_enabled = enabled
         for i in range(self.count()):
             editor = self.widget(i)
-            if isinstance(editor, PythonEditor) and getattr(editor, "autocomplete", None) is not None:
+            if isinstance(editor, CodeEditor) and getattr(editor, "autocomplete", None) is not None:
                 editor.autocomplete.set_enabled(enabled)
 
     def _apply_autocomplete(self, editor):
@@ -228,7 +228,7 @@ class CodeEditorWidget(QTabWidget):
 
         for i in range(self.count()):
             editor = self.widget(i)
-            if isinstance(editor, PythonEditor) and editor.file_path:
+            if isinstance(editor, CodeEditor) and editor.file_path:
                 existing_path = os.path.normpath(os.path.abspath(editor.file_path)).replace("\\", "/")
                 if existing_path == file_path:
                     # Promote preview tab to permanent if this file was previewed.
@@ -240,7 +240,7 @@ class CodeEditorWidget(QTabWidget):
                     self.setCurrentIndex(i)
                     return True
 
-        editor = PythonEditor(self, language=get_profile_for_path(file_path))
+        editor = CodeEditor(self, language=get_profile_for_path(file_path))
         if not editor.load_file(file_path):
             return False
 
@@ -265,7 +265,7 @@ class CodeEditorWidget(QTabWidget):
 
         for i in range(self.count()):
             editor = self.widget(i)
-            if isinstance(editor, PythonEditor) and editor.file_path:
+            if isinstance(editor, CodeEditor) and editor.file_path:
                 existing_path = os.path.normpath(os.path.abspath(editor.file_path)).replace("\\", "/")
                 if existing_path == file_path:
                     # Already open — just focus it (no duplicate preview).
@@ -291,7 +291,7 @@ class CodeEditorWidget(QTabWidget):
                 self.save_session_if_available()
                 return True
 
-        editor = PythonEditor(self, language=get_profile_for_path(file_path))
+        editor = CodeEditor(self, language=get_profile_for_path(file_path))
         if not editor.load_file(file_path):
             return False
 
@@ -317,7 +317,7 @@ class CodeEditorWidget(QTabWidget):
             return False
 
         editor = self.widget(self.preview_tab_index)
-        if not (editor and isinstance(editor, PythonEditor)):
+        if not (editor and isinstance(editor, CodeEditor)):
             return False
 
         current_text = self.tabText(self.preview_tab_index)
@@ -387,7 +387,7 @@ class CodeEditorWidget(QTabWidget):
     def save_current_file(self) -> bool:
         """Save the active editor, prompting for a destination if untitled."""
         editor = self.currentWidget()
-        if not isinstance(editor, PythonEditor):
+        if not isinstance(editor, CodeEditor):
             return False
 
         if hasattr(editor, "is_draft") and editor.is_draft:
@@ -424,14 +424,14 @@ class CodeEditorWidget(QTabWidget):
 
     def get_current_code(self) -> str:
         editor = self.currentWidget()
-        if isinstance(editor, PythonEditor):
+        if isinstance(editor, CodeEditor):
             return editor.toPlainText()
         return ""
 
     def close_tab(self, index: int):
         """Close ``index`` after prompting if there are unsaved changes."""
         editor = self.widget(index)
-        if not isinstance(editor, PythonEditor):
+        if not isinstance(editor, CodeEditor):
             return
 
         if hasattr(editor, "is_draft") and editor.is_draft:
@@ -474,7 +474,7 @@ class CodeEditorWidget(QTabWidget):
         self.setCurrentIndex(current_index)
         return success
 
-    def update_tab_title(self, editor: PythonEditor):
+    def update_tab_title(self, editor: CodeEditor):
         """Refresh the tab text for ``editor`` (skip preview tabs).
 
         Hot path: ``contentChanged`` fires this on every keystroke. After the

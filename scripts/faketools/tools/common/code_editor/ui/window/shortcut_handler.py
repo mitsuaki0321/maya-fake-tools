@@ -60,7 +60,7 @@ class ShortcutHandler:
         self.run_file_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.run_file_shortcut.activated.connect(self._handle_run_entire_file)
 
-        # Note: Numpad Enter is handled directly in PythonEditor.keyPressEvent
+        # Note: Numpad Enter is handled directly in CodeEditor.keyPressEvent
         # to ensure it takes precedence over default text editing behavior
 
         # Comment toggle (VSCode-like, only active within code editor tabs)

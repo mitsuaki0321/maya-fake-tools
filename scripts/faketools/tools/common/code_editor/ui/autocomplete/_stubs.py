@@ -2,7 +2,7 @@
 
 Lives next to the autocomplete controller so the editor widget itself
 stays Maya-agnostic at module scope. The single shared engine is reused
-across all ``PythonEditor`` instances because jedi caches results by
+across all ``CodeEditor`` instances because jedi caches results by
 source hash internally.
 
 :func:`get_shared_engine` is a lazy getter — first call configures the

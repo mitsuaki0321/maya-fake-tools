@@ -1,5 +1,5 @@
 """
-Multi-cursor mixin for ``PythonEditor``.
+Multi-cursor mixin for ``CodeEditor``.
 
 Thin facade: this module keeps the public API (``init_multi_cursor``,
 ``handle_multi_cursor_keys``, etc.) that external callers already rely on,

@@ -49,7 +49,7 @@ class EditorShortcuts:
 
         Args:
             event: QKeyEvent
-            editor: PythonEditor instance
+            editor: CodeEditor instance
 
         Returns:
             bool: True if event was handled, False otherwise
