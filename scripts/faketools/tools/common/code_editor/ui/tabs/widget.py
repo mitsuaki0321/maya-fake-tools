@@ -20,7 +20,7 @@ from ......lib_ui.qt_compat import (
     QTimer,
     Signal,
 )
-from ...languages import DEFAULT_PROFILE, LanguageProfile
+from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
 from ...themes import AppTheme
 from ..dialogs import CodeEditorMessageBox
 from ..editor import PythonEditor
@@ -240,7 +240,7 @@ class CodeEditorWidget(QTabWidget):
                     self.setCurrentIndex(i)
                     return True
 
-        editor = PythonEditor(self)
+        editor = PythonEditor(self, language=get_profile_for_path(file_path))
         if not editor.load_file(file_path):
             return False
 
@@ -291,7 +291,7 @@ class CodeEditorWidget(QTabWidget):
                 self.save_session_if_available()
                 return True
 
-        editor = PythonEditor(self)
+        editor = PythonEditor(self, language=get_profile_for_path(file_path))
         if not editor.load_file(file_path):
             return False
 

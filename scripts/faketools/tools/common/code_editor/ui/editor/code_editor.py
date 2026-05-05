@@ -158,9 +158,20 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         Profiles without a ``highlighter_factory`` leave ``self.highlighter``
         at ``None`` so the editor falls back to plain unstyled text.
+
+        Detaches any previously-installed highlighter first. ``QSyntaxHighlighter``
+        instances stay registered against the document via Qt's parent/child
+        relationship, so simply rebinding ``self.highlighter`` would leave the
+        old highlighter listening to ``contentsChange`` and competing with the
+        new one — most visibly, ``PythonHighlighter``'s debounced ``rehighlight()``
+        would erase MEL formats roughly 30 ms after every keystroke.
         """
-        if self.language.highlighter_factory is None:
+        if self.highlighter is not None:
+            self.highlighter.setDocument(None)
+            self.highlighter.setParent(None)
+            self.highlighter.deleteLater()
             self.highlighter = None
+        if self.language.highlighter_factory is None:
             return
         self.highlighter = self.language.highlighter_factory(self.document())
 
@@ -586,7 +597,11 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.setTextCursor(cursor)
 
         new_indent = auto_indent.compute_indent(
-            self.document(), block_number, current_line, text_before_cursor, self.language,
+            self.document(),
+            block_number,
+            current_line,
+            text_before_cursor,
+            self.language,
         )
         self.insertPlainText("\n" + new_indent)
 
