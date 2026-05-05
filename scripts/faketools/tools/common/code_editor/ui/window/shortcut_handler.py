@@ -175,57 +175,14 @@ class ShortcutHandler:
         toolbar.autocomplete_toggled.emit(button.is_active())
 
     def _handle_toggle_help_popup(self):
-        """Toggle the floating docstring popup (Ctrl+Shift+Space).
+        """Forward Ctrl+Shift+Space to the help package.
 
-        Lazily constructs the :class:`HelpPopupController` on first use
-        so jedi / the help popup widget don't load until someone asks.
-        The controller decides whether to target the autocomplete
-        selection or the identifier at the caret based on popup state.
+        Lazy-imports ``toggle_help_popup`` so jedi / the help popup widget
+        don't load until the user actually presses the shortcut.
         """
-        controller = self._get_or_create_help_popup_controller()
-        if controller is None:
-            return
-        controller.toggle()
+        from ..help.controller import toggle_help_popup
 
-    def _get_or_create_help_popup_controller(self):
-        """Return the shared ``HelpPopupController``, lazily building it.
-
-        Returns ``None`` when autocomplete isn't wired up (jedi missing,
-        no editor, etc.). The controller is attached to the main window
-        so it lives as long as the window does.
-        """
-        existing = getattr(self.main_window, "_help_popup_controller", None)
-        if existing is not None:
-            return existing
-
-        engine = self._shared_engine()
-        if engine is None:
-            return None
-
-        from ..help.controller import HelpPopupController
-
-        controller = HelpPopupController(self.main_window, engine)
-        self.main_window._help_popup_controller = controller
-        return controller
-
-    def _shared_engine(self):
-        """Find the ``JediEngine`` used by the current editor's autocomplete.
-
-        Reusing the already-configured engine means we inherit its
-        ``sys.path`` / stubs / subprocess avoidance settings. Returns
-        ``None`` when no editor is available yet (tool just opened,
-        headless, jedi missing).
-        """
-        get_current_editor = getattr(self.main_window, "get_current_editor", None)
-        if get_current_editor is None:
-            return None
-        editor = get_current_editor()
-        if editor is None:
-            return None
-        ac = getattr(editor, "autocomplete", None)
-        if ac is None:
-            return None
-        return getattr(ac, "engine", None)
+        toggle_help_popup(self.main_window)
 
     def run_current_line_or_selection(self):
         """Run current line or selected text (Ctrl+Enter)."""

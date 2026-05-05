@@ -314,4 +314,64 @@ class HelpPopupController(QObject):
         return False
 
 
-__all__ = ["HelpPopupController"]
+# -------------------- Window-level bootstrap --------------------
+#
+# Bridges the QShortcut layer (``ShortcutHandler``) to a single cached
+# controller per main window. Living here -- next to the controller it
+# constructs -- keeps the lazy-init rules with the thing they bootstrap:
+# the controller is reused across keystrokes, but never built until
+# Ctrl+Shift+Space fires for the first time.
+
+
+def _shared_engine(main_window) -> Optional[JediEngine]:
+    """Return the ``JediEngine`` already configured on the active editor.
+
+    Reusing it inherits the editor's ``sys.path`` / stubs / subprocess
+    avoidance settings. Returns ``None`` when no editor is available
+    (tool just opened, headless, jedi missing).
+    """
+    get_current_editor = getattr(main_window, "get_current_editor", None)
+    if get_current_editor is None:
+        return None
+    editor = get_current_editor()
+    if editor is None:
+        return None
+    ac = getattr(editor, "autocomplete", None)
+    if ac is None:
+        return None
+    return getattr(ac, "engine", None)
+
+
+def _ensure_controller(main_window) -> Optional[HelpPopupController]:
+    """Return the cached ``HelpPopupController``, lazy-creating it on demand.
+
+    Returns ``None`` when autocomplete isn't wired up (jedi missing, no
+    editor, etc.). The controller is attached to the main window so it
+    lives as long as the window does.
+    """
+    existing = getattr(main_window, "_help_popup_controller", None)
+    if existing is not None:
+        return existing
+
+    engine = _shared_engine(main_window)
+    if engine is None:
+        return None
+
+    controller = HelpPopupController(main_window, engine)
+    main_window._help_popup_controller = controller
+    return controller
+
+
+def toggle_help_popup(main_window) -> None:
+    """Toggle the floating docstring popup (Ctrl+Shift+Space).
+
+    Graceful no-op when autocomplete isn't wired up. The controller decides
+    whether to target the autocomplete selection or the identifier at the
+    caret based on popup state.
+    """
+    controller = _ensure_controller(main_window)
+    if controller is not None:
+        controller.toggle()
+
+
+__all__ = ["HelpPopupController", "toggle_help_popup"]
