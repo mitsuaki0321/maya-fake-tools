@@ -472,3 +472,65 @@ class FindReplaceDialog(CodeEditorDialog):
             )
             # Save to file immediately
             self.parent_window.settings_manager.save_settings()
+
+
+# -------------------- Window-level entry points --------------------
+#
+# These bridge the QShortcut layer (``ShortcutHandler``) to the dialog without
+# making the handler responsible for the dialog's lifecycle. The dialog is
+# cached as ``main_window.find_replace_dialog`` on first use so subsequent
+# Ctrl+F / Ctrl+H / F3 / Shift+F3 reuse it (preserving search history).
+
+
+def _ensure_dialog(main_window):
+    """Return ``(dialog, editor)`` for the active editor, lazy-creating the dialog.
+
+    Returns ``(None, None)`` when no editor is available so callers can no-op.
+    Re-binds ``dialog.editor`` to the current editor on every call: tabs change,
+    but the dialog instance does not.
+    """
+    current_editor = main_window.get_current_editor()
+    if not current_editor:
+        return None, None
+
+    dialog = getattr(main_window, "find_replace_dialog", None)
+    if dialog is None:
+        dialog = FindReplaceDialog(current_editor, main_window)
+        main_window.find_replace_dialog = dialog
+
+    dialog.editor = current_editor
+    return dialog, current_editor
+
+
+def show_find_dialog(main_window):
+    """Show the find dialog, lazy-creating it on first use."""
+    dialog, editor = _ensure_dialog(main_window)
+    if dialog is None:
+        return
+    dialog.show_find_mode(editor.textCursor().selectedText())
+
+
+def show_replace_dialog(main_window):
+    """Show the replace dialog, lazy-creating it on first use."""
+    dialog, editor = _ensure_dialog(main_window)
+    if dialog is None:
+        return
+    dialog.show_replace_mode(editor.textCursor().selectedText())
+
+
+def find_next(main_window):
+    """Advance the cached dialog's search, or open the find dialog if hidden."""
+    dialog = getattr(main_window, "find_replace_dialog", None)
+    if dialog is not None and dialog.isVisible():
+        dialog.find_next()
+    else:
+        show_find_dialog(main_window)
+
+
+def find_previous(main_window):
+    """Step back through the cached dialog's search, or open it if hidden."""
+    dialog = getattr(main_window, "find_replace_dialog", None)
+    if dialog is not None and dialog.isVisible():
+        dialog.find_previous()
+    else:
+        show_find_dialog(main_window)

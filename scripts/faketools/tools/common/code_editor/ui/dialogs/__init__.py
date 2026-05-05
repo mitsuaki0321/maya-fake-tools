@@ -22,7 +22,13 @@ from .base import (
     CodeEditorMessageBox,
     DialogPositioner,
 )
-from .find_replace import FindReplaceDialog
+from .find_replace import (
+    FindReplaceDialog,
+    find_next,
+    find_previous,
+    show_find_dialog,
+    show_replace_dialog,
+)
 
 __all__ = [
     "CodeEditorDialog",
@@ -31,4 +37,8 @@ __all__ = [
     "CodeEditorMessageBox",
     "DialogPositioner",
     "FindReplaceDialog",
+    "find_next",
+    "find_previous",
+    "show_find_dialog",
+    "show_replace_dialog",
 ]

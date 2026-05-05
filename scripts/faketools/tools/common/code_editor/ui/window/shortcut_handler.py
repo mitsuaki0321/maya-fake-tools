@@ -4,7 +4,12 @@ Manages all keyboard shortcuts and their associated functionality.
 """
 
 from ......lib_ui.qt_compat import QKeySequence, QShortcut, Qt, QTextCursor
-from ..dialogs import FindReplaceDialog
+from ..dialogs import (
+    find_next as _find_next_in_dialog,
+    find_previous as _find_previous_in_dialog,
+    show_find_dialog as _show_find_dialog,
+    show_replace_dialog as _show_replace_dialog,
+)
 
 
 class ShortcutHandler:
@@ -13,7 +18,6 @@ class ShortcutHandler:
     def __init__(self, main_window):
         """Initialize the shortcut handler with reference to main window."""
         self.main_window = main_window
-        self.find_replace_dialog = None
 
     def setup_shortcuts(self):
         """Setup global keyboard shortcuts (VSCode-like)."""
@@ -124,20 +128,20 @@ class ShortcutHandler:
         self.run_entire_file()
 
     def _handle_show_find_dialog(self):
-        """Handle show find dialog shortcut - only when code editor widget has focus."""
-        self.show_find_dialog()
+        """Forward Ctrl+F to the dialogs package (lazy-creates the dialog)."""
+        _show_find_dialog(self.main_window)
 
     def _handle_show_replace_dialog(self):
-        """Handle show replace dialog shortcut - only when code editor widget has focus."""
-        self.show_replace_dialog()
+        """Forward Ctrl+H to the dialogs package (lazy-creates the dialog)."""
+        _show_replace_dialog(self.main_window)
 
     def _handle_find_next(self):
-        """Handle find next shortcut - only when code editor widget has focus."""
-        self.find_next()
+        """Forward F3: advance the cached search, or open the dialog if hidden."""
+        _find_next_in_dialog(self.main_window)
 
     def _handle_find_previous(self):
-        """Handle find previous shortcut - only when code editor widget has focus."""
-        self.find_previous()
+        """Forward Shift+F3: step back through the cached search, or open the dialog."""
+        _find_previous_in_dialog(self.main_window)
 
     def _handle_clear_terminal(self):
         """Handle clear terminal shortcut - only when code editor widget has focus."""
@@ -222,60 +226,6 @@ class ShortcutHandler:
         if ac is None:
             return None
         return getattr(ac, "engine", None)
-
-    def show_find_dialog(self):
-        """Show the find dialog."""
-        current_editor = self.main_window.get_current_editor()
-        if not current_editor:
-            return
-
-        # Create dialog if it doesn't exist
-        if self.find_replace_dialog is None:
-            self.find_replace_dialog = FindReplaceDialog(current_editor, self.main_window)
-
-        # Update dialog's editor reference
-        self.find_replace_dialog.editor = current_editor
-
-        # Get selected text if any
-        selected_text = current_editor.textCursor().selectedText()
-
-        # Show dialog in find mode
-        self.find_replace_dialog.show_find_mode(selected_text)
-
-    def show_replace_dialog(self):
-        """Show the replace dialog."""
-        current_editor = self.main_window.get_current_editor()
-        if not current_editor:
-            return
-
-        # Create dialog if it doesn't exist
-        if self.find_replace_dialog is None:
-            self.find_replace_dialog = FindReplaceDialog(current_editor, self.main_window)
-
-        # Update dialog's editor reference
-        self.find_replace_dialog.editor = current_editor
-
-        # Get selected text if any
-        selected_text = current_editor.textCursor().selectedText()
-
-        # Show dialog in replace mode
-        self.find_replace_dialog.show_replace_mode(selected_text)
-
-    def find_next(self):
-        """Find next occurrence using existing dialog."""
-        if self.find_replace_dialog and self.find_replace_dialog.isVisible():
-            self.find_replace_dialog.find_next()
-        else:
-            # Show find dialog if not visible
-            self.show_find_dialog()
-
-    def find_previous(self):
-        """Find previous occurrence using existing dialog."""
-        if self.find_replace_dialog and self.find_replace_dialog.isVisible():
-            self.find_replace_dialog.find_previous()
-        else:
-            # Show find dialog if not visible
-            self.show_find_dialog()
 
     def run_current_line_or_selection(self):
         """Run current line or selected text (Ctrl+Enter)."""
