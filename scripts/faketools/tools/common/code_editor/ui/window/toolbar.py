@@ -344,7 +344,7 @@ class ToolBar(QWidget):
         sep4 = ToolBarSeparator()
 
         # Add widgets to layout following the specified order
-        # [Explorer][Refresh] | [Run] | [New][Save][SaveAll][Folder] | [Clear][Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll] | [Swap] | →stretch
+        # [Explorer][Refresh] | [Run] | [New][Save][SaveAll][Folder] | [Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll][Autocomplete] | [Clear][Terminal][Swap] | →stretch
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(self.refresh_explorer_button)
         layout.addWidget(sep0)
@@ -356,7 +356,6 @@ class ToolBar(QWidget):
         layout.addWidget(self.save_all_button)
         layout.addWidget(self.workspace_button)
         layout.addWidget(sep2)
-        layout.addWidget(self.clear_button)
         layout.addWidget(self.echo_all_button)
         layout.addWidget(self.add_to_shelf_button)
         layout.addWidget(sep3)
@@ -365,6 +364,7 @@ class ToolBar(QWidget):
         layout.addWidget(self.unfold_all_button)
         layout.addWidget(self.autocomplete_button)
         layout.addWidget(sep4)
+        layout.addWidget(self.clear_button)
         layout.addWidget(self.terminal_toggle_button)
         layout.addWidget(self.swap_layout_button)
         layout.addStretch()
