@@ -156,23 +156,11 @@ class ShortcutHandler:
         self.main_window.unfold_all()
 
     def _handle_toggle_autocomplete(self):
-        """Flip the autocomplete toggle and keep the toolbar button in sync.
-
-        Routes through the toolbar's ``autocomplete_toggled`` signal rather
-        than calling ``main_window.toggle_autocomplete`` directly so the
-        existing signal path (button state, settings persistence, etc.)
-        runs exactly like a user click would.
-        """
+        """Forward Ctrl+Space to the toolbar so the button click path runs."""
         toolbar = getattr(self.main_window, "toolbar", None)
         if toolbar is None:
             return
-        button = getattr(toolbar, "autocomplete_button", None)
-        if button is None or not button.isEnabled():
-            # jedi missing → button disabled; do nothing so the shortcut is
-            # a no-op rather than silently toggling a setting nobody can see.
-            return
-        button.set_active(not button.is_active())
-        toolbar.autocomplete_toggled.emit(button.is_active())
+        toolbar.toggle_autocomplete()
 
     def _handle_toggle_help_popup(self):
         """Forward Ctrl+Shift+Space to the help package.

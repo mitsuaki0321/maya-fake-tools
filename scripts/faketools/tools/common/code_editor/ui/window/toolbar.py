@@ -397,3 +397,17 @@ class ToolBar(QWidget):
         self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
         self.add_to_shelf_button.clicked.connect(self.add_to_shelf_clicked.emit)
         self.autocomplete_button.clicked.connect(lambda: self.autocomplete_toggled.emit(self.autocomplete_button.is_active()))
+
+    def toggle_autocomplete(self):
+        """Flip the autocomplete button state and emit the toggled signal.
+
+        Mirrors what a user click does so shortcut callers don't need to
+        know about the button widget. No-op when the button is disabled
+        (e.g. jedi missing) so the shortcut stays silent rather than
+        toggling a setting nobody can see.
+        """
+        button = self.autocomplete_button
+        if not button.isEnabled():
+            return
+        button.set_active(not button.is_active())
+        self.autocomplete_toggled.emit(button.is_active())
