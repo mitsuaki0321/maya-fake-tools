@@ -44,6 +44,7 @@ from ......lib_ui.qt_compat import (
 )
 from ...command.autocomplete import JEDI_AVAILABLE, JediEngine
 from .._common import _OwnerWindowWatcher
+from .namespaces import collect_exec_namespaces
 from .worker import CompletionRunnable
 
 logger = getLogger(__name__)
@@ -208,14 +209,9 @@ class AutocompleteController:
         self,
         editor,
         engine: JediEngine,
-        namespace_provider: Optional[Callable[[], list[dict]]] = None,
     ):
         self.editor = editor
         self.engine = engine
-        # Lazy accessor so the controller doesn't capture exec_globals until
-        # the user actually triggers a completion (avoids holding stale dicts
-        # if the main window rebuilds its globals).
-        self._namespace_provider = namespace_provider or (lambda: [])
 
         self._enabled = JEDI_AVAILABLE
         self._request_id = 0
@@ -713,9 +709,9 @@ class AutocompleteController:
 
         namespaces = []
         try:
-            namespaces = self._namespace_provider() or []
+            namespaces = collect_exec_namespaces(editor)
         except Exception as exc:
-            logger.debug(f"namespace_provider raised: {exc}")
+            logger.debug(f"collect_exec_namespaces raised: {exc}")
 
         # Invalidate any previous request: even if it's mid-flight, its
         # emission will be filtered out by the id check in the receiver.

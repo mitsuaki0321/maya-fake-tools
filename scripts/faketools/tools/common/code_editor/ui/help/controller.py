@@ -15,7 +15,7 @@ from typing import Optional
 from ......lib_ui.qt_compat import QEvent, QObject, QRect, Qt, QTextCursor, QThreadPool, QTimer
 from ...command.autocomplete import JEDI_AVAILABLE, JediEngine
 from .._common import _OwnerWindowWatcher
-from ..autocomplete import DocstringRunnable
+from ..autocomplete import DocstringRunnable, collect_exec_namespaces
 from .popup import HelpPopup
 
 logger = getLogger(__name__)
@@ -208,14 +208,21 @@ class HelpPopupController(QObject):
         self._popup.set_text(text)
 
     def _collect_namespaces(self, editor) -> Optional[list[dict]]:
-        """Reuse the autocomplete controller's namespaces so jedi resolves in-house runtime modules."""
-        ac = getattr(editor, "autocomplete", None)
-        if ac is None:
+        """Resolve the live runtime namespaces jedi should see.
+
+        Gated on the editor having an autocomplete controller — non-Python
+        tabs leave the controller None, and we don't pull __main__ for
+        them. When the gate passes we go straight through the shared
+        :func:`collect_exec_namespaces` helper rather than the controller
+        instance, which keeps this path independent of the controller's
+        internals.
+        """
+        if getattr(editor, "autocomplete", None) is None:
             return None
         try:
-            return list(ac._namespace_provider())  # noqa: SLF001
+            return collect_exec_namespaces(editor)
         except Exception as exc:
-            logger.debug(f"namespace provider failed: {exc}")
+            logger.debug(f"namespace collection failed: {exc}")
             return None
 
     # -------------------- selection follow-through --------------------

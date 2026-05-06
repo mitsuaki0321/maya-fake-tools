@@ -8,6 +8,13 @@ the same thread pool. :func:`get_shared_engine` returns the process-wide
 
 from ._stubs import get_shared_engine
 from .controller import AutocompleteController
+from .namespaces import collect_exec_namespaces
 from .worker import CompletionRunnable, DocstringRunnable
 
-__all__ = ["AutocompleteController", "CompletionRunnable", "DocstringRunnable", "get_shared_engine"]
+__all__ = [
+    "AutocompleteController",
+    "CompletionRunnable",
+    "DocstringRunnable",
+    "collect_exec_namespaces",
+    "get_shared_engine",
+]

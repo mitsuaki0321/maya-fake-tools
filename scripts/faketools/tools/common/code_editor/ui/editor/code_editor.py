@@ -88,45 +88,6 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.line_number_area.attach()
         self.connect_signals()
 
-    def _get_exec_namespaces(self) -> list[dict]:
-        """Return the live namespaces jedi.Interpreter should consult.
-
-        Two sources, in priority order:
-
-        1. The editor's own ``exec_globals`` (populated by
-           :func:`build_exec_globals` with ``cmds`` / ``om2`` / ``om`` and
-           whatever the user's Run has added since).
-        2. Maya's ``__main__.__dict__``. This catches modules the user
-           imported in Maya's Script Editor but never executed inside our
-           editor — without it, ``import eST3`` done at the Maya prompt
-           would be invisible to the popup until the user ran *any* code
-           through our Run button (which syncs ``__main__`` into
-           ``exec_globals``).
-        """
-        namespaces: list[dict] = []
-        node = self.parent()
-        while node is not None:
-            exec_globals = getattr(node, "exec_globals", None)
-            if isinstance(exec_globals, dict):
-                namespaces.append(exec_globals)
-                break
-            node = node.parent() if hasattr(node, "parent") else None
-
-        try:
-            import __main__
-
-            main_dict = getattr(__main__, "__dict__", None)
-            # Identity check, not ``in`` — value comparison would compare every
-            # key/value pair across exec_globals and __main__.__dict__, which
-            # both can be large in a Maya session and which gets called on every
-            # autocomplete dispatch.
-            if isinstance(main_dict, dict) and all(d is not main_dict for d in namespaces):
-                namespaces.append(main_dict)
-        except Exception as exc:
-            logger.debug(f"failed to attach __main__ to namespaces: {exc}")
-
-        return namespaces
-
     def init_editor(self):
         """Initialize editor settings."""
         self.setFont(AppTheme.make_monospace_font(self.current_font_size))
@@ -296,11 +257,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
             return
 
         engine = factory()
-        self.autocomplete = AutocompleteController(
-            self,
-            engine,
-            namespace_provider=self._get_exec_namespaces,
-        )
+        self.autocomplete = AutocompleteController(self, engine)
 
     def save_file(self, file_path: str = None) -> bool:
         """Save the editor contents via the command-layer writer."""
