@@ -232,6 +232,7 @@ scripts/faketools/tools/common/snapshot_capture/sample_ui.py
 annotation-refactoring-plan.md
 REFACTORING_MEMO.md
 MEL_SUPPORT_PLAN.md
+CODE_EDITOR_STRUCTURE.md
 
 # Documentation output files
 docs/output/
