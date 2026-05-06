@@ -1,14 +1,19 @@
 """Viewport overlays drawn on top of the editor's normal text rendering.
 
-Two decorations:
+Three decorations:
 
 - :func:`paint_fold_placeholders` writes the ``...`` indicator at the
   end of folded header lines.
+- :func:`paint_current_line_border` draws thin rules at the top and
+  bottom of the cursor's row.
 - :func:`paint_indent_guides` draws faint vertical rules at each indent
   level so wide indentation stays scannable.
 
-Both run after the editor's parent ``paintEvent`` has rendered the
-text and before the multi-cursor painter draws caret highlights.
+The decorations run after the editor's parent ``paintEvent`` has
+rendered the text and before the multi-cursor painter draws caret
+highlights. :func:`update_current_line_highlight` is the matching
+*invalidation* helper — it lives here too so all current-line concerns
+sit in one file.
 """
 
 from __future__ import annotations
@@ -71,6 +76,28 @@ def paint_fold_placeholders(editor, event) -> None:
         block = block.next()
 
     painter.end()
+
+
+def update_current_line_highlight(editor) -> None:
+    """Repaint the viewport when the caret's line or selection state flips.
+
+    Connected to ``cursorPositionChanged`` from the editor. The actual
+    decoration is drawn in :func:`paint_current_line_border` (top/bottom
+    rules); this function just invalidates the viewport so the rules
+    move with the caret. Short-circuits when neither the line nor the
+    selection state changed, since intra-line cursor moves don't need a
+    full repaint. State (``_last_highlight_line`` /
+    ``_last_had_selection``) is stashed on the editor so a fresh tab
+    gets a clean repaint without us tracking widget identity here.
+    """
+    cursor = editor.textCursor()
+    cursor_line = cursor.blockNumber()
+    has_selection = cursor.hasSelection()
+    if cursor_line == getattr(editor, "_last_highlight_line", -1) and has_selection == getattr(editor, "_last_had_selection", False):
+        return
+    editor._last_highlight_line = cursor_line
+    editor._last_had_selection = has_selection
+    editor.viewport().update()
 
 
 def paint_current_line_border(editor, event) -> None:

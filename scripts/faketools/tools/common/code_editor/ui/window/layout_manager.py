@@ -8,6 +8,7 @@ from logging import getLogger
 
 from ......lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
 from ...themes import AppTheme
+from ..editor import overlays
 from ..panels import FileExplorer, OutputTerminal
 from ..tabs import CodeEditorWidget
 from .toolbar import ToolBar
@@ -120,7 +121,7 @@ class UILayoutManager:
                 editor = self.main_window.code_editor.widget(i)
                 if editor:
                     editor.setStyleSheet(editor_style)
-                    editor.highlight_current_line()
+                    overlays.update_current_line_highlight(editor)
 
         # Apply terminal theme
         # Only apply stylesheet if using QTextEdit (not Maya native terminal)

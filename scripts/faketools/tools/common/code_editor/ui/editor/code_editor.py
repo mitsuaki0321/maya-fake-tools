@@ -14,14 +14,13 @@ from ......lib_ui.qt_compat import (
     QPainter,
     QPlainTextEdit,
     Qt,
-    QTextBlockFormat,
     QTextCursor,
     Signal,
 )
 from ...languages import PYTHON, LanguageProfile
-from ...themes import AppTheme
 from ..autocomplete import AutocompleteController
 from . import auto_indent, context_menu, overlays
+from .appearance import EditorAppearanceMixin
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
 from .line_number_area import LineNumberArea
@@ -31,11 +30,8 @@ from .text_operations import EditorTextOperationsMixin
 
 logger = getLogger(__name__)
 
-# Editor constants
-DEFAULT_TAB_SIZE = 4
 
-
-class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
+class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin, EditorAppearanceMixin):
     """Plain text editor view driven by a :class:`LanguageProfile`."""
 
     # Signal for focus lost (triggers session.json save)
@@ -86,29 +82,8 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.connect_signals()
 
     def init_editor(self):
-        """Initialize editor settings."""
-        self.setFont(AppTheme.make_monospace_font(self.current_font_size))
-
-        # Set tab width (4 spaces * 10 pixels = 40)
-        tab_stop_distance = DEFAULT_TAB_SIZE * 10
-        try:
-            # PySide6/Qt6
-            self.setTabStopDistance(tab_stop_distance)
-        except AttributeError:
-            # PySide2/Qt5 fallback
-            self.setTabStopWidth(tab_stop_distance)
-
-        # Wider caret so it stays visible when sitting on the bracket-match
-        # rectangle's 1px border (e.g. cursor at ``)|``).
-        self.setCursorWidth(2)
-
-        self._apply_line_height()
-
-        # Word wrap enabled by default
-        self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-
+        """Initialize editor settings (appearance + language placeholder)."""
+        self._init_appearance(self.current_font_size)
         self._apply_placeholder_text()
 
     def setup_syntax_highlighting(self):
@@ -144,22 +119,6 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().setPlainText(text)
         self._apply_line_height()
 
-    def _apply_line_height(self):
-        """Apply ``AppTheme.LINE_HEIGHT_PERCENT`` to every block in the document.
-
-        Qt's default line spacing follows the font's natural metrics, which is
-        noticeably tighter than VSCode at the same font. Setting a proportional
-        line height on every block — including the cursor's current block, so
-        new blocks inherit it on Enter — gives VSCode-equivalent breathing room.
-        """
-        cursor = QTextCursor(self.document())
-        cursor.select(QTextCursor.Document)
-        block_format = QTextBlockFormat()
-        # PySide6 expects (float, int); the enum value 1 is ``ProportionalHeight``.
-        # Hardcoded int avoids ``LineHeightTypes`` not accepted by the strict overload.
-        block_format.setLineHeight(float(AppTheme.LINE_HEIGHT_PERCENT), 1)
-        cursor.mergeBlockFormat(block_format)
-
     def connect_signals(self):
         """Connect editor signals.
 
@@ -172,8 +131,8 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         any highlightable content) and feedback-loop into jedi.
         """
         self.document().contentsChange.connect(self._on_contents_change)
-        self.cursorPositionChanged.connect(self.highlight_current_line)
-        self.highlight_current_line()
+        self.cursorPositionChanged.connect(lambda: overlays.update_current_line_highlight(self))
+        overlays.update_current_line_highlight(self)
 
     def _on_contents_change(self, position: int, removed: int, added: int):
         """Bookkeeping for real edits; format-only notifications are filtered."""
@@ -236,48 +195,11 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.autocomplete = AutocompleteController(self, engine)
 
     def wheelEvent(self, event):
-        """Handle mouse wheel events for font size changes."""
-        # Handle wheel event for font size changes
-        # Check if Ctrl is pressed for font size change
+        """Forward Ctrl+wheel to the appearance mixin for font zoom."""
         if event.modifiers() == Qt.ControlModifier:
-            # Get wheel delta
-            delta = event.angleDelta().y()
-            # Ctrl+wheel detected for font size adjustment
-
-            # Change font size
-            if delta > 0:
-                # Wheel up - increase font size
-                # Increase font size
-                self.increase_font_size()
-            elif delta < 0:
-                # Wheel down - decrease font size
-                # Decrease font size
-                self.decrease_font_size()
-
-            # Accept the event to prevent scrolling
-            event.accept()
-        else:
-            # Normal scrolling
-            super().wheelEvent(event)
-
-    def increase_font_size(self):
-        """Increase font size by 1."""
-        new_size = min(self.current_font_size + 1, 32)  # Max size 32
-        self.set_font_size(new_size)
-
-    def decrease_font_size(self):
-        """Decrease font size by 1."""
-        new_size = max(self.current_font_size - 1, 6)  # Min size 6
-        self.set_font_size(new_size)
-
-    def set_font_size(self, size):
-        """Set font size for the editor."""
-        self.current_font_size = size
-        self.setFont(AppTheme.make_monospace_font(size))
-
-        # Update line number area width and force repaint with new font size
-        if hasattr(self, "line_number_area"):
-            self.line_number_area.refresh_width()
+            self.handle_zoom_wheel(event)
+            return
+        super().wheelEvent(event)
 
     def fold_current(self):
         """Fold the block at the current cursor position."""
@@ -291,47 +213,10 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         if self.fold_manager.is_fold_header(block_number):
             self.fold_manager.unfold(block_number)
 
-    def set_word_wrap(self, enabled):
-        """Set word wrap mode.
-
-        Args:
-            enabled (bool): True to wrap at widget width, False for no wrap.
-        """
-        if enabled:
-            self.setLineWrapMode(QPlainTextEdit.WidgetWidth)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        else:
-            self.setLineWrapMode(QPlainTextEdit.NoWrap)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-
-    def set_default_font_size(self, size):
-        """Set default font size from settings."""
-        self.default_font_size = size
-        self.current_font_size = size
-        self.set_font_size(size)
-
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
         self.line_number_area.layout_for_resize()
-
-    def highlight_current_line(self):
-        """Repaint the viewport when the caret's line or selection state flips.
-
-        The actual decoration is drawn in
-        :func:`overlays.paint_current_line_border` (top/bottom rules) —
-        this hook just invalidates the viewport so the rules move with the
-        caret. Short-circuited when neither the line nor the selection state
-        changed, since intra-line cursor moves don't need a full repaint.
-        """
-        cursor = self.textCursor()
-        cursor_line = cursor.blockNumber()
-        has_selection = cursor.hasSelection()
-        if cursor_line == getattr(self, "_last_highlight_line", -1) and has_selection == getattr(self, "_last_had_selection", False):
-            return
-        self._last_highlight_line = cursor_line
-        self._last_had_selection = has_selection
-        self.viewport().update()
 
     def insertFromMimeData(self, source):
         """Override to ensure plain text paste only."""

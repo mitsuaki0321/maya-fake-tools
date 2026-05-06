@@ -23,7 +23,7 @@ from ......lib_ui.qt_compat import (
 from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
 from ...themes import AppTheme
 from ..dialogs import CodeEditorMessageBox
-from ..editor import CodeEditor, file_bridge
+from ..editor import CodeEditor, file_bridge, overlays
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
@@ -220,7 +220,7 @@ class CodeEditorWidget(QTabWidget):
     def apply_editor_theme(self, editor):
         """Apply theme styling + refresh the current-line highlight."""
         editor.setStyleSheet(AppTheme.get_editor_stylesheet())
-        editor.highlight_current_line()
+        overlays.update_current_line_highlight(editor)
 
     def open_file_permanent(self, file_path: str):
         """Open ``file_path`` in a permanent tab, or refocus an existing one."""
