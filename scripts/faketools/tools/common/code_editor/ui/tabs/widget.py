@@ -23,7 +23,7 @@ from ......lib_ui.qt_compat import (
 from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
 from ...themes import AppTheme
 from ..dialogs import CodeEditorMessageBox
-from ..editor import CodeEditor
+from ..editor import CodeEditor, file_bridge
 from .tab_bar import EditableTabBar
 
 logger = getLogger(__name__)
@@ -241,7 +241,7 @@ class CodeEditorWidget(QTabWidget):
                     return True
 
         editor = CodeEditor(self, language=get_profile_for_path(file_path))
-        if not editor.load_file(file_path):
+        if not file_bridge.load_file(editor, file_path):
             return False
 
         file_name = os.path.basename(file_path)
@@ -283,7 +283,7 @@ class CodeEditorWidget(QTabWidget):
 
         if existing_preview_index >= 0:
             preview_editor = self.widget(existing_preview_index)
-            if preview_editor and preview_editor.load_file(file_path):
+            if preview_editor and file_bridge.load_file(preview_editor, file_path):
                 file_name = os.path.basename(file_path)
                 self.setTabText(existing_preview_index, file_name + " (Preview)")
                 self.setCurrentIndex(existing_preview_index)
@@ -292,7 +292,7 @@ class CodeEditorWidget(QTabWidget):
                 return True
 
         editor = CodeEditor(self, language=get_profile_for_path(file_path))
-        if not editor.load_file(file_path):
+        if not file_bridge.load_file(editor, file_path):
             return False
 
         file_name = os.path.basename(file_path)
@@ -416,7 +416,7 @@ class CodeEditorWidget(QTabWidget):
         else:
             file_path = editor.file_path
 
-        success = editor.save_file(file_path)
+        success = file_bridge.save_file(editor, file_path)
         if success:
             self.update_tab_title(editor)
             self.save_session_if_available()
@@ -443,7 +443,7 @@ class CodeEditorWidget(QTabWidget):
             return
 
         if editor.is_modified:
-            file_name = editor.get_display_name().rstrip("*")
+            file_name = file_bridge.get_display_name(editor).rstrip("*")
             reply = CodeEditorMessageBox.question(
                 self,
                 "Unsaved Changes",
@@ -485,7 +485,7 @@ class CodeEditorWidget(QTabWidget):
         if hasattr(editor, "is_preview") and editor.is_preview:
             return
 
-        new_name = editor.get_display_name()
+        new_name = file_bridge.get_display_name(editor)
         for i in range(self.count()):
             if self.widget(i) == editor:
                 current = self.tabText(i)

@@ -8,7 +8,6 @@ behaviour.
 """
 
 from logging import getLogger
-import os
 from typing import Optional
 
 from ......lib_ui.qt_compat import (
@@ -19,11 +18,9 @@ from ......lib_ui.qt_compat import (
     QTextCursor,
     Signal,
 )
-from ...command import file_io
-from ...languages import PYTHON, LanguageProfile, get_profile_for_path
+from ...languages import PYTHON, LanguageProfile
 from ...themes import AppTheme
 from ..autocomplete import AutocompleteController
-from ..dialogs import CodeEditorMessageBox
 from . import auto_indent, context_menu, overlays
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
@@ -193,27 +190,6 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         super().focusOutEvent(event)
         self.focus_lost.emit()
 
-    def load_file(self, file_path: str) -> bool:
-        """Load ``file_path`` into the editor via the command-layer reader.
-
-        Re-binds the editor to the language profile resolved from the file's
-        extension. The tab widget creates editors with the default profile and
-        only learns the file path here, so without this rebind a ``foo.mel``
-        loaded into a freshly-constructed editor would stay bound to Python
-        and dispatch Run / placeholder / highlighter to the wrong language.
-        """
-        content, error = file_io.read_text(file_path)
-        if content is None:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to load file: {error}")
-            return False
-        new_language = get_profile_for_path(file_path)
-        if new_language is not self.language:
-            self.set_language(new_language)
-        self.setPlainText(content)
-        self.file_path = file_path
-        self.is_modified = False
-        return True
-
     def set_language(self, language: LanguageProfile) -> None:
         """Rebind the editor to ``language`` and refresh language-driven UI.
 
@@ -258,47 +234,6 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         engine = factory()
         self.autocomplete = AutocompleteController(self, engine)
-
-    def save_file(self, file_path: str = None) -> bool:
-        """Save the editor contents via the command-layer writer."""
-        if file_path is None:
-            file_path = self.file_path
-        if file_path is None:
-            return False
-
-        error = file_io.write_text(file_path, self.toPlainText())
-        if error:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to save file: {error}")
-            return False
-
-        self.file_path = file_path
-        self.is_modified = False
-        self.document().setModified(False)
-        return True
-
-    def get_display_name(self) -> str:
-        """Get display name for tab."""
-        # Special handling for preview tabs
-        if hasattr(self, "is_preview") and self.is_preview:
-            # For preview tabs, use the preview_title without any modifications
-            if hasattr(self, "preview_title"):
-                return self.preview_title
-            return "Preview"
-
-        if hasattr(self, "is_draft") and self.is_draft:
-            name = "Draft"  # Draft tab never shows asterisk
-        elif self.file_path:
-            name = os.path.basename(self.file_path)
-        else:
-            name = "Untitled"
-
-        # Add asterisk for modified files (but not for Draft tab)
-        # Check both custom property and QTextDocument modified state
-        is_modified = (self.is_modified or self.document().isModified()) and not (hasattr(self, "is_draft") and self.is_draft)
-        if is_modified:
-            name += "*"
-
-        return name
 
     def wheelEvent(self, event):
         """Handle mouse wheel events for font size changes."""
