@@ -39,6 +39,64 @@ class LineNumberArea(QWidget):
         self._fade_timer.setInterval(_FADE_INTERVAL_MS)
         self._fade_timer.timeout.connect(self._fade_tick)
 
+    def attach(self):
+        """Wire the gutter to its editor.
+
+        Connects the editor signals that drive gutter width / scroll updates,
+        then runs an initial margin sync so the editor's left viewport margin
+        matches the gutter on first paint. Called once from the editor's
+        constructor; kept on this widget so all gutter wiring lives in one
+        file.
+        """
+        editor = self.code_editor
+        editor.blockCountChanged.connect(self._on_block_count_changed)
+        editor.updateRequest.connect(self._on_update_request)
+        self._sync_editor_margin()
+
+    def _sync_editor_margin(self):
+        """Set the editor's left viewport margin to the current gutter width."""
+        self.code_editor.setViewportMargins(self.calculate_width(), 0, 0, 0)
+
+    def _on_block_count_changed(self, _new_block_count):
+        """Re-sync the editor margin when the line count grows/shrinks."""
+        self._sync_editor_margin()
+
+    def _on_update_request(self, rect, dy):
+        """Repaint / scroll the gutter alongside the editor viewport.
+
+        ``updateRequest`` fires when QPlainTextEdit dirties part of its
+        viewport (scroll, cursor move, text edit). We mirror those updates
+        onto our own widget so the line numbers and active-line colour
+        stay in sync without having to repaint the whole gutter.
+        """
+        if dy:
+            self.scroll(0, dy)
+        else:
+            self.update(0, int(rect.y()), int(self.width()), int(rect.height()))
+
+        if rect.contains(self.code_editor.viewport().rect()):
+            self._sync_editor_margin()
+
+    def refresh_width(self):
+        """Public hook called when font / metrics change.
+
+        Re-runs the margin sync (so the editor reserves the new width) and
+        forces a gutter repaint at the new size. Used from
+        :meth:`CodeEditor.set_font_size`.
+        """
+        self._sync_editor_margin()
+        self.update()
+
+    def layout_for_resize(self):
+        """Reposition the gutter to fill the editor's left edge.
+
+        Called from :meth:`CodeEditor.resizeEvent`; uses the editor's
+        ``contentsRect`` so the gutter tracks the editor frame instead of
+        guessing from its own geometry.
+        """
+        cr = self.code_editor.contentsRect()
+        self.setGeometry(cr.left(), cr.top(), self.calculate_width(), cr.height())
+
     def sizeHint(self):
         """Return the size hint for the line number area."""
         return self.calculate_width()

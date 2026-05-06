@@ -310,6 +310,5 @@ class CodeFoldingManager:
         doc.markContentsDirty(0, doc.characterCount())
         self.editor.updateGeometry()
         self.editor.viewport().update()
-        self.editor.update_line_number_area_width(0)
         if hasattr(self.editor, "line_number_area"):
-            self.editor.line_number_area.update()
+            self.editor.line_number_area.refresh_width()

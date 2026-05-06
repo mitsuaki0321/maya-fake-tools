@@ -85,7 +85,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.autocomplete: Optional[AutocompleteController] = None
         self._reconfigure_autocomplete()
 
-        self.setup_line_numbers()
+        self.line_number_area.attach()
         self.connect_signals()
 
     def _get_exec_namespaces(self) -> list[dict]:
@@ -202,15 +202,6 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         block_format.setLineHeight(float(AppTheme.LINE_HEIGHT_PERCENT), 1)
         cursor.mergeBlockFormat(block_format)
 
-    def setup_line_numbers(self):
-        """Setup line number area."""
-        self.blockCountChanged.connect(self.update_line_number_area_width)
-        self.updateRequest.connect(self.update_line_number_area)
-        self.cursorPositionChanged.connect(self.highlight_current_line)
-
-        self.update_line_number_area_width(0)
-        self.highlight_current_line()
-
     def connect_signals(self):
         """Connect editor signals.
 
@@ -223,6 +214,8 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         any highlightable content) and feedback-loop into jedi.
         """
         self.document().contentsChange.connect(self._on_contents_change)
+        self.cursorPositionChanged.connect(self.highlight_current_line)
+        self.highlight_current_line()
 
     def _on_contents_change(self, position: int, removed: int, added: int):
         """Bookkeeping for real edits; format-only notifications are filtered."""
@@ -392,8 +385,7 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
 
         # Update line number area width and force repaint with new font size
         if hasattr(self, "line_number_area"):
-            self.update_line_number_area_width(0)
-            self.line_number_area.update()
+            self.line_number_area.refresh_width()
 
     def fold_current(self):
         """Fold the block at the current cursor position."""
@@ -426,26 +418,10 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin):
         self.current_font_size = size
         self.set_font_size(size)
 
-    def update_line_number_area_width(self, new_block_count):
-        """Update the editor's left margin to fit the line number area."""
-        self.setViewportMargins(self.line_number_area.calculate_width(), 0, 0, 0)
-
-    def update_line_number_area(self, rect, dy):
-        """Update the line number area when scrolling or resizing."""
-        if dy:
-            self.line_number_area.scroll(0, dy)
-        else:
-            self.line_number_area.update(0, int(rect.y()), int(self.line_number_area.width()), int(rect.height()))
-
-        if rect.contains(self.viewport().rect()):
-            self.update_line_number_area_width(0)
-
     def resizeEvent(self, event):
         """Handle resize events."""
         super().resizeEvent(event)
-
-        cr = self.contentsRect()
-        self.line_number_area.setGeometry(cr.left(), cr.top(), self.line_number_area.calculate_width(), cr.height())
+        self.line_number_area.layout_for_resize()
 
     def highlight_current_line(self):
         """Repaint the viewport when the caret's line or selection state flips.
