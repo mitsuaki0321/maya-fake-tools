@@ -42,8 +42,9 @@ from ......lib_ui.qt_compat import (
     QTimer,
     QWidget,
 )
-from ...command.autocomplete import JEDI_AVAILABLE, JediEngine
+from ...command.autocomplete import JEDI_AVAILABLE, AutocompleteMruStore, JediEngine, expression_root
 from .._common import _OwnerWindowWatcher
+from ._stubs import get_shared_mru_store
 from .namespaces import collect_exec_namespaces
 from .worker import CompletionRunnable
 
@@ -223,11 +224,14 @@ class AutocompleteController:
         # right after the user just accepted something.
         self._inserting_completion = False
 
-        # Per-session usage counter. Incremented each time the user accepts an
-        # item; applied as a positive bias in _apply_mru_sort so recent picks
-        # float to the top. Not persisted — resets when the controller is
-        # rebuilt (tool reload / editor reopen).
-        self._mru: dict[str, int] = {}
+        # Process-wide MRU store, shared across every editor tab and persisted
+        # to ``autocomplete_mru.json`` between sessions. Each accept calls
+        # ``increment(root, name)`` so a context-keyed entry (``cmds.polyCube``,
+        # ``OpenMaya.MFnMesh``) ranks independently from same-leaf-name picks
+        # in other modules. ``view_for_root`` rebuilds a bare-name dict on
+        # dispatch so the engine's existing ``mru.get(it.name, ...)`` lookup
+        # keeps working without changes.
+        self._mru_store: AutocompleteMruStore = get_shared_mru_store()
 
         self._debounce_ms = _DEFAULT_DEBOUNCE_MS
         self._timer = QTimer(editor)
@@ -713,6 +717,14 @@ class AutocompleteController:
         except Exception as exc:
             logger.debug(f"collect_exec_namespaces raised: {exc}")
 
+        # Build a root-scoped MRU view so ``cmds.polyCube`` doesn't influence
+        # a popup whose root is ``pymel.core`` (and vice versa). The engine's
+        # ``mru.get(it.name, 0)`` lookup then sees only the relevant entries.
+        # Root-less popups (e.g. completing a bare keyword) get the bare-name
+        # subset of the store.
+        mru_root = expression_root(code, line, column)
+        mru_view = self._mru_store.view_for_root(mru_root)
+
         # Invalidate any previous request: even if it's mid-flight, its
         # emission will be filtered out by the id check in the receiver.
         if self._pending_runnable is not None:
@@ -727,7 +739,7 @@ class AutocompleteController:
             column=column,
             namespaces=namespaces,
             path=file_path,
-            mru=self._mru,
+            mru=mru_view,
         )
         runnable.signals.completed.connect(self._on_completion)
         self._pending_runnable = runnable
@@ -812,6 +824,12 @@ class AutocompleteController:
         cursor = self.editor.textCursor()
         prefix_len = self._current_word_prefix_length()
 
+        # Compute the MRU root *before* mutating the document so the cursor
+        # state still reflects what the user was completing. After
+        # ``removeSelectedText`` the leftmost identifier could shift if the
+        # partial word happened to be the root itself.
+        mru_root = self._compute_mru_root()
+
         # Flag the document mutation as "not user typing" so on_text_changed
         # doesn't re-dispatch on the intermediate state after removeSelectedText.
         self._inserting_completion = True
@@ -824,8 +842,28 @@ class AutocompleteController:
         finally:
             self._inserting_completion = False
 
-        # Record for MRU re-ranking on subsequent popups in this session.
-        self._mru[name] = self._mru.get(name, 0) + 1
+        # Record for MRU re-ranking on subsequent popups. Persists across
+        # sessions via :meth:`AutocompleteMruStore.save_if_dirty` (called
+        # from SettingsManager.save_session_state at focus-out / tab events
+        # / Maya exit).
+        self._mru_store.increment(mru_root, name)
+
+    def _compute_mru_root(self) -> Optional[str]:
+        """Resolve the MRU root for the current cursor position.
+
+        Falls back to ``None`` (bare-name bucket) on any RuntimeError —
+        the editor widget can be torn down between popup accept and
+        this call during workspace teardown, and a missed MRU update
+        is preferable to a crash.
+        """
+        try:
+            code = self.editor.toPlainText()
+            cursor = self.editor.textCursor()
+            line = cursor.blockNumber() + 1
+            column = cursor.columnNumber()
+        except RuntimeError:
+            return None
+        return expression_root(code, line, column)
 
     def _hide_popup(self):
         if self._completer.popup().isVisible():

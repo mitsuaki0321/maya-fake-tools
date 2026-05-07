@@ -7,25 +7,77 @@ source hash internally.
 
 :func:`get_shared_engine` is a lazy getter — first call configures the
 stub paths (a Maya ``cmds.about`` lookup), subsequent calls are free.
+
+:func:`get_shared_mru_store` returns the process-wide MRU store so
+every editor tab boosts the same persisted ranking. The store is
+loaded from disk on first access and saved through
+:meth:`SettingsManager.save_session_state` (focus-out, tab events,
+Maya exit).
 """
 
 from __future__ import annotations
 
 from logging import getLogger
+import os
 import time
+from typing import Optional
 
-from ...command.autocomplete import JediEngine
+from ...command.autocomplete import MRU_FILE_NAME, AutocompleteMruStore, JediEngine
 
 logger = getLogger(__name__)
 
 _SHARED_JEDI_ENGINE = JediEngine()
 _STUB_PATHS_CONFIGURED = False
+_SHARED_MRU_STORE: Optional[AutocompleteMruStore] = None
 
 
 def get_shared_engine() -> JediEngine:
     """Return the process-wide :class:`JediEngine`, configuring stubs once."""
     _configure_stub_paths()
     return _SHARED_JEDI_ENGINE
+
+
+def get_shared_mru_store() -> AutocompleteMruStore:
+    """Return the process-wide MRU store, loading from disk on first call.
+
+    The path is resolved through :class:`ToolDataManager` so it lands
+    in the same directory as ``user_settings.json`` /
+    ``session.json``. If the lookup fails (standalone test mode, Maya
+    workspace not yet initialised, …) the store falls back to
+    in-memory operation: ``increment`` / ``view_for_root`` still work,
+    but ``save_if_dirty`` becomes a no-op. That matches the
+    "autocomplete should never hard-fail the editor" contract used
+    elsewhere in this package.
+    """
+    global _SHARED_MRU_STORE
+    if _SHARED_MRU_STORE is not None:
+        return _SHARED_MRU_STORE
+    path = _resolve_mru_path()
+    _SHARED_MRU_STORE = AutocompleteMruStore(path=path)
+    if path is None:
+        logger.debug("autocomplete MRU: persistent path unavailable — running in-memory only")
+    return _SHARED_MRU_STORE
+
+
+def _resolve_mru_path() -> Optional[str]:
+    """Locate ``autocomplete_mru.json`` next to the other config files.
+
+    Returns ``None`` when ``ToolDataManager`` is unreachable (e.g.
+    pure-pytest standalone run). Caller treats ``None`` as "no
+    persistence today".
+    """
+    try:
+        from ......lib_ui.tool_data import ToolDataManager
+    except Exception as exc:
+        logger.debug(f"autocomplete MRU: tool_data unavailable: {exc}")
+        return None
+    try:
+        data_manager = ToolDataManager("code_editor", "common")
+        config_dir = str(data_manager.get_data_dir() / "config")
+    except Exception as exc:
+        logger.debug(f"autocomplete MRU: ToolDataManager failed: {exc}")
+        return None
+    return os.path.join(config_dir, MRU_FILE_NAME)
 
 
 def _configure_stub_paths() -> None:

@@ -678,4 +678,9 @@ def _try_cmds_help(name: str) -> str:
     return text
 
 
-__all__ = ["JEDI_AVAILABLE", "JediEngine"]
+# Public alias so the UI controller can reuse the same root-detection logic
+# at accept-time (used to scope the MRU store key to the current root).
+expression_root = _expression_root
+
+
+__all__ = ["JEDI_AVAILABLE", "JediEngine", "expression_root"]

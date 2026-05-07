@@ -271,8 +271,35 @@ class SettingsManager:
 
     # Session management methods
     def save_session_state(self, open_tabs: list[dict[str, Any]]):
-        """Save current session state (open tabs)."""
+        """Save current session state (open tabs).
+
+        Piggybacks the autocomplete MRU persistence onto every session-save
+        boundary (focus-out, tab events, Maya exit). The MRU store is dirty
+        only when the user has accepted a completion since the last save,
+        so this adds zero file I/O on idle ticks. Imported lazily to keep
+        ``settings`` free of UI-layer dependencies at import time.
+        """
         self.session_manager.save_session_state(open_tabs)
+        self._save_autocomplete_mru_if_dirty()
+
+    def _save_autocomplete_mru_if_dirty(self) -> None:
+        """Persist the shared autocomplete MRU store if any changes are pending.
+
+        Tolerant: if the autocomplete UI module isn't importable (older
+        builds without the store, standalone test mode, jedi missing) we
+        log and move on — the session save itself must not be blocked
+        by an autocomplete subsystem failure.
+        """
+        try:
+            from ..ui.autocomplete import get_shared_mru_store
+        except Exception as exc:
+            logger.debug(f"autocomplete MRU save skipped (import failed): {exc}")
+            return
+        try:
+            store = get_shared_mru_store()
+            store.save_if_dirty()
+        except Exception as exc:
+            logger.debug(f"autocomplete MRU save_if_dirty failed: {exc}")
 
     def get_session_state(self) -> list[dict[str, Any]]:
         """Get saved session state."""
