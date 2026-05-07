@@ -328,11 +328,7 @@ class ToolBar(QWidget):
             "Toggle Autocomplete",
             active_icon_name="autocomplete_active",
         )
-        self.terminal_toggle_button = ToggleButton(
-            "terminal",
-            "Toggle Terminal Visibility",
-            active_icon_name="terminal_active",
-        )
+        self.terminal_toggle_button = ToggleButton("terminal", "Toggle Terminal Visibility")
         self.terminal_toggle_button.set_active(True)  # Terminal visible by default
         self.swap_layout_button = VSCodeButton("swap", "Swap Editor/Terminal Position")
 

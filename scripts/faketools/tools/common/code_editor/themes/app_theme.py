@@ -57,9 +57,9 @@ class _Palette:
     TEXT_BRIGHTEST = "#ffffff"  # selected tab text
 
     # Icon SVG recolouring.
-    ICON_SOURCE = "#808080"  # in-file SVG colour, replaced at runtime
-    ICON_NORMAL = "#d4d4d4"
-    ICON_HOVER = "#ececec"
+    ICON_SOURCE = "#CCCCCC"  # in-file SVG colour, replaced at runtime
+    ICON_NORMAL = "#CCCCCC"
+    ICON_HOVER = "#FFFFFF"
     ICON_PRESSED = "#888888"
 
     # Accent (VSCode blue family).
