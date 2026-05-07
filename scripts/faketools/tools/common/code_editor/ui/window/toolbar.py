@@ -48,7 +48,7 @@ class VSCodeButton(QPushButton):
         self.icon_base_path = self._get_icon_path()
 
         # Set up button properties
-        self.setFixedSize(26, 20)
+        self.setFixedSize(26, 26)
         self.setToolTip(tooltip)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -250,10 +250,10 @@ class ToolBarSeparator(QFrame):
         self.setFixedWidth(1)
         self.setStyleSheet(f"""
             QFrame {{
-                color: {AppTheme.TAB_BORDER};
-                background-color: {AppTheme.TAB_BORDER};
-                margin-top: 3px;
-                margin-bottom: 3px;
+                color: {AppTheme.TOOLBAR_SEPARATOR};
+                background-color: {AppTheme.TOOLBAR_SEPARATOR};
+                margin-top: 2px;
+                margin-bottom: 2px;
             }}
         """)
 
@@ -288,7 +288,7 @@ class ToolBar(QWidget):
         """Initialize the user interface."""
         # Main layout with VSCode spacing
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 3, 10, 3)
+        layout.setContentsMargins(1, 1, 1, 1)
         layout.setSpacing(2)
 
         # Apply VSCode Dark Modern toolbar styling
@@ -370,11 +370,10 @@ class ToolBar(QWidget):
         layout.addStretch()
 
         # Calculate dynamic height
-        # icon_height(16px) + button_padding(4px) + toolbar_padding(6px) = 26px
-        icon_height = 16
-        button_padding = 4
-        toolbar_padding = 6
-        toolbar_height = icon_height + button_padding + toolbar_padding
+        # button_height(26px) + toolbar_padding(2px) = 28px
+        button_height = 26
+        toolbar_padding = 2
+        toolbar_height = button_height + toolbar_padding
 
         self.setFixedHeight(toolbar_height)
 

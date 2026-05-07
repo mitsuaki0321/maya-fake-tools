@@ -39,9 +39,10 @@ class _Palette:
     BORDER_SUBTLE = "#0a0a0a"  # near-black underline
     BORDER_DEFAULT = "#3c3c3c"  # tab + toolbar borders
     BORDER_STRONG = "#3e3e42"  # widget borders, indent guide
+    BORDER_BRIGHT = "#555555"  # toolbar vertical separators (visibility on dark toolbar)
 
     # Interactive backgrounds.
-    BUTTON_HOVER = "#484848"  # generic VSCode-style button hover
+    BUTTON_HOVER = "#5a5a5a"  # generic VSCode-style button hover
     BUTTON_RUN_PRESSED = "#5a504a"  # run button pressed (warm tint)
 
     # Scrollbar handle.
@@ -57,8 +58,8 @@ class _Palette:
 
     # Icon SVG recolouring.
     ICON_SOURCE = "#808080"  # in-file SVG colour, replaced at runtime
-    ICON_NORMAL = "#a0a0a0"
-    ICON_HOVER = "#d0d0d0"
+    ICON_NORMAL = "#d4d4d4"
+    ICON_HOVER = "#ececec"
     ICON_PRESSED = "#888888"
 
     # Accent (VSCode blue family).
@@ -95,6 +96,7 @@ class AppTheme:
 
     # ===== Toolbar =====
     TOOLBAR_BACKGROUND = _Palette.SURFACE_TOOLBAR
+    TOOLBAR_SEPARATOR = _Palette.BORDER_BRIGHT
     VSCODE_BUTTON_HOVER_BACKGROUND = _Palette.BUTTON_HOVER
     RUN_BUTTON_HOVER_BACKGROUND = _Palette.BORDER_DEFAULT
     RUN_BUTTON_PRESSED_BACKGROUND = _Palette.BUTTON_RUN_PRESSED
