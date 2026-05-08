@@ -38,6 +38,11 @@ class EditorShortcuts:
             "Ctrl+Shift+Up": "move_line_up",
             "Ctrl+Shift+Down": "move_line_down",
             "Ctrl+L": "select_current_line",
+            # IDE-style word navigation (Qt's defaults stop on every transition).
+            "Ctrl+Left": "move_word_left",
+            "Ctrl+Right": "move_word_right",
+            "Ctrl+Shift+Left": "select_word_left",
+            "Ctrl+Shift+Right": "select_word_right",
             # Code folding
             "Ctrl+Shift+[": "fold_current",
             "Ctrl+Shift+]": "unfold_current",

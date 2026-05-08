@@ -7,6 +7,7 @@ Multi-cursor equivalents live in the ``multi_cursor`` package.
 """
 
 from ......lib_ui.qt_compat import QTextCursor
+from .word_navigation import next_word_position, previous_word_position
 
 
 class EditorTextOperationsMixin:
@@ -406,6 +407,33 @@ class EditorTextOperationsMixin:
             cursor.setPosition(line_start)
             cursor.movePosition(QTextCursor.Right, QTextCursor.KeepAnchor, spaces_count)
             cursor.removeSelectedText()
+
+    # -------------------- Word navigation (Ctrl+Left/Right) --------------------
+
+    def _word_step(self, forward: bool, keep_anchor: bool):
+        """Move the caret one IDE-style word step, replacing Qt's default jumps."""
+        cursor = self.textCursor()
+        text = self.toPlainText()
+        pos = cursor.position()
+        target = next_word_position(text, pos) if forward else previous_word_position(text, pos)
+
+        if keep_anchor:
+            cursor.setPosition(target, QTextCursor.KeepAnchor)
+        else:
+            cursor.setPosition(target)
+        self.setTextCursor(cursor)
+
+    def move_word_left(self):
+        self._word_step(forward=False, keep_anchor=False)
+
+    def move_word_right(self):
+        self._word_step(forward=True, keep_anchor=False)
+
+    def select_word_left(self):
+        self._word_step(forward=False, keep_anchor=True)
+
+    def select_word_right(self):
+        self._word_step(forward=True, keep_anchor=True)
 
     def handle_backspace_key(self):
         """Handle Backspace with smart indent removal (4-space groups)."""

@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 
 from .......lib_ui.qt_compat import QApplication, Qt, QTextCursor
+from ..word_navigation import next_word_position, previous_word_position
 
 
 class MultiCursorInputHandler:
@@ -251,11 +252,11 @@ class MultiCursorInputHandler:
                 continue
 
             elif event.key() == Qt.Key_Left:
-                self._move_horizontal(cursor, event, QTextCursor.Left, QTextCursor.WordLeft, pick_start=True)
+                self._move_horizontal(editor, cursor, event, QTextCursor.Left, pick_start=True)
                 handled = True
 
             elif event.key() == Qt.Key_Right:
-                self._move_horizontal(cursor, event, QTextCursor.Right, QTextCursor.WordRight, pick_start=False)
+                self._move_horizontal(editor, cursor, event, QTextCursor.Right, pick_start=False)
                 handled = True
 
             elif event.key() == Qt.Key_Up:
@@ -326,20 +327,34 @@ class MultiCursorInputHandler:
     # -------------------- Key helpers --------------------
 
     @staticmethod
-    def _move_horizontal(cursor, event, char_op, word_op, pick_start: bool):
-        """Unified Left/Right handling with word-jump and shift-select variants."""
+    def _move_horizontal(editor, cursor, event, char_op, pick_start: bool):
+        """Unified Left/Right handling with word-jump and shift-select variants.
+
+        Word jumps go through ``word_navigation`` so multi-cursor matches the
+        single-cursor IDE-style behaviour rather than Qt's per-transition
+        ``WordLeft`` / ``WordRight``.
+        """
         use_word = bool(event.modifiers() & Qt.ControlModifier)
         keep_anchor = bool(event.modifiers() & Qt.ShiftModifier)
 
+        if use_word:
+            text = editor.toPlainText()
+            target = previous_word_position(text, cursor.position()) if pick_start else next_word_position(text, cursor.position())
+            if keep_anchor:
+                cursor.setPosition(target, QTextCursor.KeepAnchor)
+            else:
+                cursor.setPosition(target)
+            return
+
         if keep_anchor:
-            cursor.movePosition(word_op if use_word else char_op, QTextCursor.KeepAnchor)
+            cursor.movePosition(char_op, QTextCursor.KeepAnchor)
             return
 
         if cursor.hasSelection():
             pivot = min(cursor.position(), cursor.anchor()) if pick_start else max(cursor.position(), cursor.anchor())
             cursor.setPosition(pivot)
         else:
-            cursor.movePosition(word_op if use_word else char_op)
+            cursor.movePosition(char_op)
 
     def _move_home(self, cursor, event):
         """Home / Ctrl+Home with optional Shift-select and smart-Home toggle."""
