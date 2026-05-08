@@ -4,7 +4,7 @@ Provides Script Editor-like output display functionality.
 Supports both Maya native terminal and fallback QTextEdit.
 """
 
-from ......lib_ui.qt_compat import QApplication, QColor, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
+from ......lib_ui.qt_compat import QColor, Qt, QTextCharFormat, QTextCursor, QTextEdit, QVBoxLayout, QWidget
 from ...themes import AppTheme
 
 # Terminal constants
@@ -132,9 +132,6 @@ class OutputTerminal(QWidget):
         # Limit number of lines to prevent memory issues
         self.limit_output_lines()
 
-        # Refresh display
-        QApplication.processEvents()
-
     def append_error(self, text: str):
         """Append error text in red color."""
         if self.use_maya_terminal and self.maya_terminal:
@@ -245,20 +242,17 @@ class OutputTerminal(QWidget):
             return
 
         document = self.output_display.document()
+        excess = document.blockCount() - self.max_lines
+        if excess <= 0:
+            return
 
-        if document.blockCount() > self.max_lines:
-            # Remove old lines from the top
-            cursor = QTextCursor(document)
-            cursor.movePosition(QTextCursor.Start)
+        # Trim a chunk so we don't run this on every append.
+        lines_to_remove = excess + 100
 
-            # Calculate how many lines to remove
-            lines_to_remove = document.blockCount() - self.max_lines + 100
-
-            # Select and delete old lines
-            for _ in range(lines_to_remove):
-                cursor.select(QTextCursor.LineUnderCursor)
-                cursor.removeSelectedText()
-                cursor.deletePreviousChar()  # Remove the newline
+        cursor = QTextCursor(document)
+        cursor.movePosition(QTextCursor.Start)
+        cursor.movePosition(QTextCursor.NextBlock, QTextCursor.KeepAnchor, lines_to_remove)
+        cursor.removeSelectedText()
 
     def get_output_text(self) -> str:
         """Get all output text."""

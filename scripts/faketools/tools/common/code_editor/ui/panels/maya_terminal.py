@@ -14,6 +14,7 @@ except ImportError:
     MAYA_AVAILABLE = False
 
 from ......lib_ui.qt_compat import QAction, QMenu, QSizePolicy, Qt, QVBoxLayout, QWidget
+from ...themes.app_theme import AppTheme
 
 logger = getLogger(__name__)
 
@@ -101,6 +102,13 @@ class MayaTerminalWidget(QWidget):
                 # Override minimum size constraints
                 self.qt_widget.setMinimumSize(100, 50)  # Allow much smaller minimum size
                 self.qt_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+                # Match the editor's monospace family while preserving Maya's default size.
+                font = self.qt_widget.font()
+                font.setFamily(AppTheme.MONOSPACE_FONT_FAMILY)
+                if not font.exactMatch():
+                    font.setFamily(AppTheme.MONOSPACE_FONT_FALLBACK)
+                self.qt_widget.setFont(font)
 
                 # Add to our layout
                 self.layout.addWidget(self.qt_widget)
@@ -287,61 +295,24 @@ class MayaTerminalWidget(QWidget):
 
     def _setup_context_menu(self):
         """Setup context menu for the terminal."""
-        if not self._context_menu_connected:
-            try:
-                if self.qt_widget:
-                    # Test if widget is valid
-                    self.qt_widget.isVisible()
-                    # Enable custom context menu
-                    self.qt_widget.setContextMenuPolicy(Qt.CustomContextMenu)
-                    self.qt_widget.customContextMenuRequested.connect(self._show_context_menu)
-                    self._context_menu_connected = True
-            except RuntimeError:
-                # Widget reference is invalid, try to recreate it
-                if self.history_reporter:
-                    try:
-                        ptr = omui.MQtUtil.findControl(self.history_reporter)
-                        if ptr:
-                            self.qt_widget = wrapInstance(int(ptr), QWidget)
-                            self.qt_widget.setContextMenuPolicy(Qt.CustomContextMenu)
-                            self.qt_widget.customContextMenuRequested.connect(self._show_context_menu)
-                            self._context_menu_connected = True
-                    except Exception:
-                        pass
+        if self._context_menu_connected:
+            return
+        widget = self._get_valid_widget()
+        if not widget:
+            return
+        widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        widget.customContextMenuRequested.connect(self._show_context_menu)
+        self._context_menu_connected = True
 
     def _show_context_menu(self, position):
         """Show context menu at position."""
-        # Check if qt_widget is still valid
-        if not self.qt_widget:
+        widget = self._get_valid_widget()
+        if not widget:
             return
-
-        try:
-            # Test if widget is still valid by accessing a property
-            self.qt_widget.isVisible()
-        except RuntimeError:
-            # Widget has been deleted, recreate reference
-            if self.history_reporter:
-                try:
-                    ptr = omui.MQtUtil.findControl(self.history_reporter)
-                    if ptr:
-                        self.qt_widget = wrapInstance(int(ptr), QWidget)
-                    else:
-                        return
-                except Exception:
-                    return
-            else:
-                return
 
         # Create context menu with self as parent instead of qt_widget
         menu = QMenu(self)
-
-        # Apply theme from AppTheme
-        try:
-            from ...themes.app_theme import AppTheme
-
-            menu.setStyleSheet(AppTheme.get_menu_stylesheet())
-        except Exception:
-            pass
+        menu.setStyleSheet(AppTheme.get_menu_stylesheet())
 
         # Copy action
         copy_action = QAction("Copy", menu)
@@ -357,7 +328,7 @@ class MayaTerminalWidget(QWidget):
         # Show menu at cursor position
         try:
             # Map position to global coordinates
-            global_pos = self.qt_widget.mapToGlobal(position)
+            global_pos = widget.mapToGlobal(position)
             menu.exec_(global_pos)
         except RuntimeError:
             # Fallback if widget reference is invalid
@@ -378,7 +349,3 @@ class MayaTerminalWidget(QWidget):
             cmds.cmdScrollFieldReporter(self.history_reporter, edit=True, copySelection=True)
         except Exception as e:
             logger.error(f"Error copying selection: {e}")
-
-    def __del__(self):
-        """Destructor to ensure cleanup."""
-        self.cleanup()
