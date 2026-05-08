@@ -23,6 +23,12 @@ Note: Settings can be changed from the editor settings screen. You can also edit
 
 ## Settings Options
 
+### General Settings (general)
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `language` | "JPN" | UI language (JPN: Japanese / ENU: English / ...) |
+
 ### Editor Settings (editor)
 Settings for code editor display and behavior.
 
@@ -31,7 +37,7 @@ Settings for code editor display and behavior.
 | `font_size` | 10 | Editor font size |
 | `word_wrap` | true | Enable word wrap at editor width |
 
-Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Tab size is 4 spaces. Line numbers are always enabled.
+Note: Font family is fixed to "Cascadia Code" (fallback: "Consolas" → "Courier New"). Line height is roughly 1.6× the font's natural metrics. Tab size is 4 spaces. Line numbers are always enabled.
 
 ### Terminal Settings (terminal)
 Settings for the terminal that displays execution results.
@@ -40,7 +46,7 @@ Settings for the terminal that displays execution results.
 |---------|---------|-------------|
 | `font_size` | 9 | Terminal font size |
 
-Note: Font family is fixed to "Consolas" (fallback: "Courier New"). Maximum lines is 1000.
+Note: Font family is fixed to "Cascadia Code" (fallback: "Consolas" → "Courier New"). Maximum lines is 1000.
 
 ### Search Settings (search)
 Initial settings for find/replace functionality.
@@ -52,42 +58,15 @@ Initial settings for find/replace functionality.
 | `use_regex` | false | Whether to use regular expressions |
 | `search_direction` | "down" | Search direction (down / up) |
 
-### Maya Integration Settings (maya)
-Settings for Maya-specific features.
-
-#### Help Settings (maya.help)
-Settings for Maya command help display available from the code editor context menu.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `language` | "JPN" | Maya help language (JPN: Japanese / ENU: English) |
-
-### Command Port Settings (command_port)
-Settings for integration with external tools.\
-Used when integrating with tools like MCP Server.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `enabled` | false | Whether to enable command port |
-| `port` | 7001 | Port number to use |
-
 ### Autocomplete Settings (autocomplete)
 Settings for the code editor's autocomplete feature.
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `enabled` | true | Whether to enable autocomplete |
+| `debounce_ms` | 100 | Debounce window (ms) for identifier-triggered completion. Dot-triggered completion (`foo.`) bypasses the debounce. |
 
-Note: Also toggleable via the Toggle Autocomplete toolbar button. Auto-disabled when jedi is not installed.
-
-### Autosave Settings (autosave)
-Settings for automatic saving of work.
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `enabled` | true | Whether to enable autosave |
-| `interval_seconds` | 60 | Autosave interval in seconds |
-| `backup_on_change` | true | Whether to create backup on file change |
+Note: Also toggleable via the Toggle Autocomplete toolbar button or `Ctrl+Space`. Auto-disabled when jedi is not installed. MEL tabs ignore this setting (Python-only feature).
 
 ### Layout Settings (layout)
 Settings for window layout.
@@ -116,28 +95,27 @@ Settings for window layout.
     "use_regex": false,
     "search_direction": "down"
   },
-  "maya": {
-    "help": {
-      "language": "ENU"
-    }
-  },
-  "command_port": {
-    "enabled": false,
-    "port": 7001
-  },
   "autocomplete": {
-    "enabled": true
-  },
-  "autosave": {
     "enabled": true,
-    "interval_seconds": 60,
-    "backup_on_change": true
+    "debounce_ms": 100
   },
   "layout": {
     "terminal_at_bottom": true
   }
 }
 ```
+
+## Sessions and Workspace State
+
+`user_settings.json` only stores UI-display preferences. Working state lives in companion files:
+
+| File | Purpose |
+|------|------|
+| `session.json` | Open tabs, caret positions, the Draft buffer's text, the autocomplete MRU, etc. |
+| `workspace.json` | Workspace root, file-explorer expansion state, and other project-leaning data. |
+
+These are read and written automatically on Code Editor startup / shutdown and are independent of the user settings file.\
+The standalone autosave (`autosave`), Maya help language, and command port (`command_port`) options that earlier versions exposed in user settings have been removed — unsaved content is now covered by the Draft mechanism inside `session.json`.
 
 ## How to Change Settings
 

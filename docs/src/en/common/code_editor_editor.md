@@ -14,6 +14,24 @@ It provides advanced code editing features such as syntax highlighting and error
 
 ![image](../../images/common/code_editor/code-editor.png)
 
+## Supported Languages
+
+The editor handles both **Python** and **MEL**. Each tab's language is resolved from the file extension, and the following features swap accordingly.
+
+| Feature | Python ( `.py` ) | MEL ( `.mel` ) |
+|---------|------------------|----------------|
+| Syntax highlighting | Yes | Yes |
+| Auto indent | Yes (PEP-style rules) | Yes (brace-driven) |
+| Code folding | Yes (indent-based) | Yes ( `{` `}` -based) |
+| Toggle comment ( Ctrl+/ ) | `#` | `//` |
+| Run / Add to Shelf | Python executer | MEL executer |
+| Autocomplete | Yes (jedi) | No |
+| Documentation popup | Yes | No |
+| Language-specific right-click | Maya Help / Inspect / Reload | What Is / What Is (Open Source) |
+
+The active tab carries a thin **accent line at the top** in the language's accent color (blue for Python, orange for MEL).\
+The toolbar exposes a separate **New Python File** and **New MEL File** button (Ctrl+N creates the default-language file, i.e. Python).
+
 ## Tab Management
 
 ### Draft Tab
@@ -102,8 +120,14 @@ Main keyboard shortcuts for multi-cursor mode:
 
 ## Code Folding
 
-The code editor supports Python indent-based code folding.\
-Foldable blocks (such as `def`, `class`, `if`, `for`, `while`, `try`, `with`) display a chevron indicator in the gutter area next to line numbers.
+Folding is supported in both languages: **Python uses indent-based detection**, **MEL uses brace ( `{` `}` ) detection**.\
+Foldable blocks display a chevron indicator in the gutter area next to line numbers.
+
+**Python**\
+All indent-driven blocks (`def`, `class`, `if`, `for`, `while`, `try`, `with`, …) are foldable.
+
+**MEL**\
+Any `{ ... }` region is foldable — `proc` / `global proc` bodies, `if` / `for` / `while` blocks, etc. Multi-line `/* ... */` comments fold as their own region.
 
 - Chevron indicators appear when hovering over the fold gutter area, and fade out when the mouse leaves.
 - Folded blocks always display a right-pointing chevron (›) and a placeholder summary (e.g., `... (5 lines)`).
@@ -127,7 +151,9 @@ Foldable blocks (such as `def`, `class`, `if`, `for`, `while`, `try`, `with`) di
 
 ## Autocomplete
 
-The code editor ships with [jedi](https://github.com/davidhalter/jedi)-backed autocomplete, covering the Python standard library, user variables, and Maya's `maya.cmds` / `maya.api.OpenMaya` APIs.
+The code editor ships with [jedi](https://github.com/davidhalter/jedi)-backed autocomplete, covering the Python standard library, user variables, and Maya's `maya.cmds` / `maya.api.OpenMaya` / `OpenMayaAnim` / `OpenMayaUI` / `OpenMayaRender` APIs.
+
+> **Note**: Autocomplete is **Python-only**. MEL tabs never initialise the jedi engine, so this section applies only to Python tabs.
 
 ![image](../../images/common/code_editor/autocomplete.png)
 
@@ -149,10 +175,14 @@ Candidates whose name **starts with the typed prefix** are listed first, followe
 
 ### Maya API Support
 
-- **Bundled stubs**: `.pyi` stubs for `maya.cmds` and `maya.api.OpenMaya` are shipped per Maya version. No extra setup required.
+- **Bundled stubs**: `.pyi` stubs for `maya.cmds`, `maya.api.OpenMaya`, `OpenMayaAnim`, `OpenMayaUI`, and `OpenMayaRender` are shipped per Maya version. No extra setup required. The stubs cover only the **stock Maya commands** — runtime/plugin commands are deliberately excluded.
 - **Imports optional**: Typing `cmds.polyCube` in a scratch buffer works without an explicit import — the editor prepends a virtual import shim behind the scenes.
 - **Recognised aliases**: `cmds`, `mc`, `maya`, `OpenMaya`, `om`, `om2`.
 - **User variables**: When a user variable holds the return value of a call (e.g. `x = cmds.ls(); x.`), completions for that variable come from live `dir()` introspection.
+
+### Suppression Inside Comments and Strings
+
+The popup will not open inside line comments starting with `#`, nor inside string literals (`"..."`, `'...'`, triple-quoted). A token like `cmds.` written inside a comment can never act as a trigger.
 
 ### Numeric Literals
 
@@ -160,7 +190,7 @@ When `.` is preceded by a digit (`0.`, `1.5`), the editor treats it as a float l
 
 ### MRU (Most Recently Used)
 
-Items accepted earlier in the same session float to the top of subsequent popups. The MRU resets when the editor is closed.
+Items accepted earlier float to the top of subsequent popups. **The MRU is now persisted to the workspace**, so the most recently used candidates remain ranked even after restarting Maya / Code Editor. The MRU lives alongside the editor's session state in `session.json`.
 
 ### Disabling
 
@@ -239,6 +269,24 @@ Rich rendering uses these optional packages. The popup still works without them,
 Both can be installed from the [Dependency Installer](dependency_installer.html).
 
 
+## Display and Decorations
+
+### Font
+
+The editor and terminal share **Cascadia Code** as their monospace font (fallback: Consolas → Courier New). Line height is set to roughly **1.6× the font's natural metrics**, giving comfortable vertical spacing for long sessions. Font size is adjusted live with `Ctrl+MouseWheel` and persists across sessions.
+
+### Current-Line Highlight
+
+The line under the caret is highlighted with **thin horizontal rules at the top and bottom of the line**, instead of a full background tint. With multi-cursors, every line that hosts a cursor gets the same rules.
+
+### Bracket Match
+
+When the caret sits on a bracket (`()`, `[]`, `{}`), the matching bracket is decorated with an **outline frame rather than a fill**, so it never competes with selection or current-line highlighting.
+
+### Rainbow Brackets
+
+Nested brackets are coloured by depth. Brackets inside comments and string literals are excluded from the rainbow palette and stay neutral so they're not mistaken for code.
+
 ## Special Context Menu Features
 
 The context menu (right-click menu) has several code editor-specific features.
@@ -293,6 +341,19 @@ You can add the selected code to the active Maya shelf from the context menu.
 Select the code you want to register, then choose **Add to Shelf** from the context menu.\
 A shelf button will be created on the currently active shelf tab.\
 This is the same feature as the toolbar's Add to Shelf button.
+
+The shelf button's sourceType, label, and icon follow the active tab's language: Python uses `python` / `Python` / `pythonFamily.png`, while MEL uses `mel` / `MEL` / `commandButton.png`.
+
+### MEL: What Is / What Is (Open Source)
+
+On MEL tabs, selecting an identifier and right-clicking shows **What Is** entries in place of the Python `Maya Help` action. Each runs Maya's `whatIs` command on the identifier and reports the result in the terminal.
+
+| Menu Item | Behaviour |
+|------|------|
+| **What Is 'X'** | Prints the raw `whatIs` output to the terminal. Read-only — does not touch the editor state. |
+| **What Is 'X' (Open Source)** | Same classification, plus opens the source file in the **OS-default application** (Notepad / Finder preview / `xdg-open`, …) when `whatIs` returns a path. |
+
+The "Open Source" variant intentionally hands off to the OS handler instead of loading the file as a Code Editor tab — `whatIs` paths typically point at Maya bundled scripts or third-party MEL libraries that the user should not be editing in place.
 
 ## Keyboard Shortcuts
 

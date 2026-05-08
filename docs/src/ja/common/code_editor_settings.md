@@ -23,6 +23,12 @@ lang-ref: code_editor_settings
 
 ## 設定項目
 
+### 一般設定 (general)
+
+| 設定名 | デフォルト値 | 説明 |
+|--------|------------|------|
+| `language` | "JPN" | UI 言語 (JPN: 日本語 / ENU: 英語 等) |
+
 ### エディタ設定 (editor)
 コードエディタの表示と動作に関する設定です。
 
@@ -31,7 +37,7 @@ lang-ref: code_editor_settings
 | `font_size` | 10 | エディタの文字サイズ |
 | `word_wrap` | true | エディタ幅での折り返し表示 |
 
-※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。タブサイズは4スペース。行番号は常に有効です。
+※ フォントは "Cascadia Code" 固定（フォールバック: "Consolas" → "Courier New"）。行高は等幅フォントの自然行高の約 1.6 倍。タブサイズは 4 スペース。行番号は常に有効です。
 
 ### ターミナル設定 (terminal)
 実行結果を表示するターミナルの設定です。
@@ -40,7 +46,7 @@ lang-ref: code_editor_settings
 |--------|------------|------|
 | `font_size` | 9 | ターミナルの文字サイズ |
 
-※ フォントは "Consolas" 固定（フォールバック: "Courier New"）。最大行数は1000行です。
+※ フォントは "Cascadia Code" 固定（フォールバック: "Consolas" → "Courier New"）。最大行数は 1000 行です。
 
 ### 検索設定 (search)
 検索・置換機能の初期設定です。
@@ -52,42 +58,15 @@ lang-ref: code_editor_settings
 | `use_regex` | false | 正規表現を使用して検索するか |
 | `search_direction` | "down" | 検索方向（down: 下方向 / up: 上方向） |
 
-### Maya連携設定 (maya)
-Maya固有の機能に関する設定です。
-
-#### ヘルプ設定 (maya.help)
-コードエディターのコンテキストメニューより実行できる Maya コマンドのヘルプ表示に関する設定です。
-
-| 設定名 | デフォルト値 | 説明 |
-|--------|------------|------|
-| `language` | "JPN" | Mayaヘルプの言語（JPN: 日本語 / ENU: 英語） |
-
-### コマンドポート設定 (command_port)
-外部ツールとの連携用の設定です。\
-MCP Serverなどのツールと連携する場合に使用します。
-
-| 設定名 | デフォルト値 | 説明 |
-|--------|------------|------|
-| `enabled` | false | コマンドポートを有効にするか |
-| `port` | 7001 | 使用するポート番号 |
-
 ### オートコンプリート設定 (autocomplete)
 コードエディターのオートコンプリート機能に関する設定です。
 
 | 設定名 | デフォルト値 | 説明 |
 |--------|------------|------|
 | `enabled` | true | オートコンプリートを有効にするか |
+| `debounce_ms` | 100 | 識別子入力時の補完起動デバウンス時間 (ms)。 `.` 入力時のドット補完は即時で起動するため対象外 |
 
-※ ツールバーの Toggle Autocomplete ボタンからも切り替え可能です。jedi が未インストールの場合は自動的に無効化されます。
-
-### 自動保存設定 (autosave)
-作業内容の自動保存に関する設定です。
-
-| 設定名 | デフォルト値 | 説明 |
-|--------|------------|------|
-| `enabled` | true | 自動保存を有効にするか |
-| `interval_seconds` | 60 | 自動保存の間隔（秒） |
-| `backup_on_change` | true | ファイル変更時にバックアップを作成するか |
+※ ツールバーの Toggle Autocomplete ボタンや Ctrl+Space からも切り替え可能です。jedi が未インストールの場合は自動的に無効化されます。MEL タブでは設定値に関わらず動作しません ( Python 専用 )。
 
 ### レイアウト設定 (layout)
 ウィンドウのレイアウトに関する設定です。
@@ -116,28 +95,27 @@ MCP Serverなどのツールと連携する場合に使用します。
     "use_regex": false,
     "search_direction": "down"
   },
-  "maya": {
-    "help": {
-      "language": "JPN"
-    }
-  },
-  "command_port": {
-    "enabled": false,
-    "port": 7001
-  },
   "autocomplete": {
-    "enabled": true
-  },
-  "autosave": {
     "enabled": true,
-    "interval_seconds": 60,
-    "backup_on_change": true
+    "debounce_ms": 100
   },
   "layout": {
     "terminal_at_bottom": true
   }
 }
 ```
+
+## セッションとワークスペース
+
+`user_settings.json` には UI 表示まわりの設定だけを保存し、以下の状態は別ファイルで管理されます。
+
+| ファイル | 役割 |
+|------|------|
+| `session.json` | 開いていたタブ・カーソル位置・ドラフト本文・オートコンプリートの MRU 等の作業状態 |
+| `workspace.json` | ワークスペースルート、エクスプローラーの展開状態などのプロジェクト寄り情報 |
+
+これらは Code Editor の起動・終了時に自動で読み書きされ、ユーザー設定とは独立しています。\
+過去のバージョンに存在した独立した自動保存 (`autosave`) や Maya ヘルプ言語、コマンドポート (`command_port`) の設定はユーザー設定からは廃止されており、未保存内容は `session.json` のドラフトメカニズムでカバーされます。
 
 ## 設定の変更方法
 
@@ -177,4 +155,3 @@ MCP Serverなどのツールと連携する場合に使用します。
 ### 設定ファイルが見つからない場合
 - Code Editor を一度起動すると自動的に作成されます
 - 手動で作成する場合は、上記の「設定ファイルの例」をコピーして使用してください
-

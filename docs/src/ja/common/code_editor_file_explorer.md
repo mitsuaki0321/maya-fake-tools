@@ -17,7 +17,8 @@ lang-ref: code_editor_file_explorer
 
 ### ディレクトリツリー操作
 
-ファイルエクスプローラーには、プロジェクトのルートディレクトリが表示されます。
+ファイルエクスプローラーには、プロジェクトのルートディレクトリが表示されます。\
+表示は VSCode 風に整えられており、フォルダの開閉は **アイコン列に直接描画されたシェブロン (› / ˅)** で示され、ネストレベルは **薄い縦線のインデントガイド** で視覚化されます。
 
 ![image](../../images/common/code_editor/directory-tree.png)
 
@@ -29,7 +30,8 @@ lang-ref: code_editor_file_explorer
 | 操作             | 説明                                                         |
 |------------------|--------------------------------------------------------------|
 | **Open**         | 選択したファイルをエディタで開きます。                        |
-| **New Python File** | 選択したディレクトリに新しい Python ファイルを作成します。   |
+| **New Python File** | 選択したディレクトリに新しい Python ( `.py` ) ファイルを作成します。 |
+| **New MEL File** | 選択したディレクトリに新しい MEL ( `.mel` ) ファイルを作成します。 |
 | **New Folder**   | 選択したディレクトリに新しいフォルダを作成します。            |
 | **Copy**         | 選択したファイルまたはフォルダをコピーします。                |
 | **Cut**          | 選択したファイルまたはフォルダを切り取ります。                |
@@ -37,6 +39,13 @@ lang-ref: code_editor_file_explorer
 | **Rename**       | 選択したファイルまたはフォルダの名前を変更します。            |
 | **Delete**       | 選択したファイルまたはフォルダを削除します。                  |
 | **Refresh**      | ディレクトリツリーを更新します。                              |
+
+新規ファイル系のメニュー項目は、登録済みの言語プロファイルから自動生成されます ( Python と MEL の両方が常時表示 )。新しい言語が追加されればメニューにも自動で項目が並びます。
+
+### ファイル種別アイコン
+
+主要な拡張子・ファイル名には、VSCode の [Material Icon Theme](https://github.com/material-extensions/vscode-material-icon-theme) (MIT ライセンス) のグリフが適用されます。Python / MEL / Markdown / JSON / YAML / TOML / C++ ヘッダ・ソース / シェルスクリプト / 画像 / ログ など、よく使われる種別が個別のアイコンで表示されます。\
+未対応の拡張子は OS 標準のファイルアイコンにフォールバックします。
 
 
 ### ファイルをタブで開く
@@ -56,11 +65,11 @@ lang-ref: code_editor_file_explorer
 
 ### ファイルを開かず実行
 
-python ファイルをエクスプローラーでホバーすることにより、右端に ![image](../../images/common/code_editor/run_normal.svg) ボタンが表示されます。
+Python ( `.py` ) または MEL ( `.mel` ) ファイルをエクスプローラーでホバーすると、右端に ![image](../../images/common/code_editor/run_normal.svg) ボタンが表示されます。
 
 ![image](../../images/common/code_editor/directory-run-code.png)
 
-`Run` ボタンをクリックすると、そのファイルをエディタで開かずに直接実行できます。
+`Run` ボタンをクリックすると、そのファイルをエディタで開かずに直接実行できます。実行は拡張子に応じて Python または MEL の executer に自動でルーティングされます。
 
 
 ## ショートカットキー

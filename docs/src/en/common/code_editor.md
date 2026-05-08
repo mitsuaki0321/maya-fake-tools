@@ -10,8 +10,10 @@ order: 10
 
 ## Overview
 
-A custom Python code editor for Maya.\
-It features syntax highlighting, file explorer, terminal, and more.
+A custom code editor for Maya.\
+Supports both **Python** and **MEL**, with syntax highlighting, a file explorer, an embedded terminal, and more.
+
+Per-language behavior is driven by an internal `LanguageProfile` system, so highlighting, indentation, code folding, the right-click menu, and shelf registration all swap based on the active tab's language.
 
 - [Toolbar](code_editor_toolbar.html)
 - [File Explorer](code_editor_file_explorer.html)
@@ -74,10 +76,12 @@ See [Terminal Documentation](code_editor_terminal.html) for details.
 
 ## Running Code
 
-1. Click the + icon in the toolbar to create a new file.
-2. Enter Python code in the code editor.
+1. Click a per-language + icon in the toolbar (Python or MEL) to create a new file.
+2. Enter code in the editor.
 3. Click the Play icon in the toolbar to run the code.
-4. The execution results will be displayed in the output console.
+4. Results appear in the output console.
+
+Execution routes to the Python or MEL executer based on the file's extension. The Run button on file-explorer hover, and quick "run without opening", use the same extension-based dispatch.
 
 ## Configuration Files
 
@@ -87,6 +91,7 @@ The tool saves configuration files in the following locations.
 * Session: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/session.json`
 * Workspace settings: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/workspace.json`
 * Workspace files: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/`
-* Autosave: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/.maya_code_editor_backups/`
+
+Unsaved tabs and the Draft buffer are continuously backed up into `session.json`, so the standalone autosave mechanism that earlier versions shipped with has been removed.
 
 See [User Settings](code_editor_settings.html) for detailed configuration options.

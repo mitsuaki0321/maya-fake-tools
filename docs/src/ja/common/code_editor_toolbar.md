@@ -31,14 +31,16 @@ lang-ref: code_editor_toolbar
 - 現在アクティブなエディタのコードを実行します。\
 コードを選択している場合は、選択部分のみが実行されます。
 
-**![image](../../images/common/code_editor/new_normal.svg) Create New File**
+**![image](../../images/common/code_editor/new_python_normal.svg) New Python File / ![image](../../images/common/code_editor/new_mel_normal.svg) New MEL File**
 
-- 新しいファイルを作成します。\
-クリックすると、ファイル名を入力するダイアログが表示されます。
+- 言語ごとに独立した新規ファイルアイコンが並びます。アイコンには言語の頭文字 (P / M) と、その言語のアクセントカラーが描かれています。
+- クリックすると、ファイル名を入力するダイアログが表示され、対応する拡張子 (`.py` / `.mel`) のファイルが作成されます。
 
 ![image](../../images/common/code_editor/new-file.png)
 
 - ファイル名を入力して「OK」をクリックすると、新しいファイルが作成され、タブが開きます。
+- ショートカット **Ctrl+N** はデフォルト言語 ( Python ) のファイルを作成します。MEL ファイルはツールバーの専用ボタンか、ファイルエクスプローラーの右クリックメニューから作成してください。
+- 新しい言語プロファイルが追加されると、ツールバーにも自動的にそのアイコンが追加される仕組みになっています。
 
 **![image](../../images/common/code_editor/save_normal.svg) Save Current File**
 
@@ -60,12 +62,13 @@ lang-ref: code_editor_toolbar
 **![image](../../images/common/code_editor/echo_normal.svg) Toggle Echo All Commands**
 
 - ターミナルのエコーモードの ON/OFF を切り替えます。
+- アイコンが ![image](../../images/common/code_editor/echo_active_normal.svg) のとき、すべてのコマンドが Maya の Script Editor にエコーされます。
 
 **![image](../../images/common/code_editor/shelf_normal.svg) Add to Shelf**
 
 - 現在選択中のコードを、アクティブな Maya シェルフにシェルフボタンとして追加します。
 - コードが選択されていない場合、選択を促すダイアログが表示されます。
-- シェルフボタンは `pythonFamily.png` アイコンと "Python" ラベルで作成され、Maya の Script Editor と同じ動作になります。
+- シェルフボタンの sourceType / ラベル / アイコンは、現在のタブの言語に従います ( Python: `python` / `Python` / `pythonFamily.png` 、MEL: `mel` / `MEL` / `commandButton.png` )。
 - この機能はコードを選択した状態でコンテキストメニュー（右クリック）からも利用できます。
 
 **![image](../../images/common/code_editor/wordwrap_normal.svg) Toggle Word Wrap**
@@ -73,6 +76,7 @@ lang-ref: code_editor_toolbar
 - コードエディターの折り返し表示の ON/OFF を切り替えます。
 - ON の場合、長い行がエディタの幅で折り返されます。OFF の場合、水平スクロールバーが表示されます。
 - この設定はセッション間で保持されます。
+- アイコンが ![image](../../images/common/code_editor/wordwrap_active_normal.svg) のとき、折り返し表示が有効になっています。
 
 **![image](../../images/common/code_editor/foldall_normal.svg) Fold All**
 
@@ -82,13 +86,14 @@ lang-ref: code_editor_toolbar
 
 - 現在のエディタの全ての折り畳まれたコードブロックを展開します。
 
-**![image](../../images/common/code_editor/autocomplete_normal.svg) Toggle Autocomplete (Ctrl+Space)**
+**![image](../../images/common/code_editor/autocomplete_active_normal.svg) Toggle Autocomplete (Ctrl+Space)**
 
 - オートコンプリート機能の ON/OFF を切り替えます。
 - OFF 時は jedi への問い合わせが一切行われないため、タイピング時の遅延をゼロにできます (低スペック PC 向け)。
 - この設定はセッション間で保持されます。
 - jedi が未インストールの場合、このボタンは自動的に無効化されます。
 - 動作の詳細は [コードエディターのオートコンプリート](code_editor_editor.html) を参照してください。
+- アイコンが ![image](../../images/common/code_editor/autocomplete_normal.svg) のとき、オートコンプリートが無効になっています。
 
 **![image](../../images/common/code_editor/terminal_normal.svg) Toggle Terminal Visibility**
 

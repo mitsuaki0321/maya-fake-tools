@@ -10,8 +10,10 @@ order: 10
 
 ## 概要
 
-Maya 用のカスタム Python コードエディターです。\
-シンタックスハイライト、ファイルエクスプローラー、ターミナルなどの機能を備えています。
+Maya 用のカスタムコードエディターです。\
+**Python** と **MEL** の両方をサポートしており、シンタックスハイライト、ファイルエクスプローラー、ターミナルなどの機能を備えています。
+
+言語ごとの機能差は内部の言語プロファイルによって制御されており、ハイライト・インデント・コードフォールディング・右クリックメニュー・シェルフ登録などが言語に応じて切り替わります。
 
 - [ツールバー](code_editor_toolbar.html)
 - [ファイルエクスプローラー](code_editor_file_explorer.html)
@@ -74,10 +76,13 @@ faketools.tools.common.code_editor.ui.show_ui(floating=True)
 
 ## コードを実行する
 
-1. ツールバーの ＋ アイコンをクリックして新しいファイルを作成します。
-2. コードエディターに Python コードを入力します。
+1. ツールバーの言語別の ＋ アイコン (Python / MEL) をクリックして新しいファイルを作成します。
+2. コードエディターにコードを入力します。
 3. ツールバーの ▶ アイコンをクリックしてコードを実行します。
 4. アウトプットコンソールに実行結果が表示されます。
+
+実行は、ファイルの拡張子に応じて Python または MEL の executer に自動でルーティングされます。\
+ファイルエクスプローラーの Run ボタンや、ファイルを開かずに行うクイック実行も同じく拡張子から言語を判定します。
 
 ## 設定ファイル
 
@@ -87,6 +92,7 @@ faketools.tools.common.code_editor.ui.show_ui(floating=True)
 * セッション: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/session.json`
 * ワークスペース設定: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/config/workspace.json`
 * ワークスペースファイル: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/`
-* オートセーブ: `%MAYA_APP_DIR%/faketools_workspace/common/code_editor/workspace/.maya_code_editor_backups/`
+
+未保存タブやドラフトの内容は session.json に常時バックアップされるため、別途のオートセーブ機構は廃止されています。
 
 詳細な設定については、[ユーザー設定](code_editor_settings.html)をご覧ください。
