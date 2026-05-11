@@ -1,6 +1,6 @@
 """Viewport overlays drawn on top of the editor's normal text rendering.
 
-Three decorations:
+Four decorations:
 
 - :func:`paint_fold_placeholders` writes the ``...`` indicator at the
   end of folded header lines.
@@ -8,6 +8,9 @@ Three decorations:
   bottom of the cursor's row.
 - :func:`paint_indent_guides` draws faint vertical rules at each indent
   level so wide indentation stays scannable.
+- :func:`paint_selected_whitespace_dots` overlays a ``·`` at every
+  space character inside the current selection, mimicking VSCode's
+  ``editor.renderWhitespace: "selection"`` setting.
 
 The decorations run after the editor's parent ``paintEvent`` has
 rendered the text and before the multi-cursor painter draws caret
@@ -18,10 +21,11 @@ sit in one file.
 
 from __future__ import annotations
 
-from ......lib_ui.qt_compat import QColor, QPainter, QPen, Qt
+from ......lib_ui.qt_compat import QColor, QPainter, QPen, Qt, QTextCursor
 from ...themes import AppTheme
 
 _INDENT_SIZE = 4
+_MIDDLE_DOT = "·"
 
 
 def _cached_indent_step(editor) -> int:
@@ -160,6 +164,62 @@ def paint_indent_guides(editor, event) -> None:
             for level in range(indent_levels):
                 x = int(level * tab_width)
                 painter.drawLine(x, top, x, bottom)
+
+        block = block.next()
+
+    painter.end()
+
+
+def paint_selected_whitespace_dots(editor, event) -> None:
+    """Overlay a ``·`` on every space character inside the current selection.
+
+    Mirrors VSCode's ``editor.renderWhitespace: "selection"`` behaviour:
+    any space the user has highlighted is decorated so indentation and
+    inter-token spacing inside a copy-paste hunk stay scannable. Tabs
+    and other whitespace are intentionally left alone — only the plain
+    space character (U+0020) is decorated, which is what the editor's
+    indent style actually uses.
+
+    Skipped entirely when there is no selection.
+    """
+    cursor = editor.textCursor()
+    if not cursor.hasSelection():
+        return
+
+    sel_start = cursor.selectionStart()
+    sel_end = cursor.selectionEnd()
+
+    painter = QPainter(editor.viewport())
+    painter.setPen(QColor(AppTheme.FOREGROUND))
+    painter.setFont(editor.font())
+
+    metrics = editor.fontMetrics()
+    event_bottom = event.rect().bottom()
+    content_offset = editor.contentOffset()
+
+    block = editor.firstVisibleBlock()
+    while block.isValid():
+        geometry = editor.blockBoundingGeometry(block).translated(content_offset)
+        if geometry.top() > event_bottom:
+            break
+
+        if block.isVisible():
+            block_pos = block.position()
+            block_end = block_pos + block.length() - 1
+            # Skip blocks outside the selection range entirely.
+            if block_pos < sel_end and sel_start <= block_end:
+                text = block.text()
+                baseline = int(geometry.top()) + metrics.ascent()
+                # First/last char indices inside this block that are selected.
+                first_i = max(0, sel_start - block_pos)
+                last_i = min(len(text), sel_end - block_pos)
+                tmp = QTextCursor(block)
+                for i in range(first_i, last_i):
+                    if text[i] != " ":
+                        continue
+                    tmp.setPosition(block_pos + i)
+                    cur_rect = editor.cursorRect(tmp)
+                    painter.drawText(cur_rect.x(), baseline, _MIDDLE_DOT)
 
         block = block.next()
 
