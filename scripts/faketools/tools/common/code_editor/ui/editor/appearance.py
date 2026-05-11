@@ -8,7 +8,7 @@ how :class:`MultiCursorMixin` provides ``handle_*`` helpers that the
 widget's Qt overrides dispatch to.
 """
 
-from ......lib_ui.qt_compat import QPlainTextEdit, Qt, QTextBlockFormat, QTextCursor
+from ......lib_ui.qt_compat import QBrush, QPalette, QPlainTextEdit, Qt, QTextBlockFormat, QTextCursor, is_pyside6
 from ...themes import AppTheme
 
 # Editor constants
@@ -31,6 +31,25 @@ class EditorAppearanceMixin:
         separately because the placeholder is language-driven.
         """
         self.setFont(AppTheme.make_monospace_font(font_size))
+
+        # Preserve per-token syntax colours inside a selection — PySide6 only.
+        #
+        # Setting ``QPalette.HighlightedText`` to a ``NoBrush`` brush makes
+        # ``QTextDocumentLayout`` skip its per-character foreground override
+        # when painting selected text, so the syntax highlighter's
+        # ``QTextCharFormat`` colours stay visible underneath the selection
+        # background (mirrors VSCode's behaviour).
+        #
+        # Gated to PySide6 because the same call hard-crashed Maya 2023
+        # (PySide2 / Qt 5.15): ``QTextDocumentLayout`` there assumes a valid
+        # colour in ``HighlightedText``, and a ``NoBrush`` brush gets resolved
+        # to a NULL pointer that downstream paint code dereferences. Until a
+        # Qt-5-safe alternative (e.g. ExtraSelection background overlay plus
+        # custom paintEvent) is in place, only the Qt 6 path gets the polish.
+        if is_pyside6():
+            palette = self.palette()
+            palette.setBrush(QPalette.HighlightedText, QBrush(Qt.NoBrush))
+            self.setPalette(palette)
 
         tab_stop_distance = DEFAULT_TAB_SIZE * 10
         try:
