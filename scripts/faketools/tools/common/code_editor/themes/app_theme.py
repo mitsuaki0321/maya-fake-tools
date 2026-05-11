@@ -126,6 +126,11 @@ class AppTheme:
     CURRENT_LINE_BORDER = "#282828"  # rules above/below caret line
     INDENT_GUIDE_COLOR = _Palette.BORDER_STRONG
     BRACKET_MATCH_BORDER = "#666666"  # 1px rectangle around the matched bracket char
+    # Shares the fold placeholder's dim grey — both are auxiliary glyphs laid
+    # over real text and should sit at the same visual weight. Painted opaque
+    # after the native selection background, so it stays visible on both the
+    # editor (#1e1e1e) and selection (#264f78) backgrounds.
+    WHITESPACE_DOT_COLOR = _Palette.TEXT_DIMMER
 
     # ===== Line numbers =====
     LINE_NUMBER_BACKGROUND = _Palette.SURFACE_PRIMARY

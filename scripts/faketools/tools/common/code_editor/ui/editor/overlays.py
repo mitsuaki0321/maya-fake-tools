@@ -190,7 +190,7 @@ def paint_selected_whitespace_dots(editor, event) -> None:
     sel_end = cursor.selectionEnd()
 
     painter = QPainter(editor.viewport())
-    painter.setPen(QColor(AppTheme.FOREGROUND))
+    painter.setPen(QColor(AppTheme.WHITESPACE_DOT_COLOR))
     painter.setFont(editor.font())
 
     metrics = editor.fontMetrics()
