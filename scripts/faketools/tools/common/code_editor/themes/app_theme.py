@@ -126,11 +126,17 @@ class AppTheme:
     CURRENT_LINE_BORDER = "#282828"  # rules above/below caret line
     INDENT_GUIDE_COLOR = _Palette.BORDER_STRONG
     BRACKET_MATCH_BORDER = "#666666"  # 1px rectangle around the matched bracket char
-    # Shares the fold placeholder's dim grey — both are auxiliary glyphs laid
-    # over real text and should sit at the same visual weight. Painted opaque
-    # after the native selection background, so it stays visible on both the
-    # editor (#1e1e1e) and selection (#264f78) backgrounds.
-    WHITESPACE_DOT_COLOR = _Palette.TEXT_DIMMER
+    # VSCode's ``editorWhitespace.foreground`` default: off-white with 16%
+    # alpha. Painted semi-transparently so the dot blends with whatever sits
+    # underneath, which means the effective on-screen colour adapts to the
+    # background:
+    #   - editor bg (#1e1e1e) → ~#3e3e3d (subtle neutral grey)
+    #   - selection bg (#264f78) → ~#446789 (cool blue-grey)
+    # An opaque neutral grey here would look warmer than VSCode on the blue
+    # selection background due to simultaneous-contrast against the cool bg —
+    # the alpha-blend version stays perceptually neutral in both contexts.
+    # RGBA tuple to match the convention used by ``MULTI_CURSOR_COLOR`` etc.
+    WHITESPACE_DOT_COLOR = (227, 228, 226, 41)
 
     # ===== Line numbers =====
     LINE_NUMBER_BACKGROUND = _Palette.SURFACE_PRIMARY
