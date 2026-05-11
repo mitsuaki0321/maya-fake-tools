@@ -6,6 +6,7 @@ delegated to ``command.file_ops`` so the widget only translates user intent
 into ops and renders the resulting error messages.
 """
 
+import contextlib
 from logging import getLogger
 import os
 
@@ -17,6 +18,7 @@ from ......lib_ui.qt_compat import (
     QFileInfo,
     QFileSystemModel,
     QIcon,
+    QItemSelectionModel,
     QLineEdit,
     QMenu,
     QModelIndex,
@@ -744,6 +746,9 @@ class FileExplorer(QWidget):
 
         result = file_ops.create_source_file(parent_dir, name, language=language)
         if result.success:
+            # QFileSystemModel's watcher misses creations on network shares,
+            # so nudge it explicitly while keeping the user's tree state.
+            self._refresh_preserving_state(ensure_visible_path=result.destination)
             self.file_selected.emit(result.destination)
         else:
             CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {result.error}")
@@ -758,6 +763,11 @@ class FileExplorer(QWidget):
         result = file_ops.create_folder(parent_dir, name)
         if not result.success:
             CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {result.error}")
+            return
+
+        # Same reason as create_new_file: network drives don't notify Qt of
+        # the new directory, so trigger a state-preserving rescan ourselves.
+        self._refresh_preserving_state(ensure_visible_path=result.destination)
 
     def refresh(self):
         """Refresh the file tree."""
@@ -773,6 +783,117 @@ class FileExplorer(QWidget):
             # Try to restore selection
             if current_index.isValid():
                 self.tree_view.setCurrentIndex(current_index)
+
+    def _refresh_preserving_state(self, ensure_visible_path: str = "") -> None:
+        """Force-rescan the model while keeping expansion / selection / scroll.
+
+        ``QFileSystemModel`` relies on OS-level change notifications
+        (``ReadDirectoryChangesW`` on Windows, ``inotify`` on Linux) which are
+        not delivered reliably on SMB/CIFS shares. After explicit local
+        mutations from our own context menu we therefore force a full rescan
+        and reinstate the user's expansion as each directory's listing
+        arrives via the ``directoryLoaded`` signal.
+
+        Args:
+            ensure_visible_path (str): Optional path that should be reachable
+                after the refresh — its ancestor folders are added to the
+                expansion set so a newly created entry becomes visible even
+                when the parent wasn't previously expanded.
+        """
+        if not self.root_path:
+            return
+
+        target_expansion = self._snapshot_expanded_paths()
+        target_selection = {os.path.normpath(p) for p in self.get_selected_paths()}
+        target_scroll = self.tree_view.verticalScrollBar().value()
+        norm_root = os.path.normpath(self.root_path)
+
+        if ensure_visible_path:
+            ancestor = os.path.dirname(ensure_visible_path)
+            while ancestor:
+                norm_anc = os.path.normpath(ancestor)
+                if os.path.commonpath([norm_anc, norm_root]) != norm_root:
+                    break
+                target_expansion.add(norm_anc)
+                if norm_anc == norm_root:
+                    break
+                parent = os.path.dirname(ancestor)
+                if parent == ancestor:
+                    break
+                ancestor = parent
+
+        state = {"expand_remaining": set(target_expansion), "root_loaded": False}
+
+        def on_directory_loaded(loaded_path: str) -> None:
+            # Resolve the proxy index for the directory that just finished
+            # loading; fall back to the view's rootIndex for the workspace
+            # root because mapFromSource returns an invalid index there.
+            norm_loaded = os.path.normpath(loaded_path)
+            if norm_loaded == norm_root:
+                parent_proxy = self.tree_view.rootIndex()
+            else:
+                parent_src = self.file_model.index(loaded_path)
+                parent_proxy = self.proxy_model.mapFromSource(parent_src)
+                if not parent_proxy.isValid():
+                    return
+
+            row_count = self.proxy_model.rowCount(parent_proxy)
+            for row in range(row_count):
+                child_proxy = self.proxy_model.index(row, 0, parent_proxy)
+                child_src = self.proxy_model.mapToSource(child_proxy)
+                child_path = os.path.normpath(self.file_model.filePath(child_src))
+
+                if child_path in state["expand_remaining"]:
+                    # Expanding triggers a fetchMore on the child which in
+                    # turn re-emits directoryLoaded — that's how the restore
+                    # cascades through nested folders.
+                    self.tree_view.expand(child_proxy)
+                    state["expand_remaining"].discard(child_path)
+
+                if child_path in target_selection:
+                    selection_model = self.tree_view.selectionModel()
+                    selection_model.select(
+                        child_proxy,
+                        QItemSelectionModel.Select | QItemSelectionModel.Rows,
+                    )
+
+            if norm_loaded == norm_root:
+                state["root_loaded"] = True
+                self.tree_view.verticalScrollBar().setValue(target_scroll)
+
+            if state["root_loaded"] and not state["expand_remaining"]:
+                with contextlib.suppress(RuntimeError, TypeError):
+                    self.file_model.directoryLoaded.disconnect(on_directory_loaded)
+
+        # Replace any previous in-flight restorer so handlers don't pile up
+        # when refreshes are issued back-to-back.
+        previous = getattr(self, "_directory_loaded_restorer", None)
+        if previous is not None:
+            with contextlib.suppress(RuntimeError, TypeError):
+                self.file_model.directoryLoaded.disconnect(previous)
+        self._directory_loaded_restorer = on_directory_loaded
+        self.file_model.directoryLoaded.connect(on_directory_loaded)
+
+        # Hard reset forces QFileInfoGatherer to re-list the workspace.
+        self.file_model.setRootPath("")
+        root_index = self.file_model.setRootPath(self.root_path)
+        proxy_root_index = self.proxy_model.mapFromSource(root_index)
+        self.tree_view.setRootIndex(proxy_root_index)
+
+    def _snapshot_expanded_paths(self) -> set:
+        """Walk the proxy tree and return normalized paths of expanded folders."""
+        paths: set = set()
+
+        def walk(parent_proxy_index):
+            for row in range(self.proxy_model.rowCount(parent_proxy_index)):
+                child_proxy = self.proxy_model.index(row, 0, parent_proxy_index)
+                if self.tree_view.isExpanded(child_proxy):
+                    child_src = self.proxy_model.mapToSource(child_proxy)
+                    paths.add(os.path.normpath(self.file_model.filePath(child_src)))
+                    walk(child_proxy)
+
+        walk(self.tree_view.rootIndex())
+        return paths
 
     def start_rename(self):
         """Start inline rename for the selected item."""
