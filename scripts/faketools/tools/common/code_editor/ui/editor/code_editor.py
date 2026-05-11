@@ -135,8 +135,9 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin, Ed
         # selectionChanged covers shrink/expand within the same block, which
         # cursorPositionChanged + update_current_line_highlight short-circuits
         # past. The whitespace-dot overlay depends on a full repaint whenever
-        # selection bounds shift, so force one here.
-        self.selectionChanged.connect(self.viewport().update)
+        # selection bounds shift, so force one here. Wrapped in a lambda for
+        # consistency with the ``cursorPositionChanged`` connection above.
+        self.selectionChanged.connect(lambda: self.viewport().update())
         overlays.update_current_line_highlight(self)
 
     def _on_contents_change(self, position: int, removed: int, added: int):

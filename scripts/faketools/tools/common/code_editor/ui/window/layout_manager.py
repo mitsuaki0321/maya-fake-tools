@@ -3,7 +3,6 @@ UI Layout Manager for Code Editor.
 Handles UI initialization, theming, and layout management.
 """
 
-import contextlib
 from logging import getLogger
 
 from ......lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
@@ -204,13 +203,20 @@ class UILayoutManager:
             self._wire_focus_lost(editor)
 
     def _wire_focus_lost(self, editor):
-        """Connect ``focus_lost`` to session save (idempotent)."""
-        save = self.main_window.session_manager.save_session_state
+        """Connect ``focus_lost`` to session save (idempotent).
 
-        with contextlib.suppress(Exception):
-            editor.focus_lost.disconnect(save)
-        with contextlib.suppress(Exception):
-            editor.focus_lost.connect(save)
+        Tracks the wired state on the editor itself rather than relying on a
+        ``disconnect → connect`` cycle: in PySide2 (Maya 2023), disconnecting
+        a slot that was never connected leaves ``SignalManager``'s global
+        receiver tracker in a state where the next ``connect`` NULL-derefs
+        inside ``notifyGlobalReceiver``. Skipping the speculative disconnect
+        and using an idempotency flag avoids the crashing code path.
+        """
+        if getattr(editor, "_focus_lost_wired", False):
+            return
+        save = self.main_window.session_manager.save_session_state
+        editor.focus_lost.connect(save)
+        editor._focus_lost_wired = True
 
     def apply_font_settings(self):
         """Apply default font settings from settings.json to editors and terminal."""

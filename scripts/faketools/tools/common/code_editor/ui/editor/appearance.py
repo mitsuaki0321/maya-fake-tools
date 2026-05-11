@@ -8,7 +8,7 @@ how :class:`MultiCursorMixin` provides ``handle_*`` helpers that the
 widget's Qt overrides dispatch to.
 """
 
-from ......lib_ui.qt_compat import QBrush, QPalette, QPlainTextEdit, Qt, QTextBlockFormat, QTextCursor
+from ......lib_ui.qt_compat import QPlainTextEdit, Qt, QTextBlockFormat, QTextCursor
 from ...themes import AppTheme
 
 # Editor constants
@@ -31,16 +31,6 @@ class EditorAppearanceMixin:
         separately because the placeholder is language-driven.
         """
         self.setFont(AppTheme.make_monospace_font(font_size))
-
-        # Preserve per-token syntax colors inside a selection.
-        # Qt's native selection rendering overrides each character's foreground
-        # with QPalette.HighlightedText. Setting that brush to NoBrush makes
-        # QTextDocumentLayout skip the override, so the syntax highlighter's
-        # QTextCharFormat foreground stays visible behind the selection
-        # background — matching VSCode's "selection keeps token colors" look.
-        palette = self.palette()
-        palette.setBrush(QPalette.HighlightedText, QBrush(Qt.NoBrush))
-        self.setPalette(palette)
 
         tab_stop_distance = DEFAULT_TAB_SIZE * 10
         try:
