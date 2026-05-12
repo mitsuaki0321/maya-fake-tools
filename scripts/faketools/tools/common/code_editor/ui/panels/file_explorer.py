@@ -118,6 +118,28 @@ class HiddenFileFilterModel(QSortFilterProxyModel):
         # ``foo.pyc`` or stray ``.DS_Store`` files are hidden too.
         return all(pattern not in file_name for pattern in _HIDDEN_PATTERNS)
 
+    def lessThan(self, left, right):
+        """Folders before files, then case-insensitive name within each group.
+
+        Directories always lead regardless of ``sortOrder`` — when the user
+        flips to descending we invert the directory branch so Qt's
+        post-flip rendering still places folders on top, matching the
+        VSCode / Explorer convention.
+        """
+        source_model = self.sourceModel()
+        if source_model is None:
+            return super().lessThan(left, right)
+
+        left_info = source_model.fileInfo(left)
+        right_info = source_model.fileInfo(right)
+        left_is_dir = left_info.isDir()
+        right_is_dir = right_info.isDir()
+
+        if left_is_dir != right_is_dir:
+            return left_is_dir if self.sortOrder() == Qt.AscendingOrder else not left_is_dir
+
+        return left_info.fileName().lower() < right_info.fileName().lower()
+
     def data(self, index, role=Qt.DisplayRole):
         """Custom decorations: chevron for folders, Material glyph for known files."""
         if role == Qt.DecorationRole and self._tree_view is not None and self._chevron_right is not None:
