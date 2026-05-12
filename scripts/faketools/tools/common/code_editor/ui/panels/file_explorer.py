@@ -770,35 +770,28 @@ class FileExplorer(QWidget):
         self._refresh_preserving_state(ensure_visible_path=result.destination)
 
     def refresh(self):
-        """Refresh the file tree."""
-        if self.root_path:
-            current_index = self.tree_view.currentIndex()
-            self.file_model.setRootPath("")  # Reset
-            root_index = self.file_model.setRootPath(self.root_path)
-
-            # Map from source model to proxy model
-            proxy_root_index = self.proxy_model.mapFromSource(root_index)
-            self.tree_view.setRootIndex(proxy_root_index)
-
-            # Try to restore selection
-            if current_index.isValid():
-                self.tree_view.setCurrentIndex(current_index)
+        """Refresh the file tree, preserving expansion / selection / scroll."""
+        self._refresh_preserving_state()
 
     def _refresh_preserving_state(self, ensure_visible_path: str = "") -> None:
-        """Force-rescan the model while keeping expansion / selection / scroll.
+        """Recreate the file system model so caches are dropped, preserving UI state.
 
-        ``QFileSystemModel`` relies on OS-level change notifications
-        (``ReadDirectoryChangesW`` on Windows, ``inotify`` on Linux) which are
-        not delivered reliably on SMB/CIFS shares. After explicit local
-        mutations from our own context menu we therefore force a full rescan
-        and reinstate the user's expansion as each directory's listing
-        arrives via the ``directoryLoaded`` signal.
+        ``QFileSystemModel`` keeps an internal per-directory listing cache
+        (populated even for sub-folders that were only listed to determine
+        ``hasChildren``) and invalidates it through ``QFileSystemWatcher``.
+        The watcher does not fire on SMB/CIFS shares, so once a directory
+        has been listed — including a freshly created empty folder whose
+        listing got cached during the parent's enumeration — subsequent
+        changes are invisible even after ``setRootPath`` is toggled. To
+        guarantee an up-to-date view after explicit local mutations or a
+        manual Refresh we therefore drop the model entirely and rebuild
+        it, replaying expansion / selection / scroll from snapshots.
 
         Args:
             ensure_visible_path (str): Optional path that should be reachable
                 after the refresh — its ancestor folders are added to the
-                expansion set so a newly created entry becomes visible even
-                when the parent wasn't previously expanded.
+                expansion set so a newly created or moved entry is visible
+                even when its parent wasn't previously expanded.
         """
         if not self.root_path:
             return
@@ -812,7 +805,12 @@ class FileExplorer(QWidget):
             ancestor = os.path.dirname(ensure_visible_path)
             while ancestor:
                 norm_anc = os.path.normpath(ancestor)
-                if os.path.commonpath([norm_anc, norm_root]) != norm_root:
+                try:
+                    common = os.path.commonpath([norm_anc, norm_root])
+                except ValueError:
+                    # Different drives — nothing more to add upwards.
+                    break
+                if common != norm_root:
                     break
                 target_expansion.add(norm_anc)
                 if norm_anc == norm_root:
@@ -821,6 +819,20 @@ class FileExplorer(QWidget):
                 if parent == ancestor:
                     break
                 ancestor = parent
+
+        # Detach signals tied to the outgoing model so they don't fire mid-swap.
+        old_model = self.file_model
+        with contextlib.suppress(RuntimeError, TypeError):
+            old_model.fileRenamed.disconnect(self.on_file_renamed)
+        previous_restorer = getattr(self, "_directory_loaded_restorer", None)
+        if previous_restorer is not None:
+            with contextlib.suppress(RuntimeError, TypeError):
+                old_model.directoryLoaded.disconnect(previous_restorer)
+        self._directory_loaded_restorer = None
+
+        new_model = QFileSystemModel()
+        new_model.setReadOnly(False)
+        new_model.fileRenamed.connect(self.on_file_renamed)
 
         state = {"expand_remaining": set(target_expansion), "root_loaded": False}
 
@@ -832,7 +844,7 @@ class FileExplorer(QWidget):
             if norm_loaded == norm_root:
                 parent_proxy = self.tree_view.rootIndex()
             else:
-                parent_src = self.file_model.index(loaded_path)
+                parent_src = new_model.index(loaded_path)
                 parent_proxy = self.proxy_model.mapFromSource(parent_src)
                 if not parent_proxy.isValid():
                     return
@@ -841,7 +853,7 @@ class FileExplorer(QWidget):
             for row in range(row_count):
                 child_proxy = self.proxy_model.index(row, 0, parent_proxy)
                 child_src = self.proxy_model.mapToSource(child_proxy)
-                child_path = os.path.normpath(self.file_model.filePath(child_src))
+                child_path = os.path.normpath(new_model.filePath(child_src))
 
                 if child_path in state["expand_remaining"]:
                     # Expanding triggers a fetchMore on the child which in
@@ -863,22 +875,24 @@ class FileExplorer(QWidget):
 
             if state["root_loaded"] and not state["expand_remaining"]:
                 with contextlib.suppress(RuntimeError, TypeError):
-                    self.file_model.directoryLoaded.disconnect(on_directory_loaded)
+                    new_model.directoryLoaded.disconnect(on_directory_loaded)
 
-        # Replace any previous in-flight restorer so handlers don't pile up
-        # when refreshes are issued back-to-back.
-        previous = getattr(self, "_directory_loaded_restorer", None)
-        if previous is not None:
-            with contextlib.suppress(RuntimeError, TypeError):
-                self.file_model.directoryLoaded.disconnect(previous)
         self._directory_loaded_restorer = on_directory_loaded
-        self.file_model.directoryLoaded.connect(on_directory_loaded)
+        new_model.directoryLoaded.connect(on_directory_loaded)
 
-        # Hard reset forces QFileInfoGatherer to re-list the workspace.
-        self.file_model.setRootPath("")
-        root_index = self.file_model.setRootPath(self.root_path)
+        # Swap models. ``setSourceModel`` resets the proxy and clears the
+        # view's selection/root, so the explicit ``setRootIndex`` below has
+        # to come after ``setRootPath`` triggers initial loading.
+        self.file_model = new_model
+        self.proxy_model.setSourceModel(new_model)
+
+        root_index = new_model.setRootPath(self.root_path)
         proxy_root_index = self.proxy_model.mapFromSource(root_index)
         self.tree_view.setRootIndex(proxy_root_index)
+
+        # Defer destruction of the old model so any in-flight gatherer-thread
+        # signals can drain on the (now disconnected) instance safely.
+        old_model.deleteLater()
 
     def _snapshot_expanded_paths(self) -> set:
         """Walk the proxy tree and return normalized paths of expanded folders."""
@@ -1025,8 +1039,8 @@ class FileExplorer(QWidget):
             self.clipboard_paths = []
             self.clipboard_operation = None
 
-        # Refresh view
-        self.refresh()
+        # Refresh view, anchoring on the paste destination so it stays visible.
+        self._refresh_preserving_state(ensure_visible_path=destination_path)
 
         logger.info(f"Completed: {success_count} successful, {error_count} errors")
 
@@ -1263,8 +1277,8 @@ class FileExplorer(QWidget):
                 operation = "copying" if is_external_drag else "moving"
                 logger.error(f"Error {operation} {source_path}: {e!s}")
 
-        # Refresh the view
-        self.refresh()
+        # Refresh the view, anchoring on the drop target so it stays visible.
+        self._refresh_preserving_state(ensure_visible_path=target_dir)
 
         if success_count > 0:
             event.acceptProposedAction()
