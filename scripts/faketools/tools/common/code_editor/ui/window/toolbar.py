@@ -5,7 +5,7 @@ Provides quick access to common actions with proper icon states and styling.
 
 import os
 
-from ......lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, Qt, QtSvg, QWidget, Signal
+from ......lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, QSize, Qt, QtSvg, QWidget, Signal
 from ...languages import ALL_PROFILES, DEFAULT_PROFILE
 from ...themes import AppTheme
 
@@ -15,6 +15,10 @@ _ICON_STATE_COLORS = {
     "hover": AppTheme.ICON_HOVER,
     "pressed": AppTheme.ICON_PRESSED,
 }
+
+# Pixmap resolution for rasterised SVG icons. Sized so that detailed badge
+# glyphs in the 24-unit viewBox render legibly inside the 26 px buttons.
+_ICON_RENDER_SIZE = 20
 
 
 def _create_icon_from_svg(svg_text, source_color, target_color):
@@ -31,7 +35,10 @@ def _create_icon_from_svg(svg_text, source_color, target_color):
     modified_svg = svg_text.replace(source_color, target_color)
     svg_bytes = QByteArray(modified_svg.encode("utf-8"))
     renderer = QtSvg.QSvgRenderer(svg_bytes)
-    pixmap = QPixmap(16, 16)
+    # Match VSCodeButton.setIconSize — rendering at the same resolution as
+    # the button request keeps fine SVG detail (badge circles, plus glyphs)
+    # legible at the on-screen size.
+    pixmap = QPixmap(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
     renderer.render(painter)
@@ -49,6 +56,10 @@ class VSCodeButton(QPushButton):
 
         # Set up button properties
         self.setFixedSize(26, 26)
+        # Render icons at the same resolution they're rasterised to so the
+        # 24-viewBox details (badge circle, plus glyph) stay sharp instead
+        # of collapsing through Qt's default 16 px iconSize.
+        self.setIconSize(QSize(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE))
         self.setToolTip(tooltip)
         self.setCursor(Qt.PointingHandCursor)
 
@@ -106,7 +117,7 @@ class VSCodeButton(QPushButton):
                 background-color: transparent;
                 border: none;
                 border-radius: 3px;
-                padding: 3px;
+                padding: 2px;
             }}
             QPushButton:hover {{
                 background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
@@ -165,7 +176,7 @@ class RunButton(VSCodeButton):
                 background-color: transparent;
                 border: none;
                 border-radius: 3px;
-                padding: 3px;
+                padding: 2px;
             }}
             QPushButton:hover {{
                 background-color: {AppTheme.RUN_BUTTON_HOVER_BACKGROUND};
@@ -268,6 +279,7 @@ class ToolBar(QWidget):
     save_clicked = Signal()
     save_all_clicked = Signal()
     new_clicked = Signal(object)  # Emits the LanguageProfile of the clicked button.
+    new_folder_clicked = Signal()  # Signal for creating a folder at the workspace root
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
@@ -313,6 +325,7 @@ class ToolBar(QWidget):
         for profile in ALL_PROFILES:
             shortcut_hint = " (Ctrl+N)" if profile is DEFAULT_PROFILE else ""
             self.new_buttons[profile.id] = VSCodeButton(f"new_{profile.id}", f"New {profile.display_name} File{shortcut_hint}")
+        self.new_folder_button = VSCodeButton("new_folder", "New Folder")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
         self.save_all_button = VSCodeButton("saveall", "Save All Files (Ctrl+Shift+S)")
         self.workspace_button = VSCodeButton("folder", "Open Root Directory")
@@ -340,7 +353,7 @@ class ToolBar(QWidget):
         sep4 = ToolBarSeparator()
 
         # Add widgets to layout following the specified order
-        # [Explorer][Refresh] | [Run] | [New][Save][SaveAll][Folder] | [Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll][Autocomplete] | [Clear][Terminal][Swap] | →stretch
+        # [Explorer][Refresh] | [Run] | [New per-language][NewFolder][Save][SaveAll][Folder] | [Echo][Shelf] | [WordWrap][FoldAll][UnfoldAll][Autocomplete] | [Clear][Terminal][Swap] | →stretch
         layout.addWidget(self.toggle_explorer_button)
         layout.addWidget(self.refresh_explorer_button)
         layout.addWidget(sep0)
@@ -348,6 +361,7 @@ class ToolBar(QWidget):
         layout.addWidget(sep1)
         for profile in ALL_PROFILES:
             layout.addWidget(self.new_buttons[profile.id])
+        layout.addWidget(self.new_folder_button)
         layout.addWidget(self.save_button)
         layout.addWidget(self.save_all_button)
         layout.addWidget(self.workspace_button)
@@ -382,6 +396,7 @@ class ToolBar(QWidget):
         self.save_all_button.clicked.connect(self.save_all_clicked.emit)
         for profile in ALL_PROFILES:
             self.new_buttons[profile.id].clicked.connect(lambda checked=False, p=profile: self.new_clicked.emit(p))
+        self.new_folder_button.clicked.connect(self.new_folder_clicked.emit)
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)

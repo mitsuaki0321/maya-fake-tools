@@ -166,6 +166,22 @@ class FileOperationsController:
         self.open_file_permanent(file_path)
         mw.output_terminal.append_output(f"Created new file: {filename}")
 
+    def new_folder(self) -> None:
+        """Prompt for a folder name and create it at the workspace root.
+
+        Delegates to :meth:`FileExplorer.create_new_folder` so the dialog,
+        creation, and state-preserving refresh follow the same path as the
+        explorer's own context menu.
+        """
+        mw = self.main_window
+        workspace_dir = mw.settings_manager.get_workspace_directory()
+        if not workspace_dir or not os.path.exists(workspace_dir):
+            CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
+            return
+        if not mw.file_explorer:
+            return
+        mw.file_explorer.create_new_folder(workspace_dir, True)
+
     # -------------------- Rename / Delete (file_explorer signals) --------------------
 
     def handle_file_renamed(self, old_path: str, new_path: str) -> None:
