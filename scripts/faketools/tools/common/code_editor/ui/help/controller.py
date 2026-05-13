@@ -305,14 +305,26 @@ class HelpPopupController(QObject):
         # open (keys go to the popup widget) or closed (keys go to the editor).
         if et == QEvent.KeyPress and obj in (self._active_editor, self._active_autocomplete_popup):
             mods = event.modifiers()
+            key = event.key()
             if mods & Qt.ControlModifier and mods & Qt.ShiftModifier:
-                key = event.key()
                 if key == Qt.Key_Up:
                     self._popup.scroll_lines(-_SCROLL_LINES_PER_PRESS)
                     return True
                 if key == Qt.Key_Down:
                     self._popup.scroll_lines(_SCROLL_LINES_PER_PRESS)
                     return True
+            # Ctrl+C copies the help popup selection when present. The popup
+            # is non-activating, so keystrokes target the editor/autocomplete
+            # list; without this hook the user's mouse-selected docs would
+            # never reach the clipboard.
+            if (
+                key == Qt.Key_C
+                and mods & Qt.ControlModifier
+                and not (mods & Qt.ShiftModifier)
+                and not (mods & Qt.AltModifier)
+                and self._popup.copy_selection()
+            ):
+                return True
 
         if obj is self._active_autocomplete_popup and et in (QEvent.Show, QEvent.Hide):
             self.hide()

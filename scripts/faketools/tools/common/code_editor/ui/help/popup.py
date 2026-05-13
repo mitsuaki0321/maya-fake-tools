@@ -97,6 +97,17 @@ class HelpPopup(QFrame):
         bar = self._text_view.verticalScrollBar()
         bar.setValue(bar.value() + delta * bar.singleStep())
 
+    def has_selection(self) -> bool:
+        """Return whether the popup body currently has a text selection."""
+        return self._text_view.textCursor().hasSelection()
+
+    def copy_selection(self) -> bool:
+        """Copy the popup body's selection to the clipboard. Returns ``False`` when there is nothing to copy."""
+        if not self.has_selection():
+            return False
+        self._text_view.copy()
+        return True
+
     def show_at(self, anchor_rect: QRect) -> None:
         """Show next to ``anchor_rect`` (global coords). Prefers right of anchor, flips left if overflowing."""
         screen = self._screen_geometry(anchor_rect.topLeft())
