@@ -41,7 +41,7 @@ from ......lib_ui.qt_compat import (
 from ...command import file_ops
 from ...languages import ALL_PROFILES, DEFAULT_PROFILE, KNOWN_EXTENSIONS, LanguageProfile
 from ...themes import AppTheme
-from ..dialogs import CodeEditorInputDialog, CodeEditorMessageBox
+from ..dialogs import CodeEditorMessageBox
 
 logger = getLogger(__name__)
 
@@ -437,6 +437,12 @@ class FileExplorer(QWidget):
         self.clipboard_operation = None  # 'copy' or 'cut'
         self.startup_complete = False  # Prevent auto-preview during startup
 
+        # Path of a just-created file/folder waiting for the user to commit
+        # or cancel its inline rename. ``None`` when no fresh entry exists.
+        # See :meth:`create_new_file` / :meth:`_on_inline_rename_closed`
+        # for the lifecycle.
+        self._fresh_path = None
+
         self.init_ui()
         self.setup_file_model()
 
@@ -471,6 +477,9 @@ class FileExplorer(QWidget):
         # Set custom delegate for run button
         self.delegate = FileExplorerDelegate(self, self.tree_view)
         self.tree_view.setItemDelegate(self.delegate)
+        # Watch for editor close so a freshly-created file/folder whose
+        # inline rename the user Esc-cancels gets deleted from disk.
+        self.delegate.closeEditor.connect(self._on_inline_rename_closed)
 
         # Connect signals
         self.tree_view.clicked.connect(self.on_single_click)
@@ -750,46 +759,139 @@ class FileExplorer(QWidget):
         # Show menu
         menu.exec_(self.tree_view.mapToGlobal(position))
 
+    def begin_inline_create_file(self, language: LanguageProfile = DEFAULT_PROFILE):
+        """Selection-aware entry point used by the toolbar / ``Ctrl+N``.
+
+        Mirrors the context-menu rule so all three entry points behave
+        the same way — selected folder anchors the create, a selected
+        file places the new entry next to it, and no selection falls
+        back to the workspace root.
+        """
+        base_path, is_dir = self._resolve_creation_target()
+        if base_path:
+            self.create_new_file(base_path, is_dir, language=language)
+
+    def begin_inline_create_folder(self):
+        """Selection-aware entry point for inline folder creation."""
+        base_path, is_dir = self._resolve_creation_target()
+        if base_path:
+            self.create_new_folder(base_path, is_dir)
+
+    def _resolve_creation_target(self) -> tuple[str, bool]:
+        """Return ``(base_path, is_dir)`` for selection-driven creation."""
+        for path in self.get_selected_paths():
+            if os.path.exists(path):
+                return path, os.path.isdir(path)
+        if self.root_path:
+            return self.root_path, True
+        return "", False
+
     def create_new_file(self, base_path: str, is_dir: bool, language: LanguageProfile = DEFAULT_PROFILE):
-        """Prompt for a filename and create a new source file next to it.
+        """Create a source file under ``base_path`` and start inline rename on its row.
+
+        Uses the "pre-create + rename" pattern: the file is written to disk
+        with a unique default name, the model is refreshed, and Qt's
+        standard rename machinery (``tree_view.edit``) is invoked on the
+        new row so the user can type the real name directly in the tree.
+
+        - **Enter / focus-loss** → ``QFileSystemModel.setData`` renames the
+          file on disk; ``on_file_renamed`` keeps ``_fresh_path`` in sync
+          and ``_on_inline_rename_closed`` opens the file as a tab.
+        - **Esc** → ``_on_inline_rename_closed`` deletes the freshly-created
+          file so the disk doesn't accumulate ``new_script.py`` placeholders.
 
         Args:
             base_path (str): Path that anchors the creation directory; if it's
                 a file, the new file is created next to it.
             is_dir (bool): Whether ``base_path`` itself is a directory.
-            language (LanguageProfile): Profile driving extension and dialog
-                wording. Per-language menu entries pass their own profile.
+            language (LanguageProfile): Profile driving the default extension.
         """
         parent_dir = base_path if is_dir else os.path.dirname(base_path)
-        default_name = f"new_script{language.default_extension}"
-        name, ok = CodeEditorInputDialog.getText(self, f"New {language.display_name} File", "Enter file name:", text=default_name)
-        if not (ok and name):
+        # ``file_ops.create_source_file`` overwrites if the path exists, so
+        # pick a unique default name up-front to avoid clobbering anything.
+        default_path = os.path.join(parent_dir, f"new_script{language.default_extension}")
+        unique_name = os.path.basename(file_ops.get_unique_name(default_path))
+
+        result = file_ops.create_source_file(parent_dir, unique_name, language=language)
+        if not result.success:
+            CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {result.error}")
             return
 
-        result = file_ops.create_source_file(parent_dir, name, language=language)
-        if result.success:
-            # QFileSystemModel's watcher misses creations on network shares,
-            # so nudge it explicitly while keeping the user's tree state.
-            self._refresh_preserving_state(ensure_visible_path=result.destination)
-            self.file_selected.emit(result.destination)
-        else:
-            CodeEditorMessageBox.warning(self, "Error", f"Failed to create file: {result.error}")
+        self._fresh_path = result.destination
+        # Force a model rebuild — QFileSystemWatcher misses creations on
+        # SMB shares — and arrange for the new row to be reachable.
+        self._refresh_preserving_state(ensure_visible_path=result.destination)
+        self._schedule_inline_rename()
 
     def create_new_folder(self, base_path: str, is_dir: bool):
-        """Prompt for a folder name and create a new folder."""
-        parent_dir = base_path if is_dir else os.path.dirname(base_path)
-        name, ok = CodeEditorInputDialog.getText(self, "New Folder", "Enter folder name:")
-        if not (ok and name):
-            return
+        """Create a folder under ``base_path`` and start inline rename on its row.
 
-        result = file_ops.create_folder(parent_dir, name)
+        Same lifecycle as :meth:`create_new_file` — folder is created with
+        a unique default name, then Qt's rename machinery takes over.
+        """
+        parent_dir = base_path if is_dir else os.path.dirname(base_path)
+        default_path = os.path.join(parent_dir, "new_folder")
+        unique_name = os.path.basename(file_ops.get_unique_name(default_path))
+
+        result = file_ops.create_folder(parent_dir, unique_name)
         if not result.success:
             CodeEditorMessageBox.warning(self, "Error", f"Failed to create folder: {result.error}")
             return
 
-        # Same reason as create_new_file: network drives don't notify Qt of
-        # the new directory, so trigger a state-preserving rescan ourselves.
+        self._fresh_path = result.destination
         self._refresh_preserving_state(ensure_visible_path=result.destination)
+        self._schedule_inline_rename()
+
+    def _schedule_inline_rename(self, attempts_left: int = 10):
+        """Locate the freshly-created row and start ``tree_view.edit`` on it.
+
+        ``QFileSystemModel`` populates directories asynchronously, so the
+        freshly-written path may not have an index in the model the
+        instant we ask. Retry up to ``attempts_left`` times at 100 ms
+        intervals — enough latitude for slow SMB shares without making
+        cancel feel sluggish.
+        """
+        if not self._fresh_path:
+            return
+        src_index = self.file_model.index(self._fresh_path)
+        if src_index.isValid():
+            proxy_index = self.proxy_model.mapFromSource(src_index)
+            if proxy_index.isValid():
+                self.tree_view.setCurrentIndex(proxy_index)
+                self.tree_view.scrollTo(proxy_index)
+                self.tree_view.edit(proxy_index)
+                return
+        if attempts_left > 0:
+            QTimer.singleShot(100, lambda: self._schedule_inline_rename(attempts_left - 1))
+        else:
+            logger.warning(f"Inline rename: model never exposed the fresh path {self._fresh_path}")
+
+    def _on_inline_rename_closed(self, editor, hint):
+        """Editor-close handler — decides whether the fresh entry survives.
+
+        Fires for *every* editor close (F2 rename of existing files too),
+        but only acts when ``_fresh_path`` is set, which marks a pending
+        inline-create. On Esc (``RevertModelCache``) the disk file is
+        deleted; on any other hint we treat the close as a commit, leave
+        the file in place (it may already be at its final name thanks to
+        ``QFileSystemModel.setData``), and open it as a tab.
+        """
+        if not self._fresh_path:
+            return
+        fresh = self._fresh_path
+        self._fresh_path = None
+
+        if hint == QStyledItemDelegate.RevertModelCache:
+            result = file_ops.delete_item(fresh)
+            if not result.success:
+                logger.warning(f"Failed to clean up canceled new file: {result.error}")
+            self._refresh_preserving_state()
+            return
+        # Commit (Enter, Tab, focus-out, etc.). The path may have been
+        # updated mid-flight by ``on_file_renamed`` when the user actually
+        # changed the name.
+        if os.path.isfile(fresh):
+            self.file_selected.emit(fresh)
 
     def refresh(self):
         """Refresh the file tree, preserving expansion / selection / scroll."""
@@ -944,6 +1046,12 @@ class FileExplorer(QWidget):
         parent_dir = old_path
         old_full_path = os.path.join(parent_dir, old_name)
         new_full_path = os.path.join(parent_dir, new_name)
+
+        # When the rename targets a freshly-created entry that's still mid
+        # inline-create, keep the tracked path in sync so the closeEditor
+        # handler can find the right file (or skip the disk-cleanup).
+        if self._fresh_path and os.path.normpath(self._fresh_path) == os.path.normpath(old_full_path):
+            self._fresh_path = new_full_path
 
         # Check if it's a file or folder and emit appropriate signal
         if os.path.isfile(new_full_path):

@@ -20,7 +20,7 @@ import os
 
 from ...command import file_io
 from ...languages import DEFAULT_PROFILE, LanguageProfile, get_profile_for_path
-from ..dialogs import CodeEditorInputDialog, CodeEditorMessageBox
+from ..dialogs import CodeEditorMessageBox
 
 logger = getLogger(__name__)
 
@@ -116,62 +116,19 @@ class FileOperationsController:
     # -------------------- New --------------------
 
     def new_file(self, language: LanguageProfile = DEFAULT_PROFILE) -> None:
-        """Prompt for a filename, create it in the workspace, and open it.
+        """Create a new source file under the explorer's selection (or workspace root).
+
+        Delegates to :meth:`FileExplorer.begin_inline_create_file` so the
+        toolbar button, the ``Ctrl+N`` shortcut, and the explorer's
+        context menu share both the selection-anchoring rule (selected
+        folder → that folder; selected file → its parent; nothing
+        selected → workspace root) and the "pre-create + inline rename"
+        flow.
 
         Args:
-            language (LanguageProfile): Profile that drives the default extension
-                and dialog wording. Defaults to :data:`DEFAULT_PROFILE`, which
-                is what the ``Ctrl+N`` shortcut path uses; per-language toolbar
-                buttons and file-explorer menu items pass their own profile.
-        """
-        mw = self.main_window
-        workspace_dir = mw.settings_manager.get_workspace_directory()
-        if not workspace_dir or not os.path.exists(workspace_dir):
-            CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
-            return
-
-        ext = language.default_extension
-        filename, ok = CodeEditorInputDialog.getText(
-            mw,
-            f"New {language.display_name} File",
-            f"Enter filename (with {ext} extension):",
-            text=f"new_script{ext}",
-        )
-        if not ok or not filename.strip():
-            return
-
-        filename = filename.strip()
-        if not filename.endswith(ext):
-            filename += ext
-
-        file_path = os.path.join(workspace_dir, filename)
-        if os.path.exists(file_path):
-            reply = CodeEditorMessageBox.question(
-                mw,
-                "File Exists",
-                f"File '{filename}' already exists. Do you want to overwrite it?",
-                CodeEditorMessageBox.Yes | CodeEditorMessageBox.No,
-                CodeEditorMessageBox.No,
-            )
-            if reply != CodeEditorMessageBox.Yes:
-                return
-
-        error = file_io.write_text(file_path, "")
-        if error:
-            CodeEditorMessageBox.critical(mw, "Error", f"Failed to create file: {error}")
-            return
-
-        if mw.file_explorer:
-            mw.file_explorer.refresh()
-        self.open_file_permanent(file_path)
-        mw.output_terminal.append_output(f"Created new file: {filename}")
-
-    def new_folder(self) -> None:
-        """Prompt for a folder name and create it at the workspace root.
-
-        Delegates to :meth:`FileExplorer.create_new_folder` so the dialog,
-        creation, and state-preserving refresh follow the same path as the
-        explorer's own context menu.
+            language (LanguageProfile): Profile that drives the default
+                extension. Per-language toolbar buttons pass their own
+                profile; ``Ctrl+N`` uses :data:`DEFAULT_PROFILE`.
         """
         mw = self.main_window
         workspace_dir = mw.settings_manager.get_workspace_directory()
@@ -180,7 +137,18 @@ class FileOperationsController:
             return
         if not mw.file_explorer:
             return
-        mw.file_explorer.create_new_folder(workspace_dir, True)
+        mw.file_explorer.begin_inline_create_file(language=language)
+
+    def new_folder(self) -> None:
+        """Create a folder under the explorer's selection (or workspace root)."""
+        mw = self.main_window
+        workspace_dir = mw.settings_manager.get_workspace_directory()
+        if not workspace_dir or not os.path.exists(workspace_dir):
+            CodeEditorMessageBox.warning(mw, "Error", "Workspace directory not found.")
+            return
+        if not mw.file_explorer:
+            return
+        mw.file_explorer.begin_inline_create_folder()
 
     # -------------------- Rename / Delete (file_explorer signals) --------------------
 
