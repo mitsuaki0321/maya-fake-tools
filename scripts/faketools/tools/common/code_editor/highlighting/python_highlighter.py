@@ -133,12 +133,19 @@ class PythonHighlighter(QSyntaxHighlighter):
         inside comments or strings are ignored — naive char counting was wrong
         for cases like ``# foo'''`` (unbalanced ``'''`` inside a comment) which
         used to make ``tokenize`` fail and leave the document uncolored.
+
+        Single-line strings unterminated at a newline are closed in place by
+        inserting the matching quote just before the newline; otherwise
+        ``tokenize`` raises ``TokenError`` for the literal and the whole
+        document falls back to empty spans (no colouring anywhere), which is
+        what users see the instant they delete a closing quote mid-edit.
         """
         opens = {"(": ")", "[": "]", "{": "}"}
         closes = {")": "(", "]": "[", "}": "{"}
         NORMAL, LCOMMENT, S_STR, D_STR, S_TRI, D_TRI = range(6)
         state = NORMAL
         stack: list[str] = []
+        insertions: list[tuple[int, str]] = []
         i = 0
         n = len(text)
         while i < n:
@@ -172,7 +179,10 @@ class PythonHighlighter(QSyntaxHighlighter):
                     i += 2
                     continue
                 quote = "'" if state == S_STR else '"'
-                if c == quote or c == "\n":
+                if c == "\n":
+                    insertions.append((i, quote))
+                    state = NORMAL
+                elif c == quote:
                     state = NORMAL
                 i += 1
             elif state == S_TRI:
@@ -196,7 +206,20 @@ class PythonHighlighter(QSyntaxHighlighter):
         elif state == D_TRI:
             suffix_parts.append('"""')
         suffix_parts.extend(opens[c] for c in reversed(stack))
-        return text + "".join(suffix_parts)
+        suffix = "".join(suffix_parts)
+
+        if not insertions:
+            return text + suffix
+
+        parts: list[str] = []
+        last = 0
+        for pos, ins in insertions:
+            parts.append(text[last:pos])
+            parts.append(ins)
+            last = pos
+        parts.append(text[last:])
+        parts.append(suffix)
+        return "".join(parts)
 
     # -------------------- Token utilities --------------------
 
@@ -480,6 +503,8 @@ class PythonHighlighter(QSyntaxHighlighter):
         rev = doc.revision()
         block_count = doc.blockCount()
 
+        was_empty = not self._spans
+
         if not self._spans:
             # First call: must rebuild synchronously so the initial paint is correct.
             self._rebuild_now()
@@ -493,6 +518,13 @@ class PythonHighlighter(QSyntaxHighlighter):
             # Character-only edit: keep using stale spans for now and coalesce
             # further keystrokes into a single rebuild after the debounce window.
             self._rebuild_timer.start(self._REBUILD_DELAY_MS)
+
+        # Recovery path: if a prior tokenize failure had emptied _spans and the
+        # rebuild above produced real spans, Qt only re-invokes highlightBlock
+        # for the block the user just edited — every other line would stay
+        # uncoloured. Schedule one full rehighlight so they repaint.
+        if was_empty and self._spans:
+            QTimer.singleShot(0, self.rehighlight)
 
         row = self.currentBlock().blockNumber()
         n = len(text)
