@@ -1046,43 +1046,55 @@ class FileExplorer(QWidget):
         state = {"expand_remaining": set(target_expansion), "root_loaded": False}
 
         def on_directory_loaded(loaded_path: str) -> None:
-            # Resolve the proxy index for the directory that just finished
-            # loading; fall back to the view's rootIndex for the workspace
-            # root because mapFromSource returns an invalid index there.
-            norm_loaded = os.path.normpath(loaded_path)
-            if norm_loaded == norm_root:
-                parent_proxy = self.tree_view.rootIndex()
-            else:
-                parent_src = new_model.index(loaded_path)
-                parent_proxy = self.proxy_model.mapFromSource(parent_src)
-                if not parent_proxy.isValid():
-                    return
+            # ``directoryLoaded`` is queued from QFileSystemModel's worker
+            # thread; by the time it fires the tree_view / proxy_model C++
+            # objects may already be gone (dock workspaceControl tore down
+            # while a refresh was in flight). Wrap the whole body so a stale
+            # callback aborts cleanly instead of throwing into Qt's event loop.
+            try:
+                # Resolve the proxy index for the directory that just finished
+                # loading; fall back to the view's rootIndex for the workspace
+                # root because mapFromSource returns an invalid index there.
+                norm_loaded = os.path.normpath(loaded_path)
+                if norm_loaded == norm_root:
+                    parent_proxy = self.tree_view.rootIndex()
+                else:
+                    parent_src = new_model.index(loaded_path)
+                    parent_proxy = self.proxy_model.mapFromSource(parent_src)
+                    if not parent_proxy.isValid():
+                        return
 
-            row_count = self.proxy_model.rowCount(parent_proxy)
-            for row in range(row_count):
-                child_proxy = self.proxy_model.index(row, 0, parent_proxy)
-                child_src = self.proxy_model.mapToSource(child_proxy)
-                child_path = os.path.normpath(new_model.filePath(child_src))
+                row_count = self.proxy_model.rowCount(parent_proxy)
+                for row in range(row_count):
+                    child_proxy = self.proxy_model.index(row, 0, parent_proxy)
+                    child_src = self.proxy_model.mapToSource(child_proxy)
+                    child_path = os.path.normpath(new_model.filePath(child_src))
 
-                if child_path in state["expand_remaining"]:
-                    # Expanding triggers a fetchMore on the child which in
-                    # turn re-emits directoryLoaded — that's how the restore
-                    # cascades through nested folders.
-                    self.tree_view.expand(child_proxy)
-                    state["expand_remaining"].discard(child_path)
+                    if child_path in state["expand_remaining"]:
+                        # Expanding triggers a fetchMore on the child which in
+                        # turn re-emits directoryLoaded — that's how the restore
+                        # cascades through nested folders.
+                        self.tree_view.expand(child_proxy)
+                        state["expand_remaining"].discard(child_path)
 
-                if child_path in target_selection:
-                    selection_model = self.tree_view.selectionModel()
-                    selection_model.select(
-                        child_proxy,
-                        QItemSelectionModel.Select | QItemSelectionModel.Rows,
-                    )
+                    if child_path in target_selection:
+                        selection_model = self.tree_view.selectionModel()
+                        selection_model.select(
+                            child_proxy,
+                            QItemSelectionModel.Select | QItemSelectionModel.Rows,
+                        )
 
-            if norm_loaded == norm_root:
-                state["root_loaded"] = True
-                self.tree_view.verticalScrollBar().setValue(target_scroll)
+                if norm_loaded == norm_root:
+                    state["root_loaded"] = True
+                    self.tree_view.verticalScrollBar().setValue(target_scroll)
 
-            if state["root_loaded"] and not state["expand_remaining"]:
+                if state["root_loaded"] and not state["expand_remaining"]:
+                    with contextlib.suppress(RuntimeError, TypeError):
+                        new_model.directoryLoaded.disconnect(on_directory_loaded)
+            except RuntimeError:
+                # Underlying C++ widget/model was destroyed while we were queued —
+                # nothing left to restore. Stop listening so further loads don't
+                # repeat the failure.
                 with contextlib.suppress(RuntimeError, TypeError):
                     new_model.directoryLoaded.disconnect(on_directory_loaded)
 
