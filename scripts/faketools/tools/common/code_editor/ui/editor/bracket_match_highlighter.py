@@ -33,13 +33,16 @@ class BracketMatchHighlighter:
     """Outlines the bracket pair surrounding (or adjacent to) the cursor.
 
     A single full-text scan builds a sorted list of ``(open_pos, close_pos)``
-    pairs, ignoring brackets inside comments and strings. The scan is cached
-    until the document content changes.
+    pairs, ignoring brackets inside comments and strings. The scan and the
+    document text it was built from are both cached until the next edit, so
+    cursor-move repaints (which fire on every keystroke) reuse them instead
+    of cloning the whole document via ``toPlainText`` each time.
     """
 
     def __init__(self, editor):
         self._editor = editor
         self._pairs = None
+        self._text = None
         self._border_color = QColor(AppTheme.BRACKET_MATCH_BORDER)
 
         editor.cursorPositionChanged.connect(self._on_cursor_moved)
@@ -49,6 +52,7 @@ class BracketMatchHighlighter:
 
     def _on_contents_changed(self):
         self._pairs = None
+        self._text = None
         self._editor.viewport().update()
 
     def _on_cursor_moved(self):
@@ -151,10 +155,10 @@ class BracketMatchHighlighter:
 
     def paint(self, event):
         """Draw 1px rectangles around the cursor's matching bracket pair."""
-        text = self._editor.document().toPlainText()
         if self._pairs is None:
-            self._pairs = self._scan(text)
-        pair = self._find_pair_at(self._editor.textCursor().position(), text)
+            self._text = self._editor.document().toPlainText()
+            self._pairs = self._scan(self._text)
+        pair = self._find_pair_at(self._editor.textCursor().position(), self._text)
         if pair is None:
             return
 
