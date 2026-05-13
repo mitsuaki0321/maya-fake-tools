@@ -420,7 +420,6 @@ class AutocompleteController:
         completion when they explicitly ask for one with Tab / Enter.
         """
         key = event.key()
-        mods = event.modifiers()
 
         popup = self._completer.popup()
         if not popup.isVisible():
@@ -469,12 +468,13 @@ class AutocompleteController:
             new_row = max((current_row if current_row >= 0 else 0) - step, 0)
             self._set_popup_row(new_row)
             return True
-        if key == Qt.Key_Home and not (mods & Qt.ControlModifier):
-            self._set_popup_row(0)
-            return True
-        if key == Qt.Key_End and not (mods & Qt.ControlModifier):
-            self._set_popup_row(row_count - 1)
-            return True
+        # Home / End: pass straight to the editor so the cursor jumps within
+        # the line (or document with Ctrl). The user is leaving the completion
+        # context, so dismiss the popup explicitly — a cursor-only move
+        # doesn't fire on_text_changed and otherwise the popup would linger.
+        if key in (Qt.Key_Home, Qt.Key_End):
+            popup.hide()
+            return False
 
         # Any other key: let it go to the editor. If it changes text, on_text_changed
         # will refresh the completion; if it's a movement that takes the cursor out of
