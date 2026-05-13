@@ -3,7 +3,8 @@
 Triggered by Ctrl+Shift+Space: shows docs for the autocomplete
 highlight when the list is open, otherwise for the identifier under
 the caret. Dismissed by Esc, the shortcut again, autocomplete Show /
-Hide, or owner-window state changes.
+Hide, owner-window state changes, or resumed typing in cursor mode
+(so the user doesn't have to reach for Esc).
 """
 
 from __future__ import annotations
@@ -287,6 +288,22 @@ class HelpPopupController(QObject):
         global_top_left = editor.mapToGlobal(cursor_rect.topLeft())
         return QRect(global_top_left, cursor_rect.size())
 
+    @staticmethod
+    def _is_typing_key(event) -> bool:
+        """Return whether ``event`` is a text-mutating keystroke that should retire the popup.
+
+        Pure modifier presses, navigation, and anything paired with Ctrl/Alt/Meta
+        (i.e. shortcuts, including the help popup's own reserved combos) are excluded.
+        """
+        key = event.key()
+        if key in (Qt.Key_Backspace, Qt.Key_Delete, Qt.Key_Return, Qt.Key_Enter, Qt.Key_Tab):
+            return True
+        mods = event.modifiers()
+        if mods & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier):
+            return False
+        text = event.text()
+        return bool(text) and text.isprintable()
+
     # -------------------- event filter --------------------
 
     def eventFilter(self, obj, event):
@@ -325,6 +342,16 @@ class HelpPopupController(QObject):
                 and self._popup.copy_selection()
             ):
                 return True
+
+        # Resume-typing auto-dismiss: closes the popup so the user doesn't
+        # have to reach for Esc. Scoped to cursor-mode (no active
+        # autocomplete) — in autocomplete-mode the docs follow the
+        # selection as the user types, so dismissing would fight that.
+        # Reserved popup shortcuts above already returned, so they can't
+        # reach this branch.
+        if et == QEvent.KeyPress and obj is self._active_editor and self._active_autocomplete is None and self._is_typing_key(event):
+            self.hide()
+            return False
 
         if obj is self._active_autocomplete_popup and et in (QEvent.Show, QEvent.Hide):
             self.hide()
