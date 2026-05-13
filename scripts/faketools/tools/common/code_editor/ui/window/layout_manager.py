@@ -153,6 +153,7 @@ class UILayoutManager:
             mw.toolbar.save_all_clicked.connect(file_ops.save_all_files)
             mw.toolbar.new_clicked.connect(file_ops.new_file)
             mw.toolbar.new_folder_clicked.connect(file_ops.new_folder)
+            mw.toolbar.delete_clicked.connect(file_ops.delete_selection)
             mw.toolbar.clear_clicked.connect(self.clear_terminal)
             mw.toolbar.workspace_clicked.connect(mw.open_workspace_directory)
             mw.toolbar.swap_layout_clicked.connect(self.swap_editor_terminal_layout)

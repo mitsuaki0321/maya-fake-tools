@@ -280,6 +280,7 @@ class ToolBar(QWidget):
     save_all_clicked = Signal()
     new_clicked = Signal(object)  # Emits the LanguageProfile of the clicked button.
     new_folder_clicked = Signal()  # Signal for creating a folder at the workspace root
+    delete_clicked = Signal()  # Signal for deleting the explorer's current selection
     clear_clicked = Signal()
     workspace_clicked = Signal()
     swap_layout_clicked = Signal()  # Signal for swapping editor/terminal layout
@@ -326,6 +327,7 @@ class ToolBar(QWidget):
             shortcut_hint = " (Ctrl+N)" if profile is DEFAULT_PROFILE else ""
             self.new_buttons[profile.id] = VSCodeButton(f"new_{profile.id}", f"New {profile.display_name} File{shortcut_hint}")
         self.new_folder_button = VSCodeButton("new_folder", "New Folder")
+        self.delete_button = VSCodeButton("delete", "Delete Selected (Del)")
         self.save_button = VSCodeButton("save", "Save Current File (Ctrl+S)")
         self.save_all_button = VSCodeButton("saveall", "Save All Files (Ctrl+Shift+S)")
         self.workspace_button = VSCodeButton("folder", "Open Root Directory")
@@ -362,6 +364,7 @@ class ToolBar(QWidget):
         for profile in ALL_PROFILES:
             layout.addWidget(self.new_buttons[profile.id])
         layout.addWidget(self.new_folder_button)
+        layout.addWidget(self.delete_button)
         layout.addWidget(self.save_button)
         layout.addWidget(self.save_all_button)
         layout.addWidget(self.workspace_button)
@@ -397,6 +400,7 @@ class ToolBar(QWidget):
         for profile in ALL_PROFILES:
             self.new_buttons[profile.id].clicked.connect(lambda checked=False, p=profile: self.new_clicked.emit(p))
         self.new_folder_button.clicked.connect(self.new_folder_clicked.emit)
+        self.delete_button.clicked.connect(self.delete_clicked.emit)
         self.clear_button.clicked.connect(self.clear_clicked.emit)
         self.workspace_button.clicked.connect(self.workspace_clicked.emit)
         self.swap_layout_button.clicked.connect(self.swap_layout_clicked.emit)

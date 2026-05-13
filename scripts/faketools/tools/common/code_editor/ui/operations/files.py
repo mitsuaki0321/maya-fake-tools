@@ -150,6 +150,18 @@ class FileOperationsController:
             return
         mw.file_explorer.begin_inline_create_folder()
 
+    def delete_selection(self) -> None:
+        """Delete the explorer's current selection (toolbar entry point).
+
+        The confirmation dialog anchors itself to the selected row inside
+        :meth:`FileExplorer.delete_selected_items`, so the dialog opens near
+        the explorer rather than the screen's right-half center.
+        """
+        mw = self.main_window
+        if not mw.file_explorer:
+            return
+        mw.file_explorer.delete_selected_items()
+
     # -------------------- Rename / Delete (file_explorer signals) --------------------
 
     def handle_file_renamed(self, old_path: str, new_path: str) -> None:

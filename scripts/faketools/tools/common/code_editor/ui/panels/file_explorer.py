@@ -721,6 +721,11 @@ class FileExplorer(QWidget):
         elif event.key() == Qt.Key_F2:
             # F2 - Rename
             self.start_rename()
+        elif event.key() == Qt.Key_Delete:
+            # Delete - Delete selected items (no-op when nothing selected so
+            # the keypress doesn't trigger an empty confirmation dialog).
+            if self.get_selected_paths():
+                self.delete_selected_items()
         else:
             super().keyPressEvent(event)
 
@@ -806,9 +811,12 @@ class FileExplorer(QWidget):
         rename_action.setEnabled(has_selection)
         menu.addAction(rename_action)
 
-        # Delete action (for files and folders)
-        delete_action = QAction("Delete", self)
-        delete_action.triggered.connect(self.delete_selected_items)
+        # Delete action (for files and folders). Pass the menu's global
+        # position so the confirmation dialog opens near where the user
+        # clicked instead of the screen's right-half center.
+        delete_action = QAction("Delete\tDel", self)
+        menu_global = self.tree_view.mapToGlobal(position)
+        delete_action.triggered.connect(lambda checked=False, pos=menu_global: self.delete_selected_items(anchor_global_pos=pos))
         delete_action.setEnabled(has_selection)
         menu.addAction(delete_action)
 
@@ -1138,13 +1146,23 @@ class FileExplorer(QWidget):
             self.folder_renamed.emit(old_full_path, new_full_path)
             logger.info(f"Folder renamed: {old_name} -> {new_name}")
 
-    def delete_selected_items(self):
-        """Confirm, then delete every selected file/folder via ``file_ops``."""
+    def delete_selected_items(self, anchor_global_pos=None):
+        """Confirm, then delete every selected file/folder via ``file_ops``.
+
+        Args:
+            anchor_global_pos: Optional screen-space anchor for the confirmation
+                dialog. Context-menu callers pass the click position; key /
+                toolbar callers leave it unset and the anchor is derived from
+                the first selected row so the dialog opens near the selection.
+        """
         selected_paths = self.get_selected_paths()
         if not selected_paths:
             return
 
-        if not self._confirm_delete(selected_paths):
+        if anchor_global_pos is None:
+            anchor_global_pos = self._compute_selection_anchor()
+
+        if not self._confirm_delete(selected_paths, anchor_global_pos=anchor_global_pos):
             return
 
         success_count = 0
@@ -1173,7 +1191,7 @@ class FileExplorer(QWidget):
         elif success_count > 0:
             logger.info(f"Successfully deleted {success_count} item(s)")
 
-    def _confirm_delete(self, selected_paths: list) -> bool:
+    def _confirm_delete(self, selected_paths: list, anchor_global_pos=None) -> bool:
         """Build the confirmation prompt for a delete and return True on Yes."""
         num_items = len(selected_paths)
         if num_items == 1:
@@ -1193,8 +1211,24 @@ class FileExplorer(QWidget):
             confirmation_msg,
             CodeEditorMessageBox.Yes | CodeEditorMessageBox.No,
             CodeEditorMessageBox.No,
+            anchor_global_pos=anchor_global_pos,
         )
         return reply == CodeEditorMessageBox.Yes
+
+    def _compute_selection_anchor(self):
+        """Return a screen-space anchor near the first selected row, or ``None``.
+
+        Used by the Delete shortcut and the toolbar entry point so the
+        confirmation dialog still opens close to what's being deleted even
+        though there's no click position to inherit.
+        """
+        indexes = self.tree_view.selectedIndexes()
+        if not indexes:
+            return None
+        rect = self.tree_view.visualRect(indexes[0])
+        if rect.isNull():
+            return None
+        return self.tree_view.viewport().mapToGlobal(rect.topRight())
 
     def copy_selected(self):
         """Copy selected items to clipboard."""

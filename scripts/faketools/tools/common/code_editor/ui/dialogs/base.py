@@ -22,9 +22,26 @@ class DialogPositioner:
                 return widget
         return None
 
+    # Visual offset from an anchor point so the dialog opens just below-right of
+    # the trigger (a context-menu pick or a row's edge) rather than under the
+    # cursor, which would obscure the item the user is acting on.
+    _ANCHOR_OFFSET_X = 12
+    _ANCHOR_OFFSET_Y = 12
+
     @staticmethod
-    def position_dialog(dialog, parent_widget=None):
-        """Position dialog at the center of the right half of the screen."""
+    def position_dialog(dialog, parent_widget=None, anchor_global_pos=None):
+        """Place dialog near ``anchor_global_pos`` if given, else center-right.
+
+        When an anchor is supplied (typically the screen-space position of a
+        context-menu click or the right edge of a selected row), the dialog is
+        offset below-and-right of it and clamped to the anchor's screen so it
+        appears close to where the user just acted instead of jumping to the
+        right half of the primary display.
+        """
+        if anchor_global_pos is not None:
+            DialogPositioner._position_near(dialog, anchor_global_pos)
+            return
+
         # Get screen geometry
         screen = QApplication.primaryScreen().geometry()
 
@@ -46,19 +63,35 @@ class DialogPositioner:
 
         dialog.move(dialog_x, dialog_y)
 
+    @staticmethod
+    def _position_near(dialog, anchor_global_pos):
+        """Place ``dialog`` with a small offset from ``anchor_global_pos``, clamped to its screen."""
+        screen = QApplication.screenAt(anchor_global_pos) if hasattr(QApplication, "screenAt") else None
+        if screen is None:
+            screen = QApplication.primaryScreen()
+        sg = screen.availableGeometry()
+        size = dialog.size()
+
+        x = anchor_global_pos.x() + DialogPositioner._ANCHOR_OFFSET_X
+        y = anchor_global_pos.y() + DialogPositioner._ANCHOR_OFFSET_Y
+        x = max(sg.left(), min(x, sg.right() - size.width()))
+        y = max(sg.top(), min(y, sg.bottom() - size.height()))
+        dialog.move(x, y)
+
 
 class CodeEditorMessageBox(QMessageBox):
     """QMessageBox that automatically positions itself relative to the code editor."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, anchor_global_pos=None):
         # Always use code editor as parent for consistent positioning
         code_editor_parent = DialogPositioner.get_code_editor_parent()
         super().__init__(code_editor_parent or parent)
+        self._anchor_global_pos = anchor_global_pos
 
     def showEvent(self, event):
         """Position dialog when shown."""
         super().showEvent(event)
-        DialogPositioner.position_dialog(self)
+        DialogPositioner.position_dialog(self, anchor_global_pos=self._anchor_global_pos)
 
     @staticmethod
     def information(parent, title, text, buttons=QMessageBox.Ok, defaultButton=QMessageBox.NoButton):
@@ -94,11 +127,18 @@ class CodeEditorMessageBox(QMessageBox):
         return msg.exec()
 
     @staticmethod
-    def question(parent, title, text, buttons=None, defaultButton=QMessageBox.NoButton):
-        """Show question dialog positioned relative to code editor."""
+    def question(parent, title, text, buttons=None, defaultButton=QMessageBox.NoButton, anchor_global_pos=None):
+        """Show question dialog positioned relative to code editor.
+
+        Args:
+            anchor_global_pos: Optional screen-space point; when provided the
+                dialog opens just below-right of it instead of the default
+                center-right of the screen. Used so context-menu / row-anchored
+                confirmations appear near where the user just clicked.
+        """
         if buttons is None:
             buttons = QMessageBox.StandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg = CodeEditorMessageBox(parent)
+        msg = CodeEditorMessageBox(parent, anchor_global_pos=anchor_global_pos)
         msg.setIcon(QMessageBox.Question)
         msg.setWindowTitle(title)
         msg.setText(text)
