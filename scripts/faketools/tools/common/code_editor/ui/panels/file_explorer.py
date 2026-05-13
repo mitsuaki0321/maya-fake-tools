@@ -393,8 +393,19 @@ class FileExplorerDelegate(QStyledItemDelegate):
         return self.run_button_rect
 
     def createEditor(self, parent, option, index):
-        """Create custom editor for inline editing with pre-selected filename."""
+        """Create custom editor for inline editing.
+
+        Inline-create flow starts the editor blank so the user types the
+        filename from scratch — the on-disk placeholder name is internal
+        scratch state. F2 rename of existing files keeps the original
+        pre-filled-with-basename-selected behaviour.
+        """
         editor = QLineEdit(parent)
+
+        # Inline-create: leave the editor empty; ``setEditorData`` below
+        # also skips the default re-population for this case.
+        if getattr(self.file_explorer, "_fresh_path", None):
+            return editor
 
         # Get the current filename
         filename = index.data(Qt.DisplayRole)
@@ -410,6 +421,53 @@ class FileExplorerDelegate(QStyledItemDelegate):
                     QTimer.singleShot(0, lambda: editor.setSelection(0, last_dot_index))
 
         return editor
+
+    def setEditorData(self, editor, index):
+        """Skip Qt's default EditRole pre-population when inline-creating.
+
+        Without this override, the default ``QStyledItemDelegate.setEditorData``
+        would re-populate the editor with the model's EditRole (the
+        placeholder filename), defeating ``createEditor``'s blank start.
+        """
+        if getattr(self.file_explorer, "_fresh_path", None):
+            editor.setText("")
+            return
+        super().setEditorData(editor, index)
+
+    def setModelData(self, editor, model, index):
+        """Commit hook for inline-create edits.
+
+        Three cases, all gated on the explorer having a live
+        ``_fresh_path`` (F2 rename of existing files falls straight
+        through to the default ``QStyledItemDelegate.setModelData``):
+
+        - **Empty submission** → treat as cancel: clear the tracker
+          synchronously so ``_on_inline_rename_closed`` skips the
+          open-tab step, then schedule the placeholder deletion for
+          after the editor finishes tearing down.
+        - **Bare basename** (no dot in the entered name) → append the
+          language's default extension so ``foo`` becomes ``foo.py``.
+        - **Anything else** → pass through unchanged; an explicit dot
+          anywhere in the basename (e.g. ``foo.txt``) signals user intent
+          and is respected even if it differs from the language's default.
+        """
+        fresh_ext = getattr(self.file_explorer, "_fresh_extension", None)
+        fresh_path = getattr(self.file_explorer, "_fresh_path", None)
+        if fresh_path:
+            text = editor.text().strip()
+            if not text:
+                # Clear trackers synchronously so the closeEditor
+                # handler doesn't open or repurpose the placeholder.
+                self.file_explorer._fresh_path = None
+                self.file_explorer._fresh_extension = None
+                QTimer.singleShot(0, lambda p=fresh_path: self.file_explorer._delete_fresh_placeholder(p))
+                return
+            if fresh_ext:
+                basename = os.path.basename(text)
+                _name_part, ext_part = os.path.splitext(basename)
+                if not ext_part:
+                    editor.setText(text + fresh_ext)
+        super().setModelData(editor, model, index)
 
 
 class FileExplorer(QWidget):
@@ -442,6 +500,11 @@ class FileExplorer(QWidget):
         # See :meth:`create_new_file` / :meth:`_on_inline_rename_closed`
         # for the lifecycle.
         self._fresh_path = None
+        # Language default extension for the in-flight file create, used
+        # by :class:`FileExplorerDelegate.setModelData` to auto-append
+        # the extension when the user submits a bare basename. ``None``
+        # for folder creates and idle state.
+        self._fresh_extension = None
 
         self.init_ui()
         self.setup_file_model()
@@ -818,6 +881,7 @@ class FileExplorer(QWidget):
             return
 
         self._fresh_path = result.destination
+        self._fresh_extension = language.default_extension
         # Force a model rebuild — QFileSystemWatcher misses creations on
         # SMB shares — and arrange for the new row to be reachable.
         self._refresh_preserving_state(ensure_visible_path=result.destination)
@@ -866,6 +930,18 @@ class FileExplorer(QWidget):
         else:
             logger.warning(f"Inline rename: model never exposed the fresh path {self._fresh_path}")
 
+    def _delete_fresh_placeholder(self, path: str):
+        """Disk-side cleanup for an empty-named inline-create commit.
+
+        Invoked one event-loop tick after the editor's ``setModelData``
+        cleared the trackers — the editor is fully torn down by then so
+        the refresh isn't racing with an in-flight rename.
+        """
+        result = file_ops.delete_item(path)
+        if not result.success:
+            logger.warning(f"Failed to delete empty-named new entry: {result.error}")
+        self._refresh_preserving_state()
+
     def _on_inline_rename_closed(self, editor, hint):
         """Editor-close handler — decides whether the fresh entry survives.
 
@@ -880,6 +956,7 @@ class FileExplorer(QWidget):
             return
         fresh = self._fresh_path
         self._fresh_path = None
+        self._fresh_extension = None
 
         if hint == QStyledItemDelegate.RevertModelCache:
             result = file_ops.delete_item(fresh)
