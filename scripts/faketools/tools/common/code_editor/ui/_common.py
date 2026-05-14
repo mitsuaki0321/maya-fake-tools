@@ -3,7 +3,7 @@
 Lives at the top of ``ui/`` so feature sub-packages can reach it without
 crossing each other (the historical reason this module exists is to break a
 cycle between ``autocomplete/`` and ``help/``: both need
-:class:`_OwnerWindowWatcher`).
+:class:`_OwnerWindowWatcher` and :class:`_OutsideClickWatcher`).
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import contextlib
 from logging import getLogger
 from typing import Callable, Optional
 
-from .....lib_ui.qt_compat import QEvent, QObject, Qt, QWidget
+from .....lib_ui.qt_compat import QApplication, QEvent, QObject, Qt, QWidget
 
 logger = getLogger(__name__)
 
@@ -100,6 +100,137 @@ class _OwnerWindowWatcher(QObject):
                     return False
             popup.hide()
             logger.debug(f"_OwnerWindowWatcher hid popup (event_type={et})")
+        except RuntimeError:
+            pass
+        return False
+
+
+class _OutsideClickWatcher(QObject):
+    """Closes a popup when the user clicks outside of it.
+
+    Replacement for ``Qt.Popup``'s built-in mouse-grab-and-auto-close
+    behaviour. Used by both the autocomplete list and the floating help
+    popup, which use ``Qt.Tool`` (so they can receive their own mouse
+    events: drag-select, scroll, right-click menu) and therefore lose
+    the built-in auto-close.
+
+    ``popup_getter`` is re-invoked on every event for the same reason
+    as :class:`_OwnerWindowWatcher`: QCompleter may internally swap the
+    popup widget (observed after ``setWindowFlags``), so caching a
+    reference at construction leaves us dangling.
+
+    An optional "exception" widget can be registered (via
+    :meth:`set_exception`) so that clicks landing inside it do NOT
+    dismiss the popup — used to keep the autocomplete and help popups
+    coexisting when both are visible at once.
+    """
+
+    def __init__(self, popup_getter: Callable[[], Optional[QWidget]], parent: Optional[QObject] = None):
+        super().__init__(parent)
+        self._popup_getter = popup_getter
+        self._exception: Optional[QWidget] = None
+        self._alive = True
+        self._installed = False  # idempotency flag — safe to re-install
+        self._extra_targets: list[QWidget] = []
+
+    def mark_dead(self) -> None:
+        """External teardown signal. Auto-removes event filters via Qt."""
+        self._alive = False
+        self.uninstall()
+
+    def set_exception(self, widget: Optional[QWidget]) -> None:
+        """Mark ``widget`` as a "click-inside" region; ``None`` clears it."""
+        self._exception = widget
+
+    def install(self, extra_targets: Optional[list[QWidget]] = None) -> None:
+        """Install on QApplication + optional ``extra_targets``. Idempotent."""
+        if self._installed:
+            return
+        app = QApplication.instance()
+        if app is None:
+            logger.warning("_OutsideClickWatcher: QApplication.instance() is None — filter NOT installed")
+            return
+        app.installEventFilter(self)
+        # Belt-and-suspenders: also register on explicit widgets (editor)
+        # in case Maya intercepts application-level events before our
+        # filter runs. Same filter object can be installed multiple
+        # times; Qt deduplicates per (target, filter) pair.
+        for target in extra_targets or ():
+            if target is None:
+                continue
+            with contextlib.suppress(RuntimeError):
+                target.installEventFilter(self)
+                self._extra_targets.append(target)
+        self._installed = True
+
+    def _resolve_popup(self) -> Optional[QWidget]:
+        try:
+            return self._popup_getter()
+        except Exception as exc:
+            logger.debug(f"_OutsideClickWatcher popup_getter failed: {exc}")
+            return None
+
+    def uninstall(self) -> None:
+        """Remove from everywhere we registered. Idempotent."""
+        if not self._installed:
+            return
+        app = QApplication.instance()
+        if app is not None:
+            with contextlib.suppress(RuntimeError):
+                app.removeEventFilter(self)
+        for target in self._extra_targets:
+            with contextlib.suppress(RuntimeError):
+                target.removeEventFilter(self)
+        self._extra_targets.clear()
+        self._installed = False
+
+    def eventFilter(self, obj, event):
+        if not self._alive:
+            return False
+        # Fast reject: non-mouse-press events are ~all of the traffic here
+        # (paint, move, key, etc.). This single comparison is the entire
+        # overhead we add to Maya's event loop when nothing else is going
+        # on — everything heavier runs only on real mouse presses.
+        if event.type() != QEvent.MouseButtonPress:
+            return False
+
+        popup = self._resolve_popup()
+        if popup is None:
+            return False
+        try:
+            if not popup.isVisible():
+                return False
+            popup_rect = popup.geometry()
+        except RuntimeError:
+            # The popup instance we resolved just got torn down between
+            # resolve and use — exceedingly rare but Qt/PySide can race
+            # here during shutdown. Next event will re-resolve.
+            return False
+
+        # Qt5 exposes ``globalPos()``; Qt6 renamed it to ``globalPosition()``.
+        # We support Maya 2023 (Qt5) through 2027 (Qt6) so probe both.
+        if hasattr(event, "globalPosition"):
+            global_pos = event.globalPosition().toPoint()
+        else:
+            global_pos = event.globalPos()
+
+        if popup_rect.contains(global_pos):
+            return False  # click inside popup — default handling
+
+        exc_widget = self._exception
+        if exc_widget is not None:
+            try:
+                if exc_widget.isVisible() and exc_widget.frameGeometry().contains(global_pos):
+                    return False  # click on the paired popup — keep this one open
+            except RuntimeError:
+                self._exception = None
+
+        try:
+            popup.hide()
+            logger.debug(
+                f"_OutsideClickWatcher hid popup on click at {global_pos.x()},{global_pos.y()} "
+                f"(popup_rect={popup_rect.x()},{popup_rect.y()},{popup_rect.width()}x{popup_rect.height()})"
+            )
         except RuntimeError:
             pass
         return False

@@ -15,7 +15,7 @@ from typing import Optional
 
 from ......lib_ui.qt_compat import QEvent, QObject, QRect, Qt, QTextCursor, QThreadPool, QTimer
 from ...command.autocomplete import JEDI_AVAILABLE, JediEngine
-from .._common import _OwnerWindowWatcher
+from .._common import _OutsideClickWatcher, _OwnerWindowWatcher
 from ..autocomplete import DocstringRunnable, collect_exec_namespaces
 from .popup import HelpPopup
 
@@ -52,6 +52,7 @@ class HelpPopupController(QObject):
         self._selection_timer.timeout.connect(self._refresh_from_autocomplete)
 
         self._owner_window_watcher: Optional[_OwnerWindowWatcher] = None
+        self._outside_click_watcher: Optional[_OutsideClickWatcher] = None
 
     # -------------------- public entry points --------------------
 
@@ -92,6 +93,9 @@ class HelpPopupController(QObject):
             self._active_editor = None
         if self._owner_window_watcher is not None:
             self._owner_window_watcher.detach()
+        if self._outside_click_watcher is not None:
+            self._outside_click_watcher.set_exception(None)
+            self._outside_click_watcher.uninstall()
         if self._popup is not None:
             self._popup.hide()
 
@@ -175,6 +179,16 @@ class HelpPopupController(QObject):
             if self._owner_window_watcher is None:
                 self._owner_window_watcher = _OwnerWindowWatcher(lambda: self._popup, self)
             self._owner_window_watcher.attach(editor.window() or editor)
+
+        # Outside-click dismiss. The popup uses Qt.Tool (not Qt.Popup), so
+        # we reinstate the auto-close at the application level. Whitelist
+        # the autocomplete list so clicking an item to follow its docs
+        # doesn't kill the help popup we're trying to drive.
+        if self._popup is not None:
+            if self._outside_click_watcher is None:
+                self._outside_click_watcher = _OutsideClickWatcher(lambda: self._popup, self)
+            self._outside_click_watcher.set_exception(self._active_autocomplete_popup)
+            self._outside_click_watcher.install(extra_targets=[editor])
 
     def _ensure_popup(self) -> None:
         if self._popup is None:
