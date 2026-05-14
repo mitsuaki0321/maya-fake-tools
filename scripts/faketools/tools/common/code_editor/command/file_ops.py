@@ -62,6 +62,26 @@ def get_unique_name(path: str) -> str:
     return path
 
 
+def get_copy_name(path: str) -> str:
+    """Return a Finder-style `` copy``-suffixed alias for ``path``.
+
+    Always appends the suffix; bumps the counter on collision so a
+    duplicate of ``foo.py`` becomes ``foo copy.py``, then ``foo copy 2.py``,
+    ``foo copy 3.py``, ... Folders follow the same rule against the bare
+    basename (the empty extension means no trailing ``.``).
+    """
+    name, ext = os.path.splitext(path)
+    candidate = f"{name} copy{ext}"
+    if not os.path.exists(candidate):
+        return candidate
+    counter = 2
+    while True:
+        candidate = f"{name} copy {counter}{ext}"
+        if not os.path.exists(candidate):
+            return candidate
+        counter += 1
+
+
 def copy_item(source_path: str, destination_dir: str) -> FileOpResult:
     """Copy a file or directory into ``destination_dir``.
 
@@ -79,6 +99,27 @@ def copy_item(source_path: str, destination_dir: str) -> FileOpResult:
             shutil.copytree(source_path, destination_path)
     except Exception as exc:
         logger.error(f"Copy failed: {source_path} -> {destination_path}: {exc}")
+        return FileOpResult.fail(str(exc), source=source_path, destination=destination_path)
+    return FileOpResult.ok(source=source_path, destination=destination_path)
+
+
+def duplicate_item(source_path: str, destination_dir: str) -> FileOpResult:
+    """Copy ``source_path`` into ``destination_dir`` with a `` copy`` suffix.
+
+    Distinct from :func:`copy_item` so the Ctrl+drag flow can explicitly
+    request the Finder-style naming convention (``foo.py`` -> ``foo copy.py``)
+    while paste-copy keeps the conservative `` (N)`` style for collisions.
+    """
+    source_name = os.path.basename(source_path)
+    destination_path = get_copy_name(os.path.join(destination_dir, source_name))
+
+    try:
+        if os.path.isfile(source_path):
+            shutil.copy2(source_path, destination_path)
+        else:
+            shutil.copytree(source_path, destination_path)
+    except Exception as exc:
+        logger.error(f"Duplicate failed: {source_path} -> {destination_path}: {exc}")
         return FileOpResult.fail(str(exc), source=source_path, destination=destination_path)
     return FileOpResult.ok(source=source_path, destination=destination_path)
 
@@ -166,6 +207,8 @@ __all__ = [
     "create_folder",
     "create_source_file",
     "delete_item",
+    "duplicate_item",
+    "get_copy_name",
     "get_unique_name",
     "move_item",
 ]

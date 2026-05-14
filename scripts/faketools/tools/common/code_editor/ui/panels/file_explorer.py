@@ -12,6 +12,7 @@ import os
 
 from ......lib_ui.qt_compat import (
     QAction,
+    QApplication,
     QBrush,
     QColor,
     QEvent,
@@ -1342,9 +1343,27 @@ class FileExplorer(QWidget):
             CodeEditorMessageBox.warning(self, "Move Error", f"Failed to move {name}: {result.error}")
         return result.success
 
+    def duplicate_item(self, source_path, destination_dir):
+        """Duplicate through ``file_ops`` (Ctrl+drag) with `` copy`` naming."""
+        result = file_ops.duplicate_item(source_path, destination_dir)
+        if not result.success:
+            name = os.path.basename(source_path)
+            CodeEditorMessageBox.warning(self, "Copy Error", f"Failed to copy {name}: {result.error}")
+        return result.success
+
     def start_drag(self, supportedActions):
-        """Start drag operation with custom mime data."""
+        """Start drag operation with custom mime data.
+
+        Restricted to left-button presses. ``QAbstractItemView`` will invoke
+        this hook whenever its drag-distance threshold is crossed, and
+        without this guard middle-click panning / right-click context-menu
+        gestures could accidentally drag the selection into a sibling
+        folder.
+        """
         from ......lib_ui.qt_compat import QtCore, QtGui
+
+        if not (QApplication.mouseButtons() & Qt.LeftButton):
+            return
 
         # Get selected items
         selected_paths = self.get_selected_paths()
@@ -1488,24 +1507,62 @@ class FileExplorer(QWidget):
             event.ignore()
             return
 
-        # Perform the operation (move for internal, copy for external)
+        # Ctrl-held internal drag becomes a duplicate (with `` copy`` suffix)
+        # instead of a move. External drags stay on the original copy path
+        # so dropping foreign files keeps their original name. Any other
+        # modifier (Shift, Alt, ...) is treated as a plain move — the
+        # previous code path silently auto-renamed collisions to ``(1)``
+        # which surprised users dropping on empty area.
+        is_internal_duplicate = not is_external_drag and bool(event.keyboardModifiers() & Qt.ControlModifier)
+
+        # Normalize for cross-separator / case-insensitive equality.
+        # ``self.root_path`` is stored in OS-native form (often backslash on
+        # Windows) while paths read out of ``QFileSystemModel`` use forward
+        # slashes; without normalization the same-dir guard misfires when
+        # the user drops on the workspace's empty area.
+        norm_target = os.path.normcase(os.path.normpath(target_dir))
+
+        # Perform the operation (move / duplicate / copy depending on the gesture)
         success_count = 0
         error_count = 0
-        operation_name = "Copied" if is_external_drag else "Moved"
+        if is_external_drag:
+            operation_name = "Copied"
+        elif is_internal_duplicate:
+            operation_name = "Duplicated"
+        else:
+            operation_name = "Moved"
 
         for source_path in dragged_paths:
-            # Skip if source and target are the same (only for internal move)
-            if not is_external_drag and os.path.dirname(source_path) == target_dir:
+            norm_source = os.path.normcase(os.path.normpath(source_path))
+            norm_source_parent = os.path.normcase(os.path.normpath(os.path.dirname(source_path)))
+
+            # Plain move into the same folder is a no-op; Ctrl-duplicate into
+            # the same folder is the *primary* use case so we don't skip it.
+            if not is_external_drag and not is_internal_duplicate and norm_source_parent == norm_target:
                 continue
 
-            # Skip if trying to move a parent into its child (only for internal move)
-            if not is_external_drag and target_dir.startswith(source_path + os.sep):
+            # Never let a folder be copied/moved into itself or its own subtree.
+            if not is_external_drag and (norm_target == norm_source or norm_target.startswith(norm_source + os.sep)):
                 continue
+
+            # For plain move (no Ctrl), refuse collisions instead of
+            # auto-appending ``(N)``. Renames are explicit (F2) and copies
+            # are explicit (Ctrl+drag); a drag-move that silently renames
+            # the file is the exact behaviour we're trying to retire.
+            if not is_external_drag and not is_internal_duplicate:
+                collision_path = os.path.join(target_dir, os.path.basename(source_path))
+                if os.path.exists(collision_path):
+                    error_count += 1
+                    logger.warning(f"Move skipped: '{os.path.basename(source_path)}' already exists in {target_dir}")
+                    continue
 
             try:
                 if is_external_drag:
                     # Copy external files
                     success = self.copy_item(source_path, target_dir)
+                elif is_internal_duplicate:
+                    # Ctrl+drag: duplicate with `` copy`` naming
+                    success = self.duplicate_item(source_path, target_dir)
                 else:
                     # Move internal files
                     success = self.move_item(source_path, target_dir)
@@ -1514,7 +1571,7 @@ class FileExplorer(QWidget):
                     success_count += 1
 
                     # Emit signals for file tracking (only for internal moves)
-                    if not is_external_drag:
+                    if not is_external_drag and not is_internal_duplicate:
                         if os.path.isfile(os.path.join(target_dir, os.path.basename(source_path))):
                             # File moved
                             new_path = os.path.join(target_dir, os.path.basename(source_path))
@@ -1527,7 +1584,10 @@ class FileExplorer(QWidget):
                     error_count += 1
             except Exception as e:
                 error_count += 1
-                operation = "copying" if is_external_drag else "moving"
+                if is_external_drag or is_internal_duplicate:
+                    operation = "copying"
+                else:
+                    operation = "moving"
                 logger.error(f"Error {operation} {source_path}: {e!s}")
 
         # Refresh the view, anchoring on the drop target so it stays visible.
