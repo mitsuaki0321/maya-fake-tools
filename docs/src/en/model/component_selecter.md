@@ -29,13 +29,22 @@ import faketools.tools.rig.component_selecter_ui
 faketools.tools.rig.component_selecter_ui.show_ui()
 ```
 
-![image001](../../images/rig/component_selecter/image001.png)
+![image001](../../images/model/component_selecter/image001.png)
+
+## Selection Mode
+
+Toggles the selection modes.
+
+![image006](../../images/model/component_selecter/image006.png)
+
+- `Soft Select`: Toggles selection via SoftSelection.
+- `Symmetry`: Toggles selection via SymmetrySelection.
 
 ## Unique Selection
 
 Reselects components in various ways.
 
-![image002](../../images/rig/component_selecter/image002.png)
+![image002](../../images/model/component_selecter/image002.png)
 
 ### Unique
 
@@ -46,9 +55,7 @@ To select, follow these steps:
 1. Select components in SoftSelection, SymmetrySelection mode.
 2. Press `Unique` button.
 
-※ You can toggle each mode with `Toggle Soft Selection` and `Toggle Symmetry Selection` in the Edit menu.
-
-![image005](../../images/rig/component_selecter/image005.png)
+![image005](../../images/model/component_selecter/image005.png)
 
 ### Reverse
 
@@ -66,7 +73,7 @@ To select, follow these steps:
 
 ### Area Selection
 
-![image003](../../images/rig/component_selecter/image003.png)
+![image003](../../images/model/component_selecter/image003.png)
 
 Performs area selection of components. Can select right, left, and center areas based on the YZ plane.
 
@@ -77,7 +84,7 @@ To select, follow these steps:
 
 ### CV Area Selection
 
-![image004](../../images/rig/component_selecter/image004.png)
+![image004](../../images/model/component_selecter/image004.png)
 
 Performs area selection of CVs.
 

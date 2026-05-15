@@ -29,13 +29,22 @@ import faketools.tools.rig.component_selecter_ui
 faketools.tools.rig.component_selecter_ui.show_ui()
 ```
 
-![image001](../../images/rig/component_selecter/image001.png)
+![image001](../../images/model/component_selecter/image001.png)
+
+## Selection Mode
+
+選択モードを切り替えます。
+
+![image006](../../images/model/component_selecter/image006.png)
+
+- `Soft Select`: SoftSelection　による選択を切り替えます。
+- `Symmetry`: SymmetrySelection による選択を切り替えます。
 
 ## Unique Selection
 
 コンポーネントをいろいろな方法で選択しなおします。
 
-![image002](../../images/rig/component_selecter/image002.png)
+![image002](../../images/model/component_selecter/image002.png)
 
 ### Unique
 
@@ -46,9 +55,7 @@ faketools.tools.rig.component_selecter_ui.show_ui()
 1. SoftSelection、SymmetrySelection モードでコンポーネントを選択します。
 2. `Unique` ボタンを押します。
 
-※ Edit メニューの `Toggle Soft Selection` と `Toggle Symmetry Selection` で各モードを切り替えることができます。
-
-![image005](../../images/rig/component_selecter/image005.png)
+![image005](../../images/model/component_selecter/image005.png)
 
 ### Reverse
 
@@ -66,7 +73,7 @@ faketools.tools.rig.component_selecter_ui.show_ui()
 
 ### Area Selection
 
-![image003](../../images/rig/component_selecter/image003.png)
+![image003](../../images/model/component_selecter/image003.png)
 
 コンポーネントのエリア選択を行います。YZ 平面を軸としてそれぞれ 右、左、真ん中のエリア選択が可能です。
 
@@ -77,7 +84,7 @@ faketools.tools.rig.component_selecter_ui.show_ui()
 
 ### CV Area Selection
 
-![image004](../../images/rig/component_selecter/image004.png)
+![image004](../../images/model/component_selecter/image004.png)
 
 CV のエリア選択を行います。
 
