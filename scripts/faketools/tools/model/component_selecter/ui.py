@@ -1,5 +1,6 @@
 """Component selection tool."""
 
+import contextlib
 from logging import getLogger
 
 import maya.cmds as cmds
@@ -8,7 +9,7 @@ from ....lib_ui import maya_decorator
 from ....lib_ui.base_window import BaseMainWindow
 from ....lib_ui.maya_qt import get_maya_main_window
 from ....lib_ui.qt_compat import QButtonGroup, QGridLayout, QHBoxLayout, QLabel, QPushButton, QRadioButton, QSpinBox, Qt
-from ....lib_ui.widgets import extra_widgets
+from ....lib_ui.widgets import SwitchToggleButton, extra_widgets
 from ....operations import component_selection
 
 logger = getLogger(__name__)
@@ -32,13 +33,31 @@ class MainWindow(BaseMainWindow):
             central_layout="vertical",
         )
 
+        self._script_job_ids: list[int] = []
+
         self.setup_ui()
+        self._refresh_selection_mode_buttons()
+        self._register_script_jobs()
 
     def setup_ui(self):
         """Setup the user interface."""
-        # Menu
-        self.menu = self.menuBar()
-        self._add_menu()
+        # Selection mode
+        label = QLabel("Selection Mode")
+        label.setStyleSheet("font-weight: bold;")
+        self.central_layout.addWidget(label)
+
+        mode_layout = QHBoxLayout()
+
+        self.soft_select_button = SwitchToggleButton("Soft Select")
+        mode_layout.addWidget(self.soft_select_button)
+
+        self.symmetry_button = SwitchToggleButton("Symmetry")
+        mode_layout.addWidget(self.symmetry_button)
+
+        self.central_layout.addLayout(mode_layout)
+
+        separator = extra_widgets.HorizontalSeparator()
+        self.central_layout.addWidget(separator)
 
         # Unique selection
         label = QLabel("Unique Selection")
@@ -121,6 +140,8 @@ class MainWindow(BaseMainWindow):
         self.central_layout.addWidget(uv_sel_button)
 
         # Signal and slot
+        self.soft_select_button.clicked.connect(self.toggle_soft_selection)
+        self.symmetry_button.clicked.connect(self.toggle_symmetry_selection)
         unique_sel_button.clicked.connect(self.unique_selection)
         reverse_sel_button.clicked.connect(self.reverse_selection)
         same_sel_button.clicked.connect(self.same_selection)
@@ -132,15 +153,38 @@ class MainWindow(BaseMainWindow):
         self.min_param_spinbox.valueChanged.connect(self.__update_uv_spinbox)
         self.max_param_spinbox.valueChanged.connect(self.__update_uv_spinbox)
 
-    def _add_menu(self):
-        """Add menu."""
-        menu = self.menu.addMenu("Edit")
+    def _register_script_jobs(self):
+        """Register scriptJobs to mirror Maya's selection-mode state in the UI."""
+        events = [
+            "softSelectOptionsChanged",
+            "symmetricModellingOptionsChanged",
+        ]
+        for event in events:
+            try:
+                job_id = cmds.scriptJob(event=[event, self._refresh_selection_mode_buttons], protected=True)
+                self._script_job_ids.append(job_id)
+            except RuntimeError:
+                logger.warning(f"Failed to register scriptJob for event: {event}")
 
-        action = menu.addAction("Toggle Soft Selection")
-        action.triggered.connect(self.toggle_soft_selection)
+    def _kill_script_jobs(self):
+        """Kill registered scriptJobs."""
+        for job_id in self._script_job_ids:
+            with contextlib.suppress(RuntimeError):
+                cmds.scriptJob(kill=job_id, force=True)
+        self._script_job_ids = []
 
-        action = menu.addAction("Toggle Symmetry Selection")
-        action.triggered.connect(self.toggle_symmetry_selection)
+    def _refresh_selection_mode_buttons(self):
+        """Sync Soft Select / Symmetry button states with Maya."""
+        soft_on = bool(cmds.softSelect(q=True, sse=True))
+        sym_on = bool(cmds.symmetricModelling(q=True, s=True))
+
+        self.soft_select_button.setChecked(soft_on)
+        self.symmetry_button.setChecked(sym_on)
+
+    def closeEvent(self, event):
+        """Kill scriptJobs on close."""
+        self._kill_script_jobs()
+        super().closeEvent(event)
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Unique selection")
@@ -262,10 +306,8 @@ class MainWindow(BaseMainWindow):
     def toggle_soft_selection(self):
         """Toggle soft selection."""
         current_soft_select = cmds.softSelect(q=True, sse=True)
-        if current_soft_select:
-            cmds.softSelect(sse=False)
-        else:
-            cmds.softSelect(sse=True)
+        cmds.softSelect(sse=not current_soft_select)
+        self._refresh_selection_mode_buttons()
 
     @maya_decorator.error_handler
     @maya_decorator.undo_chunk("Toggle symmetry selection")
@@ -277,6 +319,7 @@ class MainWindow(BaseMainWindow):
         else:
             cmds.symmetricModelling(s=True)
             cmds.select(cmds.ls(sl=True), sym=True)
+        self._refresh_selection_mode_buttons()
 
     def _select_objects_to_components(self, filter_types: list[str] = None) -> list[str]:
         """Convert objects to components.

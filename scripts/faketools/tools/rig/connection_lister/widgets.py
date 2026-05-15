@@ -2,7 +2,8 @@
 
 from logging import getLogger
 
-from ....lib_ui.qt_compat import QHBoxLayout, QLabel, QPushButton, Qt, QWidget, Signal
+from ....lib_ui.qt_compat import QHBoxLayout, QLabel, Qt, QWidget, Signal
+from ....lib_ui.widgets import SwitchToggleButton
 
 logger = getLogger(__name__)
 
@@ -20,13 +21,11 @@ class OperationSwitchWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self.connect_button = OperationSwitchButton("Connect")
-        self.connect_button.setCheckable(True)
+        self.connect_button = SwitchToggleButton("Connect")
         self.connect_button.setChecked(True)
         layout.addWidget(self.connect_button)
 
-        self.command_button = OperationSwitchButton("Command")
-        self.command_button.setCheckable(True)
+        self.command_button = SwitchToggleButton("Command")
         self.command_button.setChecked(False)
         layout.addWidget(self.command_button)
 
@@ -61,45 +60,6 @@ class OperationSwitchWidget(QWidget):
         self.button_changed.emit(int(self.command_button.isChecked()))
 
 
-class OperationSwitchButton(QPushButton):
-    """Switch operation button."""
-
-    def __init__(self, text: str, parent=None):
-        """Initialize the button.
-
-        Args:
-            text (str): The button text.
-        """
-        super().__init__(text, parent=parent)
-
-        self.setCheckable(True)
-        self.setChecked(False)
-        self.toggled.connect(self._update_style)
-
-    def _update_style(self, checked: bool) -> None:
-        """Update the button style based on the checked state.
-
-        Args:
-            checked (bool): The checked state.
-        """
-        if checked:
-            stylesheet = """
-            QPushButton {
-                border: 1px solid #444444;
-                background-color: #3c3c3c;
-                color: #cccccc;
-                padding: 5px 10px;
-            }
-            QPushButton:checked {
-                background-color: #5285A6;
-                color: #ffffff;
-            }
-            """
-            self.setStyleSheet(stylesheet)
-        else:
-            self.setStyleSheet("")
-
-
 class NodeCountLabel(QLabel):
     """Label to display the number of nodes."""
 
@@ -119,4 +79,4 @@ class NodeCountLabel(QLabel):
         self.setText(f"{current} / {total}")
 
 
-__all__ = ["OperationSwitchWidget", "OperationSwitchButton", "NodeCountLabel"]
+__all__ = ["NodeCountLabel", "OperationSwitchWidget"]

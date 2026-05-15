@@ -4,7 +4,7 @@ from .extra_widgets import HorizontalSeparator, VerticalSeparator
 from .field_slider_widget import FieldSliderWidget
 from .float_slider import FloatSlider, unify_slider_widths
 from .icon_button import IconButton, IconButtonStyle, IconToggleButton, IconToolButton, ToolIconButton
-from .toggle_button import TextToggleButton
+from .toggle_button import SwitchToggleButton, TextToggleButton
 
 __all__ = [
     "FieldSliderWidget",
@@ -14,6 +14,7 @@ __all__ = [
     "IconButtonStyle",
     "IconToggleButton",
     "IconToolButton",
+    "SwitchToggleButton",
     "TextToggleButton",
     "ToolIconButton",
     "VerticalSeparator",

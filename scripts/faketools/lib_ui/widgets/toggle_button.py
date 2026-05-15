@@ -112,4 +112,70 @@ class TextToggleButton(QPushButton):
         self._apply_stylesheet(self._bg_on if checked else self._bg_off)
 
 
-__all__ = ["TextToggleButton"]
+class SwitchToggleButton(QPushButton):
+    """Checkable push button that highlights with a custom color when checked.
+
+    Unlike ``TextToggleButton`` (square, palette-driven, abbreviated text),
+    this button uses normal QPushButton sizing and is intended for full-text
+    toggles such as mode switches. When unchecked the default style is used;
+    when checked the configured highlight color is applied via stylesheet.
+
+    Examples:
+        button = SwitchToggleButton("Connect", parent=self)
+        button.setChecked(True)
+
+        # Custom highlight color
+        button = SwitchToggleButton("Soft Select", highlight_color="#a65252", parent=self)
+    """
+
+    # Geometry-affecting properties (border, padding) are kept identical across
+    # both states so that toggling does not shift the layout. Only the colors
+    # change via the :checked pseudo-state.
+    _STYLESHEET = """
+        QPushButton {{
+            border: none;
+            background-color: #5d5d5d;
+            color: #e0e0e0;
+            padding: 5px 10px;
+        }}
+        QPushButton:hover {{
+            background-color: #6a6a6a;
+        }}
+        QPushButton:checked {{
+            background-color: {highlight};
+            color: #ffffff;
+        }}
+        QPushButton:checked:hover {{
+            background-color: {highlight_hover};
+        }}
+    """
+
+    def __init__(
+        self,
+        text: str,
+        highlight_color: str | QColor = "#5285A6",
+        parent=None,
+    ):
+        """Initialize the switch toggle button.
+
+        Args:
+            text: The button text.
+            highlight_color: Background color (hex string or QColor) when checked.
+            parent: Parent widget.
+        """
+        super().__init__(text, parent=parent)
+
+        self._highlight_color = QColor(highlight_color) if not isinstance(highlight_color, QColor) else highlight_color
+        highlight_hover = adjust_lightness(self._highlight_color, 1.15)
+
+        self.setCheckable(True)
+        self.setChecked(False)
+        self.setStyleSheet(
+            self._STYLESHEET.format(
+                highlight=self._highlight_color.name(),
+                highlight_hover=highlight_hover.name(),
+            )
+        )
+
+
+__all__ = ["SwitchToggleButton", "TextToggleButton"]
