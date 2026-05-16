@@ -27,6 +27,7 @@ The editor handles both **Python** and **MEL**. Each tab's language is resolved 
 | Run / Add to Shelf | Python executer | MEL executer |
 | Autocomplete | Yes (jedi) | No |
 | Documentation popup | Yes | No |
+| Rename name everywhere ( F2 ) | Yes (jedi) | No |
 | Language-specific right-click | Maya Help / Inspect / Reload | What Is / What Is (Open Source) |
 
 The active tab carries a thin **accent line at the top** in the language's accent color (blue for Python, orange for MEL).\
@@ -93,6 +94,42 @@ Press Ctrl+F/Ctrl+H to open the find/replace dialog.
 - **Find All:** Selects all matches and enters multi-cursor mode.
 - **Replace:** Replaces the current match.
 - **Replace All:** Replaces all matches.
+
+
+## Rename Name Everywhere ( F2 )
+
+When you want to change the name of a variable or function, this feature **renames every place that name is used in the file at once**.
+
+Unlike plain find/replace, it understands the meaning of the code before rewriting. The same text appearing inside a comment or a string is not touched, and the same name used in a different place (for example, as an independent variable in another function) is correctly kept separate rather than being mixed in.
+
+### How to Use
+
+1. Place the cursor **anywhere inside** the variable or function name you want to change (the start, middle, or end is all fine).
+2. Press **F2**.
+3. A small input box appears at that name, pre-filled with the current name and fully selected.
+4. Type the new name and press **Enter** to confirm. Every matching place in the file is rewritten at once.
+5. To cancel, press **Esc** or click somewhere else inside the editor.
+
+| Action | Behaviour |
+|--------|-----------|
+| F2 | Start renaming the name at the cursor position |
+| Type + Enter | Rewrite every matching place in the file with the new name |
+| Escape | Cancel ( close without changing anything ) |
+| Click elsewhere in the editor / scroll | Cancel |
+
+If the typed text is not valid as a Python name ( empty, starts with a digit, contains spaces, etc. ), pressing Enter does not rewrite anything and the input box stays open. If the new name is identical to the old one or is empty, nothing is changed and the box just closes.
+
+### Behaviour Notes
+
+- **One undo restores everything**: no matter how many places were rewritten, a single Ctrl+Z reverts the whole rename.
+- **Cursor returns to where you started**: after the rewrite the cursor lands back at the place where you pressed F2. Undo also returns the cursor to that position.
+- **Multiple places change together**: when the same name appears many times in the file, every occurrence is renamed to the same new name in one step.
+
+### When It Works
+
+- Available only in **Python files ( `.py` )**. Pressing F2 in a MEL file does nothing.
+- Only the **currently open file** is rewritten. Other files that use the same name ( the import source, etc. ) are not touched.
+- Pressing F2 anywhere other than on a name ( whitespace, inside a comment, etc. ), or when the name isn't found anywhere in the file, also does nothing.
 
 
 ## Multi-Cursor
@@ -382,6 +419,7 @@ Main keyboard shortcuts available in the code editor:
 | Ctrl+F                    | Find dialog                              |
 | Ctrl+H                    | Replace dialog                           |
 | F3 / Shift+F3             | Find next/previous                       |
+| F2                        | Rename the name at the cursor everywhere in the file ( Python only ) |
 | Ctrl+Enter                | Execute current line or selection        |
 | Numpad Enter              | Execute current script (same as Run button) |
 | Ctrl+Shift+Enter          | Execute entire file                      |
