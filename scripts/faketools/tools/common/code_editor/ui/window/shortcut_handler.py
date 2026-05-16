@@ -100,6 +100,14 @@ class ShortcutHandler:
         self.toggle_help_popup_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.toggle_help_popup_shortcut.activated.connect(self._handle_toggle_help_popup)
 
+        # Symbol rename (VSCode F2). Python-only — gated on the language
+        # profile exposing a completion engine factory, which is the
+        # same signal used to decide whether jedi is available for the
+        # active document. Silent no-op for MEL / cursor-not-on-symbol.
+        self.rename_symbol_shortcut = QShortcut(QKeySequence("F2"), self.main_window)
+        self.rename_symbol_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.rename_symbol_shortcut.activated.connect(self._handle_rename_symbol)
+
     # Editor tab-scoped shortcut handlers (requires focus check)
     def _handle_new_file(self):
         """Handle new file shortcut - only when code editor widget has focus."""
@@ -171,3 +179,32 @@ class ShortcutHandler:
         from ..help.controller import toggle_help_popup
 
         toggle_help_popup(self.main_window)
+
+    def _handle_rename_symbol(self):
+        """F2 → inline rename of the identifier at the caret.
+
+        Gated on the language profile exposing a completion engine factory
+        (the same condition that decides whether jedi runs for this tab)
+        so MEL files are a silent no-op. Lazy-imports the refactor logic
+        and overlay so neither jedi nor the overlay widget loads until
+        someone actually presses F2.
+        """
+        editor = self.main_window.get_current_editor()
+        if editor is None or editor.language.completion_engine_factory is None:
+            return
+
+        cursor = editor.textCursor()
+        line = cursor.blockNumber() + 1  # jedi is 1-indexed
+        column = cursor.columnNumber()
+
+        from ...command.refactor import find_symbol_references
+        from ..editor.rename_overlay import RenameOverlay
+
+        code = editor.toPlainText()
+        references = find_symbol_references(code=code, line=line, column=column, path=editor.file_path)
+        if not references:
+            return
+
+        first = references[0]
+        old_name = code[first.start : first.end]
+        RenameOverlay(editor, references, old_name, cursor_offset=cursor.position())
