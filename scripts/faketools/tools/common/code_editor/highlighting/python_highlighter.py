@@ -14,9 +14,11 @@ Rebuilds span cache at most once per debounce window while typing; re-uses
 stale spans in between so keystrokes never trigger a full tokenize pass.
 """
 
+import builtins
 from collections import defaultdict
 import io
 import keyword
+import re
 import token as _token
 import tokenize as _tokenize
 
@@ -59,6 +61,28 @@ class PythonHighlighter(QSyntaxHighlighter):
     # Bracket depth colors cycle through these theme keys (rainbow brackets).
     _BRACKET_DEPTH_KEYS = ("bracket_1", "bracket_2", "bracket_3")
 
+    # Python's conventional first-parameter names — coloured wherever they
+    # appear so the reader can spot instance/class context at a glance.
+    _SELF_PARAMS = frozenset({"self", "cls"})
+
+    # Builtin type and exception class names — coloured regardless of position
+    # (Sublime-style). Built dynamically so this stays in sync with whatever
+    # Python the editor is running on. Builtin *functions* (print/len/sorted)
+    # are intentionally excluded so the existing method-call coloring still
+    # applies to them.
+    _BUILTIN_TYPES = frozenset(name for name in dir(builtins) if not name.startswith("_") and isinstance(getattr(builtins, name), type))
+
+    # Escape sequences inside string literals (excluding raw strings).
+    # Covers simple letter escapes, \xNN, \uNNNN, \UNNNNNNNN, \N{...}, octal,
+    # and line continuations. Applied as an overlay on top of the base str
+    # colour so the surrounding string colour still wins.
+    _ESCAPE_RE = re.compile(
+        # NOTE: octal [0-7]{1,3} comes BEFORE the simple-letter set so that
+        # multi-digit octals (\07, \377) match as a single span instead of
+        # falling into \0 + trailing digits.
+        r"\\(?:[0-7]{1,3}|[\\'\"abfnrtv]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8}|N\{[^}]*\}|\r?\n)"
+    )
+
     # Token type -> theme key mapping (colors retrieved from SyntaxConfigLoader)
     _KIND_TO_FMTKEY = {
         # Core features
@@ -76,11 +100,17 @@ class PythonHighlighter(QSyntaxHighlighter):
         "kwarg": "variable",
         "const": "boolean",  # True / False / None
         "method": "method",  # Method/function calls & bare calls
+        "self_param": "variable",  # self / cls
+        "builtin_type": "class",  # int / str / dict / Exception / ...
+        "escape": "escape_sequence",  # \n \t \xNN ... inside strings
     }
 
     # Kinds rendered in bold. Style attributes live here so the loader stays
     # a pure colour-table reader.
     _BOLD_KINDS = frozenset({"kw", "defk", "const", "classname", "decorator"})
+
+    # Kinds rendered in italic.
+    _ITALIC_KINDS = frozenset({"self_param", "builtin_type"})
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -106,9 +136,12 @@ class PythonHighlighter(QSyntaxHighlighter):
         reloaded or shared.
         """
         fmt = self._cfg.get_format(fmt_key)
-        if kind in self._BOLD_KINDS:
+        if kind in self._BOLD_KINDS or kind in self._ITALIC_KINDS:
             fmt = QTextCharFormat(fmt)
-            fmt.setFontWeight(QFont.Bold)
+            if kind in self._BOLD_KINDS:
+                fmt.setFontWeight(QFont.Bold)
+            if kind in self._ITALIC_KINDS:
+                fmt.setFontItalic(True)
         return fmt
 
     # -------------------- Safe tokenization (handles incomplete code) --------------------
@@ -230,6 +263,201 @@ class PythonHighlighter(QSyntaxHighlighter):
             j += 1
         return j
 
+    def _add_escape_spans(self, tok, add_span):
+        """Overlay escape-sequence spans on top of a string token.
+
+        Walks the token text once while tracking row/col so multi-line
+        (triple-quoted) strings are handled. Raw strings (``r"..."``,
+        ``rb"..."``, ``Rb"..."``) are skipped entirely — the regex would
+        otherwise mis-colour ``\\n`` etc. inside them.
+        """
+        text = tok.string
+        if not text:
+            return
+        # Detect string prefix (everything before the first quote char).
+        prefix_end = 0
+        n = len(text)
+        while prefix_end < n and text[prefix_end] not in ("'", '"'):
+            prefix_end += 1
+        if "r" in text[:prefix_end].lower():
+            return
+
+        sr, sc = tok.start
+        row = sr - 1
+        col = sc
+        pos = 0
+        for m in self._ESCAPE_RE.finditer(text):
+            start = m.start()
+            end = m.end()
+            while pos < start:
+                if text[pos] == "\n":
+                    row += 1
+                    col = 0
+                else:
+                    col += 1
+                pos += 1
+            start_row, start_col = row, col
+            while pos < end:
+                if text[pos] == "\n":
+                    row += 1
+                    col = 0
+                else:
+                    col += 1
+                pos += 1
+            # Escape sequences don't cross newlines except for the rare
+            # backslash-line-continuation; emit only on the start row in
+            # that case so the spans table stays consistent.
+            if row == start_row:
+                add_span(start_row, start_col, col, "escape")
+            else:
+                add_span(start_row, start_col, start_col + (end - start), "escape")
+
+    def _add_string_prefix_span(self, tok, add_span):
+        """Colour the string-literal prefix (``r`` / ``f`` / ``b`` / ``u`` /
+        combinations like ``rb`` / ``fr``) with the escape colour, so the
+        prefix visually rhymes with the in-string syntax it enables.
+
+        The prefix is always on the first line of the token — it precedes
+        the opening quote — so no row tracking is needed.
+        """
+        text = tok.string
+        if not text:
+            return
+        prefix_end = 0
+        n = len(text)
+        while prefix_end < n and text[prefix_end] not in ("'", '"'):
+            prefix_end += 1
+        if prefix_end == 0:
+            return
+        sr, sc = tok.start
+        add_span(sr - 1, sc, sc + prefix_end, "escape")
+
+    def _add_fstring_marker_spans(self, tok, add_span):
+        """Overlay expression-boundary markers on top of an f-string token.
+
+        Python 3.9–3.11 (Maya's runtime) emits f-strings as a single STRING
+        token with the embedded expressions un-tokenized. Re-tokenizing the
+        expressions to colour them properly would require either Python 3.12
+        ``FSTRING_*`` tokens or a custom parser — both larger changes than
+        the user wants right now. Instead this helper marks just the
+        expression *boundaries* so f-strings are visually scannable:
+
+        * single ``{`` and matching ``}`` (literal ``{{`` / ``}}`` are left alone)
+        * conversion flag ``!r`` / ``!s`` / ``!a``
+        * format-spec colon ``:``
+
+        The expression body itself stays at the surrounding string colour.
+
+        The walker tracks brace depth and skips over string literals inside
+        expressions so nested ``{`` inside ``f"{x or '{'}"`` don't break the
+        boundary detection.
+        """
+        text = tok.string
+        if not text:
+            return
+        # Detect prefix (everything before the first quote char).
+        prefix_end = 0
+        n = len(text)
+        while prefix_end < n and text[prefix_end] not in ("'", '"'):
+            prefix_end += 1
+        if "f" not in text[:prefix_end].lower():
+            return
+
+        sr, sc = tok.start
+        row = sr - 1
+        col = sc
+        pos = 0
+
+        def advance():
+            nonlocal row, col, pos
+            if text[pos] == "\n":
+                row += 1
+                col = 0
+            else:
+                col += 1
+            pos += 1
+
+        def emit_marker(length):
+            """Emit a single-line span starting at the current position.
+
+            Uses the ``escape`` colour so the f-string boundary markers
+            visually rhyme with ``\\n`` / ``\\t`` escapes — both are
+            "non-literal syntax embedded in a string".
+            """
+            start_row, start_col = row, col
+            for _ in range(length):
+                if pos >= n:
+                    break
+                advance()
+            if row == start_row:
+                add_span(start_row, start_col, col, "escape")
+
+        # Skip prefix and opening quote (1 or 3 chars).
+        quote_start = prefix_end
+        triple = text[quote_start : quote_start + 3] in ("'''", '"""')
+        quote_end = quote_start + (3 if triple else 1)
+        while pos < quote_end and pos < n:
+            advance()
+
+        expr_depth = 0
+        while pos < n:
+            c = text[pos]
+            if expr_depth == 0:
+                # Literal portion of the f-string.
+                if c == "{":
+                    if pos + 1 < n and text[pos + 1] == "{":
+                        # Literal `{{` — skip both, no marker.
+                        advance()
+                        advance()
+                        continue
+                    emit_marker(1)
+                    expr_depth = 1
+                    continue
+                if c == "}":
+                    if pos + 1 < n and text[pos + 1] == "}":
+                        advance()
+                        advance()
+                        continue
+                    # Stray `}` in literal body (malformed but tolerate).
+                    advance()
+                    continue
+                advance()
+                continue
+
+            # Inside an expression. Skip string literals so their braces
+            # don't perturb depth tracking.
+            if c in ("'", '"'):
+                quote = c
+                advance()
+                while pos < n and text[pos] != quote:
+                    if text[pos] == "\\" and pos + 1 < n:
+                        advance()
+                    advance()
+                if pos < n:
+                    advance()
+                continue
+            if c == "{":
+                expr_depth += 1
+                advance()
+                continue
+            if c == "}":
+                expr_depth -= 1
+                if expr_depth == 0:
+                    emit_marker(1)
+                else:
+                    advance()
+                continue
+            if c == "!" and expr_depth == 1 and pos + 1 < n and text[pos + 1] in "rsa":
+                # Conversion flag must be followed by `:` or `}` to be valid.
+                lookahead = pos + 2
+                if lookahead < n and text[lookahead] in (":", "}"):
+                    emit_marker(2)
+                    continue
+            if c == ":" and expr_depth == 1:
+                emit_marker(1)
+                continue
+            advance()
+
     def _highlight_dotted_name(self, tokens, j, add_token, kind):
         """Highlight tokens[j] (assumed to be NAME) and following '. NAME' chain with given kind."""
         n = len(tokens)
@@ -346,6 +574,9 @@ class PythonHighlighter(QSyntaxHighlighter):
 
             elif ttype == _tokenize.STRING:
                 add_token(tok, "str")
+                self._add_string_prefix_span(tok, add_span)
+                self._add_escape_spans(tok, add_span)
+                self._add_fstring_marker_spans(tok, add_span)
 
             elif ttype == _tokenize.NUMBER:
                 add_token(tok, "num")
@@ -390,7 +621,29 @@ class PythonHighlighter(QSyntaxHighlighter):
                         add_token(tok, "classname")
                         after_class = False
                     else:
+                        # Lookbacks needed by several branches below.
+                        prev_is_dot = i > 0 and tokens[i - 1].type == _tokenize.OP and tokens[i - 1].string == "."
+                        prev_is_at = i > 0 and tokens[i - 1].type == _tokenize.OP and tokens[i - 1].string == "@"
+                        is_builtin_type = not in_import_stmt and not prev_is_dot and not prev_is_at and tstr in self._BUILTIN_TYPES
+
+                        # self / cls — colored wherever they appear as a bare
+                        # identifier. Attribute access (foo.self) is naturally
+                        # excluded because `tokenize` still emits self as NAME,
+                        # but it's preceded by '.' — colouring it there is
+                        # harmless and rare, so we don't bother filtering.
+                        if not in_import_stmt and tstr in self._SELF_PARAMS:
+                            add_token(tok, "self_param")
+
+                        # Builtin types / exception classes coloured even when
+                        # they aren't called. Applied before the method/bare-
+                        # call branches so we can skip those branches and avoid
+                        # last-write-wins overriding the italic style.
+                        if is_builtin_type:
+                            add_token(tok, "builtin_type")
+
                         # Dotted method calls (obj.method() / pkg.mod.Func())
+                        # — colours the *last* NAME in the chain, not the
+                        # current one, so it never conflicts with builtin_type.
                         if self.ENABLE_METHOD_TAIL and not in_import_stmt:
                             j = i
                             last_tok = tok
@@ -408,7 +661,7 @@ class PythonHighlighter(QSyntaxHighlighter):
                                 j += 2
 
                             # Case where previous token is '.' (e.g., super().foo)
-                            if not had_dot and i > 0 and tokens[i - 1].type == _tokenize.OP and tokens[i - 1].string == ".":
+                            if not had_dot and prev_is_dot:
                                 had_dot = True
                                 last_tok = tok
 
@@ -422,16 +675,17 @@ class PythonHighlighter(QSyntaxHighlighter):
                                     add_token(last_tok, "method")
 
                         # Bare 'Name(' with capital first letter gets class color
-                        if self.ENABLE_CAPITAL_CALL and not in_import_stmt:
+                        # (skip for builtin types so italic builtin_type wins)
+                        if self.ENABLE_CAPITAL_CALL and not in_import_stmt and not is_builtin_type:
                             j2 = self._next_meaningful(tokens, i + 1)
                             if j2 < n and tokens[j2].type == _tokenize.OP and tokens[j2].string == "(" and tstr[:1].isupper():
                                 add_token(tok, "classname")
 
                         # Bare function calls 'name(' also get method color
-                        if self.ENABLE_METHOD_TAIL and not in_import_stmt:
+                        # (skip for builtin types — already coloured as builtin_type)
+                        if self.ENABLE_METHOD_TAIL and not in_import_stmt and not is_builtin_type:
                             j3 = self._next_meaningful(tokens, i + 1)
                             is_call = j3 < n and tokens[j3].type == _tokenize.OP and tokens[j3].string == "("
-                            prev_is_dot = i > 0 and tokens[i - 1].type == _tokenize.OP and tokens[i - 1].string == "."
                             # Let capital 'Name(' be handled by class color if enabled
                             if is_call and not prev_is_dot and not (self.ENABLE_CAPITAL_CALL and tstr[:1].isupper()):
                                 add_token(tok, "method")
