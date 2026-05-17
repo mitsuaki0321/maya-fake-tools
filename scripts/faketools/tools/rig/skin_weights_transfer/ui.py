@@ -396,13 +396,16 @@ class MainWindow(BaseMainWindow):
         # Get selected components with soft selection weights
         soft_weights = component_selection.get_unique_selections()
         if not soft_weights:
-            cmds.warning("Select vertices, CVs, or lattice points.")
+            cmds.warning("No components found in rich selection. Select vertices, CVs, or lattice points.")
             return
 
         # Filter to valid component types (vtx, CV, lattice point)
         components = cmds.filterExpand(list(soft_weights.keys()), selectionMask=[28, 31, 46]) or []
         if not components:
-            cmds.warning("Select vertices, CVs, or lattice points.")
+            cmds.warning(
+                f"Selected components are not vertices, CVs, or lattice points "
+                f"(got: {sorted(soft_weights.keys())[:5]}{'...' if len(soft_weights) > 5 else ''})."
+            )
             return
 
         # Validate components belong to the skinCluster's geometry
