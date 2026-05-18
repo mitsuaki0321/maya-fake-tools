@@ -19,7 +19,7 @@ from ......lib_ui.qt_compat import (
 )
 from ...languages import PYTHON, LanguageProfile
 from ..autocomplete import AutocompleteController
-from . import auto_indent, context_menu, overlays
+from . import auto_close, auto_indent, context_menu, overlays
 from .appearance import EditorAppearanceMixin
 from .bracket_match_highlighter import BracketMatchHighlighter
 from .code_folding import CodeFoldingManager
@@ -266,6 +266,13 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin, Ed
 
         # Try to handle multi-cursor keyboard events first
         if self.handle_multi_cursor_keys(event):
+            return
+
+        # Auto-close brackets / quotes / surround-selection. Runs before the
+        # shortcut manager so the empty-pair Backspace shortcut wins over the
+        # smart-indent Backspace registered in ``EditorShortcuts``. Skips
+        # itself entirely when multi-cursor is active.
+        if auto_close.handle_key(self, event):
             return
 
         # Handle Home key with smart home behavior (single-cursor mode)
