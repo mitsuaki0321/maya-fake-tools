@@ -87,181 +87,92 @@ class EditorTextOperationsMixin:
         cursor.removeSelectedText()
         self.setTextCursor(cursor)
 
-    def move_line_up(self):
-        """Move current line or selection up (Ctrl+Shift+Up)."""
+    def _move_blocks(self, delta):
+        """Move the current line or block-selection up (delta=-1) or down (+1) by one block.
+
+        Works on whole blocks via :class:`QTextBlock` rather than ``QTextCursor.Down``,
+        which fails or stops short at the last block (especially when the document
+        has no trailing newline) and used to corrupt the swap near document edges.
+        """
         self._unfold_at_cursor()
         cursor = self.textCursor()
+        doc = self.document()
+        has_selection = cursor.hasSelection()
+        forward_selection = cursor.position() >= cursor.anchor()
 
-        # Use single undo transaction for atomic operation
-        cursor.beginEditBlock()
-
-        # Determine if we have a selection
-        if cursor.hasSelection():
-            # Get selection boundaries and expand to full lines
-            start_pos = cursor.selectionStart()
-            end_pos = cursor.selectionEnd()
-
-            # Move to start of first selected line
-            cursor.setPosition(start_pos)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            first_line_start = cursor.position()
-
-            # Check if we're already at the first line
-            if first_line_start == 0:
-                cursor.endEditBlock()
-                return
-
-            # Move to start of line after last selected line
-            cursor.setPosition(end_pos)
-            if cursor.positionInBlock() > 0:  # If not at start of line, move to next line
-                cursor.movePosition(QTextCursor.Down)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            line_after_end = cursor.position()
-
-            # Select complete lines including final newline
-            cursor.setPosition(first_line_start)
-            cursor.setPosition(line_after_end, QTextCursor.KeepAnchor)
-            selected_text = cursor.selectedText()
-
-            # Remove selected lines
-            cursor.removeSelectedText()
-
-            # Move up one line and insert
-            cursor.movePosition(QTextCursor.Up)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            insert_pos = cursor.position()
-            cursor.insertText(selected_text)
-
-            # Position cursor at start of moved text with proper selection
-            cursor.setPosition(insert_pos)
-            cursor.setPosition(insert_pos + len(selected_text) - 1, QTextCursor.KeepAnchor)
-            self.setTextCursor(cursor)
-
+        if has_selection:
+            sel_start = cursor.selectionStart()
+            sel_end = cursor.selectionEnd()
+            first_no = doc.findBlock(sel_start).blockNumber()
+            end_block = doc.findBlock(sel_end)
+            # Selection ending exactly at the start of the next block (caret placed
+            # right after the trailing paragraph separator) must not pull that
+            # block into the move range.
+            if sel_end > sel_start and end_block.position() == sel_end:
+                last_no = end_block.blockNumber() - 1
+            else:
+                last_no = end_block.blockNumber()
         else:
-            # Single line mode
-            cursor = self.textCursor()
+            first_no = last_no = cursor.block().blockNumber()
+            offset_in_block = cursor.positionInBlock()
 
-            # Save cursor position in line
-            cursor.movePosition(QTextCursor.StartOfLine)
-            line_start = cursor.position()
-            cursor = self.textCursor()  # Restore original position
-            offset_in_line = cursor.position() - line_start
-
-            # Check if already at first line
-            cursor.movePosition(QTextCursor.StartOfLine)
-            if cursor.position() == 0:
-                cursor.endEditBlock()
+        if delta < 0:
+            target_no = first_no - 1
+            if target_no < 0:
                 return
+            range_start_no = target_no
+            range_end_no = last_no
+        else:
+            target_no = last_no + 1
+            if target_no >= doc.blockCount():
+                return
+            range_start_no = first_no
+            range_end_no = target_no
 
-            # Select current line completely
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
-            line_text = cursor.selectedText()
+        block_texts = [doc.findBlockByNumber(i).text() for i in range(range_start_no, range_end_no + 1)]
+        if delta < 0:
+            # Target was the first block; rotate it to the end.
+            block_texts.append(block_texts.pop(0))
+        else:
+            # Target was the last block; rotate it to the front.
+            block_texts.insert(0, block_texts.pop())
+        new_text = " ".join(block_texts)
 
-            # Remove current line
-            cursor.removeSelectedText()
+        range_start_block = doc.findBlockByNumber(range_start_no)
+        range_end_block = doc.findBlockByNumber(range_end_no)
 
-            # Insert line above previous line
-            cursor.movePosition(QTextCursor.Up)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.insertText(line_text)
+        edit_cursor = QTextCursor(range_start_block)
+        end_cursor = QTextCursor(range_end_block)
+        end_cursor.movePosition(QTextCursor.EndOfBlock)
+        edit_cursor.beginEditBlock()
+        edit_cursor.setPosition(end_cursor.position(), QTextCursor.KeepAnchor)
+        edit_cursor.insertText(new_text)
+        edit_cursor.endEditBlock()
 
-            # Restore cursor position on the moved line
-            cursor.movePosition(QTextCursor.Up)  # Go back to the inserted line
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, offset_in_line)
-            self.setTextCursor(cursor)
+        new_first_block = doc.findBlockByNumber(first_no + delta)
+        new_last_block = doc.findBlockByNumber(last_no + delta)
+        new_cursor = self.textCursor()
+        if has_selection:
+            start_pos = new_first_block.position()
+            end_pos = new_last_block.position() + len(new_last_block.text())
+            if forward_selection:
+                new_cursor.setPosition(start_pos)
+                new_cursor.setPosition(end_pos, QTextCursor.KeepAnchor)
+            else:
+                new_cursor.setPosition(end_pos)
+                new_cursor.setPosition(start_pos, QTextCursor.KeepAnchor)
+        else:
+            new_pos = new_first_block.position() + min(offset_in_block, len(new_first_block.text()))
+            new_cursor.setPosition(new_pos)
+        self.setTextCursor(new_cursor)
 
-        # End the undo transaction
-        cursor.endEditBlock()
+    def move_line_up(self):
+        """Move current line or selection up (Ctrl+Shift+Up)."""
+        self._move_blocks(-1)
 
     def move_line_down(self):
         """Move current line or selection down (Ctrl+Shift+Down)."""
-        self._unfold_at_cursor()
-        cursor = self.textCursor()
-
-        # Use single undo transaction for atomic operation
-        cursor.beginEditBlock()
-
-        # Determine if we have a selection
-        if cursor.hasSelection():
-            # Get selection boundaries and expand to full lines
-            start_pos = cursor.selectionStart()
-            end_pos = cursor.selectionEnd()
-
-            # Move to start of first selected line
-            cursor.setPosition(start_pos)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            first_line_start = cursor.position()
-
-            # Move to start of line after last selected line
-            cursor.setPosition(end_pos)
-            if cursor.positionInBlock() > 0:  # If not at start of line, move to next line
-                cursor.movePosition(QTextCursor.Down)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            line_after_end = cursor.position()
-
-            # Check if we're at the last line
-            if cursor.atEnd():
-                cursor.endEditBlock()
-                return
-
-            # Select complete lines including final newline
-            cursor.setPosition(first_line_start)
-            cursor.setPosition(line_after_end, QTextCursor.KeepAnchor)
-            selected_text = cursor.selectedText()
-
-            # Remove selected lines
-            cursor.removeSelectedText()
-
-            # Move down one line and insert
-            cursor.movePosition(QTextCursor.Down)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            insert_pos = cursor.position()
-            cursor.insertText(selected_text)
-
-            # Position cursor at start of moved text with proper selection
-            cursor.setPosition(insert_pos)
-            cursor.setPosition(insert_pos + len(selected_text) - 1, QTextCursor.KeepAnchor)
-            self.setTextCursor(cursor)
-
-        else:
-            # Single line mode
-            cursor = self.textCursor()
-
-            # Save cursor position in line
-            cursor.movePosition(QTextCursor.StartOfLine)
-            line_start = cursor.position()
-            cursor = self.textCursor()  # Restore original position
-            offset_in_line = cursor.position() - line_start
-
-            # Check if already at last line
-            cursor.movePosition(QTextCursor.EndOfLine)
-            if cursor.atEnd():
-                cursor.endEditBlock()
-                return
-
-            # Select current line completely
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
-            line_text = cursor.selectedText()
-
-            # Remove current line
-            cursor.removeSelectedText()
-
-            # Insert line below next line
-            cursor.movePosition(QTextCursor.Down)
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.insertText(line_text)
-
-            # Restore cursor position on the moved line
-            cursor.movePosition(QTextCursor.Up)  # Go back to the inserted line
-            cursor.movePosition(QTextCursor.StartOfLine)
-            cursor.movePosition(QTextCursor.Right, QTextCursor.MoveAnchor, offset_in_line)
-            self.setTextCursor(cursor)
-
-        # End the undo transaction
-        cursor.endEditBlock()
+        self._move_blocks(1)
 
     def select_next_occurrence(self):
         """Ctrl+D — thin alias that forwards to the multi-cursor implementation."""
