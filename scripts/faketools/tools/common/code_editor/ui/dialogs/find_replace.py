@@ -69,7 +69,6 @@ class FindReplaceDialog(CodeEditorDialog):
         """Initialize the user interface."""
         self.setWindowTitle("Find and Replace")
         self.setModal(False)  # Allow interaction with main window
-        self.setFixedSize(380, 180)  # Fixed size, not resizable
 
         layout = QVBoxLayout()
         layout.setSpacing(4)  # Reduce spacing
@@ -88,6 +87,12 @@ class FindReplaceDialog(CodeEditorDialog):
         layout.addWidget(buttons_frame)
 
         self.setLayout(layout)
+
+        # Lock width to a comfortable size and let height auto-fit content so
+        # the buttons sit flush against the bottom margin rather than leaving a
+        # gap from a hard-coded fixed height.
+        layout.activate()
+        self.setFixedSize(380, self.sizeHint().height())
 
     def create_input_section(self):
         """Create the input section with find and replace fields."""
