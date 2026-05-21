@@ -1,24 +1,27 @@
 """
 VSCode-style inline rename overlay.
 
-A small ``QLineEdit`` parented to the editor's viewport that floats over
-the symbol under the caret. Enter applies the new name to every in-file
+Parents a ``QLineEdit`` to the editor's viewport, floating over the
+symbol under the caret. Enter applies the new name to every in-file
 reference in a single undo block; Esc / focus-out / scroll cancels.
 
 The widget is single-shot: each F2 press builds a fresh overlay and
 schedules ``deleteLater`` when it dismisses. That keeps cleanup obvious
 — there's no long-lived state to invalidate when the editor reflows,
 swaps documents, or the active tab changes.
+
+Lifecycle, key routing, focus-out / scroll cancel, and theming live in
+:class:`.inline_overlay.EditorInlineOverlay`; this module only owns the
+symbol-anchored positioning and the multi-reference Enter commit.
 """
 
 from __future__ import annotations
 
-import contextlib
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from ......lib_ui.qt_compat import QLineEdit, Qt, QTextCursor
-from ...themes import AppTheme
+from ......lib_ui.qt_compat import QTextCursor
+from .inline_overlay import EditorInlineOverlay
 
 if TYPE_CHECKING:
     from ...command.refactor import SymbolReference
@@ -38,38 +41,23 @@ _PAD_Y = 2
 _MIN_WIDTH = 100
 
 
-class RenameOverlay(QLineEdit):
+class RenameOverlay(EditorInlineOverlay):
     """Inline rename input. Created fresh per F2 invocation."""
 
     def __init__(self, editor: CodeEditor, references: list[SymbolReference], old_name: str, cursor_offset: int):
-        super().__init__(editor.viewport())
-        self._editor = editor
+        super().__init__(editor)
         self._references = references
         self._old_name = old_name
         # The reference the user was actually pointing at — drives both the
         # overlay position and where the caret lands after a commit, so the
         # focus stays at the call site rather than jumping to the definition.
         self._anchor = _anchor_reference(references, cursor_offset)
-        # Guards against re-entry: ``hide()`` and ``setFocus()`` trigger
-        # ``focusOutEvent`` synchronously, which would otherwise call
-        # ``_dismiss`` again on a half-cleaned widget.
-        self._dismissed = False
 
-        self.setFont(editor.font())
         self.setText(old_name)
         self.selectAll()
-        self.setStyleSheet(_stylesheet())
 
         self._position_over(self._anchor)
-
-        # Cancel on scroll — the box would otherwise stay pinned to its
-        # original viewport coordinate while the underlying symbol moves.
-        editor.verticalScrollBar().valueChanged.connect(self._dismiss)
-        editor.horizontalScrollBar().valueChanged.connect(self._dismiss)
-
-        self.show()
-        self.setFocus(Qt.PopupFocusReason)
-        self.raise_()
+        self._finish_setup()
 
     # -------------------- positioning --------------------
 
@@ -87,27 +75,7 @@ class RenameOverlay(QLineEdit):
         height = rect.height() + _PAD_Y * 2
         self.setGeometry(rect.left() - _PAD_X, rect.top() - _PAD_Y, width, height)
 
-    # -------------------- input handling --------------------
-
-    def keyPressEvent(self, event):
-        key = event.key()
-        if key == Qt.Key_Escape:
-            self._dismiss()
-            return
-        if key in (Qt.Key_Return, Qt.Key_Enter):
-            self._commit()
-            return
-        super().keyPressEvent(event)
-
-    def focusOutEvent(self, event):
-        super().focusOutEvent(event)
-        # Defer through the guard rather than checking ``isVisible`` —
-        # focusOut fires *during* ``hide()``, so a visibility check would
-        # still allow the recursive dismiss path.
-        if not self._dismissed:
-            self._dismiss()
-
-    # -------------------- lifecycle --------------------
+    # -------------------- Enter commit --------------------
 
     def _commit(self) -> None:
         new_name = self.text()
@@ -160,23 +128,6 @@ class RenameOverlay(QLineEdit):
 
         self._teardown()
 
-    def _dismiss(self) -> None:
-        if self._dismissed:
-            return
-        self._dismissed = True
-        self._disconnect_scroll()
-        self._teardown()
-
-    def _disconnect_scroll(self) -> None:
-        for bar in (self._editor.verticalScrollBar(), self._editor.horizontalScrollBar()):
-            with contextlib.suppress(TypeError, RuntimeError):
-                bar.valueChanged.disconnect(self._dismiss)
-
-    def _teardown(self) -> None:
-        self.hide()
-        self.deleteLater()
-        self._editor.setFocus()
-
 
 def _anchor_reference(references: list[SymbolReference], cursor_offset: int) -> SymbolReference:
     """Pick the reference the user was pointing at.
@@ -194,25 +145,6 @@ def _anchor_reference(references: list[SymbolReference], cursor_offset: int) -> 
         if ref.start <= cursor_offset <= ref.end:
             return ref
     return references[0]
-
-
-def _stylesheet() -> str:
-    """Themed appearance for the rename input.
-
-    Matches the editor's surface colour so the box visually overlays the
-    text without clashing, with an accent-blue border to mark it as an
-    active editing affordance (mirrors VSCode's rename popup).
-    """
-    return (
-        "QLineEdit {"
-        f"  background-color: {AppTheme.BACKGROUND};"
-        f"  color: {AppTheme.FOREGROUND};"
-        f"  border: 1px solid {AppTheme.ACCENT_BLUE};"
-        "  border-radius: 2px;"
-        "  padding: 1px 3px;"
-        "  selection-background-color: " + AppTheme.SELECTION + ";"
-        "}"
-    )
 
 
 __all__ = ["RenameOverlay"]

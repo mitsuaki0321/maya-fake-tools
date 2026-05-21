@@ -38,6 +38,13 @@ class ShortcutHandler:
         self.find_prev_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
         self.find_prev_shortcut.activated.connect(self._handle_find_previous)
 
+        # Go to line. Scoped to WidgetWithChildrenShortcut so Qt dispatches
+        # the event before Maya's "Group" hotkey sees it, same approach
+        # other Ctrl+letter bindings use to co-exist with Maya defaults.
+        self.goto_line_shortcut = QShortcut(QKeySequence("Ctrl+G"), self.main_window)
+        self.goto_line_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self.goto_line_shortcut.activated.connect(self._handle_show_goto_line_dialog)
+
         # File shortcuts (only active within code editor tabs)
         self.new_file_shortcut = QShortcut(QKeySequence("Ctrl+N"), self.main_window)
         self.new_file_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
@@ -142,6 +149,22 @@ class ShortcutHandler:
     def _handle_show_replace_dialog(self):
         """Forward Ctrl+H to the dialogs package (lazy-creates the dialog)."""
         _show_replace_dialog(self.main_window)
+
+    def _handle_show_goto_line_dialog(self):
+        """Ctrl+G → inline overlay at the top of the active editor.
+
+        Lazy-imports the overlay so the widget module doesn't load until
+        someone actually presses Ctrl+G. The widget is single-shot: each
+        invocation builds a fresh ``GoToLineOverlay`` that deletes itself
+        on dismiss, same pattern as the F2 rename overlay.
+        """
+        editor = self.main_window.get_current_editor()
+        if editor is None:
+            return
+
+        from ..editor.goto_line_overlay import GoToLineOverlay
+
+        GoToLineOverlay(editor)
 
     def _handle_find_next(self):
         """Forward F3: advance the cached search, or open the dialog if hidden."""
