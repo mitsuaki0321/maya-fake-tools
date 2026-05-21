@@ -59,10 +59,16 @@ class GoToLineOverlay(EditorInlineOverlay):
     # -------------------- positioning --------------------
 
     def _position(self) -> None:
-        viewport_width = self._editor.viewport().width()
+        # Centre over the editor as a whole (line-number gutter + text), not
+        # just the text viewport. ``editor.viewport()`` sits inside Qt's
+        # viewport margins, so its coordinate origin is already offset to the
+        # right of the gutter — subtracting the gutter width shifts the box
+        # back so it lines up with the editor's visual centre.
+        editor_width = self._editor.width()
+        gutter_width = editor_width - self._editor.viewport().width()
         metrics = self._editor.fontMetrics()
         height = metrics.height() + _HEIGHT_PAD * 2
-        x = max(0, (viewport_width - _WIDTH) // 2)
+        x = max(0, (editor_width - _WIDTH) // 2 - gutter_width)
         self.setGeometry(x, _TOP_MARGIN, _WIDTH, height)
 
     # -------------------- Enter commit --------------------
