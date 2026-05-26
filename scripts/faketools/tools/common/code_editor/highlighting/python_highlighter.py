@@ -122,6 +122,12 @@ class PythonHighlighter(QSyntaxHighlighter):
         self._spans = {}
         self._rev = -1
         self._last_block_count = 0
+        # Whether a span build has run at least once. Distinct from "_spans is
+        # empty": a failed tokenize legitimately yields no spans, and conflating
+        # the two used to make highlightBlock re-run a full-document tokenize on
+        # every block of every repaint (O(blocks x file)), freezing the editor
+        # on large files held in a transient syntax-error state.
+        self._built = False
         self._kw = set(keyword.kwlist)
 
         self._rebuild_timer = QTimer(self)
@@ -156,8 +162,11 @@ class PythonHighlighter(QSyntaxHighlighter):
             rd = io.StringIO(patched).readline
             return list(_tokenize.generate_tokens(rd))
         except (_tokenize.TokenError, IndentationError, SyntaxError):
-            # Handle tokenization errors gracefully
-            return []
+            # Tokenization failed (transient mid-edit syntax error). Signal the
+            # failure with None so callers can keep the last good spans instead
+            # of treating it like a successful "no tokens" result and blanking
+            # the document.
+            return None
 
     def _close_unfinished_structures(self, text: str) -> str:
         """Append closing brackets and triple quotes for any unfinished structures.
@@ -472,9 +481,13 @@ class PythonHighlighter(QSyntaxHighlighter):
     # -------------------- Full tokenization -> line-based spans construction --------------------
 
     def _build_spans(self, text: str):
+        tokens = self._safe_tokenize(text)
+        if tokens is None:
+            # Tokenize failed — return None so the caller keeps the previous
+            # spans rather than blanking every line.
+            return None
         spans = defaultdict(list)
         lines = text.splitlines()
-        tokens = self._safe_tokenize(text)
         n = len(tokens)
 
         def add_span(row0: int, c1: int, c2: int, kind: str):
@@ -728,13 +741,27 @@ class PythonHighlighter(QSyntaxHighlighter):
     # -------------------- Span cache management --------------------
 
     def _rebuild_now(self):
-        """Synchronously rebuild the span cache from the current document text."""
+        """Synchronously rebuild the span cache from the current document text.
+
+        On tokenize failure (``_build_spans`` returns ``None``) the last good
+        spans are kept when the line layout is unchanged, so colours don't flash
+        white during a transient syntax error. They are dropped only when the
+        block count shifted, since row-indexed spans would then misalign against
+        the new layout.
+        """
         doc = self.document()
         if doc is None:
             return
-        self._spans = self._build_spans(doc.toPlainText())
+        spans = self._build_spans(doc.toPlainText())
+        new_block_count = doc.blockCount()
+        if spans is None:
+            if new_block_count != self._last_block_count:
+                self._spans = {}
+        else:
+            self._spans = spans
+        self._built = True
         self._rev = doc.revision()
-        self._last_block_count = doc.blockCount()
+        self._last_block_count = new_block_count
 
     def _on_rebuild_timer(self):
         """Timer callback: rebuild spans, then re-apply formats via rehighlight()."""
@@ -759,7 +786,7 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         was_empty = not self._spans
 
-        if not self._spans:
+        if not self._built:
             # First call: must rebuild synchronously so the initial paint is correct.
             self._rebuild_now()
         elif block_count != self._last_block_count:
