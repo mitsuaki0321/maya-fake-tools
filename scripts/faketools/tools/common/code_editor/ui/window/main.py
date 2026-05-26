@@ -98,6 +98,44 @@ class MayaCodeEditor(QWidget):
         if not ok:
             CodeEditorMessageBox.warning(self, "Add to Shelf", f"Failed to add code to shelf:\n{info}")
 
+    def insert_named_command(self, name: str):
+        """Run a registered editor insert command at the current cursor.
+
+        Looks the command up by name, formats its text for the active
+        tab's language, and inserts it. No-ops (with a terminal note) when
+        the command is unsupported for the language or has nothing to
+        insert (e.g. no Maya selection).
+
+        Args:
+            name (str): The :class:`EditorInsertCommand` ``name``.
+        """
+        from ...command.insert_commands import get_insert_command
+
+        editor = self.get_current_editor()
+        if not editor:
+            return
+
+        command = get_insert_command(name)
+        if command is None:
+            return
+
+        language = getattr(editor, "language", PYTHON)
+        if not command.supports(language):
+            if self.output_terminal:
+                self.output_terminal.append_output(f"'{command.label}' is not available for {language.display_name}.")
+            return
+
+        text = command.build_text(language)
+        if text is None:
+            if self.output_terminal:
+                self.output_terminal.append_output("Nothing to insert — select node(s) in Maya first.")
+            return
+
+        cursor = editor.textCursor()
+        cursor.insertText(text)
+        editor.setTextCursor(cursor)
+        editor.setFocus()
+
     def open_workspace_directory(self):
         """Open the workspace directory in the host OS file manager."""
         if hasattr(self.file_explorer, "root_path") and self.file_explorer.root_path:

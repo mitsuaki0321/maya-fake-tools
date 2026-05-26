@@ -6,6 +6,7 @@ Handles UI initialization, theming, and layout management.
 from logging import getLogger
 
 from ......lib_ui.qt_compat import QSplitter, Qt, QTimer, QVBoxLayout, QWidget
+from ...languages import PYTHON
 from ...themes import AppTheme
 from ..editor import overlays
 from ..panels import FileExplorer, OutputTerminal
@@ -164,6 +165,8 @@ class UILayoutManager:
             mw.toolbar.unfold_all_clicked.connect(mw.unfold_all)
             mw.toolbar.add_to_shelf_clicked.connect(mw.add_to_shelf)
             mw.toolbar.autocomplete_toggled.connect(self.toggle_autocomplete)
+            mw.toolbar.insert_command_triggered.connect(mw.insert_named_command)
+            mw.toolbar.insert_default_changed.connect(self._save_insert_default)
 
         if mw.file_explorer:
             mw.file_explorer.file_selected.connect(file_ops.open_file_permanent)
@@ -176,6 +179,7 @@ class UILayoutManager:
 
         if self.main_window.code_editor:
             self._connect_editor_focus_signals()
+            self.main_window.code_editor.currentChanged.connect(self._update_insert_button_state)
 
     def _connect_editor_focus_signals(self):
         """Wire ``focus_lost`` on every editor to ``save_session_state``.
@@ -259,6 +263,13 @@ class UILayoutManager:
             if not JEDI_AVAILABLE:
                 button.setEnabled(False)
                 button.setToolTip("Autocomplete unavailable (install jedi to enable)")
+
+        # Restore the default insert command for the toolbar split-button.
+        if self.main_window.toolbar and hasattr(self.main_window.toolbar, "insert_button"):
+            default_cmd = self.main_window.settings_manager.get("insert.default_command", "")
+            if default_cmd:
+                self.main_window.toolbar.insert_button.set_default(default_cmd)
+            self._update_insert_button_state()
 
     def restore_settings(self):
         """Restore window settings from saved preferences."""
@@ -501,3 +512,22 @@ class UILayoutManager:
         """Clear the output terminal."""
         if self.main_window.output_terminal:
             self.main_window.output_terminal.clear()
+
+    def _save_insert_default(self, name: str):
+        """Persist the insert command promoted to default via the menu."""
+        mw = self.main_window
+        mw.settings_manager.set("insert.default_command", name)
+        mw.settings_manager.save_settings()
+
+    def _update_insert_button_state(self, index=None):
+        """Sync the toolbar insert button to the active tab's language.
+
+        Connected to ``currentChanged`` so the button greys out on tabs
+        whose language has no insert support, and re-enables on Python tabs.
+        """
+        mw = self.main_window
+        if not mw.toolbar or not hasattr(mw.toolbar, "insert_button"):
+            return
+        editor = mw.code_editor.currentWidget() if mw.code_editor else None
+        language = getattr(editor, "language", PYTHON) if editor else PYTHON
+        mw.toolbar.insert_button.update_state(language)

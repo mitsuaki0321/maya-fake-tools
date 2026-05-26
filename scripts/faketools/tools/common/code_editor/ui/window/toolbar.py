@@ -5,7 +5,24 @@ Provides quick access to common actions with proper icon states and styling.
 
 import os
 
-from ......lib_ui.qt_compat import QByteArray, QFrame, QHBoxLayout, QIcon, QPainter, QPixmap, QPushButton, QSize, Qt, QtSvg, QWidget, Signal
+from ......lib_ui.qt_compat import (
+    QAction,
+    QByteArray,
+    QFrame,
+    QHBoxLayout,
+    QIcon,
+    QMenu,
+    QPainter,
+    QPixmap,
+    QPushButton,
+    QSize,
+    Qt,
+    QToolButton,
+    QtSvg,
+    QWidget,
+    Signal,
+)
+from ...command.insert_commands import INSERT_COMMANDS
 from ...languages import ALL_PROFILES, DEFAULT_PROFILE
 from ...themes import AppTheme
 
@@ -269,6 +286,168 @@ class ToolBarSeparator(QFrame):
         """)
 
 
+class InsertSplitButton(QToolButton):
+    """Split button for editor insert commands.
+
+    Clicking the body runs the current *default* command immediately (one
+    action, no menu). Clicking the drop-down arrow opens a menu to pick any
+    registered :class:`EditorInsertCommand`; the picked command also becomes
+    the new default. Mirrors :class:`VSCodeButton`'s SVG recolouring so it
+    sits visually with the other toolbar buttons.
+    """
+
+    command_triggered = Signal(str)  # command name to execute
+    default_changed = Signal(str)  # command name promoted to default
+
+    def __init__(self, commands, parent=None):
+        super().__init__(parent)
+        self._commands = list(commands)
+        self._default_name = self._commands[0].name if self._commands else ""
+        self.icon_base_path = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "icons"))
+
+        self.setPopupMode(QToolButton.MenuButtonPopup)
+        self.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.setCursor(Qt.PointingHandCursor)
+        # Wider than the 26px single-action buttons to fit the drop-down arrow.
+        self.setFixedSize(38, 26)
+        self.setIconSize(QSize(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE))
+
+        self._load_icons()
+        self._build_menu()
+        self._apply_style()
+        self._set_icon_state("normal")
+        self._update_tooltip()
+
+        self.clicked.connect(self._on_body_clicked)
+
+    def _load_icons(self):
+        """Recolour the shared ``insert`` SVG per button state."""
+        self.icons = {}
+        normal_path = os.path.join(self.icon_base_path, "insert_normal.svg")
+        if not os.path.exists(normal_path):
+            return
+        with open(normal_path, encoding="utf-8") as f:
+            svg_template = f.read()
+        for state, color in _ICON_STATE_COLORS.items():
+            self.icons[state] = _create_icon_from_svg(svg_template, AppTheme.ICON_SVG_SOURCE, color)
+
+    def _set_icon_state(self, state):
+        if state in self.icons:
+            self.setIcon(self.icons[state])
+
+    def _build_menu(self):
+        """Build the drop-down menu, one entry per registered command."""
+        menu = QMenu(self)
+        menu.setStyleSheet(f"""
+            QMenu {{
+                background-color: {AppTheme.TOOLBAR_BACKGROUND};
+                color: {AppTheme.ICON_NORMAL};
+                border: 1px solid {AppTheme.TAB_BORDER};
+            }}
+            QMenu::item {{
+                padding: 4px 18px;
+            }}
+            QMenu::item:selected {{
+                background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+            }}
+            QMenu::item:disabled {{
+                color: {AppTheme.ICON_PRESSED};
+            }}
+        """)
+        self._actions = {}
+        for command in self._commands:
+            action = QAction(command.label, self)
+            action.triggered.connect(lambda checked=False, n=command.name: self._on_menu_selected(n))
+            menu.addAction(action)
+            self._actions[command.name] = action
+        self.setMenu(menu)
+
+    def _apply_style(self):
+        self.setStyleSheet(f"""
+            QToolButton {{
+                background-color: transparent;
+                border: none;
+                border-radius: 3px;
+                padding: 2px;
+            }}
+            QToolButton:hover {{
+                background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+            }}
+            QToolButton:pressed {{
+                background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+            }}
+            QToolButton::menu-button {{
+                border: none;
+                width: 12px;
+            }}
+            QToolButton:disabled {{
+                background-color: transparent;
+            }}
+        """)
+
+    def _on_body_clicked(self):
+        if self._default_name:
+            self.command_triggered.emit(self._default_name)
+
+    def _on_menu_selected(self, name):
+        self.set_default(name)
+        self.default_changed.emit(name)
+        self.command_triggered.emit(name)
+
+    def set_default(self, name):
+        """Promote command ``name`` to the body's default action."""
+        if any(command.name == name for command in self._commands):
+            self._default_name = name
+            self._update_tooltip()
+
+    def _update_tooltip(self):
+        label = next((c.label for c in self._commands if c.name == self._default_name), "")
+        if label:
+            self.setToolTip(f"Insert: {label}  (▾ to switch)")
+        else:
+            self.setToolTip("Insert")
+
+    def update_state(self, language):
+        """Enable/disable the button and menu items for ``language``.
+
+        Each command's menu item is gated on its own ``supports``. The body
+        (default action) is enabled whenever at least one command is usable;
+        when nothing is supported the whole button greys out.
+        """
+        any_supported = False
+        for command in self._commands:
+            supported = command.supports(language)
+            action = self._actions.get(command.name)
+            if action is not None:
+                action.setEnabled(supported)
+            if supported:
+                any_supported = True
+
+        self.setEnabled(any_supported)
+        default_supported = any(c.name == self._default_name and c.supports(language) for c in self._commands)
+        if any_supported and not default_supported:
+            display = getattr(language, "display_name", "this language")
+            self.setToolTip(f"Insert: pick a command available for {display} (▾)")
+        else:
+            self._update_tooltip()
+
+    def enterEvent(self, event):
+        self._set_icon_state("hover")
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._set_icon_state("normal")
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        self._set_icon_state("pressed")
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._set_icon_state("hover")
+        super().mouseReleaseEvent(event)
+
+
 class ToolBar(QWidget):
     """VSCode Dark Modern style toolbar with icon-based buttons."""
 
@@ -291,6 +470,8 @@ class ToolBar(QWidget):
     unfold_all_clicked = Signal()  # Signal for unfolding all regions
     add_to_shelf_clicked = Signal()  # Signal for adding selected code to Maya shelf
     autocomplete_toggled = Signal(bool)  # Signal for toggling autocomplete (True=on, False=off)
+    insert_command_triggered = Signal(str)  # Emits an EditorInsertCommand name to execute
+    insert_default_changed = Signal(str)  # Emits the command name promoted to default (for persistence)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -334,6 +515,7 @@ class ToolBar(QWidget):
         self.clear_button = VSCodeButton("clear", "Clear Terminal")
         self.echo_all_button = ToggleButton("echo", "Toggle Echo All Commands", active_icon_name="echo_active")
         self.add_to_shelf_button = VSCodeButton("shelf", "Add Selected Code to Shelf")
+        self.insert_button = InsertSplitButton(INSERT_COMMANDS)
         self.word_wrap_button = ToggleButton("wordwrap", "Toggle Word Wrap", active_icon_name="wordwrap_active")
         self.word_wrap_button.set_active(True)  # Word wrap ON by default
         self.fold_all_button = VSCodeButton("foldall", "Fold All")
@@ -381,6 +563,9 @@ class ToolBar(QWidget):
         layout.addWidget(self.terminal_toggle_button)
         layout.addWidget(self.swap_layout_button)
         layout.addStretch()
+        # Insert split-button lives at the far right, set apart from the
+        # left-aligned action groups by the stretch.
+        layout.addWidget(self.insert_button)
 
         # Calculate dynamic height
         # button_height(26px) + toolbar_padding(2px) = 28px
@@ -411,6 +596,8 @@ class ToolBar(QWidget):
         self.unfold_all_button.clicked.connect(self.unfold_all_clicked.emit)
         self.add_to_shelf_button.clicked.connect(self.add_to_shelf_clicked.emit)
         self.autocomplete_button.clicked.connect(lambda: self.autocomplete_toggled.emit(self.autocomplete_button.is_active()))
+        self.insert_button.command_triggered.connect(self.insert_command_triggered.emit)
+        self.insert_button.default_changed.connect(self.insert_default_changed.emit)
 
     def toggle_autocomplete(self):
         """Flip the autocomplete button state and emit the toggled signal.

@@ -13,6 +13,7 @@ from ..profile import LanguageProfile, ShelfConfig
 from .actions import python_context_menu_extender
 from .completion import python_completion_engine_factory
 from .folding import PythonFoldingStrategy
+from .formatting import python_string_list, python_string_literal
 from .highlighting import python_highlighter_factory
 from .indent import PythonIndentResolver
 
@@ -34,6 +35,8 @@ PYTHON = LanguageProfile(
     completion_engine_factory=python_completion_engine_factory,
     folding_strategy=PythonFoldingStrategy(),
     accent_color="#007acc",
+    format_string_literal=python_string_literal,
+    format_string_list=python_string_list,
 )
 
 

@@ -85,6 +85,15 @@ class LanguageProfile:
             the toolbar "New {language} File" button colour. ``None``
             falls back to the editor's default theme accent and skips
             the per-tab indicator line.
+        format_string_literal (Optional[Callable]): ``str -> str`` that
+            formats a single value as this language's string literal
+            (e.g. Python ``pCube1`` -> ``"pCube1"``). Consumed by insert
+            commands. ``None`` means the language has no string-literal
+            form, so single-value insert commands are unavailable for it.
+        format_string_list (Optional[Callable]): ``list[str] -> str`` that
+            formats values as this language's native list literal (e.g.
+            Python -> ``["a", "b"]``). ``None`` disables list-based insert
+            commands for the language.
     """
 
     id: str
@@ -107,6 +116,9 @@ class LanguageProfile:
     folding_strategy: Optional[FoldingStrategy] = None
 
     accent_color: Optional[str] = None
+
+    format_string_literal: Optional[Callable] = None
+    format_string_list: Optional[Callable] = None
 
     @property
     def file_filter(self) -> str:
