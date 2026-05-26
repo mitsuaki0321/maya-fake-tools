@@ -527,6 +527,7 @@ def find_next(main_window):
     """Advance the cached dialog's search, or open the find dialog if hidden."""
     dialog = getattr(main_window, "find_replace_dialog", None)
     if dialog is not None and dialog.isVisible():
+        _rebind_to_current(dialog, main_window)
         dialog.find_next()
     else:
         show_find_dialog(main_window)
@@ -536,6 +537,21 @@ def find_previous(main_window):
     """Step back through the cached dialog's search, or open it if hidden."""
     dialog = getattr(main_window, "find_replace_dialog", None)
     if dialog is not None and dialog.isVisible():
+        _rebind_to_current(dialog, main_window)
         dialog.find_previous()
     else:
         show_find_dialog(main_window)
+
+
+def _rebind_to_current(dialog, main_window):
+    """Point the cached dialog at the active editor before searching.
+
+    F3 / Shift+F3 reuse the visible dialog without going through
+    ``_ensure_dialog``, so its ``editor`` could otherwise still reference a tab
+    that was closed (and whose widget has since been deleted) — calling into
+    that stale wrapper would raise. Rebinding to the current editor both avoids
+    that and matches the expectation that the shortcut searches the focused tab.
+    """
+    current = main_window.get_current_editor()
+    if current is not None:
+        dialog.editor = current

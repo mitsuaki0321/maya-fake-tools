@@ -227,6 +227,25 @@ class FileOperationsController:
             # Tab paths changed without a focus event — persist now.
             mw.session_manager.save_session_state()
 
+    def _dispose_editor(self, editor) -> None:
+        """Tear down and free an editor removed outside ``close_tab``.
+
+        ``removeTab`` never deletes the page widget, so the file/folder-deletion
+        paths would otherwise leak the editor for the session. Mirrors
+        ``CodeEditorWidget.close_tab``: clear the preview bookkeeping if this was
+        the preview tab, run the editor's ``shutdown()`` (cancels in-flight jedi,
+        detaches the highlighter), then ``deleteLater`` frees it and its children.
+        """
+        if editor is None:
+            return
+        code_editor = self.main_window.code_editor
+        if editor is getattr(code_editor, "preview_tab_editor", None):
+            code_editor.preview_tab_index = -1
+            code_editor.preview_tab_editor = None
+        if hasattr(editor, "shutdown"):
+            editor.shutdown()
+        editor.deleteLater()
+
     def handle_file_deleted(self, deleted_file_path: str) -> None:
         """Close the tab matching ``deleted_file_path`` and clean up state."""
         mw = self.main_window
@@ -239,6 +258,7 @@ class FileOperationsController:
                 continue
 
             mw.code_editor.removeTab(i)
+            self._dispose_editor(editor)
 
             recent_files = mw.settings_manager.get("recent_files", [])
             if deleted_file_path in recent_files:
@@ -271,7 +291,9 @@ class FileOperationsController:
 
         # Reverse order to keep earlier indices stable while removing.
         for i, file_path in reversed(tabs_to_remove):
+            editor = mw.code_editor.widget(i)
             mw.code_editor.removeTab(i)
+            self._dispose_editor(editor)
             recent_files = mw.settings_manager.get("recent_files", [])
             if file_path in recent_files:
                 recent_files.remove(file_path)

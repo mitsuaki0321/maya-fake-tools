@@ -459,6 +459,18 @@ class CodeEditorWidget(QTabWidget):
 
         self.removeTab(index)
 
+        # removeTab only detaches the page from the tab bar — it never deletes
+        # the widget. Without an explicit delete, every closed tab's CodeEditor
+        # (highlighter, autocomplete controller + jedi state, timers, document)
+        # lingered for the whole session, so memory and load grew the longer the
+        # editor was used. shutdown() neutralises the cross-thread / document
+        # hazards, then deleteLater frees the editor and its child QObjects.
+        if editor is self.preview_tab_editor:
+            self.preview_tab_index = -1
+            self.preview_tab_editor = None
+        editor.shutdown()
+        editor.deleteLater()
+
         QTimer.singleShot(0, self.update_active_tab_styling)
         self.save_session_if_available()
 

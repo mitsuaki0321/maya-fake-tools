@@ -119,6 +119,11 @@ class UISessionManager:
                     and not (hasattr(editor, "is_draft") and editor.is_draft)
                 ):
                     self.code_editor.removeTab(0)
+                    # removeTab doesn't delete the page widget; free it so the
+                    # discarded empty tab doesn't leak for the session.
+                    if hasattr(editor, "shutdown"):
+                        editor.shutdown()
+                    editor.deleteLater()
 
             # Check for preview tabs and ensure only one is restored
             preview_tabs = [tab for tab in saved_tabs if tab.get("tab_name", "").startswith("[Preview]") or " (Preview)" in tab.get("tab_name", "")]

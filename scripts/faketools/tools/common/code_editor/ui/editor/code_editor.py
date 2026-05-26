@@ -155,6 +155,31 @@ class CodeEditor(QPlainTextEdit, EditorTextOperationsMixin, MultiCursorMixin, Ed
         super().focusOutEvent(event)
         self.focus_lost.emit()
 
+    def shutdown(self):
+        """Release per-tab resources before the widget is deleted on tab close.
+
+        Qt deletes the editor's child QObjects — highlighter, completer, timers,
+        fold manager, line-number area — automatically when ``deleteLater`` runs,
+        so this only covers the two things the parent/child cascade does not:
+
+        * an in-flight jedi worker, which would otherwise emit into a controller
+          bound to a now-deleted editor (``teardown`` cancels it);
+        * the highlighter's document link, detached so its 30 ms debounce timer
+          can't run one last tokenize pass against a document being torn down.
+
+        Defensive throughout: closing a tab must never raise from teardown.
+        """
+        try:
+            if self.autocomplete is not None:
+                self.autocomplete.teardown()
+        except Exception:
+            logger.debug("autocomplete teardown failed during shutdown", exc_info=True)
+        try:
+            if self.highlighter is not None:
+                self.highlighter.setDocument(None)
+        except Exception:
+            logger.debug("highlighter detach failed during shutdown", exc_info=True)
+
     def set_language(self, language: LanguageProfile) -> None:
         """Rebind the editor to ``language`` and refresh language-driven UI.
 

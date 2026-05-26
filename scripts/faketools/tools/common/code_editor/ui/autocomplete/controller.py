@@ -614,6 +614,20 @@ class AutocompleteController:
         self._pending_runnable = runnable
         QThreadPool.globalInstance().start(runnable)
 
+    def teardown(self):
+        """Release the controller before its editor is destroyed.
+
+        Cancels any in-flight jedi worker so its completion signal can't fire
+        into ``_on_completion`` after the editor's C++ object is gone (the slot
+        reads ``self.editor``), and stops the debounce timer. The QTimer /
+        QCompleter / QStringListModel are parented to the editor and so are
+        deleted by Qt's child cascade — only the thread-pool worker escapes it.
+        """
+        if self._pending_runnable is not None:
+            self._pending_runnable.cancel()
+            self._pending_runnable = None
+        self._timer.stop()
+
     def _on_completion(self, request_id: int, items: list):
         """Receive jedi results on the UI thread; show popup if still relevant."""
         # Stale / disabled / empty — all silent. A previous verbose log here
