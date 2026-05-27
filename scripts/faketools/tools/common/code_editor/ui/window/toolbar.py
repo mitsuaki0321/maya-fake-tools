@@ -8,6 +8,7 @@ import os
 from ......lib_ui.qt_compat import (
     QAction,
     QByteArray,
+    QEvent,
     QFrame,
     QHBoxLayout,
     QIcon,
@@ -38,13 +39,16 @@ _ICON_STATE_COLORS = {
 _ICON_RENDER_SIZE = 20
 
 
-def _create_icon_from_svg(svg_text, source_color, target_color):
+def _create_icon_from_svg(svg_text, source_color, target_color, render_size=_ICON_RENDER_SIZE):
     """Create a QIcon from SVG text with color replacement.
 
     Args:
         svg_text (str): SVG file content.
         source_color (str): Color hex code to replace (e.g. "#808080").
         target_color (str): Replacement color hex code (e.g. "#A0A0A0").
+        render_size (int): Pixmap edge length to rasterise at. Defaults to
+            ``_ICON_RENDER_SIZE``; smaller for secondary glyphs like the
+            drop-down chevron so they don't dominate the button.
 
     Returns:
         QIcon: Icon rendered from the modified SVG.
@@ -55,7 +59,7 @@ def _create_icon_from_svg(svg_text, source_color, target_color):
     # Match VSCodeButton.setIconSize — rendering at the same resolution as
     # the button request keeps fine SVG detail (badge circles, plus glyphs)
     # legible at the on-screen size.
-    pixmap = QPixmap(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE)
+    pixmap = QPixmap(render_size, render_size)
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
     renderer.render(painter)
@@ -286,18 +290,35 @@ class ToolBarSeparator(QFrame):
         """)
 
 
-class InsertSplitButton(QToolButton):
+class InsertSplitButton(QWidget):
     """Split button for editor insert commands.
 
-    Clicking the body runs the current *default* command immediately (one
-    action, no menu). Clicking the drop-down arrow opens a menu to pick any
-    registered :class:`EditorInsertCommand`; the picked command also becomes
-    the new default. Mirrors :class:`VSCodeButton`'s SVG recolouring so it
-    sits visually with the other toolbar buttons.
+    A composite of three children laid out horizontally: a square icon
+    *body* that runs the current default command on click, a thin inset
+    *divider*, and an *arrow* button whose menu picks which command is
+    current (the pick is also run immediately and promoted to default).
+
+    Built as a ``QWidget`` rather than a single ``QToolButton`` on purpose:
+    a tool button centres its icon over the whole rect, so an icon-only
+    body and the drop-down arrow visually overlap and no amount of QSS
+    margin on ``::menu-button`` opens a real gap. Here the gaps and the
+    divider are genuine layout space. The body mirrors :class:`VSCodeButton`'s
+    per-state SVG recolouring so it sits visually with the other buttons.
     """
 
     command_triggered = Signal(str)  # command name to execute
     default_changed = Signal(str)  # command name promoted to default
+
+    # Body matches the 26px single-action buttons; the rest is gap + divider + arrow.
+    _BODY_SIZE = 26
+    _GAP_BEFORE_DIVIDER = 5
+    _GAP_AFTER_DIVIDER = 3
+    _DIVIDER_HEIGHT = 14
+    _ARROW_WIDTH = 16
+    # The shared chevron SVG ships with a lowercase stroke colour and is
+    # rendered smaller than the body icon so it reads as a secondary caret.
+    _CHEVRON_SVG_SOURCE = "#cccccc"
+    _ARROW_ICON_SIZE = 12
 
     def __init__(self, commands, parent=None):
         super().__init__(parent)
@@ -305,35 +326,74 @@ class InsertSplitButton(QToolButton):
         self._default_name = self._commands[0].name if self._commands else ""
         self.icon_base_path = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "icons"))
 
-        self.setPopupMode(QToolButton.MenuButtonPopup)
-        self.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.setCursor(Qt.PointingHandCursor)
-        # Wider than the 26px single-action buttons to fit the drop-down arrow.
-        self.setFixedSize(38, 26)
-        self.setIconSize(QSize(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE))
+        self.setFixedHeight(26)
 
         self._load_icons()
+        self._build_widgets()
         self._build_menu()
         self._apply_style()
         self._set_icon_state("normal")
         self._update_tooltip()
 
-        self.clicked.connect(self._on_body_clicked)
-
     def _load_icons(self):
-        """Recolour the shared ``insert`` SVG per button state."""
-        self.icons = {}
-        normal_path = os.path.join(self.icon_base_path, "insert_normal.svg")
-        if not os.path.exists(normal_path):
-            return
-        with open(normal_path, encoding="utf-8") as f:
+        """Recolour the shared ``insert`` and ``chevron`` SVGs per state."""
+        self.icons = self._recolour_svg("insert_normal.svg", AppTheme.ICON_SVG_SOURCE, _ICON_RENDER_SIZE)
+        self.arrow_icons = self._recolour_svg("chevron_down.svg", self._CHEVRON_SVG_SOURCE, self._ARROW_ICON_SIZE)
+
+    def _recolour_svg(self, filename, source_color, render_size):
+        """Return a ``{state: QIcon}`` map for ``filename`` per icon state.
+
+        Args:
+            filename (str): SVG file under the icons dir.
+            source_color (str): Stroke/fill colour in the SVG to replace.
+            render_size (int): Pixmap edge length to rasterise at.
+
+        Returns:
+            dict[str, QIcon]: Empty when the file is missing.
+        """
+        path = os.path.join(self.icon_base_path, filename)
+        if not os.path.exists(path):
+            return {}
+        with open(path, encoding="utf-8") as f:
             svg_template = f.read()
-        for state, color in _ICON_STATE_COLORS.items():
-            self.icons[state] = _create_icon_from_svg(svg_template, AppTheme.ICON_SVG_SOURCE, color)
+        return {state: _create_icon_from_svg(svg_template, source_color, color, render_size) for state, color in _ICON_STATE_COLORS.items()}
+
+    def _build_widgets(self):
+        """Lay out the icon body, divider and arrow as real children."""
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        self.body = QToolButton(self)
+        self.body.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.body.setCursor(Qt.PointingHandCursor)
+        self.body.setFixedSize(self._BODY_SIZE, 26)
+        self.body.setIconSize(QSize(_ICON_RENDER_SIZE, _ICON_RENDER_SIZE))
+        self.body.clicked.connect(self._on_body_clicked)
+        self.body.installEventFilter(self)
+
+        self.divider = QFrame(self)
+        self.divider.setFixedSize(1, self._DIVIDER_HEIGHT)
+
+        self.arrow = QToolButton(self)
+        self.arrow.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.arrow.setIconSize(QSize(self._ARROW_ICON_SIZE, self._ARROW_ICON_SIZE))
+        self.arrow.setCursor(Qt.PointingHandCursor)
+        self.arrow.setFixedSize(self._ARROW_WIDTH, 26)
+        self.arrow.setPopupMode(QToolButton.InstantPopup)
+        self.arrow.installEventFilter(self)
+
+        layout.addWidget(self.body)
+        layout.addSpacing(self._GAP_BEFORE_DIVIDER)
+        layout.addWidget(self.divider, 0, Qt.AlignVCenter)
+        layout.addSpacing(self._GAP_AFTER_DIVIDER)
+        layout.addWidget(self.arrow)
 
     def _set_icon_state(self, state):
         if state in self.icons:
-            self.setIcon(self.icons[state])
+            self.body.setIcon(self.icons[state])
+        if state in self.arrow_icons:
+            self.arrow.setIcon(self.arrow_icons[state])
 
     def _build_menu(self):
         """Build the drop-down menu, one entry per registered command."""
@@ -360,39 +420,48 @@ class InsertSplitButton(QToolButton):
             action.triggered.connect(lambda checked=False, n=command.name: self._on_menu_selected(n))
             menu.addAction(action)
             self._actions[command.name] = action
-        self.setMenu(menu)
+        self.arrow.setMenu(menu)
 
     def _apply_style(self):
-        self.setStyleSheet(f"""
+        self.divider.setStyleSheet(f"background-color: {AppTheme.TOOLBAR_SEPARATOR}; border: none;")
+        button_style = f"""
             QToolButton {{
                 background-color: transparent;
+                color: {AppTheme.ICON_NORMAL};
                 border: none;
                 border-radius: 3px;
-                padding: 2px;
+                padding: 0px;
             }}
             QToolButton:hover {{
                 background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
+                color: {AppTheme.ICON_HOVER};
             }}
             QToolButton:pressed {{
                 background-color: {AppTheme.VSCODE_BUTTON_HOVER_BACKGROUND};
-            }}
-            QToolButton::menu-button {{
-                border: none;
-                width: 12px;
+                color: {AppTheme.ICON_PRESSED};
             }}
             QToolButton:disabled {{
                 background-color: transparent;
+                color: {AppTheme.ICON_PRESSED};
             }}
-        """)
+            QToolButton::menu-indicator {{
+                image: none;
+                width: 0px;
+            }}
+        """
+        self.body.setStyleSheet(button_style)
+        self.arrow.setStyleSheet(button_style)
 
     def _on_body_clicked(self):
         if self._default_name:
             self.command_triggered.emit(self._default_name)
 
     def _on_menu_selected(self, name):
+        # Selecting from the drop-down only switches which command is current;
+        # it does not run it. Execution happens on a body click (or the
+        # right-click context menu). This keeps the menu a pure picker.
         self.set_default(name)
         self.default_changed.emit(name)
-        self.command_triggered.emit(name)
 
     def set_default(self, name):
         """Promote command ``name`` to the body's default action."""
@@ -400,12 +469,22 @@ class InsertSplitButton(QToolButton):
             self._default_name = name
             self._update_tooltip()
 
+    def current_name(self):
+        """Return the name of the current default insert command.
+
+        Returns:
+            str: The command name the body would run on a plain click.
+            Empty when no commands are registered. The right-click context
+            menu reads this so it can mirror the toolbar's current pick.
+        """
+        return self._default_name
+
     def _update_tooltip(self):
         label = next((c.label for c in self._commands if c.name == self._default_name), "")
-        if label:
-            self.setToolTip(f"Insert: {label}  (▾ to switch)")
-        else:
-            self.setToolTip("Insert")
+        tooltip = f"Insert: {label}  (▾ to switch)" if label else "Insert"
+        self.setToolTip(tooltip)
+        self.body.setToolTip(tooltip)
+        self.arrow.setToolTip(tooltip)
 
     def update_state(self, language):
         """Enable/disable the button and menu items for ``language``.
@@ -427,25 +506,35 @@ class InsertSplitButton(QToolButton):
         default_supported = any(c.name == self._default_name and c.supports(language) for c in self._commands)
         if any_supported and not default_supported:
             display = getattr(language, "display_name", "this language")
-            self.setToolTip(f"Insert: pick a command available for {display} (▾)")
+            tooltip = f"Insert: pick a command available for {display} (▾)"
+            self.setToolTip(tooltip)
+            self.body.setToolTip(tooltip)
+            self.arrow.setToolTip(tooltip)
         else:
             self._update_tooltip()
 
-    def enterEvent(self, event):
-        self._set_icon_state("hover")
-        super().enterEvent(event)
+    def eventFilter(self, obj, event):
+        """Recolour the hovered sub-button's icon (the SVG state mirror).
 
-    def leaveEvent(self, event):
-        self._set_icon_state("normal")
-        super().leaveEvent(event)
+        Body and arrow recolour independently so only the part under the
+        cursor brightens, matching the other toolbar buttons.
+        """
+        if obj is self.body:
+            button, icons = self.body, self.icons
+        elif obj is self.arrow:
+            button, icons = self.arrow, self.arrow_icons
+        else:
+            return super().eventFilter(obj, event)
 
-    def mousePressEvent(self, event):
-        self._set_icon_state("pressed")
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        self._set_icon_state("hover")
-        super().mouseReleaseEvent(event)
+        state = {
+            QEvent.Enter: "hover",
+            QEvent.Leave: "normal",
+            QEvent.MouseButtonPress: "pressed",
+            QEvent.MouseButtonRelease: "hover",
+        }.get(event.type())
+        if state is not None and state in icons:
+            button.setIcon(icons[state])
+        return super().eventFilter(obj, event)
 
 
 class ToolBar(QWidget):
