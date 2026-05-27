@@ -246,10 +246,10 @@ class CopyShapeCommand(PairCommand):
 
 
 class ParentTransformCommand(PairCommand):
-    """Command to parent the target node under the source node."""
+    """Command to parent the source node under the target node."""
 
     _name = "Parent Transform"
-    _description = "Command to parent the target node under the source node"
+    _description = "Command to parent the source node under the target node"
     _visible = False
 
     def execute_pair(self, source_node: str, target_node: str):
@@ -260,10 +260,10 @@ class ParentTransformCommand(PairCommand):
             target_node (str): The target node to process.
         """
         try:
-            cmds.parent(target_node, source_node)
-            logger.debug(f"Parented: {target_node} under {source_node}")
+            cmds.parent(source_node, target_node)
+            logger.debug(f"Parented: {source_node} under {target_node}")
         except RuntimeError as e:
-            logger.warning(f"Failed to parent {target_node} under {source_node}: {e}")
+            logger.warning(f"Failed to parent {source_node} under {target_node}: {e}")
 
 
 __all__ = [
