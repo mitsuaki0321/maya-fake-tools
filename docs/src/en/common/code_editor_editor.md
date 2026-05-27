@@ -330,6 +330,15 @@ The context menu (right-click menu) has several code editor-specific features.
 
 ![image](../../images/common/code_editor/code-editor-menu.png)
 
+### Insert Node Name ( Insert )
+
+An entry at the **top** of the context menu inserts the name(s) of the currently selected Maya node(s) at the cursor position. It offers the same feature as the [Insert split button](code_editor_toolbar.html) at the far right of the toolbar, but right next to the cursor so you don't have to move the mouse.
+
+- The entry shown is the **insert command currently selected in the toolbar** ( e.g. **Insert Selected Node Name** ). Switching which command is inserted is done via the toolbar drop-down.
+- The text is inserted **at the right-clicked position** ( if there is a selection, it replaces that selection ).
+- When nothing is selected in Maya, the entry is **disabled**.
+- If the active tab's language does not support that insert command, another command available for the language is shown instead.
+
 ### Command Help Display
 
 You can display Maya **python (cmds)** and **OpenMaya (om)** command help in the browser from the context menu.

@@ -106,6 +106,24 @@ If there are unsaved changes, an asterisk (*) appears on the tab.
 
 - Swaps the vertical positions of the code editor and terminal.
 
+**![image](../../images/common/code_editor/insert_normal.svg) Insert ( split button )**
+
+A split button placed at the far right of the toolbar, set slightly apart from the other buttons. It inserts the name(s) of the currently selected Maya node(s) at the active editor's cursor position.
+
+- **Click the body ( icon )**: Runs the currently selected insert command.
+- **![image](../../images/common/code_editor/chevron_down.svg) Drop-down**: Switches the insert command. Picking from the drop-down only changes *which* command is current; it **does not run** the command ( execution happens on a body click, or from the editor's right-click menu ).
+- The inserted text is **formatted according to the active tab's language**. Commands that are not supported by the language are disabled in the drop-down, and the whole button is disabled when no command applies.
+- Running it with nothing selected shows a prompt in the terminal asking you to select node(s) first.
+- The tooltip shows which command is currently selected.
+- The same feature is available from the **top** of the editor's right-click menu ( see the context menu in [Code Editor](code_editor_editor.html) ).
+
+The available insert commands are:
+
+| Command | Behavior |
+|---|---|
+| Selected Node Name | Inserts the first selected node name as a single string ( Python: `"pCube1"` ) |
+| Selected Node Names ( List ) | Inserts all selected node names as a list ( Python: `["pCube1", "pCube2"]` ) |
+
 ## Keyboard Shortcuts
 
 The following keyboard shortcuts are assigned to toolbar actions.
