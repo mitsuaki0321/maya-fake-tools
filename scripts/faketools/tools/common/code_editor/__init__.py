@@ -19,11 +19,15 @@ TOOL_CONFIG = {
 }
 
 
-def show_ui():
-    """Show the Code Editor UI."""
+def show_ui(floating: bool = False):
+    """Show the Code Editor UI.
+
+    Args:
+        floating (bool): If True, show as a floating window instead of docked (Maya only).
+    """
     from .main import show_editor
 
-    show_editor()
+    show_editor(floating=floating)
 
 
 __all__ = ["TOOL_CONFIG", "show_ui"]
