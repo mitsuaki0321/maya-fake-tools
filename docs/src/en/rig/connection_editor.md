@@ -104,7 +104,7 @@ operated independently for the left and right sides.
 
 3. To operate on a selected pair, select one attribute on each side, then use the direction toggle and `Connect` / `Connect Leaf` / `Copy Value` in the action bar.
 
-4. Value copy can also be run from the menu shown by right-clicking an attribute.
+4. Right-clicking an attribute lets you load the connected node or copy the current value to the clipboard (see "Right-click Menu" below).
 
 External scene changes are tracked automatically.
 
@@ -159,16 +159,20 @@ Instead of dragging, you can operate on the attribute pair selected on the left 
 
 When only one side is selected or the combination cannot be connected, a warning with the reason is shown at run time.
 
-## Copying Values
+## Right-click Menu (Context Menu)
 
-Value copy is run from the menu shown by right-clicking an attribute, or from the `Copy Value` button in the action bar.
+Right-clicking an attribute shows an operation menu based on that attribute (the origin). While the action bar targets the pair selected on the left and right, this menu acts on **the single attribute you right-clicked** as its origin. Each item is grayed out when its conditions are not met.
 
 ![context](../../images/rig/connection_editor/context.png)
 
-* **Copy Value** : Copies the value of the selected pair.
-* **Copy Value (Leaf)** : Copies the value per child attribute.
+* **Load Connected**
+  * Loads the node connected to the origin attribute into the opposite tree (replacing, like `Load`). Enabled only for attributes that have a connection.
+* **Add Connected**
+  * Appends the node connected to the origin attribute to the opposite tree (adding to the existing load, like `Add`). Enabled only for attributes that have a connection.
+* **Copy Attribute Value**
+  * Copies the current value of the origin attribute to the clipboard. Enabled only for numeric and matrix types.
 
-If the copy destination already has an input connection, the set value is ignored, so a warning is shown. If the destination is locked, turning on `Options > Force connect` allows you to overwrite it.
+Use `Load Connected` / `Add Connected` when you want to follow a connection and quickly line up the partner node on the opposite side. For example, right-clicking an output attribute in the left tree and running `Load Connected` loads the node that output is connected to into the right tree.
 
 ## Filters
 
