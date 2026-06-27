@@ -194,6 +194,8 @@ You can narrow down the displayed attributes of each tree independently for left
   * `Show Non-Keyable` : Also shows non-keyable attributes (on by default).
   * `Show Connected Only` : Shows only connected attributes.
   * `Show Extra Attribute Only` : Shows only user-defined (extra) attributes.
+  * `Show Hidden` : Also shows hidden attributes (Maya-internal attributes that are rarely used for connections; off by default). Like Maya's standard Connection Editor, these are hidden by default so you can quickly reach the attribute you want.
+  * The state of these display options is saved independently for the left and right sides and restored on the next launch.
 
 ## Menus
 

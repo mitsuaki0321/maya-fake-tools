@@ -191,6 +191,8 @@ fake_connection_editor.launch()
   * `Show Non-Keyable` : キー設定不可の属性も表示します（既定オン）。
   * `Show Connected Only` : 接続済みの属性のみ表示します。
   * `Show Extra Attribute Only` : ユーザー定義（追加）属性のみ表示します。
+  * `Show Hidden` : hidden 属性（Maya 内部用で接続にはほぼ使わない属性）も表示します（既定オフ）。Maya 標準の Connection Editor と同様に、既定では非表示にして目的の属性へ素早く到達できるようにしています。
+  * これらの表示オプションの状態は左右独立に保存され、次回起動時に復元されます。
 
 ## メニュー
 
